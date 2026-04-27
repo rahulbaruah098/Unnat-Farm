@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}UnnatFarm MIS{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    {% if session.get('user_id') and request.endpoint not in ['auth.login'] %}
+    <aside class="sidebar">
+        <div class="brand">UnnatFarm MIS</div>
+        <div class="role-chip">
+            {% set role_labels = {
+                'accounts': 'Accountant',
+                'sales_unnatfarm': 'Sales - UnnatFarm',
+                'sales_nelocals': 'Sales - NeLocals',
+                'avpl_admin': 'AVPL Admin',
+                'super_admin': 'Super Admin',
+                'ufc_admin': 'UnnatFarm Centre',
+                'ufc_mitra': 'UnnatFarm Mitra',
+                'farmer': 'Farmer'
+            } %}
+            {{ role_labels.get(session.get('role'), session.get('role','').replace('_',' ').title()) }}
+        </div>
+        <nav>
+            <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
+            <a href="{{ url_for('modules.profile') }}">My Profile</a>
+
+            {% if session.get('role') in ['super_admin','avpl_admin'] %}
+                <a href="{{ url_for('admin.users') }}">Users / IDs</a>
+                <a href="{{ url_for('validation.queue') }}">Validations</a>
+                <a href="{{ url_for('master.farmers') }}">Farmer Master</a>
+                <a href="{{ url_for('master.ufc_admins') }}">UFC Admin Master</a>
+                <a href="{{ url_for('master.ufc_mitras') }}">UFC Mitra Master</a>
+            {% endif %}
+
+            {% if session.get('role') == 'avpl_admin' %}
+                <a href="{{ url_for('admin.add_product') }}">Products</a>
+                <a href="{{ url_for('admin.lms_upload') }}">LMS Upload</a>
+            {% endif %}
+
+            {% if session.get('role') == 'accounts' %}
+                <a href="{{ url_for('admin.product_list') }}">Product Addition</a>
+                <a href="{{ url_for('modules.transactions') }}">Transactions</a>
+                <a href="{{ url_for('modules.orders') }}">Procurements / Orders</a>
+            {% endif %}
+
+            {% if session.get('role') == 'sales_nelocals' %}
+                <a href="{{ url_for('modules.products') }}">Products Table</a>
+                <a href="{{ url_for('admin.onboard_trader') }}">Onboard B2B Traders</a>
+            {% endif %}
+
+            {% if session.get('role') == 'sales_unnatfarm' %}
+                <a href="{{ url_for('modules.transactions') }}">Sales Analytics</a>
+            {% endif %}
+
+            {% if session.get('role') == 'ufc_admin' %}
+                <a href="{{ url_for('admin.users') }}">Create UFC Mitra</a>
+                <a href="{{ url_for('master.farmers') }}">Farmers</a>
+                <a href="{{ url_for('master.ufc_mitras') }}">UFC Mitras</a>
+                <a href="{{ url_for('modules.orders') }}">Orders</a>
+                <a href="{{ url_for('modules.pos') }}">POS</a>
+                <a href="{{ url_for('modules.support') }}">Support</a>
+            {% endif %}
+
+            {% if session.get('role') == 'ufc_mitra' %}
+                <a href="{{ url_for('validation.queue') }}">Validations</a>
+                <a href="{{ url_for('modules.buy') }}">Buy</a>
+                <a href="{{ url_for('modules.sell') }}">Sell</a>
+                <a href="{{ url_for('modules.finance') }}">Financial Assistance</a>
+                <a href="{{ url_for('modules.insurance') }}">Insurance Support</a>
+                <a href="{{ url_for('modules.transactions') }}">Transactions</a>
+                <a href="{{ url_for('modules.support') }}">Support</a>
+            {% endif %}
+
+            {% if session.get('role') == 'farmer' %}
+                <a href="{{ url_for('modules.profile') }}">Profile</a>
+                <a href="{{ url_for('modules.buy') }}">Buy</a>
+                <a href="{{ url_for('modules.add_farmer_product') }}">Add Product</a>
+                <a href="{{ url_for('modules.sell') }}">Sell</a>
+                <a href="{{ url_for('modules.finance') }}">Finance</a>
+                <a href="{{ url_for('modules.insurance') }}">Insurance</a>
+                <a href="{{ url_for('modules.lms') }}">LMS</a>
+                <a href="{{ url_for('modules.support') }}">Support</a>
+                <a href="{{ url_for('modules.purchases') }}">My Purchases</a>
+            {% endif %}
+
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        </nav>
+    </aside>
+    {% endif %}
+
+    <main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login'] %} full{% endif %}">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-wrap">
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+            </div>
+        {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+{% set title = 'Sales UnnatFarm Dashboard' %}
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>{{ title }}</h2>
+
+    <h3>A table of Products available (Input of Farmers)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Available Quantity</th>
+                <th>Area Available</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in product_summary %}
+            <tr>
+                <td>{{ p.product_name }}</td>
+                <td>{{ p.available_quantity }}</td>
+                <td>{{ p.areas }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="3">No farmer products available.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <p class="muted" style="margin-top:22px;">Click/reference a product quantity from the above table to review the farmer-wise details below.</p>
+
+    <h3>Farmer-wise Product Details</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Picture</th>
+                <th>Name of the Farmer</th>
+                <th>Contact Number</th>
+                <th>Product</th>
+                <th>Available Quantity</th>
+                <th>Quote Price per unit</th>
+                <th>UnnatFarm Centre associated to</th>
+                <th>Village / Area</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in farmer_products %}
+            <tr>
+                <td>
+                    {% if item.picture %}
+                        <img class="product-thumb" src="{{ url_for('documents.serve', filename=item.picture) }}" alt="{{ item.product_name }}">
+                    {% else %}
+                        <span class="muted">No image</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.farmer_name or '-' }}</td>
+                <td>{{ item.farmer_contact or '-' }}</td>
+                <td>{{ item.product_name or '-' }}</td>
+                <td>{{ item.available_quantity or '-' }}</td>
+                <td>{{ item.unit_price or '-' }}</td>
+                <td>{{ item.centre_uid or '-' }}</td>
+                <td>{{ item.village or '-' }}{% if item.block %}, {{ item.block }}{% endif %}{% if item.district %}, {{ item.district }}{% endif %}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="8">No farmer-wise product records found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

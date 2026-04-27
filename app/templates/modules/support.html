@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Support Module</h2>
+    <div class="info-banner">Contact us / Toll-free placeholder can be expanded here.</div>
+    <form method="post" class="grid-form">
+        <label>Subject <input type="text" name="subject" required></label>
+        <label>Message <textarea name="message" rows="4" required></textarea></label>
+        <button type="submit">Create Ticket</button>
+    </form>
+    <table>
+        <thead><tr><th>Subject</th><th>Status</th><th>Created At</th></tr></thead>
+        <tbody>
+        {% for t in tickets %}
+            <tr><td>{{ t.subject }}</td><td>{{ t.status }}</td><td>{{ t.created_at }}</td></tr>
+        {% else %}
+            <tr><td colspan="3">No support tickets.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

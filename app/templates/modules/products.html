@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Products Module</h2>
+    <table>
+        <thead><tr><th>Name</th><th>Category</th><th>Type</th><th>Available Centres</th><th>Price</th></tr></thead>
+        <tbody>
+        {% for i in items %}
+            <tr><td>{{ i.name }}</td><td>{{ i.category }}</td><td>{{ i.type }}</td><td>{{ i.available_centres }}</td><td>{{ i.price }}</td></tr>
+        {% else %}
+            <tr><td colspan="5">No products found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

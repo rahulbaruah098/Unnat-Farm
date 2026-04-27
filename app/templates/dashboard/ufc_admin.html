@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>UFC Admin Dashboard</h2>
+    <div class="uid-card">
+        <span>Your Centre UID</span>
+        <strong class="masked-uid" data-real-uid="{{ session.get('centre_uid') or '' }}">********</strong>
+        <button type="button" class="btn-soft uid-toggle">👁</button>
+    </div>
+    <div class="stat-grid">
+        <div class="stat"><span>Mapped UFC Mitras</span><strong>{{ data.mitra_count }}</strong></div>
+        <div class="stat"><span>Mapped Farmers</span><strong>{{ data.farmer_count }}</strong></div>
+    </div>
+    <h3>Recent Orders</h3>
+    <table><thead><tr><th>Status</th><th>Product</th><th>Quantity</th><th>Farmer / Source</th></tr></thead><tbody>
+    {% for o in data.orders %}<tr><td>{{ o.status }}</td><td>{{ o.product_name }}</td><td>{{ o.quantity }}</td><td>{{ o.farmer_contact or o.source }}</td></tr>{% else %}<tr><td colspan="4">No orders yet.</td></tr>{% endfor %}
+    </tbody></table>
+</div>
+{% endblock %}

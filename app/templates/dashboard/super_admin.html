@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Super Admin Dashboard</h2>
+    <div class="stat-grid">
+        <div class="stat"><span>Total Users</span><strong>{{ stats.total_users }}</strong></div>
+        <div class="stat"><span>UFC Admins</span><strong>{{ stats.total_ufc_admins }}</strong></div>
+        <div class="stat"><span>UFC Mitras</span><strong>{{ stats.total_ufc_mitras }}</strong></div>
+        <div class="stat"><span>Farmers</span><strong>{{ stats.total_farmers }}</strong></div>
+        <div class="stat"><span>Pending Validations</span><strong>{{ stats.pending_validations }}</strong></div>
+        <div class="stat"><span>Total Transactions</span><strong>{{ stats.total_transactions }}</strong></div>
+    </div>
+    <p class="muted">Top-level monitoring, ID creation oversight, deletion access, analytics visibility.</p>
+</div>
+{% endblock %}

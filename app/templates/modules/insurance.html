@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Insurance Module</h2>
+    <form method="post" class="grid-form two-col">
+        <label>Livestock Type
+            <select name="livestock_type">
+                <option>Pig</option><option>Cattle</option><option>Goat</option>
+            </select>
+        </label>
+        <label>Remarks <input type="text" name="remarks"></label>
+        <div class="span-2"><button type="submit">Submit Insurance Request</button></div>
+    </form>
+    <table>
+        <thead><tr><th>Livestock Type</th><th>Remarks</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for i in items %}
+            <tr><td>{{ i.livestock_type }}</td><td>{{ i.remarks }}</td><td>{{ i.status }}</td></tr>
+        {% else %}
+            <tr><td colspan="3">No insurance requests.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Orders Module</h2>
+    <table>
+        <thead><tr><th>Status</th><th>Product</th><th>Quantity</th><th>Centre</th><th>Mitra</th></tr></thead>
+        <tbody>
+        {% for i in items %}
+            <tr><td>{{ i.status }}</td><td>{{ i.product_name }}</td><td>{{ i.quantity }}</td><td>{{ i.centre_uid }}</td><td>{{ i.mitra_uid }}</td></tr>
+        {% else %}
+            <tr><td colspan="5">No orders found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

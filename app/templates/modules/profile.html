@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>My Profile</h2>
+    {% if user %}
+    <div class="stat-grid">
+        <div class="stat"><span>Name</span><strong>{{ user.name }}</strong></div>
+        <div class="stat"><span>Role</span><strong>{{ user.role|replace('_',' ')|title }}</strong></div>
+        <div class="stat"><span>Status</span><strong>{{ user.approval_status }}</strong></div>
+        <div class="stat"><span>User Ref ID</span><strong>{{ user.user_ref_id }}</strong></div>
+    </div>
+    <h3>Account Details</h3>
+    <table><tbody>
+        <tr><th>Name</th><td>{{ user.name }}</td></tr>
+        <tr><th>Username</th><td>{{ user.username or '-' }}</td></tr>
+        <tr><th>Phone</th><td>{{ user.phone or '-' }}</td></tr>
+        <tr><th>Role</th><td>{{ user.role }}</td></tr>
+        <tr><th>Centre UID</th><td>{{ user.centre_uid or user.mapped_centre_uid or '-' }}</td></tr>
+        <tr><th>Mitra UID</th><td>{{ user.mitra_uid or user.mapped_mitra_uid or '-' }}</td></tr>
+        <tr><th>State</th><td>{{ user.state or '-' }}</td></tr>
+        <tr><th>District</th><td>{{ user.district or '-' }}</td></tr>
+        <tr><th>Block</th><td>{{ user.block or '-' }}</td></tr>
+        <tr><th>Village</th><td>{{ user.village or '-' }}</td></tr>
+        <tr><th>Approval Status</th><td>{{ user.approval_status }}</td></tr>
+        <tr><th>Created At</th><td>{{ user.created_at }}</td></tr>
+        <tr><th>Last Login</th><td>{{ user.last_login or '-' }}</td></tr>
+    </tbody></table>
+    {% if master %}
+    <h3>Master/Profile Details</h3>
+    <table><tbody>{% for key, value in master.items() if key not in ['_id'] %}<tr><th>{{ key|replace('_',' ')|title }}</th><td>{{ value if value is not none else '-' }}</td></tr>{% endfor %}</tbody></table>
+    {% endif %}
+    <h3>Uploaded Documents</h3>
+    <table>
+      <thead><tr><th>Document Type</th><th>Preview</th><th>Download</th></tr></thead>
+      <tbody>
+      {% for d in docs %}
+        <tr><td>{{ d.document_type }}</td><td><a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">View</a></td><td><a href="{{ url_for('documents.serve', filename=d.filename, download=1) }}">Download</a></td></tr>
+      {% else %}
+        <tr><td colspan="3">No uploaded documents found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p>User not found.</p>{% endif %}
+</div>
+{% endblock %}

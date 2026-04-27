@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Farmer Registration{% endblock %}
+{% block content %}
+<div class="page-card">
+    <h2>Farmer Registration</h2>
+    <p class="muted">First enter farmer name and contact number, then press Next to complete the full form. Centre UID and UFC Mitra UID are mandatory.</p>
+    <form method="post" class="grid-form two-col" id="farmerRegistrationForm">
+        <div class="span-2 step-panel" id="farmerStep1">
+            <h3>Step 1: Basic Details</h3>
+            <div class="grid-form two-col inner-grid">
+                <label>Name <input type="text" name="name" id="farmerName" value="{{ data.name if data else '' }}" required></label>
+                <label>Contact No. <input type="text" name="contact_no" id="farmerContact" value="{{ data.contact_no if data else '' }}" required></label>
+            </div>
+            <button type="button" id="farmerNextBtn">Next</button>
+        </div>
+        <div class="span-2 step-panel farmer-full-field" id="farmerStep2">
+            <h3>Step 2: Full Farmer Registration</h3>
+            <p class="muted">Name and number are reflected from Step 1 and remain editable.</p>
+        </div>
+        <label class="farmer-full-field">Name <input type="text" id="farmerNameMirror" value="{{ data.name if data else '' }}"></label>
+        <label class="farmer-full-field">Contact No. <input type="text" id="farmerContactMirror" value="{{ data.contact_no if data else '' }}"></label>
+        <label class="farmer-full-field">Gender <select name="gender" required><option value="">Select</option><option {% if data and data.gender == 'Male' %}selected{% endif %}>Male</option><option {% if data and data.gender == 'Female' %}selected{% endif %}>Female</option><option {% if data and data.gender == 'Other' %}selected{% endif %}>Other</option></select></label>
+        <label class="farmer-full-field">Age <input type="number" name="age" value="{{ data.age if data else '' }}" required></label>
+        <label class="farmer-full-field">Create Password <input type="password" name="password" required></label>
+        <label class="farmer-full-field">UnnatFarm Centre UID <input type="text" name="centre_uid" value="{{ data.centre_uid if data else '' }}" required></label>
+        <label class="farmer-full-field">UnnatFarm Centre Mitra UID <input type="text" name="mitra_uid" data-mitra-lookup value="{{ data.mitra_uid if data else '' }}" required></label>
+        <label class="farmer-full-field">State <select name="state"><option value="">Select</option>{% for s in states %}<option value="{{ s }}" {% if data and data.state == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+        <label class="farmer-full-field">District <input type="text" name="district" value="{{ data.district if data else '' }}" placeholder="Auto-filled from Mitra UID, editable"></label>
+        <label class="farmer-full-field">Block <input type="text" name="block" value="{{ data.block if data else '' }}" placeholder="Auto-filled from Mitra UID, editable"></label>
+        <label class="farmer-full-field">Village <input type="text" name="village" value="{{ data.village if data else '' }}" placeholder="Auto-filled from Mitra UID, editable" required></label>
+        <div class="span-2 farmer-full-field"><label>Activities</label><div class="checkbox-grid">{% for item in ['Pig','Goat','Poultry','Cattle','Fishery','Agri'] %}<label><input type="checkbox" name="activities" value="{{ item }}" {% if data and item in data.activities %}checked{% endif %}> {{ item }}</label>{% endfor %}</div></div>
+        <div class="span-2 farmer-full-field"><label>Agri Sub-categories</label><div class="checkbox-grid">{% for item in ['Maize','Joha Rice','Mustard Seed','Black Rice','Ginger','Turmeric','Black Pepper'] %}<label><input type="checkbox" name="agri_sub_categories" value="{{ item }}" {% if data and item in data.agri_sub_categories %}checked{% endif %}> {{ item }}</label>{% endfor %}</div></div>
+        <div class="span-2 farmer-full-field"><button type="submit">Submit Registration</button></div>
+    </form>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const name = document.getElementById('farmerName');
+    const contact = document.getElementById('farmerContact');
+    const nameMirror = document.getElementById('farmerNameMirror');
+    const contactMirror = document.getElementById('farmerContactMirror');
+    const fullFields = Array.from(document.querySelectorAll('.farmer-full-field'));
+    function showFull(){ fullFields.forEach(el => el.style.display='block'); }
+    function hideFull(){ fullFields.forEach(el => el.style.display='none'); }
+    function syncFromTop(){ nameMirror.value = name.value; contactMirror.value = contact.value; }
+    function syncFromMirror(){ name.value = nameMirror.value; contact.value = contactMirror.value; }
+    hideFull();
+    if(name.value || contact.value){ showFull(); syncFromTop(); }
+    document.getElementById('farmerNextBtn').addEventListener('click', function(){
+        if(!name.value.trim() || !contact.value.trim()){ alert('Please enter farmer name and contact number first.'); return; }
+        syncFromTop(); showFull();
+    });
+    name.addEventListener('input', syncFromTop); contact.addEventListener('input', syncFromTop);
+    nameMirror.addEventListener('input', syncFromMirror); contactMirror.addEventListener('input', syncFromMirror);
+});
+</script>
+{% endblock %}

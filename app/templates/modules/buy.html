@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Buy Module</h2>
+
+    <h3>Farmer Available Products</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Picture</th>
+                <th>Product</th>
+                <th>Variety</th>
+                <th>Average Size</th>
+                <th>Available Quantity</th>
+                <th>Unit Price</th>
+                <th>Farmer</th>
+                <th>Contact</th>
+                <th>Village / Area</th>
+                <th>Centre UID</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in farmer_products %}
+            <tr>
+                <td>
+                    {% if p.picture %}
+                        <img class="product-thumb" src="{{ url_for('documents.serve', filename=p.picture) }}" alt="{{ p.product_name }}">
+                    {% else %}
+                        <span class="muted">No image</span>
+                    {% endif %}
+                </td>
+                <td>{{ p.product_name }}</td>
+                <td>{{ p.variety or '-' }}</td>
+                <td>{{ p.average_size or '-' }}</td>
+                <td>{{ p.available_quantity or '-' }}</td>
+                <td>{{ p.unit_price or '-' }}</td>
+                <td>{{ p.farmer_name or '-' }}</td>
+                <td>{{ p.farmer_contact or '-' }}</td>
+                <td>{{ p.village or '-' }}{% if p.block %}, {{ p.block }}{% endif %}{% if p.district %}, {{ p.district }}{% endif %}</td>
+                <td>{{ p.centre_uid or '-' }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="10">No farmer products available.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h3 style="margin-top:26px;">AVPL Product Catalogue</h3>
+    <table>
+        <thead><tr><th>Name</th><th>Category</th><th>Type</th><th>Available Centres</th><th>Price</th></tr></thead>
+        <tbody>
+        {% for p in products %}
+            <tr><td>{{ p.name }}</td><td>{{ p.category }}</td><td>{{ p.type }}</td><td>{{ p.available_centres }}</td><td>{{ p.price }}</td></tr>
+        {% else %}
+            <tr><td colspan="5">No catalogue products available.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Onboarding of B2B Traders</h2>
+    <form method="post" class="grid-form two-col">
+        <label>Business Name <input type="text" name="business_name" required></label>
+        <label>Contact Person <input type="text" name="contact_person" required></label>
+        <label>Phone <input type="text" name="phone" required></label>
+        <label>Address <input type="text" name="address" required></label>
+        <div class="span-2"><button type="submit">Save Trader</button></div>
+    </form>
+    <table>
+        <thead><tr><th>Business</th><th>Contact</th><th>Phone</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for t in traders %}
+            <tr><td>{{ t.business_name }}</td><td>{{ t.contact_person }}</td><td>{{ t.phone }}</td><td>{{ t.status }}</td></tr>
+        {% else %}
+            <tr><td colspan="4">No traders yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

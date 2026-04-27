@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>UFC Mitra Dashboard</h2>
+    <div class="uid-card">
+        <span>Your Mitra UID</span>
+        <strong class="masked-uid" data-real-uid="{{ session.get('mitra_uid') or '' }}">********</strong>
+        <button type="button" class="btn-soft uid-toggle">👁</button>
+    </div>
+    <div class="stat-grid">
+        <div class="stat"><span>Farmers</span><strong>{{ data.farmer_count }}</strong></div>
+        <div class="stat"><span>Input Bonus 2%</span><strong>{{ data.input_bonus }}</strong></div>
+        <div class="stat"><span>Output Bonus 2%</span><strong>{{ data.output_bonus }}</strong></div>
+    </div>
+    <h3>Farmer List</h3>
+    <table><thead><tr><th>Name</th><th>Contact</th><th>Centre UID</th><th>Mitra UID</th><th>Village</th><th>Status</th></tr></thead><tbody>
+    {% for f in data.farmers %}<tr><td>{{ f.name }}</td><td>{{ f.contact_no }}</td><td>{{ f.centre_uid or '-' }}</td><td>{{ f.mitra_uid or '-' }}</td><td>{{ f.village }}</td><td>{{ f.approval_status }}</td></tr>{% else %}<tr><td colspan="6">No mapped farmers.</td></tr>{% endfor %}
+    </tbody></table>
+</div>
+{% endblock %}

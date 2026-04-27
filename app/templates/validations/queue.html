@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Validation Queue</h2>
+    <table>
+        <thead><tr><th>Type</th><th>Status</th><th>Created At</th><th>View</th></tr></thead>
+        <tbody>
+        {% for i in items %}
+            <tr>
+                <td>{{ i.entity_type }}</td>
+                <td><span class="badge">{{ i.status }}</span></td>
+                <td>{{ i.created_at }}</td>
+                <td><a href="{{ url_for('validation.detail', validation_id=i._id) }}">Open</a></td>
+            </tr>
+        {% else %}
+            <tr><td colspan="4">No validation items.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>My Purchases</h2>
+    <table>
+        <thead><tr><th>Product</th><th>Amount</th><th>Date</th></tr></thead>
+        <tbody>
+        {% for i in items %}
+            <tr><td>{{ i.product_name }}</td><td>{{ i.amount }}</td><td>{{ i.created_at }}</td></tr>
+        {% else %}
+            <tr><td colspan="3">No purchases found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

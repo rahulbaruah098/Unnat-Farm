@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Farmer Dashboard</h2>
+    <div class="stat-grid">
+        <div class="stat"><span>Finance Eligibility</span><strong>{{ 'Enabled' if data.finance_enabled else 'Locked' }}</strong></div>
+        <div class="stat"><span>Insurance Eligibility</span><strong>{{ 'Enabled' if data.insurance_enabled else 'Locked' }}</strong></div>
+    </div>
+    <div class="info-banner">Mapped Centre: <strong>{{ data.farmer.centre_uid }}</strong> | Mapped Mitra: <strong>{{ data.farmer.mitra_uid }}</strong></div>
+    <h3>Recent Purchases</h3>
+    <table>
+        <thead><tr><th>Product</th><th>Amount</th><th>Date</th></tr></thead>
+        <tbody>
+        {% for p in data.purchases %}
+            <tr><td>{{ p.product_name }}</td><td>{{ p.amount }}</td><td>{{ p.created_at }}</td></tr>
+        {% else %}
+            <tr><td colspan="3">No purchases yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

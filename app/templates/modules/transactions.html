@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Transactions Module</h2>
+    <table>
+        <thead><tr><th>Type</th><th>Product</th><th>Amount</th><th>Centre</th><th>Mitra</th><th>Farmer Contact</th></tr></thead>
+        <tbody>
+        {% for i in items %}
+            <tr><td>{{ i.transaction_type }}</td><td>{{ i.product_name }}</td><td>{{ i.amount }}</td><td>{{ i.centre_uid }}</td><td>{{ i.mitra_uid }}</td><td>{{ i.farmer_contact }}</td></tr>
+        {% else %}
+            <tr><td colspan="6">No transactions found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

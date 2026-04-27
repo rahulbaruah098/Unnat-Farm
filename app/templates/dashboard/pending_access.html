@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-card">
+    <h2>Access Restricted</h2>
+
+    {% if session.get('approval_status') == 'rejected' %}
+        <div class="alert-box danger">
+            <h3>Application Rejected</h3>
+
+            <p>Your application has been rejected by AVPL Admin.</p>
+
+            <p>
+                <strong>Reason / Rectification Required:</strong>
+                {{ rejection_reason or session.get('rejection_reason') or 'Please check remarks and resubmit your application.' }}
+            </p>
+
+            {% if correction_url %}
+                <a class="button-link" href="{{ correction_url }}">
+                    Continue
+                </a>
+            {% else %}
+                <p class="text-danger">
+                    Correction form link is missing. Please contact Super Admin.
+                </p>
+            {% endif %}
+        </div>
+
+    {% elif session.get('approval_status') == 'pending_profile' %}
+        <div class="alert-box warning">
+            <h3>Profile Completion Required</h3>
+
+            <p>You must complete your profile before validation can be done.</p>
+
+            {% if correction_url %}
+                <a class="button-link" href="{{ correction_url }}">
+                    Complete Registration
+                </a>
+            {% else %}
+                <p class="text-danger">
+                    Registration form link is missing. Please contact Super Admin.
+                </p>
+            {% endif %}
+        </div>
+
+    {% else %}
+        <div class="alert-box info">
+            <h3>Approval Pending</h3>
+            <p>Your account is submitted and waiting for approval.</p>
+        </div>
+    {% endif %}
+
+    <p>Status: <strong>{{ session.get('approval_status', 'pending') }}</strong></p>
+</div>
+{% endblock %}

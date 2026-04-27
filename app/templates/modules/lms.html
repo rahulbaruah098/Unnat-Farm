@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>LMS Module</h2>
+    <table>
+        <thead><tr><th>Title</th><th>Audience</th><th>Description</th><th>File</th></tr></thead>
+        <tbody>
+        {% for i in items %}
+            <tr><td>{{ i.title }}</td><td>{{ i.audience }}</td><td>{{ i.description }}</td><td>{{ i.file_name or '-' }}</td></tr>
+        {% else %}
+            <tr><td colspan="4">No LMS materials.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}Complete UFC Admin Profile{% endblock %}
+
+{% block content %}
+<div class="page-card">
+    <h2>
+        {% if session.get('approval_status') == 'rejected' %}
+            Rectify UFC Admin Application
+        {% else %}
+            Complete UFC Admin Profile
+        {% endif %}
+    </h2>
+
+    {% if rejection_reason or session.get('rejection_reason') %}
+        <div class="alert-box danger">
+            <strong>Your application was rejected.</strong><br>
+            <strong>Reason / Rectification Required:</strong>
+            {{ rejection_reason or session.get('rejection_reason') }}
+        </div>
+    {% endif %}
+
+    <div class="info-banner">
+        Your Centre Unique ID:
+        <strong>{{ user.centre_uid or master.centre_uid or 'Not Generated' }}</strong>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="grid-form two-col">
+
+        <label>
+            Name of Enterprise
+            <input type="text" name="name_of_enterprise"
+                   value="{{ master.name_of_enterprise or user.name_of_enterprise or '' }}"
+                   required>
+        </label>
+
+        <label>
+            Name of Owner
+            <input type="text" name="name_of_owner"
+                   value="{{ master.name_of_owner or user.name_of_owner or '' }}"
+                   required>
+        </label>
+
+        <label>
+            State
+            <input type="text"
+                   value="{{ user.state or master.state or '' }}"
+                   readonly>
+            <input type="hidden"
+                   name="state"
+                   value="{{ user.state or master.state or '' }}">
+            <small class="muted">
+                State is fixed from AVPL Admin user creation. Type district, block and village manually below.
+            </small>
+        </label>
+
+        <label>
+            District
+            <input type="text" name="district"
+                   value="{{ master.district or user.district or '' }}"
+                   placeholder="Type district manually"
+                   required>
+        </label>
+
+        <label>
+            Block
+            <input type="text" name="block"
+                   value="{{ master.block or user.block or '' }}"
+                   placeholder="Type block manually"
+                   required>
+        </label>
+
+        <label>
+            Village
+            <input type="text" name="village"
+                   value="{{ master.village or user.village or '' }}"
+                   placeholder="Type village manually"
+                   required>
+        </label>
+
+        <label>
+            PAN Number
+            <input type="text" name="pan_number"
+                   value="{{ master.pan_number or user.pan_number or '' }}"
+                   required>
+        </label>
+
+        <label>
+            GST Number
+            <input type="text" name="gst_number"
+                   value="{{ master.gst_number or user.gst_number or '' }}"
+                   required>
+        </label>
+
+        <label>
+            Trader License Number (optional)
+            <input type="text" name="trader_license_number"
+                   value="{{ master.trader_license_number or user.trader_license_number or '' }}">
+        </label>
+
+        <label>
+            Other Licenses (optional)
+            <input type="text" name="other_licenses"
+                   value="{{ master.other_licenses or user.other_licenses or '' }}">
+        </label>
+
+        <label>
+            Registration Certificate
+            <input type="file" name="registration_certificate"
+                   {% if not master.registration_certificate %}required{% endif %}>
+            <small class="muted">
+                Upload again only if AVPL asked for correction.
+            </small>
+        </label>
+
+        <label>
+            PAN Upload
+            <input type="file" name="pan_file"
+                   {% if not master.pan_file %}required{% endif %}>
+            <small class="muted">
+                Upload again only if AVPL asked for correction.
+            </small>
+        </label>
+
+        <label>
+            GST Upload
+            <input type="file" name="gst_file"
+                   {% if not master.gst_file %}required{% endif %}>
+            <small class="muted">
+                Upload again only if AVPL asked for correction.
+            </small>
+        </label>
+
+        <label>
+            Trader License Upload
+            <input type="file" name="trader_license_file">
+            {% if master.trader_license_file %}
+                <small class="muted">Existing file already uploaded. Upload only if correction is required.</small>
+            {% endif %}
+        </label>
+
+        <label>
+            Other Licenses Upload
+            <input type="file" name="other_license_file">
+            {% if master.other_license_file %}
+                <small class="muted">Existing file already uploaded. Upload only if correction is required.</small>
+            {% endif %}
+        </label>
+
+        <div class="span-2">
+            <button type="submit">
+                {% if session.get('approval_status') == 'rejected' %}
+                    Resubmit For AVPL Validation
+                {% else %}
+                    Submit For AVPL Validation
+                {% endif %}
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

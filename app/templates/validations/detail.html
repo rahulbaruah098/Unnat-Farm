@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Validation Detail</h2>
+    <p><strong>Entity Type:</strong> {{ item.entity_type }}</p>
+    <p><strong>Status:</strong> {{ item.status }}</p>
+    <p><strong>Remarks:</strong> {{ item.remarks or '-' }}</p>
+
+    <h3>Account Information</h3>
+    <table>
+        <tr><th>Name</th><td>{{ entity.name if entity else '-' }}</td></tr>
+        <tr><th>Role</th><td>{{ entity.role if entity else '-' }}</td></tr>
+        <tr><th>Phone</th><td>{{ entity.phone if entity else '-' }}</td></tr>
+        <tr><th>Username</th><td>{{ entity.username if entity else '-' }}</td></tr>
+        <tr><th>Centre UID</th><td>{{ entity.centre_uid or entity.mapped_centre_uid if entity else '-' }}</td></tr>
+        <tr><th>Mitra UID</th><td>{{ entity.mitra_uid or entity.mapped_mitra_uid if entity else '-' }}</td></tr>
+        <tr><th>State</th><td>{{ entity.state if entity else '-' }}</td></tr>
+        <tr><th>District</th><td>{{ entity.district if entity else '-' }}</td></tr>
+        <tr><th>Block</th><td>{{ entity.block if entity else '-' }}</td></tr>
+        <tr><th>Village</th><td>{{ entity.village if entity else '-' }}</td></tr>
+    </table>
+
+    <h3>Submitted Profile Details</h3>
+    <table>
+        {% if master %}
+            {% set hidden_keys = ['_id', 'linked_user_id', 'created_at', 'updated_at'] %}
+            {% for key, value in master.items() %}
+                {% if key not in hidden_keys %}
+                    <tr><th>{{ key|replace('_', ' ')|title }}</th><td>{{ value }}</td></tr>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <tr><td>No submitted profile details found.</td></tr>
+        {% endif %}
+    </table>
+
+    <h3>Uploaded Documents</h3>
+    <table>
+        <thead><tr><th>Document Type</th><th>Preview / View</th><th>Download</th></tr></thead>
+        <tbody>
+        {% for d in linked_docs %}
+            <tr>
+                <td>{{ d.document_type }}</td>
+                <td><a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">Preview / View</a></td>
+                <td><a href="{{ url_for('documents.serve', filename=d.filename, download=1) }}">Download</a></td>
+            </tr>
+        {% else %}
+            <tr><td colspan="3">No uploaded documents found for this validation.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    {% if item.status == 'pending' %}
+    <form method="post" action="{{ url_for('validation.take_action', validation_id=item._id) }}" class="grid-form">
+        <label>Remarks <textarea name="remarks" rows="4"></textarea></label>
+        <div class="button-row"><button type="submit" name="action" value="approve">Approve</button><button type="submit" name="action" value="reject" class="danger-btn">Reject</button></div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

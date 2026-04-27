@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}Complete UFC Mitra Profile{% endblock %}
+
+{% block content %}
+<div class="page-card">
+    <h2>
+        {% if session.get('approval_status') == 'rejected' %}
+            Rectify UFC Mitra Application
+        {% else %}
+            Complete UFC Mitra Profile
+        {% endif %}
+    </h2>
+
+    {% if rejection_reason or session.get('rejection_reason') %}
+        <div class="alert-box danger">
+            <strong>Your application was rejected.</strong><br>
+            <strong>Reason / Rectification Required:</strong>
+            {{ rejection_reason or session.get('rejection_reason') }}
+        </div>
+    {% endif %}
+
+    <div class="info-banner">
+        Your Mitra Unique ID:
+        <strong>{{ user.mitra_uid or master.mitra_uid or 'Not Generated' }}</strong>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="grid-form two-col">
+
+        <label>
+            Mapped UFC Admin Unique ID
+            <input type="text" name="mapped_centre_uid" data-centre-lookup
+                   value="{{ master.mapped_centre_uid or user.mapped_centre_uid or '' }}"
+                   required>
+        </label>
+
+        <label>
+            Name
+            <input type="text" name="name"
+                   value="{{ master.name or user.name or '' }}"
+                   required>
+        </label>
+
+        <label>
+            C/O
+            <input type="text" name="care_of"
+                   value="{{ master.care_of or user.care_of or '' }}"
+                   required>
+        </label>
+
+        <label>
+            DOB
+            <input type="date" name="dob"
+                   value="{{ master.dob or user.dob or '' }}"
+                   required>
+        </label>
+
+        <label>
+            Age
+            <input type="number" name="age"
+                   value="{{ master.age or user.age or '' }}"
+                   required>
+        </label>
+
+        <label>
+            Highest Education
+            <input type="text" name="education"
+                   value="{{ master.education or user.education or '' }}"
+                   required>
+        </label>
+
+        <label>
+            Gender
+            <select name="gender" required>
+                <option value="">Select</option>
+                {% for g in ['Male','Female','Other'] %}
+                    <option value="{{ g }}"
+                        {% if (master.gender or user.gender) == g %}selected{% endif %}>
+                        {{ g }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            State
+            <select name="state" required>
+                <option value="">Select</option>
+                {% for s in states %}
+                    <option value="{{ s }}"
+                        {% if (master.state or user.state) == s %}selected{% endif %}>
+                        {{ s }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            District
+            <input type="text" name="district"
+                   value="{{ master.district or user.district or '' }}"
+                   placeholder="Auto-filled from centre UID, editable"
+                   required>
+        </label>
+
+        <label>
+            Block
+            <input type="text" name="block"
+                   value="{{ master.block or user.block or '' }}"
+                   placeholder="Auto-filled from centre UID, editable"
+                   required>
+        </label>
+
+        <label>
+            Village
+            <input type="text" name="village"
+                   value="{{ master.village or user.village or '' }}"
+                   placeholder="Auto-filled from centre UID, editable"
+                   required>
+        </label>
+
+        <label>
+            Government-issued Identity Card Number
+            <input type="text" name="government_id_number"
+                   value="{{ master.government_id_number or user.government_id_number or '' }}"
+                   required>
+        </label>
+
+        <label>
+            Government-issued Identity Card Upload
+            <input type="file" name="government_id_file"
+                   {% if not master.government_id_file %}required{% endif %}>
+            <small class="muted">
+                Existing file will remain saved. Upload again only if AVPL asked for correction.
+            </small>
+        </label>
+
+        <label>
+            Education Qualification Certificate Upload
+            <input type="file" name="education_certificate_file"
+                   {% if not master.education_certificate_file %}required{% endif %}>
+            <small class="muted">
+                Existing file will remain saved. Upload again only if AVPL asked for correction.
+            </small>
+        </label>
+
+        <label>
+            Passport Size Photo Upload
+            <input type="file" name="passport_photo_file"
+                   {% if not master.passport_photo_file %}required{% endif %}>
+            <small class="muted">
+                Existing file will remain saved. Upload again only if AVPL asked for correction.
+            </small>
+        </label>
+
+        <div class="span-2">
+            <button type="submit">
+                {% if session.get('approval_status') == 'rejected' %}
+                    Resubmit For AVPL Validation
+                {% else %}
+                    Submit For AVPL Validation
+                {% endif %}
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

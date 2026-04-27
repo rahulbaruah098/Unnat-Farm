@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>LMS Upload</h2>
+    <form method="post" enctype="multipart/form-data" class="grid-form two-col">
+        <label>Title <input type="text" name="title" required></label>
+        <label>Audience
+            <select name="audience" required>
+                <option value="all">All</option>
+                <option value="farmer">Farmer</option>
+                <option value="ufc_mitra">UFC Mitra</option>
+                <option value="ufc_admin">UFC Admin</option>
+            </select>
+        </label>
+        <label class="span-2">Description <textarea name="description" rows="4"></textarea></label>
+        <label class="span-2">Material File <input type="file" name="material_file"></label>
+        <div class="span-2"><button type="submit">Upload</button></div>
+    </form>
+    <h3>Recent LMS Materials</h3>
+    <table>
+        <thead><tr><th>Title</th><th>Audience</th><th>File</th></tr></thead>
+        <tbody>
+        {% for i in items %}
+            <tr><td>{{ i.title }}</td><td>{{ i.audience }}</td><td>{{ i.file_name or '-' }}</td></tr>
+        {% else %}
+            <tr><td colspan="3">No LMS materials yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <div class="title-row">
+        <h2>User Accounts</h2>
+        <a class="btn-link" href="{{ url_for('admin.create_user_view') }}">Create User</a>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th><th>Role</th><th>Username</th><th>Phone</th><th>Centre UID</th><th>Mitra UID</th><th>Status</th><th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+                <tr>
+                    <td>{{ u.name }}</td>
+                    <td>{{ u.role }}</td>
+                    <td>{{ u.username or '-' }}</td>
+                    <td>{{ u.phone or '-' }}</td>
+                    <td>{{ u.centre_uid or u.mapped_centre_uid or '-' }}</td>
+                    <td>{{ u.mitra_uid or u.mapped_mitra_uid or '-' }}</td>
+                    <td>{{ u.approval_status }}</td>
+                    <td class="action-cell">
+                        {% if session.get('role') == 'super_admin' %}
+                            <a class="btn-link small" href="{{ url_for('admin.reset_user_password', user_id=u._id) }}">Reset Password</a>
+                        {% endif %}
+                        {% if session.get('role') in ['super_admin','avpl_admin'] %}
+                        <form method="post" action="{{ url_for('admin.delete_user', user_id=u._id) }}" onsubmit="return confirm('Delete this user?');">
+                            <button type="submit" class="danger-btn">Delete</button>
+                        </form>
+                        {% else %}-{% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="8">No users found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+  <div class="title-row">
+    <h2>{{ title }}</h2>
+    <form method="get" class="inline-search">
+      <input type="text" name="q" value="{{ request.args.get('q','') }}" placeholder="Search by name/contact">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+  {% include 'master/_table.html' %}
+</div>
+{% endblock %}

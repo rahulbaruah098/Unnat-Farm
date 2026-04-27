@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Add Product Availability</h2>
+    <p class="muted">Only products/activities selected during your farmer registration are shown here.</p>
+
+    {% if not product_choices %}
+        <div class="info-banner">No registered activity found in your farmer profile. Please contact your UFC Mitra/Admin.</div>
+    {% else %}
+    <form method="post" enctype="multipart/form-data" class="grid-form two-col farmer-product-form">
+        <label>Product Chosen
+            <select name="product_name" required>
+                <option value="">Select product</option>
+                {% for item in product_choices %}
+                    <option value="{{ item }}">{{ item }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Variety
+            <input type="text" name="variety" placeholder="Enter variety">
+        </label>
+        <label>Average Size / Weight of One Product
+            <input type="text" name="average_size" placeholder="Example: 1.5 kg">
+        </label>
+        <label>No.(s) of Product Available
+            <input type="number" min="0" step="1" name="available_quantity" placeholder="Enter quantity" required>
+        </label>
+        <label>Set Price (Unit Price)
+            <input type="number" min="0" step="0.01" name="unit_price" placeholder="Enter unit price" required>
+        </label>
+        <label>Upload Picture
+            <input type="file" name="product_picture" accept="image/*">
+        </label>
+        <div class="span-2">
+            <button type="submit">Submit</button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

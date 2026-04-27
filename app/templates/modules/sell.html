@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Sell Module</h2>
+    <form method="post" class="grid-form two-col">
+        <label>Product Name <input type="text" name="product_name" required></label>
+        <label>Quantity <input type="text" name="quantity" required></label>
+        <label>Price <input type="text" name="price" required></label>
+        <div class="span-2"><button type="submit">Post Product</button></div>
+    </form>
+    <table>
+        <thead><tr><th>Product</th><th>Quantity</th><th>Price</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for p in posts %}
+            <tr><td>{{ p.product_name }}</td><td>{{ p.quantity }}</td><td>{{ p.price }}</td><td>{{ p.role }}</td><td>{{ p.status }}</td></tr>
+        {% else %}
+            <tr><td colspan="5">No posts found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>AVPL Admin Dashboard</h2>
+    <div class="stat-grid">
+        <div class="stat"><span>Centre-wise UFC Stats</span><strong>{{ stats.total_ufc_admins }}</strong></div>
+        <div class="stat"><span>Centre-wise Mitra Stats</span><strong>{{ stats.total_ufc_mitras }}</strong></div>
+        <div class="stat"><span>Centre-wise Farmer Stats</span><strong>{{ stats.total_farmers }}</strong></div>
+        <div class="stat"><span>Pending Validations</span><strong>{{ stats.pending_validations }}</strong></div>
+    </div>
+    <p class="muted">Use the side menu for Validations, Creation of IDs, Products, LMS Upload, and Master Data visibility.</p>
+</div>
+{% endblock %}

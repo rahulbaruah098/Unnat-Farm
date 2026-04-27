@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Create User / ID</h2>
+    <p class="muted">UFC Admin UID is generated from selected state, e.g. AS0001. UFC Mitra UID is generated under the mapped centre, e.g. AS0001-01.</p>
+    <form method="post" class="grid-form two-col">
+        <label>Role
+            <select name="role" required>
+                {% set role_labels = {
+                    'accounts': 'Accountant',
+                    'sales_unnatfarm': 'Sales - UnnatFarm',
+                    'sales_nelocals': 'Sales - NeLocals',
+                    'avpl_admin': 'AVPL Admin',
+                    'ufc_admin': 'UnnatFarm Centre Admin'
+                } %}
+                {% for role in allowed_roles %}<option value="{{ role }}">{{ role_labels.get(role, role) }}</option>{% endfor %}
+            </select>
+        </label>
+        <label>Name <input type="text" name="name" required></label>
+        <label>Username <input type="text" name="username"></label>
+        <label>Phone <input type="text" name="phone"></label>
+        <label>Password <input type="text" name="password" required></label>
+        <label data-role-field="ufc_admin">State
+            <select name="state"><option value="">Select</option>{% for s in states %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
+            <small class="muted">For UFC Admin ID creation, AVPL selects only the state. District, block and village are typed manually by the centre during profile completion.</small>
+        </label>
+        <label data-role-field="ufc_mitra">Mapped UnnatFarm Centre UID
+            <input type="text" name="mapped_centre_uid" data-centre-lookup value="{{ session.get('centre_uid') if session.get('role') == 'ufc_admin' else '' }}" {% if session.get('role') == 'ufc_admin' %}readonly{% endif %}>
+            <small class="muted">Mitra UID is generated under this Centre UID. Location is handled during Mitra profile completion.</small>
+        </label>
+        <div class="span-2"><button type="submit">Create</button></div>
+    </form>
+</div>
+{% endblock %}
