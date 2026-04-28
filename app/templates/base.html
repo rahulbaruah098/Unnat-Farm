@@ -665,6 +665,7 @@ body.menu-open .mobile-menu-btn{
 
             {% if session.get('role') == 'avpl_admin' %}
                 <a href="{{ url_for('admin.add_product') }}">Products</a>
+                <a href="{{ url_for('admin.product_categories') }}">Product Categories</a>
                 <a href="{{ url_for('admin.lms_upload') }}">LMS Upload</a>
             {% endif %}
 

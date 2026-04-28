@@ -2,13 +2,61 @@
 {% block content %}
 <div class="page-card">
     <h2>Add Product</h2>
-    <form method="post" class="grid-form two-col">
-        <label>Name <input type="text" name="name" required></label>
-        <label>Category <input type="text" name="category" required></label>
-        <label>Type <input type="text" name="type" placeholder="input / output"></label>
-        <label>Available Centres <input type="text" name="available_centres" placeholder="comma separated centre IDs"></label>
-        <label>Price <input type="text" name="price" required></label>
-        <div class="span-2"><button type="submit">Save Product</button></div>
+
+    <p style="margin-bottom:16px;">
+        <a href="{{ url_for('admin.product_categories') }}">
+            Manage Product Categories
+        </a>
+    </p>
+
+    <form method="post" enctype="multipart/form-data" class="grid-form two-col">
+        <label>Name
+            <input type="text" name="name" required>
+        </label>
+
+        <label>Category
+            <select name="category" required>
+                <option value="">Select Category</option>
+                {% for c in categories %}
+                    <option value="{{ c.name }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Type
+            <select name="type" required>
+                <option value="">Select Type</option>
+                <option value="input">Input</option>
+                <option value="output">Output</option>
+            </select>
+        </label>
+
+        <label>Available Centres
+            <select name="available_centres" multiple required>
+                <option value="all">All Centres</option>
+                {% for centre in centres %}
+                    <option value="{{ centre.centre_uid }}">
+                        {{ centre.centre_uid }}
+                        {% if centre.name %} - {{ centre.name }}{% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+            <small style="display:block;margin-top:6px;color:#64748B;">
+                Hold CTRL to select multiple centres, or select “All Centres”.
+            </small>
+        </label>
+
+        <label>Price
+            <input type="text" name="price" required>
+        </label>
+
+        <label>Product Image
+            <input type="file" name="product_image" accept="image/*">
+        </label>
+
+        <div class="span-2">
+            <button type="submit">Save Product</button>
+        </div>
     </form>
 </div>
 {% endblock %}

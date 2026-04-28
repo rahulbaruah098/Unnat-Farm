@@ -179,12 +179,76 @@ def lms_upload():
 @login_required
 @roles_required('avpl_admin', 'accounts')
 def add_product():
+    categories = list(mongo.db.product_categories.find({}).sort('name', 1))
+    centres = list(mongo.db.ufc_admin_master.find({
+        'centre_uid': {'$exists': True, '$ne': ''}
+    }).sort('centre_uid', 1))
+
     if request.method == 'POST':
-        mongo.db.products.insert_one({'name': request.form.get('name', '').strip(), 'category': request.form.get('category', '').strip(), 'type': request.form.get('type', '').strip(), 'available_centres': request.form.get('available_centres', '').strip(), 'price': request.form.get('price', '').strip(), 'created_at': now_utc()})
+        image_file = request.files.get('product_image')
+        image_name = None
+
+        if image_file and image_file.filename:
+            doc = store_document(
+                image_file,
+                session['user_id'],
+                None,
+                session['user_id'],
+                session['role'],
+                'Product Image'
+            )
+            image_name = doc['filename'] if doc else None
+
+        mongo.db.products.insert_one({
+            'name': request.form.get('name', '').strip(),
+            'category': request.form.get('category', '').strip(),
+            'type': request.form.get('type', '').strip(),
+            'available_centres': request.form.getlist('available_centres'),
+            'price': request.form.get('price', '').strip(),
+            'image_name': image_name,
+            'created_by': session['user_id'],
+            'created_at': now_utc()
+        })
+
         flash('Product added.', 'success')
         return redirect(url_for('admin.product_list'))
-    return render_template('admin/add_product.html')
 
+    return render_template(
+        'admin/add_product.html',
+        categories=categories,
+        centres=centres
+    )
+
+@admin_bp.route('/products/categories', methods=['GET', 'POST'])
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def product_categories():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+
+        if not name:
+            flash('Category name is required.', 'danger')
+            return redirect(url_for('admin.product_categories'))
+
+        existing = mongo.db.product_categories.find_one({
+            'name': {'$regex': f'^{name}$', '$options': 'i'}
+        })
+
+        if existing:
+            flash('This category already exists.', 'danger')
+            return redirect(url_for('admin.product_categories'))
+
+        mongo.db.product_categories.insert_one({
+            'name': name,
+            'created_by': session['user_id'],
+            'created_at': now_utc()
+        })
+
+        flash('Product category added.', 'success')
+        return redirect(url_for('admin.product_categories'))
+
+    categories = list(mongo.db.product_categories.find({}).sort('name', 1))
+    return render_template('admin/product_categories.html', categories=categories)
 
 @admin_bp.route('/products')
 @login_required

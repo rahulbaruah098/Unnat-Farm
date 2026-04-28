@@ -2,13 +2,51 @@
 {% block content %}
 <div class="page-card">
     <h2>Products</h2>
+
+    <p style="margin-bottom:16px;">
+        <a href="{{ url_for('admin.add_product') }}">Add Product</a> |
+        <a href="{{ url_for('admin.product_categories') }}">Manage Categories</a>
+    </p>
+
     <table>
-        <thead><tr><th>Name</th><th>Category</th><th>Type</th><th>Available Centres</th><th>Price</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Type</th>
+                <th>Available Centres</th>
+                <th>Price</th>
+            </tr>
+        </thead>
         <tbody>
         {% for p in products %}
-            <tr><td>{{ p.name }}</td><td>{{ p.category }}</td><td>{{ p.type }}</td><td>{{ p.available_centres }}</td><td>{{ p.price }}</td></tr>
+            <tr>
+                <td>
+                    {% if p.image_name %}
+                        <img src="{{ url_for('documents.serve', filename=p.image_name) }}" 
+                             alt="{{ p.name }}" 
+                             style="width:70px;height:55px;object-fit:cover;border-radius:8px;">
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ p.name }}</td>
+                <td>{{ p.category }}</td>
+                <td>{{ p.type }}</td>
+                <td>
+                    {% if p.available_centres is iterable and p.available_centres is not string %}
+                        {{ p.available_centres|join(', ') }}
+                    {% else %}
+                        {{ p.available_centres }}
+                    {% endif %}
+                </td>
+                <td>{{ p.price }}</td>
+            </tr>
         {% else %}
-            <tr><td colspan="5">No products found.</td></tr>
+            <tr>
+                <td colspan="6">No products found.</td>
+            </tr>
         {% endfor %}
         </tbody>
     </table>
