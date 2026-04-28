@@ -1,5 +1,229 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+    .page-card{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        font-family:"Times New Roman", Georgia, serif;
+    }
+
+    .page-card h2,
+    .page-card h3{
+        margin:0 0 22px;
+        color:#17252A;
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:700;
+        line-height:1.25;
+        letter-spacing:.2px;
+    }
+
+    .page-card h2{
+        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
+    }
+
+    .page-card h3{
+        margin-top:28px;
+        font-size:clamp(1.22rem, 1.7vw, 1.5rem);
+    }
+
+    .stat-grid{
+        display:grid;
+        grid-template-columns:repeat(4, minmax(0, 1fr));
+        gap:18px;
+        margin-bottom:24px;
+    }
+
+    .stat{
+        min-height:132px;
+        padding:22px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,251,247,.92));
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
+        transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+        overflow:hidden;
+    }
+
+    .stat:hover{
+        transform:translateY(-3px);
+        border-color:rgba(95,168,120,.38);
+        box-shadow:0 18px 40px rgba(23,37,42,.10);
+    }
+
+    .stat span{
+        display:block;
+        margin-bottom:18px;
+        color:#64748B;
+        font-size:1rem;
+        font-weight:600;
+        line-height:1.35;
+    }
+
+    .stat strong{
+        display:block;
+        color:#334155;
+        font-size:clamp(1.35rem, 2vw, 2rem);
+        font-weight:700;
+        line-height:1.2;
+        word-break:break-word;
+    }
+
+    .page-card table{
+        width:100%;
+        border-collapse:separate;
+        border-spacing:0;
+        margin:0 0 24px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:20px;
+        overflow:hidden;
+        background:#fff;
+        box-shadow:0 12px 28px rgba(23,37,42,.05);
+    }
+
+    .page-card th,
+    .page-card td{
+        padding:14px 16px;
+        border-bottom:1px solid rgba(220,238,226,.85);
+        color:#425466;
+        font-size:1rem;
+        line-height:1.45;
+        text-align:left;
+        vertical-align:top;
+        word-break:break-word;
+    }
+
+    .page-card th{
+        width:230px;
+        color:#17252A;
+        font-weight:700;
+        background:rgba(228,247,234,.42);
+    }
+
+    .page-card thead th{
+        background:rgba(228,247,234,.72);
+        color:#17252A;
+        font-weight:700;
+    }
+
+    .page-card tr:last-child th,
+    .page-card tr:last-child td{
+        border-bottom:none;
+    }
+
+    .page-card a{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:34px;
+        padding:7px 13px;
+        border-radius:999px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.72);
+        border:1px solid rgba(95,168,120,.25);
+        text-decoration:none;
+        font-weight:700;
+        transition:all .2s ease;
+    }
+
+    .page-card a:hover{
+        color:#fff;
+        background:#5FA878;
+        border-color:#5FA878;
+        transform:translateY(-1px);
+    }
+
+    .page-card p{
+        margin:0;
+        padding:15px 18px;
+        border:1px solid rgba(95,168,120,.18);
+        border-radius:18px;
+        color:#475569;
+        background:rgba(228,247,234,.42);
+        font-size:1rem;
+        line-height:1.6;
+    }
+
+    @media (max-width:1180px){
+        .stat-grid{
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width:760px){
+        .page-card{
+            padding:20px;
+            border-radius:22px;
+        }
+
+        .stat-grid{
+            grid-template-columns:1fr;
+            gap:14px;
+        }
+
+        .stat{
+            min-height:116px;
+            padding:20px;
+        }
+
+        .page-card table,
+        .page-card tbody,
+        .page-card tr,
+        .page-card th,
+        .page-card td{
+            display:block;
+            width:100%;
+        }
+
+        .page-card thead{
+            display:none;
+        }
+
+        .page-card tr{
+            border-bottom:1px solid rgba(220,238,226,.95);
+        }
+
+        .page-card tr:last-child{
+            border-bottom:none;
+        }
+
+        .page-card th{
+            border-bottom:none;
+            padding:13px 14px 6px;
+        }
+
+        .page-card td{
+            padding:6px 14px 13px;
+        }
+
+        .page-card td[colspan]{
+            padding:16px;
+            text-align:center;
+        }
+    }
+
+    @media (max-width:420px){
+        .page-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .stat{
+            border-radius:18px;
+        }
+
+        .page-card th,
+        .page-card td{
+            font-size:.96rem;
+        }
+    }
+</style>
+
 <div class="page-card">
     <h2>My Profile</h2>
     {% if user %}
@@ -9,6 +233,7 @@
         <div class="stat"><span>Status</span><strong>{{ user.approval_status }}</strong></div>
         <div class="stat"><span>User Ref ID</span><strong>{{ user.user_ref_id }}</strong></div>
     </div>
+
     <h3>Account Details</h3>
     <table><tbody>
         <tr><th>Name</th><td>{{ user.name }}</td></tr>
@@ -25,10 +250,12 @@
         <tr><th>Created At</th><td>{{ user.created_at }}</td></tr>
         <tr><th>Last Login</th><td>{{ user.last_login or '-' }}</td></tr>
     </tbody></table>
+
     {% if master %}
     <h3>Master/Profile Details</h3>
     <table><tbody>{% for key, value in master.items() if key not in ['_id'] %}<tr><th>{{ key|replace('_',' ')|title }}</th><td>{{ value if value is not none else '-' }}</td></tr>{% endfor %}</tbody></table>
     {% endif %}
+
     <h3>Uploaded Documents</h3>
     <table>
       <thead><tr><th>Document Type</th><th>Preview</th><th>Download</th></tr></thead>
@@ -42,4 +269,5 @@
     </table>
     {% else %}<p>User not found.</p>{% endif %}
 </div>
+
 {% endblock %}

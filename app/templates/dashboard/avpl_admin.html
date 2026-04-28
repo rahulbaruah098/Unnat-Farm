@@ -1,13 +1,130 @@
 {% extends 'base.html' %}
+
 {% block content %}
+<style>
+    .page-card {
+        width: 100%;
+        border: 1px solid rgba(220, 238, 226, .95);
+        border-radius: 26px;
+        padding: 28px;
+        background: rgba(255, 255, 255, .92);
+        box-shadow: 0 22px 55px rgba(23, 37, 42, .10);
+        backdrop-filter: blur(14px);
+        font-family: "Times New Roman", Georgia, serif;
+    }
+
+    .page-card h2 {
+        margin: 0 0 22px;
+        color: #17252A;
+        font-size: clamp(1.45rem, 2.1vw, 1.9rem);
+        font-weight: 700;
+        line-height: 1.25;
+        letter-spacing: .2px;
+    }
+
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .stat {
+        min-height: 132px;
+        padding: 22px;
+        border: 1px solid rgba(220, 238, 226, .95);
+        border-radius: 22px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(246, 251, 247, .92));
+        box-shadow: 0 14px 32px rgba(23, 37, 42, .06);
+        transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+        font-family: "Times New Roman", Georgia, serif;
+    }
+
+    .stat:hover {
+        transform: translateY(-3px);
+        border-color: rgba(95, 168, 120, .38);
+        box-shadow: 0 18px 40px rgba(23, 37, 42, .10);
+    }
+
+    .stat span {
+        display: block;
+        margin-bottom: 18px;
+        color: #64748B;
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .stat strong {
+        display: block;
+        color: #334155;
+        font-size: clamp(2rem, 3vw, 2.6rem);
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -.4px;
+    }
+
+    @media (max-width: 1180px) {
+        .stat-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 760px) {
+        .page-card {
+            padding: 20px;
+            border-radius: 22px;
+        }
+
+        .stat-grid {
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        .stat {
+            min-height: 120px;
+            padding: 20px;
+        }
+
+        .muted {
+            font-size: .95rem;
+        }
+    }
+
+    @media (max-width: 420px) {
+        .page-card {
+            padding: 16px;
+            border-radius: 18px;
+        }
+
+        .stat {
+            border-radius: 18px;
+        }
+    }
+</style>
+
 <div class="page-card">
     <h2>AVPL Admin Dashboard</h2>
+
     <div class="stat-grid">
-        <div class="stat"><span>Centre-wise UFC Stats</span><strong>{{ stats.total_ufc_admins }}</strong></div>
-        <div class="stat"><span>Centre-wise Mitra Stats</span><strong>{{ stats.total_ufc_mitras }}</strong></div>
-        <div class="stat"><span>Centre-wise Farmer Stats</span><strong>{{ stats.total_farmers }}</strong></div>
-        <div class="stat"><span>Pending Validations</span><strong>{{ stats.pending_validations }}</strong></div>
+        <div class="stat">
+            <span>Centre-wise UFC Stats</span>
+            <strong>{{ stats.total_ufc_admins }}</strong>
+        </div>
+
+        <div class="stat">
+            <span>Centre-wise Mitra Stats</span>
+            <strong>{{ stats.total_ufc_mitras }}</strong>
+        </div>
+
+        <div class="stat">
+            <span>Centre-wise Farmer Stats</span>
+            <strong>{{ stats.total_farmers }}</strong>
+        </div>
+
+        <div class="stat">
+            <span>Pending Validations</span>
+            <strong>{{ stats.pending_validations }}</strong>
+        </div>
     </div>
-    <p class="muted">Use the side menu for Validations, Creation of IDs, Products, LMS Upload, and Master Data visibility.</p>
 </div>
 {% endblock %}

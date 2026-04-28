@@ -4,14 +4,653 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}UnnatFarm MIS{% endblock %}</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/unnat1.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        :root{
+            --uf-bg:#F6FBF7;
+            --uf-soft:#E4F7EA;
+            --uf-soft2:#F0FFF5;
+            --uf-panel:#FFFFFF;
+            --uf-ink:#17252A;
+            --uf-text:#425466;
+            --uf-line:#DCEEE2;
+            --uf-green:#5FA878;
+            --uf-green2:#8ED7A5;
+            --uf-red:#DC2626;
+            --uf-redDark:#B91C1C;
+            --uf-shadow:0 22px 55px rgba(23,37,42,.10);
+            --uf-shadow2:0 10px 25px rgba(95,168,120,.18);
+            --sidebar-w:292px;
+            --header-h:74px;
+            --footer-h:64px;
+        }
+
+        *{ box-sizing:border-box; }
+
+        html{ scroll-behavior:smooth; }
+
+        body{
+            margin:0;
+            min-height:100vh;
+            font-family:Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at 10% 10%, rgba(142,215,165,.35), transparent 30%),
+                radial-gradient(circle at 90% 90%, rgba(95,168,120,.18), transparent 35%),
+                linear-gradient(135deg, #E6F8EC 0%, #F9FFFB 48%, #F4FAF6 100%);
+            color:var(--uf-text);
+            overflow-x:hidden;
+        }
+
+        body::before{
+            content:"";
+            position:fixed;
+            inset:0;
+            pointer-events:none;
+            background-image:
+                linear-gradient(rgba(95,168,120,.045) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(95,168,120,.045) 1px, transparent 1px);
+            background-size:34px 34px;
+            mask-image:linear-gradient(to bottom, rgba(0,0,0,.9), transparent);
+            z-index:0;
+        }
+
+        .app-header{
+            position:fixed;
+            top:0;
+            left:0;
+            right:0;
+            height:var(--header-h);
+            z-index:60;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:0 22px;
+            background:rgba(255,255,255,.86);
+            backdrop-filter:blur(18px);
+            border-bottom:1px solid rgba(220,238,226,.95);
+            box-shadow:0 12px 30px rgba(23,37,42,.05);
+        }
+
+        .app-header-left{
+            display:flex;
+            align-items:center;
+            gap:14px;
+            min-width:0;
+        }
+
+   .app-logo{
+    width:96px;
+    height:62px;
+    border-radius:0;
+    padding:0;
+    background:transparent;
+    box-shadow:none;
+    object-fit:contain;
+    flex:0 0 auto;
+}
+
+        .mobile-menu-btn,
+        .header-logout-btn{
+            border:none;
+            outline:none;
+            cursor:pointer;
+            width:46px;
+            height:46px;
+            border-radius:16px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:24px;
+            transition:all .22s ease;
+            text-decoration:none;
+        }
+
+        .logout-icon{
+    width:22px;
+    height:22px;
+}
+
+       .mobile-menu-btn{
+    display:none;
+    width:52px;
+    height:52px;
+    border:none;
+    border-radius:18px;
+    background:rgba(228,247,234,.95);
+    color:#316D48;
+    font-size:24px;
+    font-weight:900;
+    align-items:center;
+    justify-content:center;
+    box-shadow:none;
+}
+
+body.menu-open .mobile-menu-btn{
+    background:linear-gradient(135deg,#2563EB,#1D4ED8);
+    color:#fff;
+    box-shadow:0 10px 25px rgba(37,99,235,.35);
+}
+
+        .header-logout-btn{
+            background:rgba(220,38,38,.12);
+            color:var(--uf-red);
+        }
+
+        .header-logout-btn:hover{
+            background:var(--uf-red);
+            color:#fff;
+            transform:translateY(-1px);
+        }
+
+    .sidebar{
+    position:fixed;
+    top:var(--header-h);
+    left:0;
+    bottom:var(--footer-h);
+    width:var(--sidebar-w);
+    padding:20px 16px;
+    border-right:1px solid rgba(220,238,226,.95);
+    border-radius:0;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.94), rgba(240,255,245,.86)),
+        radial-gradient(circle at 30% 0%, rgba(142,215,165,.35), transparent 35%);
+    backdrop-filter:blur(18px);
+    box-shadow:var(--uf-shadow);
+    z-index:50;
+    overflow-y:auto;
+    overflow-x:hidden;
+    display:block;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(95,168,120,.45) transparent;
+}
+
+        .sidebar::before{
+            content:"";
+            position:absolute;
+            width:180px;
+            height:180px;
+            left:-80px;
+            top:-60px;
+            border-radius:50%;
+            background:rgba(142,215,165,.35);
+            filter:blur(8px);
+            z-index:-1;
+        }
+
+        .sidebar::after{
+            content:"";
+            position:absolute;
+            width:110px;
+            height:110px;
+            right:-40px;
+            bottom:-30px;
+            border-radius:50%;
+            background:rgba(95,168,120,.20);
+            filter:blur(6px);
+            z-index:-1;
+        }
+
+  .brand{
+    position:relative;
+    padding:80px 14px 12px 14px;
+    color:var(--uf-ink);
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1.52rem;
+    font-weight:800;
+    letter-spacing:.2px;
+    line-height:1.2;
+    flex:0 0 auto;
+    text-align:center;
+}
+
+   .brand::before{
+    content:"";
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    top:8px;
+    width:90px;
+    height:60px;
+    background:url("{{ url_for('static', filename='images/unnat1.png') }}") center/contain no-repeat;
+}
+
+        .brand::after{ display:none; }
+
+        .role-chip{
+            width:max-content;
+            max-width:100%;
+            margin:10px 12px 18px;
+            padding:8px 14px;
+            border:1px solid rgba(95,168,120,.25);
+            border-radius:999px;
+            color:#3B7D55;
+            background:rgba(228,247,234,.78);
+            font-family:"Times New Roman", Georgia, serif;
+            font-size:.92rem;
+            font-weight:800;
+            text-transform:uppercase;
+            letter-spacing:.55px;
+            box-shadow:0 8px 20px rgba(95,168,120,.10);
+            flex:0 0 auto;
+        }
+
+.sidebar nav{
+    flex:1 1 auto;
+    min-height:0;
+     overflow:visible;
+    padding:4px 4px 12px;
+    margin-bottom:8px;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(95,168,120,.45) transparent;
+}
+
+        .sidebar nav::-webkit-scrollbar{ width:6px; }
+
+        .sidebar nav::-webkit-scrollbar-thumb{
+            background:rgba(95,168,120,.35);
+            border-radius:999px;
+        }
+
+        .sidebar nav a,
+        .sidebar-logout a{
+            position:relative;
+            display:flex;
+            align-items:center;
+            min-height:48px;
+            margin:7px 4px;
+              padding:12px 16px 12px 52px;
+            color:#40515A;
+            text-decoration:none;
+            font-family:"Times New Roman", Georgia, serif;
+            font-size:1.13rem;
+            font-weight:700;
+            border-radius:16px;
+            transition:all .22s ease;
+            overflow:hidden;
+        }
+
+       .sidebar nav a::before,
+.sidebar-logout a::before{
+    content:"";
+    position:absolute;
+    left:14px;
+    width:22px;
+    height:22px;
+    border-radius:0;
+    background: url("{{ url_for('static', filename='images/unnat1.png') }}") center/contain no-repeat;
+    box-shadow:none;
+    opacity:1;
+    transition:all .22s ease;
+}
+
+        .sidebar nav a::after,
+        .sidebar-logout a::after{
+            content:"";
+            position:absolute;
+            inset:0;
+            border-radius:16px;
+            background:linear-gradient(90deg, rgba(95,168,120,.12), transparent);
+            transform:translateX(-105%);
+            transition:transform .28s ease;
+            z-index:-1;
+        }
+
+        .sidebar nav a:hover{
+            color:var(--uf-ink);
+            background:rgba(255,255,255,.80);
+            box-shadow:0 12px 25px rgba(23,37,42,.07);
+            transform:translateX(4px);
+        }
+
+        .sidebar nav a:hover::after{ transform:translateX(0); }
+
+        .sidebar nav a:hover::before{
+            opacity:1;
+            transform:scale(1.12);
+        }
+
+.sidebar-logout{
+    padding:14px 4px 22px;
+    background:transparent;
+    position:relative;
+    z-index:10;
+}
+
+      .sidebar-logout a{
+    margin:0;
+    min-height:52px;
+    justify-content:center;
+    text-align:center;
+    padding:13px 18px 13px 48px;
+    color:#fff;
+    background:linear-gradient(135deg, var(--uf-red), var(--uf-redDark));
+    box-shadow:0 14px 28px rgba(220,38,38,.24);
+}
+
+        .sidebar-logout a::before{
+            left:22px;
+            width:13px;
+            height:13px;
+            background:#fff;
+            box-shadow:0 0 0 6px rgba(255,255,255,.18);
+        }
+
+        .sidebar-logout a:hover{
+            transform:translateY(-1px);
+            box-shadow:0 18px 34px rgba(220,38,38,.30);
+        }
+
+        .main{
+            position:relative;
+            z-index:1;
+            min-height:100vh;
+            margin-left:var(--sidebar-w);
+            padding:calc(var(--header-h) + 24px) 26px calc(var(--footer-h) + 26px);
+        }
+
+        .main:not(.full){
+            animation:pageFade .35s ease both;
+        }
+
+        .main.full{
+            margin-left:0;
+            padding:0;
+            min-height:100vh;
+        }
+
+        .footer{
+            position:fixed;
+            left:0;
+            right:0;
+            bottom:0;
+            height:var(--footer-h);
+            z-index:55;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:8px 16px;
+            border-top:1px solid rgba(220,238,226,.95);
+            background:rgba(255,255,255,.90);
+            backdrop-filter:blur(18px);
+            box-shadow:0 -10px 28px rgba(23,37,42,.06);
+        }
+
+        .footer-content{
+            text-align:center;
+            color:#64748B;
+            font-size:.82rem;
+            line-height:1.45;
+        }
+
+        .footer-row{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+            flex-wrap:wrap;
+        }
+
+        .footer-link{
+            color:#3B7D55;
+            font-weight:700;
+            text-decoration:none;
+        }
+
+        .footer-link:hover{ text-decoration:underline; }
+
+        .mobile-overlay{ display:none; }
+
+        @keyframes pageFade{
+            from{ opacity:0; transform:translateY(8px); }
+            to{ opacity:1; transform:translateY(0); }
+        }
+
+        @media (max-width:1100px){
+            :root{ --sidebar-w:265px; }
+
+            .sidebar{ padding:18px 14px; }
+
+            .brand{
+                font-size:1.36rem;
+                padding-left:58px;
+            }
+
+            .sidebar nav a,
+            .sidebar-logout a{
+                font-size:1.04rem;
+                padding-left:42px;
+            }
+        }
+
+        @media (max-width:860px){
+            :root{
+                --sidebar-w:100vw;
+                --header-h:66px;
+                --footer-h:68px;
+            }
+
+            .app-header{
+                padding:0 12px;
+            }
+
+            .mobile-menu-btn{
+                display:flex;
+            }
+
+            .sidebar nav{
+    padding-bottom:8px;
+}
+
+.sidebar-logout{
+    padding-top:6px;
+    padding-bottom:8px;
+}
+
+.sidebar-logout a{
+    min-height:42px;
+}
+
+.app-logo{
+   width:82px;
+   height:54px;
+   border-radius:0;
+}
+
+            .app-title{
+                font-size:1.05rem;
+            }
+
+           .sidebar{
+    top:var(--header-h);
+    bottom:var(--footer-h);
+    width:100vw;
+    max-width:100vw;
+    padding:18px 16px;
+    transform:translateX(-105%);
+    transition:transform .28s ease;
+    z-index:70;
+    overflow-y:auto;
+    overflow-x:hidden;
+    display:block;
+}
+
+            body.menu-open .sidebar{
+                transform:translateX(0);
+            }
+
+            .mobile-overlay{
+                display:block;
+                position:fixed;
+                top:var(--header-h);
+                left:0;
+                right:0;
+                bottom:var(--footer-h);
+                background:rgba(15,23,42,.38);
+                backdrop-filter:blur(2px);
+                z-index:65;
+                opacity:0;
+                pointer-events:none;
+                transition:opacity .25s ease;
+            }
+
+            body.menu-open .mobile-overlay{
+                opacity:1;
+                pointer-events:auto;
+            }
+
+            .main{
+                margin-left:0;
+                padding:calc(var(--header-h) + 14px) 12px calc(var(--footer-h) + 18px);
+            }
+
+           .brand{
+    padding-top:58px;
+    padding-bottom:8px;
+    font-size:1.22rem;
+}
+
+.brand::before{
+    top:6px;
+    width:66px;
+    height:46px;
+}
+
+            .sidebar nav a,
+            .sidebar-logout a{
+                font-size:1.1rem;
+                min-height:46px;
+            }
+        }
+
+        @media (max-width:560px){
+            .app-title{
+                font-size:.98rem;
+            }
+
+            .mobile-menu-btn,
+            .header-logout-btn{
+                width:42px;
+                height:42px;
+                border-radius:14px;
+                font-size:22px;
+            }
+
+
+            .sidebar nav{
+    padding-bottom:8px;
+}
+
+.sidebar-logout{
+    padding-top:6px;
+    padding-bottom:8px;
+}
+
+.sidebar-logout a{
+    min-height:42px;
+}
+           .brand{
+    padding-top:58px;
+    padding-bottom:8px;
+    font-size:1.22rem;
+}
+
+.brand::before{
+    top:6px;
+    width:66px;
+    height:46px;
+}
+
+            .role-chip{
+                font-size:.86rem;
+                padding:7px 12px;
+            }
+
+            .sidebar nav a,
+            .sidebar-logout a{
+                min-height:44px;
+                font-size:1.04rem;
+                border-radius:14px;
+            }
+
+            .footer{
+                height:72px;
+            }
+
+            :root{
+                --footer-h:72px;
+            }
+        }
+
+        @media (max-height:680px) and (min-width:861px){
+            .sidebar{
+                padding-top:12px;
+                padding-bottom:12px;
+            }
+
+            .brand{
+                padding-top:10px;
+                padding-bottom:8px;
+                font-size:1.22rem;
+            }
+
+            .brand::before{
+                top:7px;
+                width:36px;
+                height:36px;
+            }
+
+            .role-chip{
+                margin-bottom:10px;
+            }
+
+            .sidebar nav a,
+            .sidebar-logout a{
+                min-height:38px;
+                margin:4px;
+                padding-top:8px;
+                padding-bottom:8px;
+                font-size:1rem;
+            }
+        }
+
+        @media (prefers-reduced-motion:reduce){
+            *,
+            *::before,
+            *::after{
+                animation:none !important;
+                transition:none !important;
+                scroll-behavior:auto !important;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    {% if session.get('user_id') and request.endpoint not in ['auth.login'] %}
+    {% if session.get('user_id') and request.endpoint not in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %}
+
+    <header class="app-header">
+        <div class="app-header-left">
+            <button type="button" class="mobile-menu-btn" onclick="toggleSidebarMenu()" aria-label="Open menu">⋮</button>
+            <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm Logo" class="app-logo">
+        </div>
+
+       <a href="{{ url_for('auth.logout') }}" class="header-logout-btn" aria-label="Logout">
+    <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+    </svg>
+</a>
+    </header>
+
+    <div class="mobile-overlay" onclick="toggleSidebarMenu()"></div>
+
     <aside class="sidebar">
         <div class="brand">UnnatFarm MIS</div>
         <div class="role-chip">{{ session.get('role','').replace('_',' ').title() }}</div>
+
         <nav>
             <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
             <a href="{{ url_for('modules.profile') }}">My Profile</a>
@@ -73,16 +712,40 @@
                 <a href="{{ url_for('modules.support') }}">Support</a>
                 <a href="{{ url_for('modules.purchases') }}">My Purchases</a>
             {% endif %}
-
-            <a href="{{ url_for('auth.logout') }}">Logout</a>
         </nav>
+
+        <div class="sidebar-logout">
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
     </aside>
     {% endif %}
 
-<main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %} full{% endif %}">
-     
+    <main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %} full{% endif %}">
         {% block content %}{% endblock %}
     </main>
-<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    {% if session.get('user_id') and request.endpoint not in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %}
+    <footer class="footer">
+        <div class="footer-content footer-2line">
+            <div class="footer-row">
+                <span>© 2026 UnnatFarm™ All rights reserved.</span>
+            </div>
+            <div class="footer-row">
+                <span>Powered by —</span>
+                <a href="https://sayanant.com/" target="_blank" rel="noopener noreferrer" class="footer-link">
+                    Sayanant Group, Guwahati Assam
+                </a>
+            </div>
+        </div>
+    </footer>
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    <script>
+        function toggleSidebarMenu(){
+            document.body.classList.toggle('menu-open');
+        }
+    </script>
 </body>
 </html>
