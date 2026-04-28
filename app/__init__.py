@@ -13,6 +13,7 @@ from app.blueprints.master_data.routes import master_bp
 from app.blueprints.modules.routes import modules_bp
 from app.blueprints.documents.routes import documents_bp
 
+from flask_cors import CORS
 
 def create_app():
     app = Flask(
@@ -20,6 +21,8 @@ def create_app():
         template_folder="templates",
         static_folder="static",
     )
+
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "unnatfarm-dev-secret")
     app.config["MONGO_URI"] = os.getenv("MONGO_URI", "mongodb://127.0.0.1:27017/")

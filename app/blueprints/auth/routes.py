@@ -18,12 +18,11 @@ def _latest_validation_for_user(user_id, entity_type=None):
         query['entity_type'] = entity_type
     return mongo.db.validations.find_one(query, sort=[('updated_at', -1), ('created_at', -1)])
 
-#changes  by atlanta
 @auth_bp.route("/")
 def login_select():
     return render_template("auth/login_select.html")
 
-
+#changes  by atlanta
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     is_json = request.is_json or request.headers.get('Content-Type') == 'application/json'
@@ -252,24 +251,23 @@ def register_farmer():
 
 #changes by atlanta
 @auth_bp.route('/profile/ufc-admin/complete', methods=['GET', 'POST'])
-@login_required
 def complete_ufc_admin():
-    if session.get('role') != 'ufc_admin':
-        return redirect(url_for('dashboard.home'))
-
     is_json = request.is_json or request.headers.get('Content-Type') == 'application/json'
 
-    user = mongo.db.users.find_one({'_id': ObjectId(session['user_id'])})
-
-    if not user:
-        if is_json:
-            return jsonify({'ok': False, 'message': 'User not found'}), 404
-        flash('User not found. Please login again.', 'danger')
-        return redirect(url_for('auth.logout'))
-
-    # ---------- APP SUBMISSION ----------
     if is_json:
         data = request.get_json(silent=True) or {}
+        user_id = (data.get('user_id') or '').strip()
+
+        if not user_id:
+            return jsonify({'ok': False, 'message': 'User ID is required.'}), 400
+
+        user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+
+        if not user:
+            return jsonify({'ok': False, 'message': 'User not found.'}), 404
+
+        if (user.get('role') or '').strip().lower() != 'ufc_admin':
+            return jsonify({'ok': False, 'message': 'Invalid user role.'}), 403
 
         form = {
             'centre_uid': user.get('centre_uid'),
@@ -286,12 +284,12 @@ def complete_ufc_admin():
         }
 
         if not form['name_of_enterprise'] or not form['name_of_owner']:
-            return jsonify({'ok': False, 'message': 'Required fields missing'}), 400
+            return jsonify({'ok': False, 'message': 'Enterprise name and owner name are required.'}), 400
 
-        master_id = complete_ufc_admin_profile(session['user_id'], form)
+        master_id = complete_ufc_admin_profile(user_id, form)
 
         mongo.db.users.update_one(
-            {'_id': ObjectId(session['user_id'])},
+            {'_id': ObjectId(user_id)},
             {
                 '$set': {
                     'approval_status': 'pending',
@@ -304,15 +302,42 @@ def complete_ufc_admin():
             }
         )
 
+        mongo.db.validations.update_one(
+            {
+                'entity_id': user_id,
+                'entity_type': 'ufc_admin_profile'
+            },
+            {
+                '$set': {
+                    'status': 'pending',
+                    'rejection_reason': '',
+                    'action_remarks': ''
+                }
+            },
+            upsert=False
+        )
+
         return jsonify({
             'ok': True,
-            'message': 'Profile submitted',
+            'message': 'Profile submitted for AVPL validation.',
             'approval_status': 'pending',
             'master_id': str(master_id)
         }), 200
 
-    # ---------- WEB (EXISTING LOGIC - KEEP SAME) ----------
+    # WEB FLOW BELOW
+    if not session.get('user_id'):
+        return redirect(url_for('auth.login_select'))
+
+    if session.get('role') != 'ufc_admin':
+        return redirect(url_for('dashboard.home'))
+
     states = list_states()
+    user = mongo.db.users.find_one({'_id': ObjectId(session['user_id'])})
+
+    if not user:
+        flash('User not found. Please login again.', 'danger')
+        return redirect(url_for('auth.logout'))
+
     master = mongo.db.ufc_admin_master.find_one({'linked_user_id': session['user_id']}) or {}
     latest_validation = _latest_validation_for_user(session['user_id'], 'ufc_admin_profile') or {}
 
@@ -324,9 +349,76 @@ def complete_ufc_admin():
     )
 
     if request.method == 'POST':
-        # KEEP YOUR ORIGINAL WEB FORM LOGIC EXACTLY
-        # (no changes here)
-        pass
+        form = {
+            'centre_uid': user.get('centre_uid'),
+            'name_of_enterprise': request.form.get('name_of_enterprise', '').strip(),
+            'name_of_owner': request.form.get('name_of_owner', '').strip(),
+            'state': request.form.get('state', '').strip() or user.get('state', ''),
+            'district': request.form.get('district', '').strip() or user.get('district', ''),
+            'block': request.form.get('block', '').strip() or user.get('block', ''),
+            'village': request.form.get('village', '').strip() or user.get('village', ''),
+            'pan_number': request.form.get('pan_number', '').strip(),
+            'gst_number': request.form.get('gst_number', '').strip(),
+            'trader_license_number': request.form.get('trader_license_number', '').strip(),
+            'other_licenses': request.form.get('other_licenses', '').strip(),
+        }
+
+        master_id = complete_ufc_admin_profile(session['user_id'], form)
+
+        doc_map = {
+            'registration_certificate': 'Registration Certificate',
+            'pan_file': 'PAN',
+            'gst_file': 'GST',
+            'trader_license_file': 'Trader License',
+            'other_license_file': 'Other Licenses',
+        }
+
+        for field, label in doc_map.items():
+            file = request.files.get(field)
+            if file and file.filename:
+                store_document(
+                    file,
+                    session['user_id'],
+                    master_id,
+                    session['user_id'],
+                    'ufc_admin',
+                    label
+                )
+
+        mongo.db.users.update_one(
+            {'_id': ObjectId(session['user_id'])},
+            {
+                '$set': {
+                    'approval_status': 'pending',
+                    'latest_rejection_reason': '',
+                    'district': form['district'],
+                    'block': form['block'],
+                    'village': form['village'],
+                    'state': form['state'],
+                }
+            }
+        )
+
+        mongo.db.validations.update_one(
+            {
+                'entity_id': session['user_id'],
+                'entity_type': 'ufc_admin_profile'
+            },
+            {
+                '$set': {
+                    'status': 'pending',
+                    'rejection_reason': '',
+                    'action_remarks': ''
+                }
+            },
+            upsert=False
+        )
+
+        session['approval_status'] = 'pending'
+        session.pop('rejection_reason', None)
+
+        flash('Profile resubmitted for AVPL validation.', 'success')
+        return redirect(url_for('dashboard.pending_access'))
 
     return render_template(
         'auth/complete_ufc_admin_profile.html',
@@ -336,6 +428,7 @@ def complete_ufc_admin():
         rejection_reason=rejection_reason,
         latest_validation=latest_validation
     )
+
 
 @auth_bp.route('/profile/ufc-mitra/complete', methods=['GET', 'POST'])
 @login_required

@@ -1,5 +1,5 @@
 from bson import ObjectId
-from flask import Blueprint, render_template, session, redirect, url_for
+from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify
 from app.extensions import mongo
 from app.utils.decorators import login_required
 from app.services.dashboard_service import (
@@ -41,11 +41,62 @@ def get_farmer_product_dashboard():
         })
     return summary, products
 
-
-
 @dashboard_bp.route("/")
-@login_required
 def home():
+    is_json = request.is_json or request.args.get("user_id")
+
+    if is_json:
+        user_id = request.args.get("user_id", "").strip()
+
+        if not user_id:
+            return jsonify({"ok": False, "message": "User ID is required"}), 400
+
+        user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+
+        if not user:
+            return jsonify({"ok": False, "message": "User not found"}), 404
+
+        if (user.get("role") or "").strip().lower() != "ufc_admin":
+            return jsonify({"ok": False, "message": "Invalid user role"}), 403
+
+        latest_validation = mongo.db.validations.find_one(
+            {"entity_id": user_id, "entity_type": "ufc_admin_profile"},
+            sort=[("updated_at", -1), ("created_at", -1)]
+        ) or {}
+
+        approval = user.get("approval_status") or "pending_profile"
+
+        if approval != "approved":
+            return jsonify({
+                "ok": True,
+                "approval_status": approval,
+                "rejection_reason": (
+                    user.get("latest_rejection_reason")
+                    or latest_validation.get("rejection_reason")
+                    or latest_validation.get("action_remarks")
+                    or ""
+                ),
+                "data": None
+            }), 200
+
+        data = get_centre_dashboard(user.get("centre_uid"))
+
+        return jsonify({
+            "ok": True,
+            "approval_status": "approved",
+            "rejection_reason": "",
+            "data": {
+                "centre_uid": user.get("centre_uid") or "",
+                "mitra_count": data.get("mitra_count", 0),
+                "farmer_count": data.get("farmer_count", 0),
+                "orders": data.get("orders", [])
+            }
+        }), 200
+
+    # WEB FLOW BELOW
+    if not session.get("user_id"):
+        return redirect(url_for("auth.login_select"))
+
     user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])})
     role = session.get("role")
 
@@ -98,7 +149,6 @@ def home():
 
     return render_template("dashboard/pending_access.html")
 
-
 @dashboard_bp.route("/pending-access")
 @login_required
 def pending_access():
@@ -144,3 +194,4 @@ def pending_access():
         rejection_reason=rejection_reason,
         correction_url=correction_url,
     )
+
