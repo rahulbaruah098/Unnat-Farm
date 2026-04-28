@@ -1,5 +1,5 @@
 import os
-from flask import Flask, session, request, redirect, url_for
+from flask import Flask, app, session, request, redirect, url_for
 
 from app.extensions import mongo
 from app.utils.db import init_indexes
@@ -28,10 +28,13 @@ def create_app():
         "UPLOAD_FOLDER",
         os.path.join(app.root_path, "uploads"),
     )
-    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+    app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
     app.config["ALLOWED_EXTENSIONS"] = {
-        "pdf", "png", "jpg", "jpeg", "webp", "doc", "docx"
-    }
+    "pdf",
+    "png", "jpg", "jpeg", "webp",
+    "doc", "docx",
+    "mp4", "mov", "avi", "mkv", "webm"
+}
 
     mongo.init_app(app)
     ensure_upload_folder(app)

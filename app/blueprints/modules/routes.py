@@ -141,7 +141,48 @@ def insurance():
 @login_required
 def lms():
     audience = session.get("role")
-    items = list(mongo.db.lms_materials.find({"$or": [{"audience": audience}, {"audience": "all"}]}).sort("created_at", -1))
+    user_id = session.get("user_id")
+
+    query = {
+        "$or": [
+            {"audience": audience},
+            {"audience": "all"}
+        ]
+    }
+
+    if audience == "farmer":
+        farmer_profile = mongo.db.farmer_master.find_one({
+            "linked_user_id": user_id
+        })
+
+        if not farmer_profile:
+            farmer_profile = mongo.db.farmer_master.find_one({
+                "linked_user_id": ObjectId(user_id)
+            })
+
+        farmer_activities = farmer_profile.get("activities", []) if farmer_profile else []
+
+        query = {
+            "$and": [
+                {
+                    "$or": [
+                        {"audience": "farmer"},
+                        {"audience": "all"}
+                    ]
+                },
+                {
+                    "$or": [
+                        {"activity_category": "all"},
+                        {"activity_category": {"$in": farmer_activities}}
+                    ]
+                }
+            ]
+        }
+
+    items = list(
+        mongo.db.lms_materials.find(query).sort("created_at", -1)
+    )
+
     return render_template("modules/lms.html", items=items)
 
 
