@@ -1,9 +1,10 @@
 from bson import ObjectId
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from app.extensions import mongo
-from app.utils.decorators import login_required
+from app.utils.decorators import login_required, roles_required
 from app.utils.helpers import now_utc
 from app.utils.security import save_file
+from datetime import datetime
 
 modules_bp = Blueprint("modules", __name__, url_prefix="/modules")
 
@@ -238,11 +239,6 @@ def transactions():
     return render_template("modules/transactions.html", items=items)
 
 
-@modules_bp.route("/pos")
-@login_required
-def pos():
-    return render_template("modules/pos.html")
-
 @modules_bp.route("/profile")
 @login_required
 def profile():
@@ -258,9 +254,116 @@ def profile():
     docs = list(mongo.db.documents.find({"linked_user_id": str(user["_id"])}).sort("created_at", -1)) if user else []
     return render_template("modules/profile.html", user=user, master=master, docs=docs)
 
+
 @modules_bp.route("/purchases")
 @login_required
 def purchases():
     user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])})
-    items = list(mongo.db.transactions.find({"farmer_contact": user.get("phone"), "transaction_type": "input_purchase"}).sort("created_at", -1).limit(20))
+    items = list(mongo.db.transactions.find({
+        "farmer_contact": user.get("phone"),
+        "transaction_type": "input_purchase"
+    }).sort("created_at", -1).limit(20))
     return render_template("modules/purchases.html", items=items)
+
+
+@modules_bp.route('/pos', methods=['GET', 'POST'])
+@login_required
+@roles_required('ufc_admin')
+def pos():
+    user_id = session.get('user_id')
+
+    ufc_profile = mongo.db.ufc_admin_master.find_one({
+        'linked_user_id': user_id
+    })
+
+    if not ufc_profile:
+        ufc_profile = mongo.db.ufc_admin_master.find_one({
+            'linked_user_id': ObjectId(user_id)
+        })
+
+    centre_uid = ufc_profile.get('centre_uid') if ufc_profile else None
+
+    mapped_farmers = list(mongo.db.farmer_master.find({
+        'centre_uid': centre_uid,
+        'approval_status': 'approved'
+    }).sort('name', 1))
+
+    products = list(mongo.db.products.find({
+        '$or': [
+            {'available_centres': 'all'},
+            {'available_centres': {'$in': ['all', centre_uid]}}
+        ]
+    }).sort('name', 1))
+
+    if request.method == 'POST':
+        sale_type = request.form.get('sale_type', 'registered')
+
+        farmer_id = None
+        farmer_name = ''
+        farmer_phone = ''
+
+        if sale_type == 'registered':
+            farmer_id = request.form.get('farmer_id')
+            farmer = mongo.db.farmer_master.find_one({'_id': ObjectId(farmer_id)}) if farmer_id else None
+
+            if farmer:
+                farmer_name = farmer.get('name', '')
+                farmer_phone = farmer.get('contact_no', '')
+        else:
+            farmer_name = request.form.get('unregistered_farmer_name', '').strip()
+            farmer_phone = request.form.get('unregistered_farmer_phone', '').strip()
+
+        product_id = request.form.get('product_id')
+        product = mongo.db.products.find_one({'_id': ObjectId(product_id)}) if product_id else None
+
+        quantity = float(request.form.get('quantity') or 0)
+        price = float(product.get('price') or 0) if product else 0
+        total_amount = quantity * price
+
+        sale_doc = {
+            'centre_uid': centre_uid,
+            'ufc_user_id': user_id,
+            'sale_type': sale_type,
+            'farmer_id': farmer_id,
+            'farmer_name': farmer_name,
+            'farmer_phone': farmer_phone,
+            'product_id': product_id,
+            'product_name': product.get('name') if product else '',
+            'product_category': product.get('category') if product else '',
+            'product_type': product.get('type') if product else '',
+            'quantity': quantity,
+            'unit_price': price,
+            'total_amount': total_amount,
+            'invoice_no': f"AVPL-{centre_uid}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            'created_at': datetime.utcnow()
+        }
+
+        result = mongo.db.pos_sales.insert_one(sale_doc)
+
+        flash('Sale recorded successfully. Invoice generated.', 'success')
+        return redirect(url_for('modules.pos_invoice', sale_id=str(result.inserted_id)))
+
+    sales = list(mongo.db.pos_sales.find({
+        'centre_uid': centre_uid
+    }).sort('created_at', -1).limit(20))
+
+    return render_template(
+        'modules/pos.html',
+        centre_uid=centre_uid,
+        farmers=mapped_farmers,
+        products=products,
+        sales=sales
+    )
+
+
+@modules_bp.route('/pos/invoice/<sale_id>')
+@login_required
+@roles_required('ufc_admin')
+def pos_invoice(sale_id):
+    sale = mongo.db.pos_sales.find_one({'_id': ObjectId(sale_id)})
+
+    if not sale:
+        flash('Invoice not found.', 'danger')
+        return redirect(url_for('modules.pos'))
+
+    return render_template('modules/pos_invoice.html', sale=sale)

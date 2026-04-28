@@ -32,43 +32,27 @@
         font-size:clamp(1.22rem, 1.7vw, 1.5rem);
     }
 
-    .stat-grid{
-        display:grid;
-        grid-template-columns:repeat(4, minmax(0, 1fr));
-        gap:18px;
-        margin-bottom:24px;
-    }
-
-    .stat{
-        min-height:132px;
+    .role-assigned-card{
+        margin-bottom:26px;
         padding:22px;
-        border:1px solid rgba(220,238,226,.95);
+        border:1px solid rgba(95,168,120,.28);
         border-radius:22px;
         background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,251,247,.92));
         box-shadow:0 14px 32px rgba(23,37,42,.06);
-        transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
-        overflow:hidden;
     }
 
-    .stat:hover{
-        transform:translateY(-3px);
-        border-color:rgba(95,168,120,.38);
-        box-shadow:0 18px 40px rgba(23,37,42,.10);
-    }
-
-    .stat span{
+    .role-assigned-label{
         display:block;
-        margin-bottom:18px;
+        margin-bottom:10px;
         color:#64748B;
         font-size:1rem;
         font-weight:600;
-        line-height:1.35;
     }
 
-    .stat strong{
+    .role-assigned-value{
         display:block;
-        color:#334155;
-        font-size:clamp(1.35rem, 2vw, 2rem);
+        color:#17252A;
+        font-size:clamp(1.6rem, 2.6vw, 2.3rem);
         font-weight:700;
         line-height:1.2;
         word-break:break-word;
@@ -149,26 +133,15 @@
         line-height:1.6;
     }
 
-    @media (max-width:1180px){
-        .stat-grid{
-            grid-template-columns:repeat(2, minmax(0, 1fr));
-        }
-    }
-
     @media (max-width:760px){
         .page-card{
             padding:20px;
             border-radius:22px;
         }
 
-        .stat-grid{
-            grid-template-columns:1fr;
-            gap:14px;
-        }
-
-        .stat{
-            min-height:116px;
+        .role-assigned-card{
             padding:20px;
+            border-radius:20px;
         }
 
         .page-card table,
@@ -213,10 +186,6 @@
             border-radius:18px;
         }
 
-        .stat{
-            border-radius:18px;
-        }
-
         .page-card th,
         .page-card td{
             font-size:.96rem;
@@ -227,33 +196,32 @@
 <div class="page-card">
     <h2>My Profile</h2>
     {% if user %}
-    <div class="stat-grid">
-        <div class="stat"><span>Name</span><strong>{{ user.name }}</strong></div>
-        <div class="stat"><span>Role</span><strong>{{ user.role|replace('_',' ')|title }}</strong></div>
-        <div class="stat"><span>Status</span><strong>{{ user.approval_status }}</strong></div>
-        <div class="stat"><span>User Ref ID</span><strong>{{ user.user_ref_id }}</strong></div>
+
+    <div class="role-assigned-card">
+        <span class="role-assigned-label">Assigned Role</span>
+        <strong class="role-assigned-value">{{ user.role|replace('_',' ')|title }}</strong>
     </div>
 
     <h3>Account Details</h3>
     <table><tbody>
-        <tr><th>Name</th><td>{{ user.name }}</td></tr>
-        <tr><th>Username</th><td>{{ user.username or '-' }}</td></tr>
-        <tr><th>Phone</th><td>{{ user.phone or '-' }}</td></tr>
-        <tr><th>Role</th><td>{{ user.role }}</td></tr>
-        <tr><th>Centre UID</th><td>{{ user.centre_uid or user.mapped_centre_uid or '-' }}</td></tr>
-        <tr><th>Mitra UID</th><td>{{ user.mitra_uid or user.mapped_mitra_uid or '-' }}</td></tr>
-        <tr><th>State</th><td>{{ user.state or '-' }}</td></tr>
-        <tr><th>District</th><td>{{ user.district or '-' }}</td></tr>
-        <tr><th>Block</th><td>{{ user.block or '-' }}</td></tr>
-        <tr><th>Village</th><td>{{ user.village or '-' }}</td></tr>
-        <tr><th>Approval Status</th><td>{{ user.approval_status }}</td></tr>
-        <tr><th>Created At</th><td>{{ user.created_at }}</td></tr>
-        <tr><th>Last Login</th><td>{{ user.last_login or '-' }}</td></tr>
+        {% if user.name %}<tr><th>Name</th><td>{{ user.name }}</td></tr>{% endif %}
+        {% if user.username %}<tr><th>Username</th><td>{{ user.username }}</td></tr>{% endif %}
+        {% if user.phone %}<tr><th>Phone</th><td>{{ user.phone }}</td></tr>{% endif %}
+        {% if user.role %}<tr><th>Role</th><td>{{ user.role }}</td></tr>{% endif %}
+        {% if user.centre_uid or user.mapped_centre_uid %}<tr><th>Centre UID</th><td>{{ user.centre_uid or user.mapped_centre_uid }}</td></tr>{% endif %}
+        {% if user.mitra_uid or user.mapped_mitra_uid %}<tr><th>Mitra UID</th><td>{{ user.mitra_uid or user.mapped_mitra_uid }}</td></tr>{% endif %}
+        {% if user.state %}<tr><th>State</th><td>{{ user.state }}</td></tr>{% endif %}
+        {% if user.district %}<tr><th>District</th><td>{{ user.district }}</td></tr>{% endif %}
+        {% if user.block %}<tr><th>Block</th><td>{{ user.block }}</td></tr>{% endif %}
+        {% if user.village %}<tr><th>Village</th><td>{{ user.village }}</td></tr>{% endif %}
+        {% if user.approval_status %}<tr><th>Approval Status</th><td>{{ user.approval_status }}</td></tr>{% endif %}
+        {% if user.created_at %}<tr><th>Created At</th><td>{{ user.created_at }}</td></tr>{% endif %}
+        {% if user.last_login %}<tr><th>Last Login</th><td>{{ user.last_login }}</td></tr>{% endif %}
     </tbody></table>
 
     {% if master %}
     <h3>Master/Profile Details</h3>
-    <table><tbody>{% for key, value in master.items() if key not in ['_id'] %}<tr><th>{{ key|replace('_',' ')|title }}</th><td>{{ value if value is not none else '-' }}</td></tr>{% endfor %}</tbody></table>
+    <table><tbody>{% for key, value in master.items() if key not in ['_id'] and value is not none and value != '-' and value != '' %}<tr><th>{{ key|replace('_',' ')|title }}</th><td>{{ value }}</td></tr>{% endfor %}</tbody></table>
     {% endif %}
 
     <h3>Uploaded Documents</h3>

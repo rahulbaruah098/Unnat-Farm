@@ -1,7 +1,136 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="page-card">
-    <h2>POS Module</h2>
-    <p>Phase 3 placeholder for offline point-of-sale counter sales and transaction capture.</p>
+    <h2>POS - Sell Products</h2>
+
+    <p><strong>Centre UID:</strong> {{ centre_uid or '-' }}</p>
+
+    <form method="post" class="grid-form two-col" id="posForm">
+        <label>Sale Type
+            <select name="sale_type" id="saleType" required>
+                <option value="registered">Registered Farmer</option>
+                <option value="unregistered">Unregistered Farmer</option>
+            </select>
+        </label>
+
+        <label id="registeredFarmerBox">Mapped Farmer
+            <select name="farmer_id">
+                <option value="">Select Farmer</option>
+                {% for f in farmers %}
+                    <option value="{{ f._id }}">
+                        {{ f.name }} - {{ f.contact_no or f.phone or '-' }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="unregisteredBox" style="display:none;">Farmer Name
+            <input type="text" name="unregistered_farmer_name">
+        </label>
+
+        <label class="unregisteredBox" style="display:none;">Farmer Phone
+            <input type="text" name="unregistered_farmer_phone">
+        </label>
+
+        <label>Product
+            <select name="product_id" id="productSelect" required>
+                <option value="">Select Product</option>
+                {% for p in products %}
+                    <option value="{{ p._id }}" data-price="{{ p.price }}">
+                        {{ p.name }} - {{ p.category }} - ₹{{ p.price }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Quantity
+            <input type="number" name="quantity" id="quantity" min="1" step="1" required>
+        </label>
+
+        <label>Unit Price
+            <input type="text" id="unitPrice" readonly>
+        </label>
+
+        <label>Total Amount
+            <input type="text" id="totalAmount" readonly>
+        </label>
+
+        <div class="span-2">
+            <button type="submit">Save Sale</button>
+        </div>
+    </form>
+
+    <h3>Recent Sales</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Farmer</th>
+                <th>Phone</th>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+                <th>Invoice</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in sales %}
+            <tr>
+                <td>{{ s.created_at }}</td>
+                <td>{{ s.farmer_name }}</td>
+                <td>{{ s.farmer_phone }}</td>
+                <td>{{ s.product_name }}</td>
+                <td>{{ s.quantity }}</td>
+                <td>₹{{ s.unit_price }}</td>
+                <td>₹{{ s.total_amount }}</td>
+                <td>
+                    <a href="{{ url_for('modules.pos_invoice', sale_id=s._id) }}" target="_blank">
+                        View Invoice
+                    </a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="8">No sales recorded yet.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
+
+<script>
+const saleType = document.getElementById('saleType');
+const registeredFarmerBox = document.getElementById('registeredFarmerBox');
+const unregisteredBoxes = document.querySelectorAll('.unregisteredBox');
+const productSelect = document.getElementById('productSelect');
+const quantity = document.getElementById('quantity');
+const unitPrice = document.getElementById('unitPrice');
+const totalAmount = document.getElementById('totalAmount');
+
+function toggleFarmerType() {
+    if (saleType.value === 'registered') {
+        registeredFarmerBox.style.display = 'block';
+        unregisteredBoxes.forEach(box => box.style.display = 'none');
+    } else {
+        registeredFarmerBox.style.display = 'none';
+        unregisteredBoxes.forEach(box => box.style.display = 'block');
+    }
+}
+
+function calculateTotal() {
+    const selected = productSelect.options[productSelect.selectedIndex];
+    const price = parseFloat(selected.getAttribute('data-price') || 0);
+    const qty = parseFloat(quantity.value || 0);
+    unitPrice.value = price ? price.toFixed(2) : '';
+    totalAmount.value = price && qty ? (price * qty).toFixed(2) : '';
+}
+
+saleType.addEventListener('change', toggleFarmerType);
+productSelect.addEventListener('change', calculateTotal);
+quantity.addEventListener('input', calculateTotal);
+
+toggleFarmerType();
+</script>
 {% endblock %}
