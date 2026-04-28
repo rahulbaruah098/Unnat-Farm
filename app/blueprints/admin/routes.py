@@ -139,14 +139,38 @@ def lms_upload():
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
         audience = request.form.get('audience', '').strip()
+        lms_type = request.form.get('lms_type', '').strip()
+        activity_category = request.form.get('activity_category', 'all').strip()
+
         file = request.files.get('material_file')
         filename = None
+
         if file and file.filename:
-            doc = store_document(file, session['user_id'], None, session['user_id'], session['role'], 'LMS Material')
+            doc = store_document(
+                file,
+                session['user_id'],
+                None,
+                session['user_id'],
+                session['role'],
+                'LMS Material'
+            )
             filename = doc['filename'] if doc else None
-        mongo.db.lms_materials.insert_one({'title': title, 'description': description, 'audience': audience, 'file_name': filename, 'created_by': session['user_id'], 'created_at': now_utc()})
-        flash('LMS material uploaded.', 'success')
+
+        mongo.db.lms_materials.insert_one({
+            'title': title,
+            'description': description,
+            'audience': audience,
+            'lms_type': lms_type,
+            'activity_category': activity_category,
+            'file_name': filename,
+            'created_by': session['user_id'],
+            'created_role': session.get('role'),
+            'created_at': now_utc()
+        })
+
+        flash('LMS material uploaded successfully.', 'success')
         return redirect(url_for('admin.lms_upload'))
+
     items = list(mongo.db.lms_materials.find({}).sort('created_at', -1).limit(20))
     return render_template('admin/lms_upload.html', items=items)
 

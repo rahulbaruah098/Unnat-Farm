@@ -2,15 +2,39 @@
 {% block content %}
 <div class="page-card">
     <h2>LMS Module</h2>
-    <table>
-        <thead><tr><th>Title</th><th>Audience</th><th>Description</th><th>File</th></tr></thead>
-        <tbody>
-        {% for i in items %}
-            <tr><td>{{ i.title }}</td><td>{{ i.audience }}</td><td>{{ i.description }}</td><td>{{ i.file_name or '-' }}</td></tr>
-        {% else %}
-            <tr><td colspan="4">No LMS materials.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+<table>
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Material</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for i in items %}
+        <tr>
+            <td>{{ i.title }}</td>
+            <td>{{ i.lms_type|upper if i.lms_type else '-' }}</td>
+            <td>{{ i.activity_category or 'All' }}</td>
+            <td>{{ i.description }}</td>
+            <td>
+                {% if i.file_name %}
+                    <a href="{{ url_for('documents.serve', filename=i.file_name) }}" target="_blank">
+                        View / Open
+                    </a>
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr>
+            <td colspan="5">No LMS materials available for your registered activities.</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
 </div>
 {% endblock %}
