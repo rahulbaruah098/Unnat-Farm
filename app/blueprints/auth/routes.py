@@ -19,7 +19,11 @@ def _latest_validation_for_user(user_id, entity_type=None):
     return mongo.db.validations.find_one(query, sort=[('updated_at', -1), ('created_at', -1)])
 
 #changes  by atlanta
-@auth_bp.route('/', methods=['GET', 'POST'])
+@auth_bp.route("/")
+def login_select():
+    return render_template("auth/login_select.html")
+
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     is_json = request.is_json or request.headers.get('Content-Type') == 'application/json'
@@ -77,30 +81,135 @@ def login():
     if request.method == 'POST':
         identifier = request.form.get('identifier', '').strip()
         password = request.form.get('password', '').strip()
+        login_type = request.form.get('login_type', '').strip()
 
         user = get_user_for_login(identifier)
 
         if not user or not verify_password(password, user.get('password_hash', '')):
             flash('Invalid credentials.', 'danger')
-            return render_template('auth/login.html')
+
+            role_routes = {
+            'authority': 'auth.login_authority',
+            'centre': 'auth.login_centre',
+            'mitra': 'auth.login_mitra',
+            'farmer': 'auth.login_farmer',
+            }
+
+            return redirect(url_for(role_routes.get(login_type, 'auth.login_select')))
 
         if not user.get('active', True):
             flash('Account is inactive.', 'danger')
-            return render_template('auth/login.html')
 
-        update_last_login(str(user['_id']))
+            role_routes = {
+            'authority': 'auth.login_authority',
+            'centre': 'auth.login_centre',
+            'mitra': 'auth.login_mitra',
+            'farmer': 'auth.login_farmer',
+            }
+
+            return redirect(url_for(role_routes.get(login_type, 'auth.login_select')))
+
+        user_role = user.get('role', '').strip()
+
+        allowed_roles = {
+            'authority': [
+                'super_admin',
+                'avpl_admin',
+                'accountant',
+                'sales_unnatfarm',
+                'sales_nelocals'
+            ],
+            'centre': [
+                'ufc_admin'
+            ],
+            'mitra': [
+                'ufc_mitra'
+            ],
+            'farmer': [
+                'farmer'
+            ]
+        }
+
+        if login_type:
+            if user_role not in allowed_roles.get(login_type, []):
+                flash('You are not allowed to login from this login type.', 'danger')
+
+                role_routes = {
+                'authority': 'auth.login_authority',
+                'centre': 'auth.login_centre',
+                'mitra': 'auth.login_mitra',
+                'farmer': 'auth.login_farmer',
+                }
+
+                return redirect(url_for(role_routes.get(login_type, 'auth.login_select')))
+
+            update_last_login(str(user['_id']))
         set_user_session(user)
+
+        role_login_routes = {
+            'authority': 'auth.login_authority',
+            'centre': 'auth.login_centre',
+            'mitra': 'auth.login_mitra',
+            'farmer': 'auth.login_farmer',
+        }
+
+        if login_type in role_login_routes:
+            session['last_login_page'] = role_login_routes[login_type]
+        else:
+            session['last_login_page'] = 'auth.login_select'
 
         return redirect(url_for('dashboard.home'))
 
-    return render_template('auth/login.html')
+    return redirect(url_for('auth.login_select'))
+
+@auth_bp.route('/login/authority')
+def login_authority():
+    return render_template(
+        'auth/role_login.html',
+        role_title='Authority Login',
+        role_subtitle='Secure access for admins and management users.',
+        role_key='authority'
+    )
+
+
+@auth_bp.route('/login/centre')
+def login_centre():
+    return render_template(
+        'auth/role_login.html',
+        role_title='UnnatFarm Centre Login',
+        role_subtitle='Access centre operations, services and dashboard.',
+        role_key='centre'
+    )
+
+
+@auth_bp.route('/login/mitra')
+def login_mitra():
+    return render_template(
+        'auth/role_login.html',
+        role_title='UnnatFarm Mitra Login',
+        role_subtitle='Access field support and farmer service tools.',
+        role_key='mitra'
+    )
+
+
+@auth_bp.route('/login/farmer')
+def login_farmer():
+    return render_template(
+        'auth/role_login.html',
+        role_title='Farmer Login',
+        role_subtitle='Access farmer account, services and support.',
+        role_key='farmer'
+    )
 
 
 @auth_bp.route('/logout')
 def logout():
+    last_login_page = session.get('last_login_page', 'auth.login_select')
+
     clear_user_session()
+
     flash('Logged out successfully.', 'success')
-    return redirect(url_for('auth.login'))
+    return redirect(url_for(last_login_page))
 
 
 @auth_bp.route('/register/farmer', methods=['GET', 'POST'])

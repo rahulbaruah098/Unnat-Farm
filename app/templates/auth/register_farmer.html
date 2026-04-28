@@ -10,6 +10,8 @@
             <div class="grid-form two-col inner-grid">
                 <label>Name <input type="text" name="name" id="farmerName" value="{{ data.name if data else '' }}" required></label>
                 <label>Contact No. <input type="text" name="contact_no" id="farmerContact" value="{{ data.contact_no if data else '' }}" required></label>
+                <label>UFC Mitra UID<input type="text" name="mitra_uid" id="farmerMitraUidStep1" data-mitra-lookup value="{{ data.mitra_uid if data else '' }}" required>
+                </label>       
             </div>
             <button type="button" id="farmerNextBtn">Next</button>
         </div>
@@ -23,7 +25,9 @@
         <label class="farmer-full-field">Age <input type="number" name="age" value="{{ data.age if data else '' }}" required></label>
         <label class="farmer-full-field">Create Password <input type="password" name="password" required></label>
         <label class="farmer-full-field">UnnatFarm Centre UID <input type="text" name="centre_uid" value="{{ data.centre_uid if data else '' }}" required></label>
-        <label class="farmer-full-field">UnnatFarm Centre Mitra UID <input type="text" name="mitra_uid" data-mitra-lookup value="{{ data.mitra_uid if data else '' }}" required></label>
+        <label class="farmer-full-field">UnnatFarm Centre Mitra UID
+        <input type="text" id="farmerMitraUidMirror" value="{{ data.mitra_uid if data else '' }}" readonly>
+        </label>
         <label class="farmer-full-field">State <select name="state"><option value="">Select</option>{% for s in states %}<option value="{{ s }}" {% if data and data.state == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
         <label class="farmer-full-field">District <input type="text" name="district" value="{{ data.district if data else '' }}" placeholder="Auto-filled from Mitra UID, editable"></label>
         <label class="farmer-full-field">Block <input type="text" name="block" value="{{ data.block if data else '' }}" placeholder="Auto-filled from Mitra UID, editable"></label>
@@ -37,21 +41,38 @@
 document.addEventListener('DOMContentLoaded', function(){
     const name = document.getElementById('farmerName');
     const contact = document.getElementById('farmerContact');
+    const mitraUid = document.getElementById('farmerMitraUidStep1');
     const nameMirror = document.getElementById('farmerNameMirror');
     const contactMirror = document.getElementById('farmerContactMirror');
+    const mitraUidMirror = document.getElementById('farmerMitraUidMirror');
     const fullFields = Array.from(document.querySelectorAll('.farmer-full-field'));
     function showFull(){ fullFields.forEach(el => el.style.display='block'); }
     function hideFull(){ fullFields.forEach(el => el.style.display='none'); }
-    function syncFromTop(){ nameMirror.value = name.value; contactMirror.value = contact.value; }
-    function syncFromMirror(){ name.value = nameMirror.value; contact.value = contactMirror.value; }
+    function syncFromTop(){
+        nameMirror.value = name.value;
+        contactMirror.value = contact.value;
+        mitraUidMirror.value = mitraUid.value;
+}
+
+    function syncFromMirror(){
+        name.value = nameMirror.value;
+        contact.value = contactMirror.value;
+}
+    
     hideFull();
-    if(name.value || contact.value){ showFull(); syncFromTop(); }
+    if(name.value && contact.value && mitraUid.value){ showFull(); syncFromTop(); }
     document.getElementById('farmerNextBtn').addEventListener('click', function(){
-        if(!name.value.trim() || !contact.value.trim()){ alert('Please enter farmer name and contact number first.'); return; }
+    if(!name.value.trim() || !contact.value.trim() || !mitraUid.value.trim()){
+        alert('Please enter Farmer Name, Phone Number and UFC Mitra UID first.');
+        return;
+}
         syncFromTop(); showFull();
     });
-    name.addEventListener('input', syncFromTop); contact.addEventListener('input', syncFromTop);
-    nameMirror.addEventListener('input', syncFromMirror); contactMirror.addEventListener('input', syncFromMirror);
+    name.addEventListener('input', syncFromTop);
+    contact.addEventListener('input', syncFromTop);
+    mitraUid.addEventListener('input', syncFromTop);
+    nameMirror.addEventListener('input', syncFromMirror);
+    contactMirror.addEventListener('input', syncFromMirror);
 });
 </script>
 {% endblock %}
