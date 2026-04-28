@@ -10,19 +10,7 @@
     {% if session.get('user_id') and request.endpoint not in ['auth.login'] %}
     <aside class="sidebar">
         <div class="brand">UnnatFarm MIS</div>
-        <div class="role-chip">
-            {% set role_labels = {
-                'accounts': 'Accountant',
-                'sales_unnatfarm': 'Sales - UnnatFarm',
-                'sales_nelocals': 'Sales - NeLocals',
-                'avpl_admin': 'AVPL Admin',
-                'super_admin': 'Super Admin',
-                'ufc_admin': 'UnnatFarm Centre',
-                'ufc_mitra': 'UnnatFarm Mitra',
-                'farmer': 'Farmer'
-            } %}
-            {{ role_labels.get(session.get('role'), session.get('role','').replace('_',' ').title()) }}
-        </div>
+        <div class="role-chip">{{ session.get('role','').replace('_',' ').title() }}</div>
         <nav>
             <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
             <a href="{{ url_for('modules.profile') }}">My Profile</a>
@@ -77,7 +65,6 @@
             {% if session.get('role') == 'farmer' %}
                 <a href="{{ url_for('modules.profile') }}">Profile</a>
                 <a href="{{ url_for('modules.buy') }}">Buy</a>
-                <a href="{{ url_for('modules.add_farmer_product') }}">Add Product</a>
                 <a href="{{ url_for('modules.sell') }}">Sell</a>
                 <a href="{{ url_for('modules.finance') }}">Finance</a>
                 <a href="{{ url_for('modules.insurance') }}">Insurance</a>
@@ -91,16 +78,8 @@
     </aside>
     {% endif %}
 
-    <main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login'] %} full{% endif %}">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-wrap">
-            {% for category, message in messages %}
-                <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
-            </div>
-        {% endif %}
-        {% endwith %}
+<main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %} full{% endif %}">
+     
         {% block content %}{% endblock %}
     </main>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>

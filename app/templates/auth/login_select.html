@@ -1,0 +1,928 @@
+{% extends 'base.html' %}
+{% block title %}UnnatFarm MIS - Select Login{% endblock %}
+
+{% block content %}
+<style>
+*{box-sizing:border-box}
+
+html,body{
+    margin:0;
+    width:100%;
+    min-height:100%;
+    font-family:"Times New Roman", Georgia, serif;
+    background:#dcefe2;
+}
+
+body{overflow:hidden}
+
+body>.container,
+body>main,
+.content,
+.main-content{
+    padding:0!important;
+    margin:0!important;
+    max-width:none!important;
+    width:100%!important;
+}
+
+/* SPLASH SCREEN */
+.uf-splash{
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+        radial-gradient(circle at 35% 35%, rgba(76,175,80,0.18), transparent 60%),
+        radial-gradient(circle at 70% 40%, rgba(227,242,253,0.9), transparent 60%),
+        linear-gradient(135deg,#FFFFFF,#F0F4F8,#EDF4FA);
+    opacity:1;
+    visibility:visible;
+    transition:opacity .65s ease, visibility .65s ease;
+}
+
+.uf-splash.is-hidden{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+}
+
+.uf-splash-content{
+    width:min(380px,86vw);
+    min-height:260px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+}
+
+.uf-splash-logo{
+    width:clamp(190px,24vw,270px);
+    max-width:74vw;
+    height:auto;
+    display:block;
+    opacity:1;
+    transform:none;
+    animation:none;
+}
+
+.uf-splash-loader{
+    height:22px;
+    margin-top:clamp(70px,12vh,110px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.uf-splash-dot{
+    width:12px;
+    height:12px;
+    margin:0 5px;
+    border-radius:50%;
+    background:linear-gradient(90deg,#1B5E20,#4CAF50);
+    display:inline-block;
+    animation:ufDot 1.2s infinite;
+}
+
+.uf-splash-dot:nth-child(2){animation-delay:.2s}
+.uf-splash-dot:nth-child(3){animation-delay:.4s}
+
+@keyframes ufDot{
+    0%,100%{opacity:.4;transform:scale(1)}
+    50%{opacity:1;transform:scale(1.3)}
+}
+
+.uf-landing{
+    width:100vw;
+    height:100vh;
+    min-height:100vh;
+    display:grid;
+ grid-template-columns:minmax(260px,30%) 1fr;
+    overflow:hidden;
+    color:#1f2933;
+    padding:clamp(24px,3.2vw,48px);
+    background:
+        radial-gradient(circle at 8% 12%, rgba(255,255,255,.58), transparent 24%),
+        radial-gradient(circle at 82% 88%, rgba(255,255,255,.48), transparent 28%),
+        linear-gradient(135deg,#b8d9bf 0%,#dcefe2 42%,#edf8ef 100%);
+}
+
+/* LEFT PANEL */
+.uf-left{
+    position:relative;
+    height:calc(100vh - clamp(48px,6.4vw,96px));
+    padding:clamp(26px,3vw,42px);
+    color:#1f2933;
+    overflow:hidden;
+    border-radius:24px 0 0 24px;
+    background:
+        radial-gradient(circle at 35% 37%, rgba(255,255,255,.65), transparent 28%),
+        linear-gradient(145deg,#d8f0de 0%,#c4e6cc 52%,#b2d9bb 100%);
+    box-shadow:0 28px 70px rgba(30,79,48,.16);
+}
+
+.uf-left::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+        radial-gradient(circle at 22% 48%, rgba(255,255,255,.46), transparent 26%),
+        radial-gradient(circle at 86% 12%, rgba(92,168,111,.10), transparent 30%);
+    pointer-events:none;
+}
+
+.uf-left-inner{
+    position:relative;
+    z-index:2;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
+
+.uf-govline{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:16px;
+}
+
+.uf-emblem{
+    width:100%;
+    display:flex;
+    justify-content:center;
+}
+
+.uf-emblem img{
+    width:clamp(135px,13vw,185px);
+    max-width:72%;
+    height:auto;
+    object-fit:contain;
+    filter:drop-shadow(0 12px 20px rgba(45,89,57,.18));
+}
+
+.uf-govline strong{
+    display:block;
+    font-size:26px;
+    line-height:1.05;
+    font-weight:700;
+    color:#20312a;
+}
+
+.uf-govline span{
+    display:block;
+    margin-top:6px;
+    font-size:15px;
+    line-height:1.3;
+    font-weight:500;
+    color:#52645a;
+}
+
+.uf-left-copy{margin-top:18px}
+
+.uf-left h1{
+    margin:0;
+    font-size:clamp(33px,3vw,54px);
+    line-height:1.13;
+    font-weight:700;
+    letter-spacing:.2px;
+    text-transform:uppercase;
+    color:#17252c;
+}
+
+.uf-highlight{
+    margin-top:36px;
+}
+
+.uf-highlight-logo{
+    width:clamp(165px,15vw,235px);
+    max-width:75%;
+    height:auto;
+    display:block;
+    margin:0 0 18px;
+    filter:drop-shadow(0 12px 24px rgba(45,89,57,.16));
+}
+
+.uf-highlight p{
+    margin:0;
+    max-width:390px;
+    font-size:18px;
+    line-height:1.5;
+    font-weight:500;
+    color:#4d5f56;
+}
+
+.uf-info-box{
+    padding:22px 24px;
+    border-radius:22px;
+     background:rgba(220,235,225,.85);
+    border:1px solid rgba(255,255,255,.72);
+    box-shadow:
+        0 18px 44px rgba(48,94,61,.12),
+        inset 0 1px 0 rgba(255,255,255,.72);
+    backdrop-filter:blur(14px);
+}
+
+.uf-info-box strong{
+    display:block;
+    font-size:22px;
+    line-height:1.15;
+    margin-bottom:10px;
+    font-weight:700;
+    color:#1d2e35;
+}
+
+.uf-info-box p{
+    margin:0;
+    font-size:16px;
+    line-height:1.45;
+    font-weight:500;
+    color:#51645a;
+}
+
+/* RIGHT PANEL */
+.uf-right{
+    position:relative;
+    height:calc(100vh - clamp(48px,6.4vw,96px));
+    padding:clamp(20px,2.3vw,34px) clamp(36px,5vw,82px) clamp(18px,2.2vw,28px);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border-radius:0 24px 24px 0;
+    background:
+        radial-gradient(circle at 78% 18%, rgba(202,231,207,.52), transparent 30%),
+        radial-gradient(circle at 14% 86%, rgba(210,241,218,.55), transparent 34%),
+        linear-gradient(135deg,#f7fbf8 0%,#f9fcfa 56%,#ffffff 100%);
+    box-shadow:0 28px 70px rgba(30,79,48,.13);
+}
+
+.uf-topbar{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    min-height:18px;
+}
+
+.uf-center-logo{
+    width:100%;
+    text-align:center;
+    margin:clamp(8px,1.8vh,22px) 0 clamp(16px,2.8vh,34px);
+    animation:ufLogoIn .75s ease both;
+}
+
+.uf-center-logo img{
+    width:clamp(215px,18vw,295px);
+    max-width:88%;
+    height:auto;
+    object-fit:contain;
+    filter:drop-shadow(0 16px 28px rgba(56,101,64,.16));
+    transition:transform .35s ease,filter .35s ease;
+}
+
+.uf-center-logo img:hover{
+    transform:translateY(-3px) scale(1.04);
+    filter:drop-shadow(0 20px 36px rgba(56,101,64,.22));
+}
+
+.uf-main{
+    width:min(940px,100%);
+    margin:0 auto;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    transform:translateY(-2px);
+}
+
+.uf-heading{
+    margin-bottom:24px;
+    animation:ufFadeUp .55s ease both;
+}
+
+.uf-heading h2{
+    margin:0;
+    color:#17252c;
+    font-size:clamp(32px,3vw,46px);
+    line-height:1;
+    font-weight:900;
+}
+
+.uf-heading p{
+    margin:14px 0 0;
+    padding-top:14px;
+    border-top:1px solid rgba(70,112,90,.16);
+    color:#52645a;
+    font-size:18px;
+    line-height:1.4;
+}
+
+.uf-login-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(250px,1fr));
+    gap:22px;
+}
+
+.uf-login-card{
+    position:relative;
+    min-height:112px;
+    padding:22px 24px;
+    border-radius:20px;
+    background:rgba(255,255,255,.96);
+    border:1px solid #ddece1;
+    box-shadow:
+        0 16px 0 rgba(31,41,51,.018),
+        0 22px 46px rgba(31,41,51,.09),
+        inset 0 1px 0 rgba(255,255,255,.92);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    text-decoration:none;
+    color:#111827;
+    transform-style:preserve-3d;
+    transition:transform .28s ease,box-shadow .28s ease,border-color .28s ease,background .28s ease;
+    animation:ufCardIn .55s ease both;
+}
+
+.uf-login-card:nth-child(2){animation-delay:.07s}
+.uf-login-card:nth-child(3){animation-delay:.14s}
+.uf-login-card:nth-child(4){animation-delay:.21s}
+
+.uf-login-card:hover{
+    transform:translateY(-7px) scale(1.01);
+    background:#fff;
+    border-color:#bfdcc6;
+    box-shadow:
+        0 18px 0 rgba(31,41,51,.018),
+        0 32px 62px rgba(31,41,51,.14),
+        inset 0 1px 0 rgba(255,255,255,1);
+}
+
+.uf-login-card:active{transform:translateY(-2px) scale(.995)}
+
+.uf-card-left{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    min-width:0;
+}
+
+.uf-icon{
+    width:62px;
+    height:62px;
+    flex:0 0 62px;
+    border-radius:50%;
+    background:#f8fcf9;
+    border:1px solid #d8eadc;
+    display:grid;
+    place-items:center;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.95),
+        0 10px 24px rgba(31,41,51,.05);
+    transition:transform .28s ease,box-shadow .28s ease;
+}
+
+.uf-login-card:hover .uf-icon{
+    transform:translateZ(16px) scale(1.05);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,1),
+        0 16px 30px rgba(31,41,51,.10);
+}
+
+.uf-icon svg{
+    width:31px;
+    height:31px;
+    display:block;
+}
+
+.uf-card-title{
+    display:block;
+    font-size:25px;
+    font-weight:900;
+    line-height:1.05;
+    color:#1f2933;
+}
+
+.uf-card-sub{
+    display:block;
+    margin-top:8px;
+    font-size:15px;
+    line-height:1.25;
+    color:#66766d;
+}
+
+.uf-arrow{
+    width:44px;
+    height:44px;
+    flex:0 0 44px;
+    border-radius:50%;
+    background:#22313a;
+    color:#fff;
+    display:grid;
+    place-items:center;
+    box-shadow:0 10px 18px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.16);
+    transition:transform .28s ease,background .28s ease,box-shadow .28s ease;
+}
+
+.uf-arrow svg{
+    width:21px;
+    height:21px;
+}
+
+.uf-login-card:hover .uf-arrow{
+    background:#3f8c5a;
+    transform:translateX(5px) scale(1.1);
+    box-shadow:0 14px 26px rgba(63,140,90,.28);
+}
+
+.uf-register-wrap{
+    display:flex;
+    justify-content:center;
+    margin-top:28px;
+    padding-top:22px;
+    animation:ufFadeUp .65s ease .18s both;
+}
+
+.uf-register-btn{
+    position:relative;
+    min-width:330px;
+    text-align:center;
+    padding:18px 32px;
+    border-radius:8px;
+    background:#22313a;
+    color:#fff;
+    text-decoration:none;
+    font-size:22px;
+    line-height:1;
+    font-weight:900;
+    box-shadow:
+        0 16px 32px rgba(34,49,58,.22),
+        inset 0 -3px 0 rgba(0,0,0,.18),
+        inset 0 1px 0 rgba(255,255,255,.14);
+    overflow:hidden;
+    transition:transform .28s ease,box-shadow .28s ease,background .28s ease;
+}
+
+.uf-register-btn::after{
+    content:"";
+    position:absolute;
+    top:0;
+    left:-70%;
+    width:44%;
+    height:100%;
+    background:rgba(255,255,255,.20);
+    transform:skewX(-20deg);
+    transition:left .55s ease;
+}
+
+.uf-register-btn:hover{
+    background:#3f8c5a;
+    transform:translateY(-5px);
+    box-shadow:
+        0 24px 44px rgba(63,140,90,.28),
+        inset 0 -3px 0 rgba(0,0,0,.18);
+}
+
+.uf-register-btn:hover::after{left:128%}
+
+.uf-footer{
+    text-align:center;
+    padding-top:8px;
+    color:#66766d;
+    font-size:14px;
+}
+
+.uf-footer a{
+    color:#3f8c5a;
+    font-weight:900;
+    text-decoration:none;
+}
+
+.uf-footer a:hover{text-decoration:underline}
+
+@keyframes ufFadeUp{
+    from{opacity:0;transform:translateY(18px)}
+    to{opacity:1;transform:translateY(0)}
+}
+
+@keyframes ufCardIn{
+    from{opacity:0;transform:translateY(22px) scale(.98)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+@keyframes ufLogoIn{
+    from{opacity:0;transform:translateY(-8px) scale(.96)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+/* LARGE TABLET / SMALL LAPTOP */
+@media(max-width:1280px){
+    .uf-landing{
+        grid-template-columns:360px 1fr;
+        padding:22px;
+    }
+    .uf-left,
+    .uf-right{
+        height:calc(100vh - 44px);
+    }
+    .uf-left{padding:24px}
+    .uf-emblem img{width:138px}
+    .uf-govline strong{font-size:22px}
+    .uf-govline span{font-size:13px}
+    .uf-left h1{font-size:35px}
+    .uf-highlight{margin-top:24px}
+    .uf-highlight-logo{width:170px}
+    .uf-highlight p{font-size:16px}
+    .uf-right{padding:18px 36px 24px}
+    .uf-center-logo{margin:6px 0 16px}
+    .uf-center-logo img{width:215px}
+    .uf-main{width:min(800px,100%);transform:none}
+    .uf-login-grid{gap:17px}
+    .uf-login-card{min-height:98px;padding:18px}
+    .uf-card-title{font-size:22px}
+}
+
+/* NEST HUB / SHORT TABLET LANDSCAPE FIX */
+@media(max-width:1100px) and (min-width:861px){
+    .uf-landing{
+        grid-template-columns:300px 1fr;
+        padding:16px;
+    }
+    .uf-left,
+    .uf-right{
+        height:calc(100vh - 32px);
+    }
+    .uf-left{padding:18px}
+    .uf-emblem img{width:112px}
+    .uf-govline{gap:8px}
+    .uf-govline strong{font-size:18px}
+    .uf-govline span{font-size:12px}
+    .uf-left h1{font-size:26px;line-height:1.08}
+    .uf-highlight{margin-top:16px}
+    .uf-highlight-logo{width:135px;margin-bottom:10px}
+    .uf-highlight p{font-size:13px;max-width:280px;line-height:1.35}
+    .uf-info-box{padding:14px 16px;border-radius:16px}
+    .uf-info-box strong{font-size:16px}
+    .uf-info-box p{font-size:12px;line-height:1.35}
+    .uf-right{padding:12px 24px 16px}
+    .uf-topbar{min-height:4px}
+    .uf-center-logo{margin:0 0 12px}
+    .uf-center-logo img{width:182px}
+    .uf-main{width:100%;transform:none;justify-content:center}
+    .uf-heading{margin-bottom:12px}
+    .uf-heading h2{font-size:29px}
+    .uf-heading p{font-size:13px;margin-top:8px;padding-top:8px}
+    .uf-login-grid{grid-template-columns:repeat(2,minmax(200px,1fr));gap:12px}
+    .uf-login-card{min-height:78px;padding:13px 15px;border-radius:16px}
+    .uf-icon{width:42px;height:42px;flex-basis:42px}
+    .uf-icon svg{width:23px;height:23px}
+    .uf-card-left{gap:12px}
+    .uf-card-title{font-size:17px}
+    .uf-card-sub{font-size:12px;margin-top:4px}
+    .uf-arrow{width:32px;height:32px;flex-basis:32px}
+    .uf-register-wrap{
+        margin-top:18px;
+        padding-top:14px;
+    }
+    .uf-register-btn{min-width:240px;font-size:16px;padding:12px 22px}
+    .uf-footer{font-size:12px;padding-top:6px}
+}
+
+@media(max-height:680px) and (min-width:861px){
+    .uf-landing{padding:14px}
+    .uf-left,
+    .uf-right{height:calc(100vh - 28px)}
+    .uf-left{padding:16px}
+    .uf-right{padding:10px 22px 14px}
+    .uf-emblem img{width:98px}
+    .uf-govline strong{font-size:17px}
+    .uf-govline span{font-size:11px}
+    .uf-left h1{font-size:24px}
+    .uf-highlight{margin-top:12px}
+    .uf-highlight-logo{width:118px;margin-bottom:8px}
+    .uf-highlight p{font-size:12px}
+    .uf-info-box{padding:12px}
+    .uf-info-box strong{font-size:15px}
+    .uf-info-box p{font-size:11px}
+    .uf-center-logo{margin:0 0 8px}
+    .uf-center-logo img{width:164px}
+    .uf-heading{margin-bottom:10px}
+    .uf-heading h2{font-size:27px}
+    .uf-heading p{font-size:12px}
+    .uf-login-card{min-height:72px;padding:12px}
+    .uf-card-title{font-size:16px}
+    .uf-card-sub{font-size:11px}
+    .uf-register-wrap{ margin-top:16px;
+        padding-top:12px;}
+    .uf-register-btn{font-size:15px;padding:11px 20px}
+}
+
+@media(max-width:860px){
+    body{overflow-x:hidden;overflow-y:auto}
+    .uf-landing{
+        display:block;
+        width:100vw;
+        height:auto;
+        min-height:100vh;
+        overflow:visible;
+        padding:18px;
+    }
+     .uf-register-wrap{
+        margin-top:22px;
+        padding-top:12px;
+    }
+    .uf-left{
+        width:100%;
+        min-height:auto;
+        height:auto;
+        padding:28px 22px;
+        border-radius:24px 24px 0 0;
+    }
+    .uf-left-inner{min-height:auto;gap:34px}
+    .uf-emblem img{width:150px}
+    .uf-left h1{font-size:clamp(30px,7.2vw,48px);line-height:1.12}
+    .uf-highlight-logo{width:170px}
+    .uf-highlight p{max-width:94%;font-size:clamp(15px,3.2vw,18px)}
+    .uf-info-box{margin-top:4px}
+    .uf-right{
+        width:100%;
+        height:auto;
+        min-height:auto;
+        padding:26px 22px 32px;
+        overflow:visible;
+        border-radius:0 0 24px 24px;
+    }
+    .uf-topbar{display:none}
+    .uf-center-logo{margin:0 0 22px}
+    .uf-center-logo img{width:210px}
+    .uf-main{width:100%;transform:none;justify-content:flex-start}
+    .uf-login-grid{grid-template-columns:1fr;gap:16px}
+    .uf-heading h2{font-size:34px}
+    .uf-heading p{font-size:16px}
+    .uf-login-card{min-height:96px;padding:19px}
+}
+
+@media(max-width:520px){
+    .uf-landing{padding:12px}
+    .uf-left{padding:24px 18px}
+    .uf-emblem img{width:135px}
+    .uf-govline strong{font-size:19px}
+    .uf-govline span{font-size:12px}
+    .uf-left h1{font-size:clamp(27px,8.1vw,36px)}
+    .uf-highlight-logo{width:145px}
+    .uf-info-box{padding:17px;border-radius:18px}
+    .uf-info-box strong{font-size:18px}
+    .uf-info-box p{font-size:14px}
+    .uf-right{padding:24px 16px 30px}
+    .uf-center-logo img{width:180px}
+    .uf-heading h2{font-size:31px}
+    .uf-heading p{font-size:15px}
+    .uf-login-card{min-height:94px;padding:17px 15px;border-radius:18px}
+    .uf-card-left{gap:13px}
+    .uf-icon{width:50px;height:50px;flex-basis:50px}
+    .uf-card-title{font-size:20px}
+    .uf-card-sub{font-size:13px}
+    .uf-arrow{width:38px;height:38px;flex-basis:38px}
+    .uf-register-btn{min-width:100%;font-size:20px;padding:17px 22px}
+    .uf-footer{font-size:13px;line-height:1.5}
+}
+
+/* REMOVE OUTER BOX LOOK - MAKE PAGE FULL SCREEN LIKE IMAGE 1 */
+.uf-landing{
+    padding:0 !important;
+}
+
+.uf-left,
+.uf-right{
+    height:100vh !important;
+    min-height:100vh !important;
+    max-height:100vh !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+}
+
+.uf-left{
+    border-radius:0 !important;
+}
+
+.uf-right{
+    border-radius:0 !important;
+}
+</style>
+
+<div class="uf-splash" id="ufSplash">
+    <div class="uf-splash-content">
+        <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm Logo" class="uf-splash-logo">
+        <div class="uf-splash-loader">
+            <span class="uf-splash-dot"></span>
+            <span class="uf-splash-dot"></span>
+            <span class="uf-splash-dot"></span>
+        </div>
+    </div>
+</div>
+
+<section class="uf-landing">
+
+    <aside class="uf-left">
+        <div class="uf-left-inner">
+
+            <div class="uf-govline">
+                <div class="uf-emblem">
+                    <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm">
+                </div>
+                <div>
+                    <strong>UnnatFarm Initiative</strong>
+                    <span>Agriculture • Market Linkage • Rural Enterprise</span>
+                </div>
+            </div>
+
+            <div class="uf-left-copy">
+                <h1>
+                    EMPOWERING<br>
+                    FARMERS THROUGH<br>
+                    SMART RURAL<br>
+                    SYSTEMS
+                </h1>
+
+                <div class="uf-highlight">
+                    <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm" class="uf-highlight-logo">
+                    <p>
+                        A unified digital platform for farmers, centres, mitras and authorities
+                        to manage services, registrations, support and growth.
+                    </p>
+                </div>
+            </div>
+
+            <div class="uf-info-box">
+                <strong>One Platform. Multiple Access Points.</strong>
+                <p>
+                    Choose your login type and continue to the dedicated dashboard designed
+                    for your role.
+                </p>
+            </div>
+
+        </div>
+    </aside>
+
+    <main class="uf-right">
+
+        <div class="uf-topbar"></div>
+
+        <div class="uf-center-logo">
+            <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm">
+        </div>
+
+        <div class="uf-main">
+
+            <div class="uf-heading">
+                <h2>Select Login Type</h2>
+                <p>Select your preferred access type to continue to UnnatFarm MIS.</p>
+            </div>
+
+            <div class="uf-login-grid">
+
+                <a href="{{ url_for('auth.login_authority') }}" class="uf-login-card">
+                    <div class="uf-card-left">
+                        <div class="uf-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="7" r="3.2" fill="#2563EB"/>
+                                <path d="M5.5 20c.8-4.1 3.2-6.2 6.5-6.2s5.7 2.1 6.5 6.2" fill="#DBEAFE"/>
+                                <path d="M5.5 20c.8-4.1 3.2-6.2 6.5-6.2s5.7 2.1 6.5 6.2" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M17.7 6.8l1.1.45v1.2c0 1.65-.9 2.95-2.25 3.45-1.35-.5-2.25-1.8-2.25-3.45v-1.2l1.1-.45 1.15-.47 1.15.47Z" fill="#22C55E" stroke="#15803D" stroke-width=".9"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="uf-card-title">Authority Login</span>
+                            <span class="uf-card-sub">Admin and management access</span>
+                        </div>
+                    </div>
+                    <span class="uf-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </a>
+
+                <a href="{{ url_for('auth.login_centre') }}" class="uf-login-card">
+                    <div class="uf-card-left">
+                        <div class="uf-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M4 10.2L12 5l8 5.2v9.3a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5v-9.3Z" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
+                                <path d="M9 21v-6h6v6" fill="#BAE6FD" stroke="#0284C7" stroke-width="1.4"/>
+                                <path d="M7 11.5h2.2M14.8 11.5H17M7 15h2.2M14.8 15H17" stroke="#0369A1" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M12 4v3" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="uf-card-title">UnnatFarm Centre Login</span>
+                            <span class="uf-card-sub">Centre operations dashboard</span>
+                        </div>
+                    </div>
+                    <span class="uf-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </a>
+
+                <a href="{{ url_for('auth.login_mitra') }}" class="uf-login-card">
+                    <div class="uf-card-left">
+                        <div class="uf-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="8" cy="8" r="2.7" fill="#F59E0B"/>
+                                <circle cx="16" cy="8" r="2.7" fill="#22C55E"/>
+                                <path d="M4.7 19.5c.45-3.1 1.95-4.8 4.1-4.8 1.25 0 2.25.55 2.95 1.55" stroke="#B45309" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M12.2 16.25c.7-1 1.7-1.55 2.95-1.55 2.15 0 3.65 1.7 4.1 4.8" stroke="#15803D" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M9.2 13.3l2.8 2.8 2.8-2.8" stroke="#2563EB" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="uf-card-title">UnnatFarm Mitra Login</span>
+                            <span class="uf-card-sub">Field support and farmer services</span>
+                        </div>
+                    </div>
+                    <span class="uf-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </a>
+
+                <a href="{{ url_for('auth.login_farmer') }}" class="uf-login-card">
+                    <div class="uf-card-left">
+                        <div class="uf-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M12 21V10" stroke="#15803D" stroke-width="1.7" stroke-linecap="round"/>
+                                <path d="M12 13c-4.6-.45-6.4-3.05-6.6-7.4 4.35.4 6.45 2.9 6.6 7.4Z" fill="#22C55E"/>
+                                <path d="M12 16c4.6-.45 6.4-3.05 6.6-7.4-4.35.4-6.45 2.9-6.6 7.4Z" fill="#84CC16"/>
+                                <path d="M8 21h8" stroke="#7C2D12" stroke-width="1.7" stroke-linecap="round"/>
+                                <path d="M9 21h6l1-5H8l1 5Z" fill="#F59E0B"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="uf-card-title">Farmer Login</span>
+                            <span class="uf-card-sub">Farmer account and services</span>
+                        </div>
+                    </div>
+                    <span class="uf-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </a>
+
+            </div>
+
+            <div class="uf-register-wrap">
+                <a href="{{ url_for('auth.register_farmer') }}" class="uf-register-btn">
+                    Signup For Farmer
+                </a>
+            </div>
+
+        </div>
+
+        <footer class="uf-footer">
+            © 2026
+            <a href="https://sayanant.com/" target="_blank" rel="noopener">Sayanant Group</a>.
+            All rights reserved.
+        </footer>
+
+    </main>
+
+</section>
+
+<script>
+(function () {
+    const splash = document.getElementById("ufSplash");
+    if (!splash) return;
+
+    const splashKey = "unnatfarm_login_select_splash_seen";
+    const currentUrl = window.location.href;
+    const lastUrl = sessionStorage.getItem("unnatfarm_last_url") || "";
+    const hasSeen = sessionStorage.getItem(splashKey) === "1";
+
+    const navEntry = performance.getEntriesByType("navigation")[0];
+    const navType = navEntry ? navEntry.type : "navigate";
+
+    const shouldShowSplash =
+        !hasSeen ||
+        (navType === "reload" && lastUrl === currentUrl);
+
+    sessionStorage.setItem("unnatfarm_last_url", currentUrl);
+
+    if (!shouldShowSplash) {
+        splash.classList.add("is-hidden");
+        return;
+    }
+
+    sessionStorage.setItem(splashKey, "1");
+
+    window.setTimeout(function () {
+        splash.classList.add("is-hidden");
+    }, 2600);
+})();
+</script>
+
+{% endblock %}
