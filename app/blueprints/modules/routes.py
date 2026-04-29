@@ -331,6 +331,46 @@ def purchases():
     return render_template("modules/purchases.html", items=items)
 
 
+def get_mitra_bonus_percentage(mitra_uid, bonus_type, category):
+    setting = mongo.db.mitra_bonus_settings.find_one({
+        "mitra_uid": mitra_uid,
+        "bonus_type": bonus_type,
+        "category": category
+    })
+
+    if setting:
+        return float(setting.get("percentage") or 2)
+
+    setting = mongo.db.mitra_bonus_settings.find_one({
+        "mitra_uid": None,
+        "bonus_type": bonus_type,
+        "category": category
+    })
+
+    if setting:
+        return float(setting.get("percentage") or 2)
+
+    setting = mongo.db.mitra_bonus_settings.find_one({
+        "mitra_uid": mitra_uid,
+        "bonus_type": bonus_type,
+        "category": "all"
+    })
+
+    if setting:
+        return float(setting.get("percentage") or 2)
+
+    setting = mongo.db.mitra_bonus_settings.find_one({
+        "mitra_uid": None,
+        "bonus_type": bonus_type,
+        "category": "all"
+    })
+
+    if setting:
+        return float(setting.get("percentage") or 2)
+
+    return 2
+
+
 @modules_bp.route('/pos', methods=['GET', 'POST'])
 @login_required
 @roles_required('ufc_admin')
@@ -352,6 +392,20 @@ def pos():
         'centre_uid': centre_uid,
         'approval_status': 'approved'
     }).sort('name', 1))
+    
+    mitras = list(mongo.db.ufc_mitra_master.find({
+        '$and': [
+            {'mitra_uid': {'$exists': True, '$ne': ''}},
+            {
+                '$or': [
+                    {'centre_uid': centre_uid},
+                    {'mapped_centre_uid': centre_uid},
+                    {'center_uid': centre_uid},
+                    {'mapped_center_uid': centre_uid}
+                ]
+            }
+        ]
+    }).sort('name', 1))
 
     products = list(mongo.db.products.find({
         '$or': [
@@ -366,17 +420,20 @@ def pos():
         farmer_id = None
         farmer_name = ''
         farmer_phone = ''
+        mitra_uid = request.form.get('mitra_uid', '').strip()
 
         if sale_type == 'registered':
             farmer_id = request.form.get('farmer_id')
             farmer = mongo.db.farmer_master.find_one({'_id': ObjectId(farmer_id)}) if farmer_id else None
 
-            if farmer:
-                farmer_name = farmer.get('name', '')
-                farmer_phone = farmer.get('contact_no', '')
+        if farmer:
+            farmer_name = farmer.get('name', '')
+            farmer_phone = farmer.get('contact_no', '')
+            mitra_uid = mitra_uid or farmer.get('mitra_uid', '')
         else:
             farmer_name = request.form.get('unregistered_farmer_name', '').strip()
             farmer_phone = request.form.get('unregistered_farmer_phone', '').strip()
+            mitra_uid = request.form.get('mitra_uid', '').strip()
 
         product_id = request.form.get('product_id')
         product = mongo.db.products.find_one({'_id': ObjectId(product_id)}) if product_id else None
@@ -385,6 +442,16 @@ def pos():
         price = float(product.get('price') or 0) if product else 0
         total_amount = quantity * price
 
+        product_category = product.get('category') if product else ''
+
+        bonus_percentage = get_mitra_bonus_percentage(
+            mitra_uid,
+            'avpl_product_sale',
+            product_category
+        )
+
+        bonus_amount = round((total_amount * bonus_percentage) / 100, 2)
+
         sale_doc = {
             'centre_uid': centre_uid,
             'ufc_user_id': user_id,
@@ -392,13 +459,18 @@ def pos():
             'farmer_id': farmer_id,
             'farmer_name': farmer_name,
             'farmer_phone': farmer_phone,
+            'mitra_uid': mitra_uid,
             'product_id': product_id,
             'product_name': product.get('name') if product else '',
-            'product_category': product.get('category') if product else '',
+            'product_category': product_category,
             'product_type': product.get('type') if product else '',
             'quantity': quantity,
             'unit_price': price,
             'total_amount': total_amount,
+            'sale_source': 'avpl_product_sale',
+            'bonus_type': 'avpl_product_sale',
+            'bonus_percentage': bonus_percentage,
+            'bonus_amount': bonus_amount,
             'invoice_no': f"AVPL-{centre_uid}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
             'created_at': datetime.utcnow()
         }
@@ -416,10 +488,10 @@ def pos():
         'modules/pos.html',
         centre_uid=centre_uid,
         farmers=mapped_farmers,
+        mitras=mitras,
         products=products,
         sales=sales
     )
-
 
 @modules_bp.route('/pos/invoice/<sale_id>')
 @login_required
@@ -432,6 +504,80 @@ def pos_invoice(sale_id):
         return redirect(url_for('modules.pos'))
 
     return render_template('modules/pos_invoice.html', sale=sale)
+
+@modules_bp.route("/mitra-earnings")
+@login_required
+@roles_required("ufc_mitra")
+def mitra_earnings():
+    user_id = session.get("user_id")
+
+    mitra_profile = mongo.db.ufc_mitra_master.find_one({
+        "linked_user_id": user_id
+    }) or mongo.db.ufc_mitra_master.find_one({
+        "linked_user_id": ObjectId(user_id)
+    })
+
+    mitra_uid = mitra_profile.get("mitra_uid") if mitra_profile else None
+
+    today = datetime.utcnow()
+    month_start = datetime(today.year, today.month, 1)
+
+    if today.month == 12:
+        next_month_start = datetime(today.year + 1, 1, 1)
+    else:
+        next_month_start = datetime(today.year, today.month + 1, 1)
+
+    monthly_pos_sales = list(mongo.db.pos_sales.find({
+        "mitra_uid": mitra_uid,
+        "created_at": {
+            "$gte": month_start,
+            "$lt": next_month_start
+        }
+    }))
+
+    total_pos_sales = list(mongo.db.pos_sales.find({
+        "mitra_uid": mitra_uid
+    }))
+
+    monthly_avpl_earning = sum(float(s.get("bonus_amount") or 0) for s in monthly_pos_sales)
+    total_avpl_earning = sum(float(s.get("bonus_amount") or 0) for s in total_pos_sales)
+
+    monthly_farmer_sales = list(mongo.db.farmer_product_sales.find({
+        "mitra_uid": mitra_uid,
+        "created_at": {
+            "$gte": month_start,
+            "$lt": next_month_start
+        }
+    }))
+
+    total_farmer_sales = list(mongo.db.farmer_product_sales.find({
+        "mitra_uid": mitra_uid
+    }))
+
+    monthly_farmer_earning = sum(float(s.get("bonus_amount") or 0) for s in monthly_farmer_sales)
+    total_farmer_earning = sum(float(s.get("bonus_amount") or 0) for s in total_farmer_sales)
+
+    current_month_earning = monthly_avpl_earning + monthly_farmer_earning
+    total_earning = total_avpl_earning + total_farmer_earning
+
+    recent_sales = sorted(
+        monthly_pos_sales + monthly_farmer_sales,
+        key=lambda x: x.get("created_at"),
+        reverse=True
+    )[:20]
+
+    return render_template(
+        "modules/mitra_earnings.html",
+        mitra_profile=mitra_profile,
+        mitra_uid=mitra_uid,
+        current_month_earning=current_month_earning,
+        total_earning=total_earning,
+        monthly_avpl_earning=monthly_avpl_earning,
+        total_avpl_earning=total_avpl_earning,
+        monthly_farmer_earning=monthly_farmer_earning,
+        total_farmer_earning=total_farmer_earning,
+        recent_sales=recent_sales
+    )
 
 @modules_bp.route("/finance/leads")
 @login_required
@@ -447,3 +593,5 @@ def finance_leads():
         "modules/finance_leads.html",
         leads=leads
     )
+    
+    

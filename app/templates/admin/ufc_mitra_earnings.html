@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>UFC Mitra Earnings</h2>
+
+    <form method="get" class="grid-form two-col">
+        <label>Select Month
+            <input type="month" name="month" value="{{ selected_month }}">
+        </label>
+
+        <label>Select UFC Mitra
+            <select name="mitra_uid">
+                <option value="">All Mitras</option>
+                {% for m in mitras %}
+                    <option value="{{ m.mitra_uid }}" {% if selected_mitra_uid == m.mitra_uid %}selected{% endif %}>
+                        {{ m.name }} ({{ m.mitra_uid }})
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <div class="span-2">
+            <button type="submit">Filter</button>
+            <a href="{{ url_for('admin.ufc_mitra_earnings') }}">Reset</a>
+        </div>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>UFC Mitra</th>
+                <th>Mitra UID</th>
+                <th>Monthly AVPL Sale Bonus</th>
+                <th>Monthly Farmer Sale Bonus</th>
+                <th>Monthly Total</th>
+                <th>Total AVPL Sale Bonus</th>
+                <th>Total Farmer Sale Bonus</th>
+                <th>Total Earning</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+            <tr>
+                <td>
+                    {{ r.mitra_name or '-' }}<br>
+                    {% if r.linked_user_id %}
+                        <a href="{{ url_for('admin.users') }}">View Profile</a>
+                    {% endif %}
+                </td>
+                <td>{{ r.mitra_uid or '-' }}</td>
+                <td>₹{{ r.monthly_avpl_earning }}</td>
+                <td>₹{{ r.monthly_farmer_earning }}</td>
+                <td>₹{{ r.monthly_total_earning }}</td>
+                <td>₹{{ r.total_avpl_earning }}</td>
+                <td>₹{{ r.total_farmer_earning }}</td>
+                <td>₹{{ r.total_earning }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="8">No UFC Mitra earnings found.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

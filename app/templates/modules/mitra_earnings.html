@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>My Earnings</h2>
+
+    <p><strong>Mitra UID:</strong> {{ mitra_uid or '-' }}</p>
+
+    <div class="stat-grid">
+        <div class="stat-card">
+            <h3>Current Month Earning</h3>
+            <p>₹{{ current_month_earning }}</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>Total Earning</h3>
+            <p>₹{{ total_earning }}</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>AVPL Product Commission</h3>
+            <p>₹{{ total_avpl_earning }}</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>Farmer Product Commission</h3>
+            <p>₹{{ total_farmer_earning }}</p>
+        </div>
+    </div>
+
+    <h3>Current Month Breakdown</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Product</th>
+                <th>Sale Amount</th>
+                <th>Bonus %</th>
+                <th>Bonus Amount</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in recent_sales %}
+            <tr>
+                <td>{{ s.bonus_type|replace('_',' ')|title if s.bonus_type else '-' }}</td>
+                <td>{{ s.product_name }}</td>
+                <td>₹{{ s.total_amount }}</td>
+                <td>{{ s.bonus_percentage }}%</td>
+                <td>₹{{ s.bonus_amount }}</td>
+                <td>{{ s.created_at }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="6">No earnings available for this month.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

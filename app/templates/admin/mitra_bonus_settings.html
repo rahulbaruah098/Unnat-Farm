@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Mitra Bonus Settings</h2>
+
+    <form method="post" class="grid-form two-col">
+        <label>Bonus Type
+            <select name="bonus_type" required>
+                <option value="avpl_product_sale">AVPL Product Sale</option>
+                <option value="farmer_product_sale">Farmer Product Sale</option>
+            </select>
+        </label>
+
+        <label>Category
+            <input type="text" name="category" placeholder="Enter category or leave blank for all">
+        </label>
+
+        <label>Mitra (Optional)
+            <select name="mitra_uid">
+                <option value="">All Mitras</option>
+                {% for m in mitras %}
+                    <option value="{{ m.mitra_uid }}">
+                        {{ m.name }} ({{ m.mitra_uid }})
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Bonus Percentage
+            <input type="number" step="0.1" name="percentage" required>
+        </label>
+
+        <div class="span-2">
+            <button type="submit">Save Bonus Rule</button>
+        </div>
+    </form>
+
+    <h3>Existing Rules</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Mitra</th>
+                <th>%</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in settings %}
+            <tr>
+                <td>{{ s.bonus_type }}</td>
+                <td>{{ s.category }}</td>
+                <td>{{ s.mitra_uid or 'All' }}</td>
+                <td>{{ s.percentage }}%</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="4">No settings yet</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

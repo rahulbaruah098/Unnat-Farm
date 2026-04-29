@@ -8,6 +8,7 @@ from app.services.user_service import create_user
 from app.services.audit_service import log_action
 from app.services.document_service import store_document
 from app.services.location_service import list_states
+from datetime import datetime
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -267,3 +268,111 @@ def onboard_trader():
         return redirect(url_for('admin.onboard_trader'))
     traders = list(mongo.db.trader_onboarding.find({}).sort('created_at', -1))
     return render_template('admin/trader_onboarding.html', traders=traders)
+
+@admin_bp.route('/mitra-bonus-settings', methods=['GET', 'POST'])
+@login_required
+@roles_required('avpl_admin')
+def mitra_bonus_settings():
+    if request.method == 'POST':
+        bonus_type = request.form.get('bonus_type')
+        category = request.form.get('category') or 'all'
+        mitra_uid = request.form.get('mitra_uid') or None
+        percentage = float(request.form.get('percentage') or 2)
+
+        mongo.db.mitra_bonus_settings.insert_one({
+            "bonus_type": bonus_type,
+            "category": category,
+            "mitra_uid": mitra_uid,
+            "percentage": percentage,
+            "created_at": now_utc(),
+            "updated_at": now_utc()
+        })
+
+        flash("Bonus setting saved.", "success")
+        return redirect(url_for('admin.mitra_bonus_settings'))
+
+    settings = list(mongo.db.mitra_bonus_settings.find({}).sort('created_at', -1))
+
+    mitras = list(mongo.db.ufc_mitra_master.find({}).sort('name', 1))
+
+    return render_template(
+        'admin/mitra_bonus_settings.html',
+        settings=settings,
+        mitras=mitras
+    )
+    
+@admin_bp.route('/ufc-mitra-earnings')
+@login_required
+@roles_required('avpl_admin')
+def ufc_mitra_earnings():
+    selected_month = request.args.get('month', '').strip()
+    selected_mitra_uid = request.args.get('mitra_uid', '').strip()
+
+    mitras = list(mongo.db.ufc_mitra_master.find({}).sort('name', 1))
+
+    date_filter = {}
+
+    if selected_month:
+        year, month = map(int, selected_month.split('-'))
+        start_date = datetime(year, month, 1)
+
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1)
+        else:
+            end_date = datetime(year, month + 1, 1)
+
+        date_filter = {
+            'created_at': {
+                '$gte': start_date,
+                '$lt': end_date
+            }
+        }
+
+    rows = []
+
+    for mitra in mitras:
+        mitra_uid = mitra.get('mitra_uid')
+
+        if selected_mitra_uid and selected_mitra_uid != mitra_uid:
+            continue
+
+        base_filter = {
+            'mitra_uid': mitra_uid
+        }
+
+        monthly_filter = {
+            **base_filter,
+            **date_filter
+        }
+
+        pos_sales = list(mongo.db.pos_sales.find(monthly_filter))
+        farmer_sales = list(mongo.db.farmer_product_sales.find(monthly_filter))
+
+        total_pos_sales = list(mongo.db.pos_sales.find(base_filter))
+        total_farmer_sales = list(mongo.db.farmer_product_sales.find(base_filter))
+
+        monthly_avpl_earning = sum(float(s.get('bonus_amount') or 0) for s in pos_sales)
+        monthly_farmer_earning = sum(float(s.get('bonus_amount') or 0) for s in farmer_sales)
+
+        total_avpl_earning = sum(float(s.get('bonus_amount') or 0) for s in total_pos_sales)
+        total_farmer_earning = sum(float(s.get('bonus_amount') or 0) for s in total_farmer_sales)
+
+        rows.append({
+            'mitra_name': mitra.get('name'),
+            'mitra_uid': mitra_uid,
+            'linked_user_id': mitra.get('linked_user_id'),
+            'monthly_avpl_earning': monthly_avpl_earning,
+            'monthly_farmer_earning': monthly_farmer_earning,
+            'monthly_total_earning': monthly_avpl_earning + monthly_farmer_earning,
+            'total_avpl_earning': total_avpl_earning,
+            'total_farmer_earning': total_farmer_earning,
+            'total_earning': total_avpl_earning + total_farmer_earning
+        })
+
+    return render_template(
+        'admin/ufc_mitra_earnings.html',
+        rows=rows,
+        mitras=mitras,
+        selected_month=selected_month,
+        selected_mitra_uid=selected_mitra_uid
+    )    

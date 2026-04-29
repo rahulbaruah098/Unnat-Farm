@@ -677,7 +677,11 @@ body.menu-open .mobile-menu-btn{
                 <a href="{{ url_for('admin.users') }}">Users / IDs</a>
                 <a href="{{ url_for('validation.queue') }}">Validations</a>
                 <a href="{{ url_for('master.farmers') }}">Farmer Master</a>
+                <a href="{{ url_for('admin.mitra_bonus_settings') }}">Mitra Bonus Settings</a>
                 {% if session.get('role') in ['avpl_admin', 'sales_nelocals', 'sales_unnatfarm'] %}
+                {% if session.get('role') == 'avpl_admin' %}
+                <a href="{{ url_for('admin.ufc_mitra_earnings') }}">UFC Mitra Earnings</a>
+                {% endif %}
                 <a href="{{ url_for('modules.finance_leads') }}">Finance Leads</a>
                 {% endif %}
                 <a href="{{ url_for('master.ufc_admins') }}">UFC Admin Master</a>
@@ -720,6 +724,9 @@ body.menu-open .mobile-menu-btn{
                 <a href="{{ url_for('validation.queue') }}">Validations</a>
                 <a href="{{ url_for('modules.buy') }}">Buy</a>
                 <a href="{{ url_for('modules.sell') }}">Sell</a>
+                {% if session.get('role') == 'ufc_mitra' %}
+                <a href="{{ url_for('modules.mitra_earnings') }}">My Earnings</a>
+                {% endif %}
                 <a href="{{ url_for('modules.finance') }}">Financial Assistance</a>
                 <a href="{{ url_for('modules.insurance') }}">Insurance Support</a>
                 <a href="{{ url_for('modules.transactions') }}">Transactions</a>
