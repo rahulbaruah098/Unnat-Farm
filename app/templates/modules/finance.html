@@ -2,18 +2,57 @@
 {% block content %}
 <div class="page-card">
     <h2>Finance Module</h2>
-    <form method="post" class="grid-form two-col">
-        <label>Amount <input type="text" name="amount" required></label>
-        <label>Purpose <input type="text" name="purpose" required></label>
-        <div class="span-2"><button type="submit">Submit Finance Request</button></div>
-    </form>
+
+    <p><strong>Your Transaction Value:</strong> ₹{{ total_transaction }}</p>
+
+    {% if is_eligible %}
+        <p style="color:#059669;">
+            You are eligible to apply for financial assistance.
+        </p>
+
+        <form method="post" class="grid-form two-col">
+            <label>Amount 
+                <input type="text" name="amount" required>
+            </label>
+
+            <label>Purpose 
+                <input type="text" name="purpose" required>
+            </label>
+
+            <div class="span-2">
+                <button type="submit">Submit Finance Request</button>
+            </div>
+        </form>
+
+    {% else %}
+        <p style="color:#B91C1C;">
+            You can apply only after completing ₹30,000 transaction value.
+        </p>
+    {% endif %}
+
+    <h3>Your Requests</h3>
+
     <table>
-        <thead><tr><th>Amount</th><th>Purpose</th><th>Status</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Amount</th>
+                <th>Purpose</th>
+                <th>Transaction Value</th>
+                <th>Status</th>
+            </tr>
+        </thead>
         <tbody>
         {% for i in items %}
-            <tr><td>{{ i.amount }}</td><td>{{ i.purpose }}</td><td>{{ i.status }}</td></tr>
+            <tr>
+                <td>{{ i.amount }}</td>
+                <td>{{ i.purpose }}</td>
+                <td>₹{{ i.total_transaction }}</td>
+                <td>{{ i.status }}</td>
+            </tr>
         {% else %}
-            <tr><td colspan="3">No finance requests.</td></tr>
+            <tr>
+                <td colspan="4">No finance requests.</td>
+            </tr>
         {% endfor %}
         </tbody>
     </table>

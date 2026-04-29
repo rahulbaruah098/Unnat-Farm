@@ -105,20 +105,85 @@ def sell():
 
 @modules_bp.route("/finance", methods=["GET", "POST"])
 @login_required
+@roles_required("farmer")
 def finance():
+    user_id = session.get("user_id")
+
+    user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
+
+    farmer = mongo.db.farmer_master.find_one({
+        "linked_user_id": user_id
+    }) or mongo.db.farmer_master.find_one({
+        "linked_user_id": ObjectId(user_id)
+    }) or mongo.db.farmer_master.find_one({
+        "contact_no": user.get("phone")
+    }) or {}
+
+    farmer_phone = farmer.get("contact_no") or user.get("phone")
+
+    # 🔹 Calculate total POS transaction
+    sales = list(mongo.db.pos_sales.find({
+        "$or": [
+            {"farmer_id": str(farmer.get("_id"))},
+            {"farmer_phone": farmer_phone}
+        ]
+    }))
+
+    total_transaction = sum(float(s.get("total_amount") or 0) for s in sales)
+
+    is_eligible = total_transaction >= 30000
+
     if request.method == "POST":
-        mongo.db.finance_requests.insert_one({
-            "requested_by": session["user_id"],
-            "role": session["role"],
-            "amount": request.form.get("amount"),
-            "purpose": request.form.get("purpose"),
-            "status": "pending",
-            "created_at": now_utc(),
+
+        if not is_eligible:
+            flash("You can apply only after completing ₹30,000 transaction value.", "danger")
+            return redirect(url_for("modules.finance"))
+
+        amount = request.form.get("amount")
+        purpose = request.form.get("purpose")
+
+        address_parts = [
+            farmer.get("village"),
+            farmer.get("block"),
+            farmer.get("district"),
+            farmer.get("state")
+        ]
+        farmer_address = ", ".join([x for x in address_parts if x])
+
+        # 🔹 Save as LEAD
+        mongo.db.financial_assistance_leads.insert_one({
+            "farmer_user_id": user_id,
+            "farmer_name": farmer.get("name") or user.get("name"),
+            "farmer_mobile": farmer_phone,
+            "farmer_address": farmer_address,
+            "centre_uid": farmer.get("centre_uid"),
+            "amount": amount,
+            "purpose": purpose,
+            "total_transaction": total_transaction,
+            "status": "new",
+            "visible_to_roles": [
+                "avpl_admin",
+                "sales_nelocals",
+                "sales_unnatfarm"
+            ],
+            "created_at": now_utc()
         })
-        flash("Finance request submitted.", "success")
+
+        flash("Finance request submitted successfully.", "success")
         return redirect(url_for("modules.finance"))
-    items = list(mongo.db.finance_requests.find({"requested_by": session["user_id"]}).sort("created_at", -1))
-    return render_template("modules/finance.html", items=items)
+
+    items = list(
+        mongo.db.financial_assistance_leads.find({
+            "farmer_user_id": user_id
+        }).sort("created_at", -1)
+    )
+
+    return render_template(
+        "modules/finance.html",
+        items=items,
+        total_transaction=total_transaction,
+        is_eligible=is_eligible
+    )
 
 
 @modules_bp.route("/insurance", methods=["GET", "POST"])
@@ -367,3 +432,18 @@ def pos_invoice(sale_id):
         return redirect(url_for('modules.pos'))
 
     return render_template('modules/pos_invoice.html', sale=sale)
+
+@modules_bp.route("/finance/leads")
+@login_required
+@roles_required("avpl_admin", "sales_nelocals", "sales_unnatfarm")
+def finance_leads():
+    role = session.get("role")
+
+    leads = list(mongo.db.financial_assistance_leads.find({
+        "visible_to_roles": role
+    }).sort("created_at", -1))
+
+    return render_template(
+        "modules/finance_leads.html",
+        leads=leads
+    )

@@ -677,6 +677,9 @@ body.menu-open .mobile-menu-btn{
                 <a href="{{ url_for('admin.users') }}">Users / IDs</a>
                 <a href="{{ url_for('validation.queue') }}">Validations</a>
                 <a href="{{ url_for('master.farmers') }}">Farmer Master</a>
+                {% if session.get('role') in ['avpl_admin', 'sales_nelocals', 'sales_unnatfarm'] %}
+                <a href="{{ url_for('modules.finance_leads') }}">Finance Leads</a>
+                {% endif %}
                 <a href="{{ url_for('master.ufc_admins') }}">UFC Admin Master</a>
                 <a href="{{ url_for('master.ufc_mitras') }}">UFC Mitra Master</a>
             {% endif %}

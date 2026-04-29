@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Financial Assistance Leads</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Farmer Name</th>
+                <th>Mobile</th>
+                <th>Address</th>
+                <th>Centre UID</th>
+                <th>Amount</th>
+                <th>Purpose</th>
+                <th>Transaction Value</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for lead in leads %}
+            <tr>
+                <td>{{ lead.created_at }}</td>
+                <td>{{ lead.farmer_name }}</td>
+                <td>{{ lead.farmer_mobile }}</td>
+                <td>{{ lead.farmer_address }}</td>
+                <td>{{ lead.centre_uid }}</td>
+                <td>₹{{ lead.amount }}</td>
+                <td>{{ lead.purpose }}</td>
+                <td>₹{{ lead.total_transaction }}</td>
+                <td>{{ lead.status }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="9">No financial assistance leads yet.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
