@@ -1,8 +1,84 @@
 {% set title = 'Sales UnnatFarm Dashboard' %}
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+.sales-up {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #ECFDF5;
+    color: #059669;
+    font-weight: 700;
+    box-shadow: 0 0 12px rgba(5, 150, 105, 0.35);
+}
+
+.sales-down {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #FEE2E2;
+    color: #B91C1C;
+    font-weight: 700;
+    box-shadow: 0 0 12px rgba(185, 28, 28, 0.35);
+}
+</style>
 <div class="page-card">
     <h2>{{ title }}</h2>
+
+    <h3>UFC Admin Sales Performance</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>UFC Centre UID</th>
+            <th>Weekly Sales</th>
+            <th>Weekly Status</th>
+            <th>Monthly Sales</th>
+            <th>Monthly Status</th>
+            <th>Yearly Sales</th>
+            <th>Yearly Status</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for row in ufc_sales_trends %}
+        <tr>
+            <td>{{ row.centre_uid }}</td>
+
+            <td>₹{{ "%.2f"|format(row.weekly_sales) }}</td>
+            <td>
+                {% if row.weekly_status == "up" %}
+                    <span class="sales-up">▲ Up</span>
+                {% else %}
+                    <span class="sales-down">▼ Down</span>
+                {% endif %}
+            </td>
+
+            <td>₹{{ "%.2f"|format(row.monthly_sales) }}</td>
+            <td>
+                {% if row.monthly_status == "up" %}
+                    <span class="sales-up">▲ Up</span>
+                {% else %}
+                    <span class="sales-down">▼ Down</span>
+                {% endif %}
+            </td>
+
+            <td>₹{{ "%.2f"|format(row.yearly_sales) }}</td>
+            <td>
+                {% if row.yearly_status == "up" %}
+                    <span class="sales-up">▲ Up</span>
+                {% else %}
+                    <span class="sales-down">▼ Down</span>
+                {% endif %}
+            </td>
+        </tr>
+    {% else %}
+        <tr>
+            <td colspan="7">No UFC sales records found.</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
 
     <h3>A table of Products available (Input of Farmers)</h3>
     <table>

@@ -21,15 +21,61 @@ def get_system_overview():
 
 def get_centre_dashboard(centre_uid):
     db = mongo.db
+
     mitras = list(db.ufc_mitra_master.find({"mapped_centre_uid": centre_uid}))
-    mitra_uids = [m.get("mitra_uid") for m in mitras]
     farmers_count = db.farmer_master.count_documents({"centre_uid": centre_uid})
     orders = list(db.orders.find({"centre_uid": centre_uid}).sort("created_at", -1).limit(10))
+
+    sales = list(db.pos_sales.find({"centre_uid": centre_uid}).sort("created_at", -1))
+
+    mitra_sales_map = {}
+    farmer_sales_map = {}
+
+    for sale in sales:
+        total_amount = float(sale.get("total_amount") or 0)
+
+        mitra_uid = sale.get("mitra_uid") or "No Mitra"
+        if mitra_uid not in mitra_sales_map:
+            mitra_sales_map[mitra_uid] = {
+                "mitra_uid": mitra_uid,
+                "total_sales": 0,
+                "total_orders": 0
+            }
+
+        mitra_sales_map[mitra_uid]["total_sales"] += total_amount
+        mitra_sales_map[mitra_uid]["total_orders"] += 1
+
+        farmer_key = sale.get("farmer_phone") or sale.get("farmer_name") or "Unknown Farmer"
+        if farmer_key not in farmer_sales_map:
+            farmer_sales_map[farmer_key] = {
+                "farmer_name": sale.get("farmer_name") or "Unknown Farmer",
+                "farmer_phone": sale.get("farmer_phone") or "-",
+                "total_sales": 0,
+                "total_orders": 0
+            }
+
+        farmer_sales_map[farmer_key]["total_sales"] += total_amount
+        farmer_sales_map[farmer_key]["total_orders"] += 1
+
+    mitra_sales = sorted(
+        mitra_sales_map.values(),
+        key=lambda x: x["total_sales"],
+        reverse=True
+    )
+
+    farmer_sales = sorted(
+        farmer_sales_map.values(),
+        key=lambda x: x["total_sales"],
+        reverse=True
+    )
+
     return {
         "mitra_count": len(mitras),
         "farmer_count": farmers_count,
         "orders": orders,
         "mitras": mitras[:10],
+        "mitra_sales": mitra_sales,
+        "farmer_sales": farmer_sales,
     }
 
 

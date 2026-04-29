@@ -2,6 +2,7 @@ from bson import ObjectId
 from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify
 from app.extensions import mongo
 from app.utils.decorators import login_required
+from datetime import datetime, timedelta
 from app.services.dashboard_service import (
     get_system_overview,
     get_centre_dashboard,
@@ -40,6 +41,71 @@ def get_farmer_product_dashboard():
             "areas": ", ".join(sorted(row["areas"])) or "-"
         })
     return summary, products
+
+def get_ufc_admin_sales_trends():
+    now = datetime.utcnow()
+
+    week_start = now - timedelta(days=7)
+    prev_week_start = now - timedelta(days=14)
+
+    month_start = datetime(now.year, now.month, 1)
+    if now.month == 1:
+        prev_month_start = datetime(now.year - 1, 12, 1)
+    else:
+        prev_month_start = datetime(now.year, now.month - 1, 1)
+
+    year_start = datetime(now.year, 1, 1)
+    prev_year_start = datetime(now.year - 1, 1, 1)
+
+    sales = list(mongo.db.pos_sales.find({}))
+
+    centre_map = {}
+
+    for s in sales:
+        centre_uid = s.get("centre_uid") or "Unknown"
+        amount = _to_number(s.get("total_amount"))
+        created_at = s.get("created_at")
+
+        if not created_at:
+            continue
+
+        if centre_uid not in centre_map:
+            centre_map[centre_uid] = {
+                "centre_uid": centre_uid,
+                "weekly_sales": 0,
+                "previous_weekly_sales": 0,
+                "monthly_sales": 0,
+                "previous_monthly_sales": 0,
+                "yearly_sales": 0,
+                "previous_yearly_sales": 0,
+            }
+
+        if created_at >= week_start:
+            centre_map[centre_uid]["weekly_sales"] += amount
+        elif prev_week_start <= created_at < week_start:
+            centre_map[centre_uid]["previous_weekly_sales"] += amount
+
+        if created_at >= month_start:
+            centre_map[centre_uid]["monthly_sales"] += amount
+        elif prev_month_start <= created_at < month_start:
+            centre_map[centre_uid]["previous_monthly_sales"] += amount
+
+        if created_at >= year_start:
+            centre_map[centre_uid]["yearly_sales"] += amount
+        elif prev_year_start <= created_at < year_start:
+            centre_map[centre_uid]["previous_yearly_sales"] += amount
+
+    rows = []
+
+    for row in centre_map.values():
+        row["weekly_status"] = "up" if row["weekly_sales"] >= row["previous_weekly_sales"] else "down"
+        row["monthly_status"] = "up" if row["monthly_sales"] >= row["previous_monthly_sales"] else "down"
+        row["yearly_status"] = "up" if row["yearly_sales"] >= row["previous_yearly_sales"] else "down"
+        rows.append(row)
+
+    rows.sort(key=lambda x: x["yearly_sales"], reverse=True)
+
+    return rows
 
 @dashboard_bp.route("/")
 def home():
@@ -133,7 +199,14 @@ def home():
 
     if role == "sales_unnatfarm":
         product_summary, farmer_products = get_farmer_product_dashboard()
-        return render_template("dashboard/sales_unnatfarm.html", product_summary=product_summary, farmer_products=farmer_products)
+        ufc_sales_trends = get_ufc_admin_sales_trends()
+
+        return render_template(
+            "dashboard/sales_unnatfarm.html",
+            product_summary=product_summary,
+            farmer_products=farmer_products,
+            ufc_sales_trends=ufc_sales_trends
+        )
 
     if role == "ufc_admin":
         data = get_centre_dashboard(session.get("centre_uid"))

@@ -11,6 +11,56 @@
         <div class="stat"><span>Mapped UFC Mitras</span><strong>{{ data.mitra_count }}</strong></div>
         <div class="stat"><span>Mapped Farmers</span><strong>{{ data.farmer_count }}</strong></div>
     </div>
+
+    <h3>Mitra-wise Sales</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Mitra UID</th>
+            <th>Total Orders</th>
+            <th>Total Sales</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for row in data.mitra_sales %}
+        <tr>
+            <td>{{ row.mitra_uid }}</td>
+            <td>{{ row.total_orders }}</td>
+            <td>₹{{ "%.2f"|format(row.total_sales) }}</td>
+        </tr>
+    {% else %}
+        <tr>
+            <td colspan="3">No Mitra sales found.</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<h3>Farmer-wise Sales</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Farmer Name</th>
+            <th>Phone</th>
+            <th>Total Orders</th>
+            <th>Total Sales</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for row in data.farmer_sales %}
+        <tr>
+            <td>{{ row.farmer_name }}</td>
+            <td>{{ row.farmer_phone }}</td>
+            <td>{{ row.total_orders }}</td>
+            <td>₹{{ "%.2f"|format(row.total_sales) }}</td>
+        </tr>
+    {% else %}
+        <tr>
+            <td colspan="4">No Farmer sales found.</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
     <h3>Recent Orders</h3>
     <table><thead><tr><th>Status</th><th>Product</th><th>Quantity</th><th>Farmer / Source</th></tr></thead><tbody>
     {% for o in data.orders %}<tr><td>{{ o.status }}</td><td>{{ o.product_name }}</td><td>{{ o.quantity }}</td><td>{{ o.farmer_contact or o.source }}</td></tr>{% else %}<tr><td colspan="4">No orders yet.</td></tr>{% endfor %}
