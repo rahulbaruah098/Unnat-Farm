@@ -114,7 +114,7 @@ def login():
             'authority': [
                 'super_admin',
                 'avpl_admin',
-                'accountant',
+                'accounts',
                 'sales_unnatfarm',
                 'sales_nelocals'
             ],

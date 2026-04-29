@@ -581,17 +581,31 @@ def mitra_earnings():
 
 @modules_bp.route("/finance/leads")
 @login_required
-@roles_required("avpl_admin", "sales_nelocals", "sales_unnatfarm")
+@roles_required("avpl_admin", "sales_nelocals", "sales_unnatfarm", "accounts")
 def finance_leads():
     role = session.get("role")
 
-    leads = list(mongo.db.financial_assistance_leads.find({
-        "visible_to_roles": role
-    }).sort("created_at", -1))
+    if role == "accounts":
+        leads = list(mongo.db.financial_assistance_leads.find({}).sort("created_at", -1))
+    else:
+        leads = list(mongo.db.financial_assistance_leads.find({
+            "visible_to_roles": role
+        }).sort("created_at", -1))
 
     return render_template(
         "modules/finance_leads.html",
         leads=leads
     )
+    
+@modules_bp.route("/sales-details")
+@login_required
+@roles_required("avpl_admin", "sales_unnatfarm", "accounts")
+def sales_details():
+    sales = list(mongo.db.pos_sales.find({}).sort("created_at", -1))
+
+    return render_template(
+        "modules/sales_details.html",
+        sales=sales
+    )    
     
     

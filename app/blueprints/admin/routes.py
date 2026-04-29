@@ -271,7 +271,7 @@ def onboard_trader():
 
 @admin_bp.route('/mitra-bonus-settings', methods=['GET', 'POST'])
 @login_required
-@roles_required('avpl_admin')
+@roles_required('avpl_admin', 'accounts')
 def mitra_bonus_settings():
     if request.method == 'POST':
         bonus_type = request.form.get('bonus_type')
@@ -303,7 +303,7 @@ def mitra_bonus_settings():
     
 @admin_bp.route('/ufc-mitra-earnings')
 @login_required
-@roles_required('avpl_admin')
+@roles_required('avpl_admin', 'accounts')
 def ufc_mitra_earnings():
     selected_month = request.args.get('month', '').strip()
     selected_mitra_uid = request.args.get('mitra_uid', '').strip()

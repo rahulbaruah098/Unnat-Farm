@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Sales Details</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Centre UID</th>
+                <th>Farmer</th>
+                <th>Phone</th>
+                <th>Mitra UID</th>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total Sale</th>
+                <th>Bonus %</th>
+                <th>Mitra Bonus</th>
+                <th>Invoice</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in sales %}
+            <tr>
+                <td>{{ s.created_at }}</td>
+                <td>{{ s.centre_uid }}</td>
+                <td>{{ s.farmer_name }}</td>
+                <td>{{ s.farmer_phone }}</td>
+                <td>{{ s.mitra_uid or '-' }}</td>
+                <td>{{ s.product_name }}</td>
+                <td>{{ s.product_category }}</td>
+                <td>{{ s.quantity }}</td>
+                <td>₹{{ s.unit_price }}</td>
+                <td>₹{{ s.total_amount }}</td>
+                <td>{{ s.bonus_percentage or 0 }}%</td>
+                <td>₹{{ s.bonus_amount or 0 }}</td>
+                <td>
+                    <a href="{{ url_for('modules.pos_invoice', sale_id=s._id) }}" target="_blank">
+                        Invoice
+                    </a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="13">No sales found.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
