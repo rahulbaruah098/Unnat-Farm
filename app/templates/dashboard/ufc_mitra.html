@@ -2,6 +2,8 @@
 {% block content %}
 <div class="page-card">
     <h2>UFC Mitra Dashboard</h2>
+
+    
     <div class="uid-card">
         <span>Your Mitra UID</span>
         <strong class="masked-uid" data-real-uid="{{ session.get('mitra_uid') or '' }}">********</strong>
@@ -12,6 +14,31 @@
         <div class="stat"><span>Input Bonus 2%</span><strong>{{ data.input_bonus }}</strong></div>
         <div class="stat"><span>Output Bonus 2%</span><strong>{{ data.output_bonus }}</strong></div>
     </div>
+
+    <h3>Month-wise Sales</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>Month</th>
+            <th>Total Orders</th>
+            <th>Total Sales</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for row in data.monthly_sales %}
+        <tr>
+            <td>{{ row._id.month }}/{{ row._id.year }}</td>
+            <td>{{ row.total_orders }}</td>
+            <td>₹{{ "%.2f"|format(row.total_sales) }}</td>
+        </tr>
+    {% else %}
+        <tr>
+            <td colspan="3">No sales found.</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
     <h3>Farmer List</h3>
     <table><thead><tr><th>Name</th><th>Contact</th><th>Centre UID</th><th>Mitra UID</th><th>Village</th><th>Status</th></tr></thead><tbody>
     {% for f in data.farmers %}<tr><td>{{ f.name }}</td><td>{{ f.contact_no }}</td><td>{{ f.centre_uid or '-' }}</td><td>{{ f.mitra_uid or '-' }}</td><td>{{ f.village }}</td><td>{{ f.approval_status }}</td></tr>{% else %}<tr><td colspan="6">No mapped farmers.</td></tr>{% endfor %}

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>POS Invoice</h2>
+
+    <div class="info-banner">
+        Invoice No: <strong>{{ sale.invoice_no }}</strong>
+    </div>
+
+    <table>
+        <tr><th>Centre UID</th><td>{{ sale.centre_uid }}</td></tr>
+        <tr><th>Farmer</th><td>{{ sale.farmer_name }}</td></tr>
+        <tr><th>Farmer Phone</th><td>{{ sale.farmer_phone }}</td></tr>
+        <tr><th>Mitra UID</th><td>{{ sale.mitra_uid }}</td></tr>
+        <tr><th>Product</th><td>{{ sale.product_name }}</td></tr>
+        <tr><th>Category</th><td>{{ sale.product_category }}</td></tr>
+        <tr><th>Quantity</th><td>{{ sale.quantity }}</td></tr>
+        <tr><th>Unit Price</th><td>₹{{ sale.unit_price }}</td></tr>
+        <tr><th>Total Amount</th><td>₹{{ sale.total_amount }}</td></tr>
+        <tr><th>Bonus Amount</th><td>₹{{ sale.bonus_amount }}</td></tr>
+        <tr><th>Date</th><td>{{ sale.created_at }}</td></tr>
+    </table>
+
+    <div style="margin-top:18px; display:flex; gap:10px;">
+        <button onclick="window.print()">Print Invoice</button>
+        <a href="{{ url_for('modules.pos') }}">
+            <button type="button">Back to POS</button>
+        </a>
+    </div>
+</div>
+{% endblock %}

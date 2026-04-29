@@ -913,7 +913,7 @@
             </span>
             Finance Leads
         </a>
-
+            <a href="{{ url_for('modules.all_orders') }}">All Orders</a>
         <a href="{{ url_for('modules.sales_details') }}">
             <span class="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1043,12 +1043,9 @@
             UFC Mitras
         </a>
 
-        <a href="{{ url_for('modules.orders') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Orders
-        </a>
+            <a href="{{ url_for('modules.centre_orders') }}">
+                Orders
+            </a>
 
         <a href="{{ url_for('modules.pos') }}">
             <span class="nav-icon">
@@ -1087,6 +1084,8 @@
             Sell
         </a>
 
+        <a href="{{ url_for('modules.mitra_stock') }}">My Stock</a>
+
         <a href="{{ url_for('modules.mitra_earnings') }}">
             <span class="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1101,10 +1100,7 @@
             Financial Assistance
         </a>
 
-        <a href="{{ url_for('modules.insurance') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
+        <a href="{{ url_for('modules.insurance_leads') }}">
             Insurance Support
         </a>
 
@@ -1165,6 +1161,8 @@
             </span>
             LMS
         </a>
+
+        <a href="{{ url_for('modules.notifications') }}">Notifications</a>
 
         <a href="{{ url_for('modules.support') }}">
             <span class="nav-icon">

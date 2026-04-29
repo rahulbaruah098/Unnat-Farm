@@ -9,13 +9,145 @@ from datetime import datetime
 modules_bp = Blueprint("modules", __name__, url_prefix="/modules")
 
 
-@modules_bp.route("/buy")
+@modules_bp.route("/buy", methods=["GET", "POST"])
 @login_required
 def buy():
-    products = list(mongo.db.products.find({}).sort("created_at", -1))
-    farmer_products = list(mongo.db.farmer_products.find({"status": "active"}).sort("created_at", -1))
-    return render_template("modules/buy.html", products=products, farmer_products=farmer_products)
+    if request.method == "POST":
+        product_id = request.form.get("product_id")
+        quantity = float(request.form.get("quantity") or 0)
 
+        product = mongo.db.farmer_products.find_one({
+            "_id": ObjectId(product_id)
+        })
+
+        if not product:
+            flash("Product not found.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        available_qty = float(product.get("available_quantity") or 0)
+
+        if quantity <= 0:
+            flash("Quantity must be greater than zero.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        if quantity > available_qty:
+            flash("Not enough quantity available.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        mitra_uid = session.get("mitra_uid")
+        centre_uid = session.get("centre_uid")
+
+        unit_price = float(product.get("unit_price") or 0)
+        total_amount = quantity * unit_price
+
+        # ✅ Purchase record
+        purchase_doc = {
+            "mitra_uid": mitra_uid,
+            "centre_uid": centre_uid,
+            "farmer_product_id": product_id,
+            "seller_farmer_name": product.get("farmer_name"),
+            "seller_farmer_contact": product.get("farmer_contact"),
+            "product_name": product.get("product_name"),
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "total_amount": total_amount,
+            "status": "purchased",
+            "created_at": now_utc()
+        }
+
+        mongo.db.mitra_product_purchases.insert_one(purchase_doc)
+
+        # ✅ Notifications
+        mongo.db.notifications.insert_one({
+            "to_user_id": session.get("user_id"),
+            "role": "ufc_mitra",
+            "title": "Purchase Successful",
+            "message": f"{quantity} {product.get('product_name')} added to your stock.",
+            "status": "unread",
+            "created_at": now_utc()
+        })
+
+        mongo.db.notifications.insert_one({
+            "to_user_id": product.get("farmer_user_id"),
+            "role": "farmer",
+            "title": "Product Sold",
+            "message": f"{quantity} {product.get('product_name')} purchased by UFC Mitra.",
+            "status": "unread",
+            "created_at": now_utc()
+        })
+
+        # ✅ Add to Mitra stock
+        mongo.db.mitra_product_stock.update_one(
+            {
+                "mitra_uid": mitra_uid,
+                "centre_uid": centre_uid,
+                "product_name": product.get("product_name")
+            },
+            {
+                "$inc": {
+                    "available_quantity": quantity
+                },
+                "$set": {
+                    "mitra_uid": mitra_uid,
+                    "centre_uid": centre_uid,
+                    "product_name": product.get("product_name"),
+                    "updated_at": now_utc()
+                },
+                "$setOnInsert": {
+                    "created_at": now_utc()
+                }
+            },
+            upsert=True
+        )
+
+        # ✅ Reduce farmer quantity
+        current_qty = float(product.get("available_quantity") or 0)
+        new_qty = current_qty - quantity
+
+        mongo.db.farmer_products.update_one(
+            {"_id": ObjectId(product_id)},
+            {
+                "$set": {
+                    "available_quantity": new_qty,
+                    "updated_at": now_utc()
+                }
+            }
+        )
+
+        # ✅ Transaction log
+        mongo.db.farmer_product_sales.insert_one({
+            "mitra_uid": mitra_uid,
+            "centre_uid": centre_uid,
+            "product_name": product.get("product_name"),
+            "quantity": quantity,
+            "unit_price": unit_price,
+            "total_amount": total_amount,
+            "type": "purchase_from_farmer",
+            "created_at": now_utc()
+        })
+
+        flash(f"{quantity} {product.get('product_name')} purchased and added to your stock.", "success")
+        return redirect(url_for("modules.buy"))
+
+    # ===== GET LOGIC =====
+    products = list(mongo.db.products.find({}).sort("created_at", -1))
+
+    farmer_query = {"status": "active"}
+
+    if session.get("role") == "ufc_mitra":
+        farmer_query["mitra_uid"] = session.get("mitra_uid")
+    elif session.get("role") == "ufc_admin":
+        farmer_query["centre_uid"] = session.get("centre_uid")
+
+    farmer_products = list(
+        mongo.db.farmer_products.find(farmer_query).sort("created_at", -1)
+    )
+
+    return render_template(
+        "modules/buy.html",
+        products=products,
+        farmer_products=farmer_products
+    )
 
 def _farmer_product_choices(farmer):
     choices = []
@@ -70,8 +202,8 @@ def add_farmer_product():
             "product_name": product_name,
             "variety": request.form.get("variety", "").strip(),
             "average_size": request.form.get("average_size", "").strip(),
-            "available_quantity": request.form.get("available_quantity", "").strip(),
-            "unit_price": request.form.get("unit_price", "").strip(),
+            "available_quantity": float(request.form.get("available_quantity") or 0),
+            "unit_price": float(request.form.get("unit_price") or 0),
             "picture": picture,
             "status": "active",
             "created_at": now_utc(),
@@ -86,6 +218,121 @@ def add_farmer_product():
 @modules_bp.route("/sell", methods=["GET", "POST"])
 @login_required
 def sell():
+    role = session.get("role")
+
+    # UFC MITRA SELL MODULE - stock based selling
+    if role == "ufc_mitra":
+        user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
+        mitra_master = mongo.db.ufc_mitra_master.find_one({
+            "linked_user_id": session["user_id"]
+        }) or mongo.db.ufc_mitra_master.find_one({
+            "linked_user_id": ObjectId(session["user_id"])
+        }) or {}
+
+        mitra_uid = session.get("mitra_uid") or user.get("mitra_uid") or mitra_master.get("mitra_uid")
+        centre_uid = (
+            session.get("centre_uid")
+            or session.get("mapped_centre_uid")
+            or user.get("mapped_centre_uid")
+            or mitra_master.get("mapped_centre_uid")
+            or mitra_master.get("centre_uid")
+        )
+
+        if request.method == "POST":
+            source_product_id = request.form.get("source_product_id")
+            buyer_type = request.form.get("buyer_type")
+            buyer_farmer_id = request.form.get("buyer_farmer_id")
+            quantity = float(request.form.get("quantity") or 0)
+            unit_price = float(request.form.get("unit_price") or 0)
+            total_amount = quantity * unit_price
+
+            stock_item = mongo.db.mitra_product_stock.find_one({
+                "_id": ObjectId(source_product_id),
+                "mitra_uid": mitra_uid
+            })
+
+            if not stock_item:
+                flash("Selected stock product not found.", "danger")
+                return redirect(url_for("modules.sell"))
+
+            available_quantity = float(stock_item.get("available_quantity") or 0)
+
+            if quantity <= 0:
+                flash("Quantity must be greater than zero.", "danger")
+                return redirect(url_for("modules.sell"))
+
+            if quantity > available_quantity:
+                flash("Sale quantity cannot be greater than available stock.", "danger")
+                return redirect(url_for("modules.sell"))
+
+            buyer_farmer = None
+
+            if buyer_type == "farmer":
+                if not buyer_farmer_id:
+                    flash("Please select buyer farmer.", "danger")
+                    return redirect(url_for("modules.sell"))
+
+                buyer_farmer = mongo.db.farmer_master.find_one({
+                    "_id": ObjectId(buyer_farmer_id),
+                    "centre_uid": centre_uid
+                })
+
+                if not buyer_farmer:
+                    flash("Selected farmer not found under this UFC Center.", "danger")
+                    return redirect(url_for("modules.sell"))
+
+            mongo.db.mitra_product_sales.insert_one({
+                "mitra_uid": mitra_uid,
+                "centre_uid": centre_uid,
+                "source_product_id": source_product_id,
+                "product_name": stock_item.get("product_name"),
+                "buyer_type": buyer_type,
+                "buyer_farmer_id": buyer_farmer_id if buyer_type == "farmer" else None,
+                "buyer_farmer_name": buyer_farmer.get("name") if buyer_farmer else None,
+                "quantity": quantity,
+                "unit_price": unit_price,
+                "total_amount": total_amount,
+                "status": "sold",
+                "created_at": now_utc(),
+            })
+
+            mongo.db.mitra_product_stock.update_one(
+                {"_id": ObjectId(source_product_id)},
+                {
+                    "$inc": {
+                        "available_quantity": -quantity
+                    },
+                    "$set": {
+                        "updated_at": now_utc()
+                    }
+                }
+            )
+
+            flash("Product sold successfully.", "success")
+            return redirect(url_for("modules.sell"))
+
+        stock_items = list(mongo.db.mitra_product_stock.find({
+            "mitra_uid": mitra_uid,
+            "available_quantity": {"$gt": 0}
+        }).sort("created_at", -1))
+
+        farmers = list(mongo.db.farmer_master.find({
+            "centre_uid": centre_uid
+        }).sort("name", 1))
+
+        sales = list(mongo.db.mitra_product_sales.find({
+            "mitra_uid": mitra_uid
+        }).sort("created_at", -1))
+
+        return render_template(
+            "modules/sell.html",
+            mitra_sell_mode=True,
+            stock_items=stock_items,
+            farmers=farmers,
+            sales=sales
+        )
+
+    # EXISTING FARMER / OTHER ROLE SELL MODULE - keep unchanged
     if request.method == "POST":
         mongo.db.marketplace_posts.insert_one({
             "posted_by": session["user_id"],
@@ -99,8 +346,9 @@ def sell():
         })
         flash("Product posted for selling.", "success")
         return redirect(url_for("modules.sell"))
+
     posts = list(mongo.db.marketplace_posts.find({}).sort("created_at", -1))
-    return render_template("modules/sell.html", posts=posts)
+    return render_template("modules/sell.html", posts=posts, mitra_sell_mode=False)
 
 
 @modules_bp.route("/finance", methods=["GET", "POST"])
@@ -157,6 +405,7 @@ def finance():
             "farmer_mobile": farmer_phone,
             "farmer_address": farmer_address,
             "centre_uid": farmer.get("centre_uid"),
+            "mitra_uid": farmer.get("mitra_uid"),
             "amount": amount,
             "purpose": purpose,
             "total_transaction": total_transaction,
@@ -164,7 +413,9 @@ def finance():
             "visible_to_roles": [
                 "avpl_admin",
                 "sales_nelocals",
-                "sales_unnatfarm"
+                "sales_unnatfarm",
+                "accounts",
+                "ufc_mitra"
             ],
             "created_at": now_utc()
         })
@@ -189,19 +440,91 @@ def finance():
 @modules_bp.route("/insurance", methods=["GET", "POST"])
 @login_required
 def insurance():
+    user = mongo.db.users.find_one({
+        "_id": ObjectId(session["user_id"])
+    }) or {}
+
+    farmer = mongo.db.farmer_master.find_one({
+        "linked_user_id": session["user_id"]
+    }) or mongo.db.farmer_master.find_one({
+        "linked_user_id": ObjectId(session["user_id"])
+    }) or mongo.db.farmer_master.find_one({
+        "contact_no": user.get("phone")
+    }) or {}
+
+    farmer_phone = farmer.get("contact_no") or user.get("phone")
+
+    sales = list(mongo.db.pos_sales.find({
+        "$or": [
+            {"farmer_id": str(farmer.get("_id"))},
+            {"farmer_phone": farmer_phone}
+        ]
+    }))
+
+    total_transaction = sum(float(s.get("total_amount") or 0) for s in sales)
+
+    livestock_activities = [
+        "Pig", "Goat", "Cattle", "Dairy",
+        "Poultry", "Chicken", "Duck", "Fishery"
+    ]
+
+    farmer_activities = farmer.get("activities", [])
+
+    is_livestock_farmer = any(
+        activity in livestock_activities for activity in farmer_activities
+    )
+
+    is_eligible = is_livestock_farmer and total_transaction >= 30000
+
     if request.method == "POST":
+        if not is_eligible:
+            flash(
+                "Insurance can be applied only by livestock farmers after completing more than ₹30,000 AVPL sales transaction.",
+                "danger"
+            )
+            return redirect(url_for("modules.insurance"))
+
         mongo.db.insurance_requests.insert_one({
             "requested_by": session["user_id"],
+            "farmer_name": farmer.get("name") or user.get("name"),
+            "farmer_mobile": farmer_phone,
+            "centre_uid": farmer.get("centre_uid"),
+            "mitra_uid": farmer.get("mitra_uid"),
             "livestock_type": request.form.get("livestock_type"),
             "remarks": request.form.get("remarks"),
+            "total_transaction": total_transaction,
+            "is_livestock_farmer": is_livestock_farmer,
             "status": "pending",
             "created_at": now_utc(),
         })
+
         flash("Insurance request submitted.", "success")
         return redirect(url_for("modules.insurance"))
-    items = list(mongo.db.insurance_requests.find({"requested_by": session["user_id"]}).sort("created_at", -1))
-    return render_template("modules/insurance.html", items=items)
 
+    items = list(
+        mongo.db.insurance_requests.find({
+            "requested_by": session["user_id"]
+        }).sort("created_at", -1)
+    )
+
+    return render_template(
+        "modules/insurance.html",
+        items=items,
+        total_transaction=total_transaction,
+        is_livestock_farmer=is_livestock_farmer,
+        is_eligible=is_eligible
+    )
+
+
+@modules_bp.route("/insurance/leads")
+@login_required
+@roles_required("ufc_mitra")
+def insurance_leads():
+    items = list(mongo.db.insurance_requests.find({
+        "mitra_uid": session.get("mitra_uid")
+    }).sort("created_at", -1))
+
+    return render_template("modules/insurance_leads.html", items=items)
 
 @modules_bp.route("/lms")
 @login_required
@@ -493,6 +816,13 @@ def pos():
         sales=sales
     )
 
+@modules_bp.route("/all-orders")
+@login_required
+@roles_required("avpl_admin")
+def all_orders():
+    orders = list(mongo.db.orders.find({}).sort("created_at", -1))
+    return render_template("modules/all_orders.html", orders=orders)
+
 @modules_bp.route('/pos/invoice/<sale_id>')
 @login_required
 @roles_required('ufc_admin')
@@ -581,11 +911,15 @@ def mitra_earnings():
 
 @modules_bp.route("/finance/leads")
 @login_required
-@roles_required("avpl_admin", "sales_nelocals", "sales_unnatfarm", "accounts")
+@roles_required("avpl_admin", "sales_nelocals", "sales_unnatfarm", "accounts", "ufc_mitra")
 def finance_leads():
     role = session.get("role")
 
-    if role == "accounts":
+    if role == "ufc_mitra":
+        leads = list(mongo.db.financial_assistance_leads.find({
+            "mitra_uid": session.get("mitra_uid")
+        }).sort("created_at", -1))
+    elif role == "accounts":
         leads = list(mongo.db.financial_assistance_leads.find({}).sort("created_at", -1))
     else:
         leads = list(mongo.db.financial_assistance_leads.find({
@@ -608,4 +942,131 @@ def sales_details():
         sales=sales
     )    
     
-    
+@modules_bp.route("/notifications")
+@login_required
+def notifications():
+    items = list(
+        mongo.db.notifications.find({
+            "to_user_id": session.get("user_id")
+        }).sort("created_at", -1)
+    )
+
+    mongo.db.notifications.update_many(
+        {
+            "to_user_id": session.get("user_id"),
+            "status": "unread"
+        },
+        {
+            "$set": {
+                "status": "read",
+                "read_at": now_utc()
+            }
+        }
+    )
+
+    return render_template("modules/notifications.html", items=items)    
+
+@modules_bp.route("/mitra-stock")
+@login_required
+@roles_required("ufc_mitra")
+def mitra_stock():
+    items = list(mongo.db.mitra_product_stock.find({
+        "mitra_uid": session.get("mitra_uid")
+    }).sort("created_at", -1))
+
+    for item in items:
+        item["low_stock"] = float(item.get("available_quantity") or 0) < 5
+
+    return render_template("modules/mitra_stock.html", items=items)
+
+@modules_bp.route("/centre-orders", methods=["GET", "POST"])
+@login_required
+@roles_required("ufc_admin")
+def centre_orders():
+    centre_uid = session.get("centre_uid")
+
+    if request.method == "POST":
+        order_id = request.form.get("order_id")
+        status = request.form.get("status")
+
+        order = mongo.db.orders.find_one({
+            "_id": ObjectId(order_id),
+            "centre_uid": centre_uid
+        })
+
+        if not order:
+            flash("Order not found for this centre.", "danger")
+            return redirect(url_for("modules.centre_orders"))
+
+        mongo.db.orders.update_one(
+            {"_id": ObjectId(order_id)},
+            {
+                "$set": {
+                    "status": status,
+                    "updated_at": now_utc()
+                }
+            }
+        )
+
+        mongo.db.notifications.insert_one({
+            "to_user_id": order.get("farmer_user_id"),
+            "role": "farmer",
+            "title": "Order Status Updated",
+            "message": f"Your order for {order.get('product_name')} is now {status}.",
+            "status": "unread",
+            "created_at": now_utc()
+        })
+
+        flash("Order status updated and farmer notified.", "success")
+        return redirect(url_for("modules.centre_orders"))
+
+    orders = list(mongo.db.orders.find({
+        "centre_uid": centre_uid
+    }).sort("created_at", -1))
+
+    return render_template("modules/centre_orders.html", orders=orders)
+
+@modules_bp.route("/farmer/order", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def place_farmer_order():
+    product_id = request.form.get("product_id")
+    product_name = request.form.get("product_name")
+    quantity = float(request.form.get("quantity") or 0)
+    unit_price = float(request.form.get("unit_price") or 0)
+
+    if quantity <= 0:
+        flash("Invalid quantity.", "danger")
+        return redirect(url_for("dashboard.home"))
+
+    user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
+
+    farmer = mongo.db.farmer_master.find_one({
+        "linked_user_id": session["user_id"]
+    }) or mongo.db.farmer_master.find_one({
+        "linked_user_id": ObjectId(session["user_id"])
+    }) or mongo.db.farmer_master.find_one({
+        "contact_no": user.get("phone")
+    }) or {}
+
+    total_amount = quantity * unit_price
+
+    mongo.db.orders.insert_one({
+        "product_id": product_id,
+        "product_name": product_name,
+        "quantity": quantity,
+        "unit_price": unit_price,
+        "total_amount": total_amount,
+        "farmer_user_id": session.get("user_id"),
+        "farmer_id": str(farmer.get("_id")),
+        "farmer_name": farmer.get("name") or user.get("name"),
+        "farmer_contact": farmer.get("contact_no") or user.get("phone"),
+        "centre_uid": farmer.get("centre_uid"),
+        "mitra_uid": farmer.get("mitra_uid"),
+        "order_type": "farmer_purchase",
+        "status": "placed",
+        "created_at": now_utc()
+    })
+
+    flash("Order placed successfully.", "success")
+    return redirect(url_for("dashboard.home"))

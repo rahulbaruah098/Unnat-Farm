@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Centre Orders</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Farmer</th>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for o in orders %}
+            <tr>
+                <td>{{ o.farmer_name }}</td>
+                <td>{{ o.product_name }}</td>
+                <td>{{ o.quantity }}</td>
+                <td>₹{{ o.total_amount }}</td>
+                <td>
+                <form method="POST">
+        <input type="hidden" name="order_id" value="{{ o._id }}">
+        <select name="status" onchange="this.form.submit()">
+            <option value="placed" {% if o.status == 'placed' %}selected{% endif %}>Placed</option>
+            <option value="approved" {% if o.status == 'approved' %}selected{% endif %}>Approved</option>
+            <option value="rejected" {% if o.status == 'rejected' %}selected{% endif %}>Rejected</option>
+            <option value="delivered" {% if o.status == 'delivered' %}selected{% endif %}>Delivered</option>
+        </select>
+         </form>
+</td>
+                <td>{{ o.created_at }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="6">No orders found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

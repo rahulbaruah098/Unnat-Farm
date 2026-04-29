@@ -1,22 +1,283 @@
 {% extends 'base.html' %}
 {% block content %}
+
+{% if mitra_sell_mode %}
+
 <div class="page-card">
-    <h2>Sell Module</h2>
+    <h2>Sell Farmer Products</h2>
+
     <form method="post" class="grid-form two-col">
-        <label>Product Name <input type="text" name="product_name" required></label>
-        <label>Quantity <input type="text" name="quantity" required></label>
-        <label>Price <input type="text" name="price" required></label>
-        <div class="span-2"><button type="submit">Post Product</button></div>
+        <label>
+            Product from Mitra Stock
+            <select name="source_product_id" required>
+                <option value="">Select Product</option>
+                {% for item in stock_items %}
+                    <option value="{{ item._id }}">
+                        {{ item.product_name }} - Available: {{ item.available_quantity }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            Buyer Type
+            <select name="buyer_type" id="buyer_type" required onchange="toggleBuyerFarmer()">
+                <option value="">Select Buyer Type</option>
+                <option value="farmer">Farmer</option>
+                <option value="avpl">AVPL</option>
+            </select>
+        </label>
+
+        <label id="buyer_farmer_box" style="display:none;">
+            Buyer Farmer
+            <select name="buyer_farmer_id">
+                <option value="">Select Farmer</option>
+                {% for farmer in farmers %}
+                    <option value="{{ farmer._id }}">
+                        {{ farmer.name }} - {{ farmer.contact_no }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            Quantity
+            <input type="number" step="0.01" name="quantity" required>
+        </label>
+
+        <label>
+            Unit Price
+            <input type="number" step="0.01" name="unit_price" required>
+        </label>
+
+        <div class="span-2">
+            <button type="submit">Sell Product</button>
+        </div>
     </form>
+
     <table>
-        <thead><tr><th>Product</th><th>Quantity</th><th>Price</th><th>Role</th><th>Status</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Buyer Type</th>
+                <th>Buyer Farmer</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+            </tr>
+        </thead>
         <tbody>
-        {% for p in posts %}
-            <tr><td>{{ p.product_name }}</td><td>{{ p.quantity }}</td><td>{{ p.price }}</td><td>{{ p.role }}</td><td>{{ p.status }}</td></tr>
+        {% for sale in sales %}
+            <tr>
+                <td>{{ sale.product_name }}</td>
+                <td>{{ sale.buyer_type|title }}</td>
+                <td>{{ sale.buyer_farmer_name or '-' }}</td>
+                <td>{{ sale.quantity }}</td>
+                <td>₹{{ "%.2f"|format(sale.unit_price) }}</td>
+                <td>₹{{ "%.2f"|format(sale.total_amount) }}</td>
+                <td>{{ sale.status|title }}</td>
+            </tr>
         {% else %}
-            <tr><td colspan="5">No posts found.</td></tr>
+            <tr>
+                <td colspan="7">No Mitra sales found.</td>
+            </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
+
+<script>
+function toggleBuyerFarmer(){
+    const buyerType = document.getElementById("buyer_type").value;
+    const farmerBox = document.getElementById("buyer_farmer_box");
+    farmerBox.style.display = buyerType === "farmer" ? "block" : "none";
+}
+</script>
+
+{% else %}
+
+<div class="page-card farmer-sell-card">
+    <h2>Sell Product</h2>
+
+    <div class="farmer-sell-box">
+        <form method="post" enctype="multipart/form-data" class="farmer-sell-form">
+            <div class="form-line full">
+                <strong>Product Chosen:</strong>
+                <select name="product_name" required>
+                    <option value="">Select Product</option>
+                    <option value="Chicken">Chicken</option>
+                    <option value="Pig">Pig</option>
+                    <option value="Goat">Goat</option>
+                    <option value="Duck">Duck</option>
+                    <option value="Fish">Fish</option>
+                    <option value="Vegetables">Vegetables</option>
+                    <option value="Paddy">Paddy</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-line">
+                <strong>Variety:</strong>
+                <input type="text" name="variety" required>
+            </div>
+
+            <div class="form-line">
+                <strong>Average Size (weight of one product):</strong>
+                <input type="text" name="average_size" required>
+            </div>
+
+            <div class="form-line">
+                <strong>No.(s) of Product Available:</strong>
+                <input type="number" step="0.01" min="0.01" name="quantity" required>
+            </div>
+
+            <div class="form-line">
+                <strong>Set Price (Unit Price):</strong>
+                <input type="number" step="0.01" min="0.01" name="price" required>
+            </div>
+
+            <div class="form-line">
+                <strong>Upload pictures:</strong>
+                <input type="file" name="product_picture" accept="image/*">
+            </div>
+
+            <div class="form-action">
+                <button type="submit">Submit</button>
+            </div>
+        </form>
+    </div>
+
+    <h3 style="margin-top:28px;">My Listed Products</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Role</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in posts %}
+            <tr>
+                <td>{{ p.product_name }}</td>
+                <td>{{ p.quantity }}</td>
+                <td>{{ p.price }}</td>
+                <td>{{ p.role }}</td>
+                <td>{{ p.status }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="5">No posts found.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+.farmer-sell-card h2{
+    margin-bottom:22px;
+}
+
+.farmer-sell-box{
+    max-width:760px;
+    margin:0 auto;
+    border:1.5px solid #0F172A;
+    background:#fff;
+    padding:30px 46px 24px;
+}
+
+.farmer-sell-form{
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+}
+
+.form-line{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:#0F172A;
+}
+
+.form-line strong{
+    min-width:230px;
+    font-weight:700;
+}
+
+.form-line input[type="text"],
+.form-line input[type="number"],
+.form-line select{
+    border:0;
+    border-bottom:1.5px solid #0F172A;
+    border-radius:0;
+    padding:4px 6px;
+    height:30px;
+    outline:none;
+    background:#fff;
+    min-width:220px;
+}
+
+.form-line select{
+    border:1px solid #CBD5E1;
+    border-radius:6px;
+    min-width:240px;
+}
+
+.form-line input[type="file"]{
+    border:1px solid #94A3B8;
+    padding:3px 8px;
+    border-radius:0;
+    background:#fff;
+}
+
+.form-action{
+    display:flex;
+    justify-content:center;
+    padding-top:18px;
+}
+
+.form-action button{
+    background:#DBEAFE;
+    color:#0F172A;
+    border:1px solid #475569;
+    padding:8px 24px;
+    border-radius:0;
+    cursor:pointer;
+}
+
+.form-action button:hover{
+    background:#BFDBFE;
+}
+
+@media(max-width:700px){
+    .farmer-sell-box{
+        padding:24px 18px;
+    }
+
+    .form-line{
+        align-items:flex-start;
+        flex-direction:column;
+        gap:6px;
+    }
+
+    .form-line strong{
+        min-width:0;
+    }
+
+    .form-line input[type="text"],
+    .form-line input[type="number"],
+    .form-line select{
+        width:100%;
+        min-width:0;
+    }
+}
+</style>
+
+{% endif %}
+
 {% endblock %}

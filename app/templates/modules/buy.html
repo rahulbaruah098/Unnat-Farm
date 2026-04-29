@@ -1,60 +1,236 @@
 {% extends 'base.html' %}
 {% block content %}
+
 <div class="page-card">
     <h2>Buy Module</h2>
 
-    <h3>Farmer Available Products</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Picture</th>
-                <th>Product</th>
-                <th>Variety</th>
-                <th>Average Size</th>
-                <th>Available Quantity</th>
-                <th>Unit Price</th>
-                <th>Farmer</th>
-                <th>Contact</th>
-                <th>Village / Area</th>
-                <th>Centre UID</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for p in farmer_products %}
-            <tr>
-                <td>
-                    {% if p.picture %}
-                        <img class="product-thumb" src="{{ url_for('documents.serve', filename=p.picture) }}" alt="{{ p.product_name }}">
-                    {% else %}
-                        <span class="muted">No image</span>
-                    {% endif %}
-                </td>
-                <td>{{ p.product_name }}</td>
-                <td>{{ p.variety or '-' }}</td>
-                <td>{{ p.average_size or '-' }}</td>
-                <td>{{ p.available_quantity or '-' }}</td>
-                <td>{{ p.unit_price or '-' }}</td>
-                <td>{{ p.farmer_name or '-' }}</td>
-                <td>{{ p.farmer_contact or '-' }}</td>
-                <td>{{ p.village or '-' }}{% if p.block %}, {{ p.block }}{% endif %}{% if p.district %}, {{ p.district }}{% endif %}</td>
-                <td>{{ p.centre_uid or '-' }}</td>
-            </tr>
-        {% else %}
-            <tr><td colspan="10">No farmer products available.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <h3>Farmer Marketplace Products</h3>
 
-    <h3 style="margin-top:26px;">AVPL Product Catalogue</h3>
-    <table>
-        <thead><tr><th>Name</th><th>Category</th><th>Type</th><th>Available Centres</th><th>Price</th></tr></thead>
-        <tbody>
-        {% for p in products %}
-            <tr><td>{{ p.name }}</td><td>{{ p.category }}</td><td>{{ p.type }}</td><td>{{ p.available_centres }}</td><td>{{ p.price }}</td></tr>
+    <div class="marketplace-grid">
+        {% for p in farmer_products %}
+            <div class="market-card">
+                <div class="market-img-wrap">
+                    {% if p.picture %}
+                        <img src="{{ url_for('documents.serve', filename=p.picture) }}"
+                             alt="{{ p.product_name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% else %}
+                        <div class="no-image">No Image</div>
+                    {% endif %}
+                </div>
+
+                <div class="market-body">
+                    <h4>{{ p.product_name }}</h4>
+
+                    <p><strong>Variety:</strong> {{ p.variety or '-' }}</p>
+                    <p><strong>Average Size:</strong> {{ p.average_size or '-' }}</p>
+                    <p><strong>Farmer:</strong> {{ p.farmer_name or '-' }}</p>
+                    <p><strong>Contact:</strong> {{ p.farmer_contact or '-' }}</p>
+                    <p>
+                        <strong>Area:</strong>
+                        {{ p.village or '-' }}{% if p.block %}, {{ p.block }}{% endif %}{% if p.district %}, {{ p.district }}{% endif %}
+                    </p>
+                    <p><strong>Centre UID:</strong> {{ p.centre_uid or '-' }}</p>
+
+                    <div class="market-footer">
+                        <div>
+                            <span class="price">₹{{ p.unit_price or '-' }}</span>
+                            <small>Available: {{ p.available_quantity or '-' }}</small>
+                        </div>
+
+                        {% if session.get('role') == 'ufc_mitra' %}
+                            <form method="POST" class="buy-form">
+                                <input type="hidden" name="product_id" value="{{ p._id }}">
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    name="quantity"
+                                    placeholder="Qty"
+                                    required
+                                >
+                                <button type="submit">Buy</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         {% else %}
-            <tr><td colspan="5">No catalogue products available.</td></tr>
+            <div class="empty-market">No farmer products available.</div>
         {% endfor %}
-        </tbody>
-    </table>
+    </div>
+
+    <h3 style="margin-top:30px;">AVPL Product Catalogue</h3>
+
+    <div class="marketplace-grid">
+        {% for p in products %}
+            <div class="market-card">
+                <div class="market-img-wrap">
+                    {% if p.image_name %}
+                        <img src="{{ url_for('documents.serve', filename=p.image_name) }}"
+                             alt="{{ p.name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% elif p.picture %}
+                        <img src="{{ url_for('documents.serve', filename=p.picture) }}"
+                             alt="{{ p.name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% elif p.file_path %}
+                        <img src="{{ url_for('documents.serve', filename=p.file_path) }}"
+                             alt="{{ p.name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% elif p.image %}
+                        <img src="{{ url_for('documents.serve', filename=p.image) }}"
+                             alt="{{ p.name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% else %}
+                        <div class="no-image">No Image</div>
+                    {% endif %}
+                </div>
+
+                <div class="market-body">
+                    <h4>{{ p.name }}</h4>
+
+                    <p><strong>Category:</strong> {{ p.category or '-' }}</p>
+                    <p><strong>Type:</strong> {{ p.type or '-' }}</p>
+                    <p><strong>Available Centres:</strong> {{ p.available_centres or '-' }}</p>
+
+                    <div class="market-footer">
+                        <div>
+                            <span class="price">₹{{ p.price or '-' }}</span>
+                            <small>AVPL Catalogue Product</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-market">No catalogue products available.</div>
+        {% endfor %}
+    </div>
 </div>
+
+<style>
+.marketplace-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:18px;
+    margin-top:16px;
+}
+
+.market-card{
+    background:#fff;
+    border:1px solid #E2E8F0;
+    border-radius:20px;
+    overflow:hidden;
+    box-shadow:0 14px 34px rgba(15,23,42,.08);
+    transition:.2s ease;
+}
+
+.market-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 18px 42px rgba(15,23,42,.12);
+}
+
+.market-img-wrap{
+    width:100%;
+    height:170px;
+    background:#F1F5F9;
+}
+
+.market-img-wrap img,
+.no-image{
+    width:100%;
+    height:170px;
+    object-fit:cover;
+}
+
+.no-image{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#64748B;
+    font-weight:700;
+    background:#F1F5F9;
+}
+
+.market-body{
+    padding:16px;
+}
+
+.market-body h4{
+    margin:0 0 10px;
+    color:#0F172A;
+    font-size:1.08rem;
+}
+
+.market-body p{
+    margin:5px 0;
+    color:#475569;
+    font-size:.92rem;
+}
+
+.market-footer{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:flex-end;
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px solid #E2E8F0;
+}
+
+.price{
+    display:block;
+    color:#059669;
+    font-weight:800;
+    font-size:1.15rem;
+}
+
+.market-footer small{
+    display:block;
+    margin-top:3px;
+    color:#64748B;
+}
+
+.buy-form{
+    display:flex;
+    gap:8px;
+    align-items:center;
+}
+
+.buy-form input{
+    width:76px;
+    padding:8px 10px;
+    border:1px solid #CBD5E1;
+    border-radius:10px;
+}
+
+.buy-form button{
+    padding:8px 14px;
+    border:none;
+    border-radius:10px;
+    background:#059669;
+    color:#fff;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.buy-form button:hover{
+    background:#047857;
+}
+
+.empty-market{
+    grid-column:1/-1;
+    padding:18px;
+    border:1px dashed #CBD5E1;
+    border-radius:16px;
+    color:#64748B;
+    background:#F8FAFC;
+}
+</style>
+
 {% endblock %}

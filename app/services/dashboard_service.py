@@ -81,14 +81,40 @@ def get_centre_dashboard(centre_uid):
 
 def get_mitra_dashboard(mitra_uid):
     db = mongo.db
+
     farmers = list(db.farmer_master.find({"mitra_uid": mitra_uid}))
-    transactions = list(db.transactions.find({"mitra_uid": mitra_uid}).sort("created_at", -1).limit(10))
+
+    transactions = list(
+        db.transactions.find({"mitra_uid": mitra_uid})
+        .sort("created_at", -1)
+        .limit(10)
+    )
+
     total_purchase = sum(float(t.get("amount", 0)) for t in transactions if t.get("transaction_type") == "input_purchase")
     total_sale = sum(float(t.get("amount", 0)) for t in transactions if t.get("transaction_type") == "output_sale")
+
+    monthly_sales_pipeline = [
+        {"$match": {"mitra_uid": mitra_uid}},
+        {
+            "$group": {
+                "_id": {
+                    "year": {"$year": "$created_at"},
+                    "month": {"$month": "$created_at"}
+                },
+                "total_sales": {"$sum": "$total_amount"},
+                "total_orders": {"$sum": 1}
+            }
+        },
+        {"$sort": {"_id.year": -1, "_id.month": -1}}
+    ]
+
+    monthly_sales = list(db.pos_sales.aggregate(monthly_sales_pipeline))
+
     return {
         "farmer_count": len(farmers),
         "farmers": farmers[:20],
         "transactions": transactions,
+        "monthly_sales": monthly_sales,
         "monthly_sales_total": total_sale,
         "monthly_purchase_total": total_purchase,
         "input_bonus": round(total_purchase * 0.02, 2),
@@ -98,16 +124,62 @@ def get_mitra_dashboard(mitra_uid):
 
 def get_farmer_dashboard(phone):
     db = mongo.db
+
     farmer = db.farmer_master.find_one({"contact_no": phone}) or {}
-    purchases = list(db.transactions.find({"farmer_contact": phone, "transaction_type": "input_purchase"}).sort("created_at", -1).limit(10))
-    sales = list(db.transactions.find({"farmer_contact": phone, "transaction_type": "output_sale"}).sort("created_at", -1).limit(10))
+
+    purchases = list(
+        db.transactions.find({
+            "farmer_contact": phone,
+            "transaction_type": "input_purchase"
+        }).sort("created_at", -1).limit(10)
+    )
+
+    sales = list(
+        db.transactions.find({
+            "farmer_contact": phone,
+            "transaction_type": "output_sale"
+        }).sort("created_at", -1).limit(10)
+    )
+
+    my_orders = list(
+    db.orders.find({
+        "farmer_contact": phone
+    }).sort("created_at", -1).limit(10)
+)
+    
     total_volume = sum(float(x.get("amount", 0)) for x in purchases + sales)
-    finance_enabled = total_volume >= 5000
-    insurance_enabled = total_volume >= 3000 and any(a in ["Pig", "Goat", "Cattle"] for a in farmer.get("activities", []))
+
+    # ✅ UPDATED RULES
+    livestock_activities = ["Pig", "Goat", "Cattle", "Poultry", "Chicken", "Duck", "Fishery"]
+
+    is_livestock_farmer = any(
+        a in livestock_activities for a in farmer.get("activities", [])
+    )
+
+    finance_enabled = total_volume >= 30000
+    insurance_enabled = is_livestock_farmer and total_volume >= 30000
+
+    # ✅ NEW: RECOMMENDED PRODUCTS
+    recommended_products = list(
+        db.products.find({}).sort("created_at", -1).limit(8)
+    )
+
+    # ✅ NEW: MARKETPLACE (ALL FARMER PRODUCTS)
+    farmer_products_marketplace = list(
+        db.farmer_products.find({"status": "active"}).sort("created_at", -1).limit(12)
+    )
+
     return {
         "farmer": farmer,
         "purchases": purchases,
         "sales": sales,
         "finance_enabled": finance_enabled,
         "insurance_enabled": insurance_enabled,
+        "my_orders": my_orders,
+
+        # NEW DATA
+        "recommended_products": recommended_products,
+        "farmer_products_marketplace": farmer_products_marketplace,
+        "total_volume": total_volume,
+        "is_livestock_farmer": is_livestock_farmer
     }

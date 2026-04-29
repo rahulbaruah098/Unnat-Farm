@@ -2,6 +2,16 @@
 {% block content %}
 <div class="page-card">
     <h2>Insurance Module</h2>
+{% if not is_eligible %}
+<div class="alert alert-danger">
+    Insurance is available only for livestock farmers after completing more than ₹30,000 AVPL sales transaction.
+</div>
+{% endif %}
+
+<div class="info-banner">
+    Total AVPL Transaction: <strong>₹{{ total_transaction }}</strong> |
+    Livestock Farmer: <strong>{{ 'Yes' if is_livestock_farmer else 'No' }}</strong>
+</div>
     <form method="post" class="grid-form two-col">
         <label>Livestock Type
             <select name="livestock_type">
@@ -9,7 +19,9 @@
             </select>
         </label>
         <label>Remarks <input type="text" name="remarks"></label>
-        <div class="span-2"><button type="submit">Submit Insurance Request</button></div>
+        <div class="span-2"><button type="submit" {% if not is_eligible %}disabled{% endif %}>
+    Submit Insurance Request
+</button>
     </form>
     <table>
         <thead><tr><th>Livestock Type</th><th>Remarks</th><th>Status</th></tr></thead>

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Insurance Support Requests</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Farmer</th>
+                <th>Mobile</th>
+                <th>Livestock Type</th>
+                <th>Remarks</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for i in items %}
+            <tr>
+                <td>{{ i.farmer_name or '-' }}</td>
+                <td>{{ i.farmer_mobile or '-' }}</td>
+                <td>{{ i.livestock_type }}</td>
+                <td>{{ i.remarks }}</td>
+                <td>{{ i.status }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="5">No insurance support requests found.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

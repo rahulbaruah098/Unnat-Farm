@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>Notifications</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Message</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for n in items %}
+            <tr>
+                <td>{{ n.title }}</td>
+                <td>{{ n.message }}</td>
+                <td>{{ n.status }}</td>
+                <td>{{ n.created_at.strftime('%d-%m-%Y %I:%M %p') if n.created_at else '-' }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="4">No notifications found.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

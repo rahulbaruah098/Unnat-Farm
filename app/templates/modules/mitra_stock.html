@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-card">
+    <h2>My Stock</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Available Quantity</th>
+                <th>Status</th>
+                <th>Last Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for i in items %}
+            <tr>
+                <td>{{ i.product_name }}</td>
+                <td>{{ i.available_quantity }}</td>
+                <td>
+                    {% if i.low_stock %}
+                        <span style="color:#B91C1C;font-weight:700;">Low Stock</span>
+                    {% else %}
+                        <span style="color:#059669;font-weight:700;">Available</span>
+                    {% endif %}
+                </td>
+                <td>{{ i.updated_at.strftime('%d-%m-%Y') if i.updated_at else '-' }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="4">No stock available.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
