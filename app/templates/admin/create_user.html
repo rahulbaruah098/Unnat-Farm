@@ -1,9 +1,285 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+    .page-card{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        font-family:"Times New Roman", Georgia, serif;
+    }
+
+.title-row{
+    display:grid;
+    grid-template-columns:42px 1fr;
+    align-items:center;
+    column-gap:12px;
+    margin-bottom:18px;
+}
+
+.title-row h2{
+    margin:0;
+    color:#17252A;
+    font-size:clamp(1.35rem, 5vw, 1.9rem);
+    font-weight:700;
+    line-height:1.25;
+    letter-spacing:.2px;
+    text-align:left;
+    white-space:nowrap;
+}
+
+.back-btn{
+    display:inline-flex;
+    width:42px;
+    height:42px;
+    border:none;
+    border-radius:14px;
+    align-items:center;
+    justify-content:center;
+    background:rgba(228,247,234,.82);
+    color:#3B7D55;
+    font-size:1.65rem;
+    font-weight:700;
+    line-height:1;
+    cursor:pointer;
+    box-shadow:0 8px 20px rgba(95,168,120,.12);
+    transition:all .2s ease;
+}
+
+    .back-btn:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateX(-2px);
+    }
+
+    .muted{
+        display:block;
+        margin:0 0 22px;
+        color:#64748B;
+        font-size:1rem;
+        line-height:1.6;
+    }
+
+    .grid-form{
+        display:grid;
+        gap:18px;
+    }
+
+    .grid-form.two-col{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-form label{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#17252A;
+        font-size:1.05rem;
+        font-weight:700;
+    }
+
+    .grid-form input,
+    .grid-form select{
+        width:100%;
+        min-height:44px;
+        padding:10px 13px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:14px;
+        background:#fff;
+        color:#334155;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        outline:none;
+        transition:all .2s ease;
+    }
+
+    .grid-form input:focus,
+    .grid-form select:focus{
+        border-color:rgba(95,168,120,.55);
+        box-shadow:0 0 0 4px rgba(95,168,120,.12);
+    }
+
+    .grid-form small.muted{
+        margin:2px 0 0;
+        padding:10px 12px;
+        border:1px solid rgba(95,168,120,.16);
+        border-radius:14px;
+        background:rgba(228,247,234,.38);
+        color:#64748B;
+        font-size:.92rem;
+        line-height:1.45;
+        font-weight:400;
+    }
+
+    .span-2{
+        grid-column:1 / -1;
+        display:flex;
+        justify-content:flex-end;
+        margin-top:4px;
+    }
+
+    .span-2 button{
+        min-height:44px;
+        padding:10px 24px;
+        border:none;
+        border-radius:999px;
+        background:#5FA878;
+        color:#fff;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1.05rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 12px 26px rgba(95,168,120,.24);
+        transition:all .2s ease;
+    }
+
+    .span-2 button:hover{
+        background:#3B7D55;
+        transform:translateY(-1px);
+    }
+
+    .modal-overlay{
+        position:fixed;
+        inset:0;
+        background:rgba(15,23,42,.45);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        z-index:9999;
+        opacity:0;
+        pointer-events:none;
+        transition:.25s ease;
+    }
+
+    .modal-overlay.active{
+        opacity:1;
+        pointer-events:auto;
+    }
+
+    .modal-box{
+        width:min(92%, 420px);
+        background:#fff;
+        border-radius:20px;
+        padding:24px;
+        box-shadow:0 30px 60px rgba(15,23,42,.25);
+        font-family:"Times New Roman", Georgia, serif;
+        text-align:center;
+    }
+
+    .modal-box h3{
+        margin:0 0 10px;
+        color:#17252A;
+        font-size:1.4rem;
+        font-weight:700;
+    }
+
+    .modal-box p{
+        margin:0 0 20px;
+        color:#475569;
+        font-size:1rem;
+    }
+
+    .modal-actions{
+        display:flex;
+        gap:12px;
+        justify-content:center;
+    }
+
+    .btn-cancel,
+    .btn-confirm{
+        min-height:38px;
+        padding:8px 18px;
+        border-radius:999px;
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:700;
+        cursor:pointer;
+        border:1px solid transparent;
+        transition:.2s ease;
+    }
+
+    .btn-cancel{
+        background:#E2E8F0;
+        color:#334155;
+    }
+
+    .btn-confirm{
+        background:#5FA878;
+        color:#fff;
+    }
+
+    .btn-cancel:hover{
+        background:#CBD5E1;
+    }
+
+    .btn-confirm:hover{
+        background:#3B7D55;
+    }
+
+    @media (max-width:860px){
+
+        .page-card{
+            padding:22px;
+            border-radius:22px;
+        }
+
+        .grid-form.two-col{
+            grid-template-columns:1fr;
+        }
+
+        .span-2{
+            justify-content:stretch;
+        }
+
+        .span-2 button{
+            width:100%;
+        }
+    }
+
+    @media (max-width:420px){
+        .page-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+       .title-row{
+    grid-template-columns:38px 1fr;
+    column-gap:10px;
+}
+
+.title-row h2{
+    font-size:1.55rem;
+}
+
+.back-btn{
+    width:38px;
+    height:38px;
+    border-radius:12px;
+    font-size:1.45rem;
+}
+
+        .grid-form label{
+            font-size:1rem;
+        }
+
+        .modal-actions{
+            flex-direction:column;
+        }
+    }
+</style>
+
 <div class="page-card">
-    <h2>Create User / ID</h2>
+    <div class="title-row">
+        <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+        <h2>Create User / ID</h2>
+    </div>
+
     <p class="muted">UFC Admin UID is generated from selected state, e.g. AS0001. UFC Mitra UID is generated under the mapped centre, e.g. AS0001-01.</p>
-    <form method="post" class="grid-form two-col">
+
+    <form method="post" class="grid-form two-col" onsubmit="return handleCreate(event, this);">
         <label>Role
             <select name="role" required>
                 {% set role_labels = {
@@ -31,4 +307,38 @@
         <div class="span-2"><button type="submit">Create</button></div>
     </form>
 </div>
+
+<div id="createModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>Confirm Creation</h3>
+        <p>Are you sure you want to create this user?</p>
+        <div class="modal-actions">
+            <button type="button" class="btn-cancel" onclick="closeCreateModal()">Cancel</button>
+            <button type="button" class="btn-confirm" onclick="confirmCreate()">Create</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let createFormRef = null;
+
+function handleCreate(e, form){
+    e.preventDefault();
+    createFormRef = form;
+    document.getElementById('createModal').classList.add('active');
+    return false;
+}
+
+function closeCreateModal(){
+    document.getElementById('createModal').classList.remove('active');
+    createFormRef = null;
+}
+
+function confirmCreate(){
+    if(createFormRef){
+        createFormRef.submit();
+    }
+}
+</script>
+
 {% endblock %}

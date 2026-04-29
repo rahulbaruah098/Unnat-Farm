@@ -8,51 +8,47 @@
 
     <style>
         :root{
-            --uf-bg:#F6FBF7;
-            --uf-soft:#E4F7EA;
-            --uf-soft2:#F0FFF5;
+            --uf-bg:#E6F2EA;
+            --uf-soft:#D8EEDF;
+            --uf-soft2:#EAF7EE;
             --uf-panel:#FFFFFF;
             --uf-ink:#17252A;
             --uf-text:#425466;
-            --uf-line:#DCEEE2;
-            --uf-green:#5FA878;
-            --uf-green2:#8ED7A5;
+            --uf-line:#C7E2D0;
+            --uf-green:#4F9A6A;
+            --uf-green2:#7BCB95;
             --uf-red:#DC2626;
             --uf-redDark:#B91C1C;
             --uf-shadow:0 22px 55px rgba(23,37,42,.10);
             --uf-shadow2:0 10px 25px rgba(95,168,120,.18);
-            --sidebar-w:292px;
-            --header-h:74px;
+            --sidebar-w:clamp(245px, 16vw, 292px);
+            --header-h:clamp(64px, 4.4vw, 74px);
             --footer-h:64px;
+            --main-x:clamp(14px, 1.45vw, 26px);
+            --main-y:clamp(14px, 1.35vw, 24px);
+            --card-pad:clamp(18px, 1.65vw, 28px);
         }
 
         *{ box-sizing:border-box; }
 
-        html{ scroll-behavior:smooth; }
+        html{
+            scroll-behavior:smooth;
+            -webkit-text-size-adjust:100%;
+            text-size-adjust:100%;
+        }
 
         body{
             margin:0;
             min-height:100vh;
             font-family:Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background:
-                radial-gradient(circle at 10% 10%, rgba(142,215,165,.35), transparent 30%),
-                radial-gradient(circle at 90% 90%, rgba(95,168,120,.18), transparent 35%),
-                linear-gradient(135deg, #E6F8EC 0%, #F9FFFB 48%, #F4FAF6 100%);
+            font-size:clamp(14px, .86vw, 16px);
+            background:linear-gradient(135deg, #DCEFE2 0%, #EAF6EE 48%, #D8EBDF 100%);
             color:var(--uf-text);
             overflow-x:hidden;
         }
 
         body::before{
-            content:"";
-            position:fixed;
-            inset:0;
-            pointer-events:none;
-            background-image:
-                linear-gradient(rgba(95,168,120,.045) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(95,168,120,.045) 1px, transparent 1px);
-            background-size:34px 34px;
-            mask-image:linear-gradient(to bottom, rgba(0,0,0,.9), transparent);
-            z-index:0;
+            display:none;
         }
 
         .app-header{
@@ -65,11 +61,11 @@
             display:flex;
             align-items:center;
             justify-content:space-between;
-            padding:0 22px;
-            background:rgba(255,255,255,.86);
+            padding:0 clamp(12px, 1.2vw, 22px);
+            background:#EEF8F1;
             backdrop-filter:blur(18px);
-            border-bottom:1px solid rgba(220,238,226,.95);
-            box-shadow:0 12px 30px rgba(23,37,42,.05);
+            border-bottom:1px solid rgba(180,216,192,.95);
+            box-shadow:0 12px 30px rgba(23,37,42,.06);
         }
 
         .app-header-left{
@@ -80,8 +76,8 @@
         }
 
         .app-logo{
-            width:96px;
-            height:62px;
+           width:clamp(100px, 6vw, 130px);
+    height:clamp(60px, 4vw, 80px);
             border-radius:0;
             padding:0;
             background:transparent;
@@ -95,8 +91,8 @@
             border:none;
             outline:none;
             cursor:pointer;
-            width:46px;
-            height:46px;
+            width:clamp(42px, 2.6vw, 46px);
+            height:clamp(42px, 2.6vw, 46px);
             border-radius:16px;
             display:flex;
             align-items:center;
@@ -117,7 +113,7 @@
             height:52px;
             border:none;
             border-radius:18px;
-            background:rgba(228,247,234,.95);
+            background:rgba(216,238,223,.95);
             color:#316D48;
             font-size:24px;
             font-weight:900;
@@ -130,6 +126,14 @@
             background:linear-gradient(135deg,#2563EB,#1D4ED8);
             color:#fff;
             box-shadow:0 10px 25px rgba(37,99,235,.35);
+        }
+
+        body:not(.menu-open) .mobile-menu-btn,
+        body:not(.menu-open) .mobile-menu-btn:focus,
+        body:not(.menu-open) .mobile-menu-btn:active{
+            background:rgba(216,238,223,.95) !important;
+            color:#316D48 !important;
+            box-shadow:none !important;
         }
 
         .header-logout-btn{
@@ -145,16 +149,16 @@
 
         .sidebar{
             position:fixed;
+               padding-left:0;
+    padding-right:0;
             top:var(--header-h);
             left:0;
             bottom:var(--footer-h);
             width:var(--sidebar-w);
-            padding:20px 16px;
-            border-right:1px solid rgba(220,238,226,.95);
+           padding:clamp(14px, 1.1vw, 20px) 0;
+            border-right:1px solid rgba(180,216,192,.95);
             border-radius:0;
-            background:
-                linear-gradient(180deg, rgba(255,255,255,.94), rgba(240,255,245,.86)),
-                radial-gradient(circle at 30% 0%, rgba(142,215,165,.35), transparent 35%);
+            background:linear-gradient(180deg, #E0F1E6 0%, #EAF7EE 52%, #D9EDE1 100%);
             backdrop-filter:blur(18px);
             box-shadow:var(--uf-shadow);
             z-index:50;
@@ -165,44 +169,30 @@
             scrollbar-color:rgba(95,168,120,.45) transparent;
         }
 
-        .sidebar::before{
-            content:"";
-            position:absolute;
-            width:180px;
-            height:180px;
-            left:-80px;
-            top:-60px;
-            border-radius:50%;
-            background:rgba(142,215,165,.35);
-            filter:blur(8px);
-            z-index:-1;
-        }
-
+        .sidebar::before,
         .sidebar::after{
-            content:"";
-            position:absolute;
-            width:110px;
-            height:110px;
-            right:-40px;
-            bottom:-30px;
-            border-radius:50%;
-            background:rgba(95,168,120,.20);
-            filter:blur(6px);
-            z-index:-1;
+            display:none;
         }
 
-        .brand{
-            position:relative;
-            padding:80px 14px 12px 14px;
-            color:var(--uf-ink);
-            font-family:"Times New Roman", Georgia, serif;
-            font-size:1.52rem;
-            font-weight:800;
-            letter-spacing:.2px;
-            line-height:1.2;
-            flex:0 0 auto;
-            text-align:center;
-        }
+        .sidebar nav,
+.role-chip{
+    padding-left:12px;
+    padding-right:12px;
+}
+
+  .brand{
+    position:relative;
+    padding:clamp(68px, 4.4vw, 80px) 0 18px 0;
+    margin:0 0 14px 0;
+    color:var(--uf-ink);
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:clamp(1.28rem, 1.25vw, 1.52rem);
+    font-weight:800;
+    letter-spacing:.2px;
+    line-height:1.2;
+    text-align:center;
+    border-bottom:1px solid rgba(79,154,106,.25);
+}
 
         .brand::before{
             content:"";
@@ -210,8 +200,8 @@
             left:50%;
             transform:translateX(-50%);
             top:8px;
-            width:90px;
-            height:60px;
+            width:clamp(74px, 4.8vw, 90px);
+            height:clamp(50px, 3.2vw, 60px);
             background:url("{{ url_for('static', filename='images/unnat1.png') }}") center/contain no-repeat;
         }
 
@@ -222,12 +212,12 @@
             max-width:100%;
             margin:10px 12px 18px;
             padding:8px 14px;
-            border:1px solid rgba(95,168,120,.25);
+            border:1px solid rgba(79,154,106,.28);
             border-radius:999px;
-            color:#3B7D55;
-            background:rgba(228,247,234,.78);
+            color:#2F7548;
+            background:#DDF2E4;
             font-family:"Times New Roman", Georgia, serif;
-            font-size:.92rem;
+            font-size:clamp(.84rem, .75vw, .92rem);
             font-weight:800;
             text-transform:uppercase;
             letter-spacing:.55px;
@@ -236,10 +226,10 @@
         }
 
         .sidebar nav{
-            flex:1 1 auto;
-            min-height:0;
-            overflow-y:auto;
-            padding:4px 4px 12px;
+             flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    padding:4px 12px 12px;
             margin-bottom:8px;
             scrollbar-width:thin;
             scrollbar-color:rgba(95,168,120,.45) transparent;
@@ -257,13 +247,13 @@
             position:relative;
             display:flex;
             align-items:center;
-            min-height:48px;
+            min-height:clamp(42px, 2.75vw, 48px);
             margin:7px 4px;
-            padding:12px 16px 12px 46px;
+            padding:clamp(10px, .75vw, 12px) 16px clamp(10px, .75vw, 12px) 50px;
             color:#40515A;
             text-decoration:none;
             font-family:"Times New Roman", Georgia, serif;
-            font-size:1.13rem;
+            font-size:clamp(1rem, .92vw, 1.13rem);
             font-weight:700;
             border-radius:16px;
             transition:all .22s ease;
@@ -272,25 +262,35 @@
 
         .sidebar nav a::before,
         .sidebar-logout a::before{
-            content:"";
             position:absolute;
-            left:18px;
-            width:10px;
-            height:10px;
-            border-radius:50%;
-            background:linear-gradient(135deg, var(--uf-green), var(--uf-green2));
-            box-shadow:0 0 0 6px rgba(95,168,120,.10);
-            opacity:.72;
+            left:16px;
+            width:22px;
+            height:22px;
+            border-radius:9px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:rgba(255,255,255,.58);
+            border:1px solid rgba(79,154,106,.18);
+            color:#2F7548;
+            font-size:14px;
+            font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",Inter,sans-serif;
+            box-shadow:0 8px 18px rgba(47,117,72,.08);
+            opacity:1;
             transition:all .22s ease;
         }
 
+        .sidebar nav a::before,
+.sidebar-logout a::before{
+    display:none !important;
+}
         .sidebar nav a::after,
         .sidebar-logout a::after{
             content:"";
             position:absolute;
             inset:0;
             border-radius:16px;
-            background:linear-gradient(90deg, rgba(95,168,120,.12), transparent);
+            background:linear-gradient(90deg, rgba(79,154,106,.13), transparent);
             transform:translateX(-105%);
             transition:transform .28s ease;
             z-index:-1;
@@ -298,7 +298,7 @@
 
         .sidebar nav a:hover{
             color:var(--uf-ink);
-            background:rgba(255,255,255,.80);
+            background:rgba(255,255,255,.72);
             box-shadow:0 12px 25px rgba(23,37,42,.07);
             transform:translateX(4px);
         }
@@ -306,8 +306,10 @@
         .sidebar nav a:hover::after{ transform:translateX(0); }
 
         .sidebar nav a:hover::before{
-            opacity:1;
-            transform:scale(1.12);
+            color:#fff;
+            background:#4F9A6A;
+            border-color:#4F9A6A;
+            transform:scale(1.06);
         }
 
         .sidebar-logout{
@@ -329,24 +331,35 @@
         }
 
         .sidebar-logout a::before{
-            left:22px;
-            width:13px;
-            height:13px;
-            background:#fff;
-            box-shadow:0 0 0 6px rgba(255,255,255,.18);
+            content:"⎋";
+            left:20px;
+            width:22px;
+            height:22px;
+            border-radius:9px;
+            background:rgba(255,255,255,.18);
+            border:1px solid rgba(255,255,255,.28);
+            color:#fff;
+            box-shadow:0 0 0 0 rgba(255,255,255,0);
         }
 
         .sidebar-logout a:hover{
             transform:translateY(-1px);
             box-shadow:0 18px 34px rgba(220,38,38,.30);
+            background:linear-gradient(135deg, #EF4444, #DC2626);
+            color:#fff;
         }
 
         .main{
             position:relative;
             z-index:1;
             min-height:100vh;
+            width:calc(100% - var(--sidebar-w));
+            max-width:calc(100% - var(--sidebar-w));
             margin-left:var(--sidebar-w);
-            padding:calc(var(--header-h) + 24px) 26px calc(var(--footer-h) + 26px);
+            padding:
+                calc(var(--header-h) + var(--main-y))
+                var(--main-x)
+                calc(var(--footer-h) + var(--main-y));
         }
 
         .main:not(.full){
@@ -356,7 +369,75 @@
         .main.full{
             margin-left:0;
             padding:0;
+            width:100%;
+            max-width:100%;
             min-height:100vh;
+        }
+
+        .main > *{
+            max-width:100%;
+        }
+
+        .page-card,
+        .manage-card,
+        .table-card,
+        .content-card{
+            width:100%;
+            max-width:1600px;
+            margin-left:auto;
+            margin-right:auto;
+            padding:var(--card-pad);
+            border-radius:clamp(18px, 1.35vw, 26px);
+        }
+
+        .page-card h1,
+        .page-card h2,
+        .manage-card h1,
+        .manage-card h2,
+        .table-card h1,
+        .table-card h2,
+        .content-card h1,
+        .content-card h2{
+            font-size:clamp(1.45rem, 1.55vw, 2rem);
+            line-height:1.18;
+        }
+
+        .table-wrap,
+        .table-responsive,
+        .dataTables_wrapper{
+            width:100%;
+            max-width:100%;
+        }
+
+        .table-wrap,
+        .table-responsive{
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        .table-wrap table,
+        .table-responsive table{
+            min-width:920px;
+        }
+
+        th,
+        td{
+            padding:clamp(11px, .85vw, 18px);
+            font-size:clamp(.88rem, .82vw, 1rem);
+            line-height:1.45;
+            vertical-align:middle;
+        }
+
+        select,
+        input,
+        textarea,
+        button{
+            max-width:100%;
         }
 
         .footer{
@@ -370,8 +451,8 @@
             align-items:center;
             justify-content:center;
             padding:8px 16px;
-            border-top:1px solid rgba(220,238,226,.95);
-            background:rgba(255,255,255,.90);
+            border-top:1px solid rgba(180,216,192,.95);
+            background:#EEF8F1;
             backdrop-filter:blur(18px);
             box-shadow:0 -10px 28px rgba(23,37,42,.06);
         }
@@ -407,22 +488,62 @@
         }
 
         @media (max-width:1100px){
-            :root{ --sidebar-w:265px; }
+            :root{ --sidebar-w:clamp(245px, 24vw, 265px); }
+
             .sidebar{ padding:18px 14px; }
-            .brand{ font-size:1.36rem; padding-left:58px; }
+
+            .brand{
+                font-size:1.36rem;
+                padding-left:14px;
+            }
+
             .sidebar nav a,
-            .sidebar-logout a{ font-size:1.04rem; padding-left:42px; }
+            .sidebar-logout a{
+                font-size:1.04rem;
+                padding-left:48px;
+            }
         }
 
         @media (max-width:860px){
-            :root{ --sidebar-w:100vw; --header-h:66px; --footer-h:68px; }
-            .app-header{ padding:0 12px; }
-            .mobile-menu-btn{ display:flex; }
-            .sidebar nav{ padding-bottom:8px; }
-            .sidebar-logout{ padding-top:6px; padding-bottom:20px; }
-            .sidebar-logout a{ min-height:42px; }
-            .app-logo{ width:82px; height:54px; border-radius:0; }
-            .app-title{ font-size:1.05rem; }
+            :root{
+                --sidebar-w:100vw;
+                --header-h:66px;
+                --footer-h:68px;
+                --main-x:12px;
+                --main-y:14px;
+                --card-pad:16px;
+            }
+
+            .app-header{
+                padding:0 12px;
+            }
+
+            .mobile-menu-btn{
+                display:flex;
+            }
+
+            .sidebar nav{
+                padding-bottom:8px;
+            }
+
+            .sidebar-logout{
+                padding-top:6px;
+                padding-bottom:20px;
+            }
+
+            .sidebar-logout a{
+                min-height:42px;
+            }
+
+            .app-logo{
+                width:82px;
+                height:54px;
+                border-radius:0;
+            }
+
+            .app-title{
+                font-size:1.05rem;
+            }
 
             .sidebar{
                 top:var(--header-h);
@@ -438,7 +559,9 @@
                 display:block;
             }
 
-            body.menu-open .sidebar{ transform:translateX(0); }
+            body.menu-open .sidebar{
+                transform:translateX(0);
+            }
 
             .mobile-overlay{
                 display:block;
@@ -462,18 +585,39 @@
 
             .main{
                 margin-left:0;
+                width:100%;
+                max-width:100%;
                 padding:calc(var(--header-h) + 14px) 12px calc(var(--footer-h) + 18px);
             }
 
-            .brand{ padding-top:58px; padding-bottom:8px; font-size:1.22rem; }
-            .brand::before{ top:6px; width:66px; height:46px; }
+            .brand{
+                padding-top:58px;
+                padding-bottom:8px;
+                font-size:1.22rem;
+            }
+
+            .brand::before{
+                top:6px;
+                width:66px;
+                height:46px;
+            }
 
             .sidebar nav a,
-            .sidebar-logout a{ font-size:1.1rem; min-height:46px; }
+            .sidebar-logout a{
+                font-size:1.1rem;
+                min-height:46px;
+            }
+
+            .table-wrap table,
+            .table-responsive table{
+                min-width:850px;
+            }
         }
 
         @media (max-width:560px){
-            .app-title{ font-size:.98rem; }
+            .app-title{
+                font-size:.98rem;
+            }
 
             .mobile-menu-btn,
             .header-logout-btn{
@@ -483,14 +627,35 @@
                 font-size:22px;
             }
 
-            .sidebar nav{ padding-bottom:8px; }
-            .sidebar-logout{ padding-top:6px; padding-bottom:18px; }
-            .sidebar-logout a{ min-height:42px; }
+            .sidebar nav{
+                padding-bottom:8px;
+            }
 
-            .brand{ padding-top:58px; padding-bottom:8px; font-size:1.22rem; }
-            .brand::before{ top:6px; width:66px; height:46px; }
+            .sidebar-logout{
+                padding-top:6px;
+                padding-bottom:18px;
+            }
 
-            .role-chip{ font-size:.86rem; padding:7px 12px; }
+            .sidebar-logout a{
+                min-height:42px;
+            }
+
+            .brand{
+                padding-top:58px;
+                padding-bottom:8px;
+                font-size:1.22rem;
+            }
+
+            .brand::before{
+                top:6px;
+                width:66px;
+                height:46px;
+            }
+
+            .role-chip{
+                font-size:.86rem;
+                padding:7px 12px;
+            }
 
             .sidebar nav a,
             .sidebar-logout a{
@@ -499,9 +664,26 @@
                 border-radius:14px;
             }
 
-            .footer{ height:72px; }
+            .footer{
+                height:72px;
+            }
 
-            :root{ --footer-h:72px; }
+            :root{
+                --footer-h:72px;
+            }
+
+            .page-card,
+            .manage-card,
+            .table-card,
+            .content-card{
+                padding:14px;
+                border-radius:18px;
+            }
+
+            .table-wrap table,
+            .table-responsive table{
+                min-width:780px;
+            }
         }
 
         @media (max-height:680px) and (min-width:861px){
@@ -510,7 +692,9 @@
                 padding-bottom:calc(var(--footer-h) + 28px);
             }
 
-            .sidebar-logout{ padding-bottom:calc(var(--footer-h) + 34px); }
+            .sidebar-logout{
+                padding-bottom:calc(var(--footer-h) + 34px);
+            }
 
             .brand{
                 padding-top:10px;
@@ -524,7 +708,9 @@
                 height:36px;
             }
 
-            .role-chip{ margin-bottom:10px; }
+            .role-chip{
+                margin-bottom:10px;
+            }
 
             .sidebar nav a,
             .sidebar-logout a{
@@ -533,6 +719,22 @@
                 padding-top:8px;
                 padding-bottom:8px;
                 font-size:1rem;
+            }
+
+            .sidebar nav a::before,
+            .sidebar-logout a::before{
+                width:20px;
+                height:20px;
+                font-size:13px;
+            }
+        }
+
+        @media (min-width:1800px){
+            .page-card,
+            .manage-card,
+            .table-card,
+            .content-card{
+                max-width:1680px;
             }
         }
 
@@ -545,8 +747,38 @@
                 scroll-behavior:auto !important;
             }
         }
+
+        .sidebar nav a{
+    padding-left:52px; /* space for icon */
+}
+
+.nav-icon{
+    position:absolute;
+    left:16px;
+    width:24px;
+    height:24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#2F7548;
+    transition:all .2s ease;
+}
+
+.nav-icon svg{
+    width:22px;
+    height:22px;
+}
+
+.sidebar nav a:hover .nav-icon{
+    color:#2F7548;
+}
+
+.logout-nav-icon{
+    color:#fff;
+}
     </style>
 </head>
+
 
 {% set public_pages = [
     'auth.login',
@@ -566,136 +798,442 @@
     <header class="app-header">
         <div class="app-header-left">
             <button type="button" class="mobile-menu-btn" onclick="toggleSidebarMenu()" aria-label="Open menu">⋮</button>
-            <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm Logo" class="app-logo">
+           <a href="{{ url_for('dashboard.home') }}">
+    <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm Logo" class="app-logo">
+</a>
         </div>
 
-        <a href="{{ url_for('auth.logout') }}" class="header-logout-btn" aria-label="Logout">
+       <a href="{{ url_for('auth.logout') }}" class="header-logout-btn" aria-label="Logout">
+    <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+    </svg>
+</a>
+    </header>
+
+  <div class="mobile-overlay" onclick="toggleSidebarMenu(true)"></div>
+
+    <aside class="sidebar">
+        <div class="brand">UnnatFarm MIS</div>
+        <div class="role-chip">{{ session.get('role','').replace('_',' ').title() }}</div>
+
+       <nav>
+        <a href="{{ url_for('dashboard.home') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </span>
+            Dashboard
+        </a>
+
+        <a href="{{ url_for('modules.profile') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1.2-4.3 4-6.5 8-6.5s6.8 2.2 8 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            My Profile
+        </a>
+
+    {% if session.get('role') in ['super_admin','avpl_admin'] %}
+        <a href="{{ url_for('admin.users') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 21c.8-4 3-6 6-6s5.2 2 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 16c2.8.2 4.8 1.9 5.6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Users / IDs
+        </a>
+
+        <a href="{{ url_for('validation.queue') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="1.5"/></svg>
+            </span>
+            Validations
+        </a>
+
+        <a href="{{ url_for('master.farmers') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 21V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 13C7.8 12.5 5.8 10 5.5 5.5C10 6 12 8.6 12 13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 16c4.2-.5 6.2-3 6.5-7.5C14 9 12 11.6 12 16Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </span>
+            Farmer Master
+        </a>
+
+        <a href="{{ url_for('master.ufc_admins') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 21V8l8-4 8 4v13" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 21v-7h6v7M8 10h.01M12 10h.01M16 10h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            UFC Admin Master
+        </a>
+
+        <a href="{{ url_for('master.ufc_mitras') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13l4-4 4 4M20 11l-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            UFC Mitra Master
+        </a>
+    {% endif %}
+
+    {% if session.get('role') == 'avpl_admin' %}
+        <a href="{{ url_for('admin.add_product') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4.5 8L12 12.2 19.5 8M12 21v-8.8" stroke="currentColor" stroke-width="1.8"/></svg>
+            </span>
+            Products
+        </a>
+
+        <a href="{{ url_for('admin.product_categories') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+            </span>
+            Product Categories
+        </a>
+
+        <a href="{{ url_for('admin.lms_upload') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            LMS Upload
+        </a>
+
+        <a href="{{ url_for('admin.mitra_bonus_settings') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.4 5 5.6.8-4 3.9.9 5.5L12 15.6 7.1 18.2l.9-5.5-4-3.9 5.6-.8L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </span>
+            Mitra Bonus Settings
+        </a>
+
+        <a href="{{ url_for('admin.ufc_mitra_earnings') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            UFC Mitra Earnings
+        </a>
+
+        <a href="{{ url_for('modules.finance_leads') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Finance Leads
+        </a>
+
+        <a href="{{ url_for('modules.sales_details') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Sales Details
+        </a>
+    {% endif %}
+
+    {% if session.get('role') == 'accounts' %}
+        <a href="{{ url_for('admin.product_list') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4.5 8L12 12.2 19.5 8M12 21v-8.8" stroke="currentColor" stroke-width="1.8"/></svg>
+            </span>
+            Product Addition
+        </a>
+
+        <a href="{{ url_for('modules.transactions') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 15l3 3-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Transactions
+        </a>
+
+        <a href="{{ url_for('modules.orders') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Procurements / Orders
+        </a>
+
+        <a href="{{ url_for('admin.mitra_bonus_settings') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.4 5 5.6.8-4 3.9.9 5.5L12 15.6 7.1 18.2l.9-5.5-4-3.9 5.6-.8L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </span>
+            Mitra Bonus Settings
+        </a>
+
+        <a href="{{ url_for('admin.ufc_mitra_earnings') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            UFC Mitra Earnings
+        </a>
+
+        <a href="{{ url_for('modules.finance_leads') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Finance Leads
+        </a>
+
+        <a href="{{ url_for('modules.sales_details') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Sales Details
+        </a>
+    {% endif %}
+
+    {% if session.get('role') in ['sales_nelocals', 'sales_unnatfarm'] %}
+        <a href="{{ url_for('modules.transactions') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 15l3 3-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Transactions
+        </a>
+
+        <a href="{{ url_for('modules.finance_leads') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Finance Leads
+        </a>
+    {% endif %}
+
+    {% if session.get('role') == 'sales_nelocals' %}
+        <a href="{{ url_for('modules.products') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+            </span>
+            Products Table
+        </a>
+
+        <a href="{{ url_for('admin.onboard_trader') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 21c.8-4 3-6 6-6s5.2 2 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 16c2.8.2 4.8 1.9 5.6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Onboard B2B Traders
+        </a>
+    {% endif %}
+
+    {% if session.get('role') == 'sales_unnatfarm' %}
+        <a href="{{ url_for('modules.transactions') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Sales Analytics
+        </a>
+
+        <a href="{{ url_for('modules.sales_details') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Sales Details
+        </a>
+    {% endif %}
+
+    {% if session.get('role') == 'ufc_admin' %}
+        <a href="{{ url_for('admin.users') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 21c.8-4 3-6 6-6s5.2 2 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 16c2.8.2 4.8 1.9 5.6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Create UFC Mitra
+        </a>
+
+        <a href="{{ url_for('master.farmers') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 21V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 13C7.8 12.5 5.8 10 5.5 5.5C10 6 12 8.6 12 13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 16c4.2-.5 6.2-3 6.5-7.5C14 9 12 11.6 12 16Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </span>
+            Farmers
+        </a>
+
+        <a href="{{ url_for('master.ufc_mitras') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13l4-4 4 4M20 11l-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            UFC Mitras
+        </a>
+
+        <a href="{{ url_for('modules.orders') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Orders
+        </a>
+
+        <a href="{{ url_for('modules.pos') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 13h5M17 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            POS / Sales
+        </a>
+
+        <a href="{{ url_for('modules.support') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 13v-2M16 13v-2M11 19h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Support
+        </a>
+    {% endif %}
+
+    {% if session.get('role') == 'ufc_mitra' %}
+        <a href="{{ url_for('validation.queue') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="1.5"/></svg>
+            </span>
+            Validations
+        </a>
+
+        <a href="{{ url_for('modules.buy') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M6 6h15l-2 8H8L6 6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 6L5 3H3M9 20h.01M18 20h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </span>
+            Buy
+        </a>
+
+        <a href="{{ url_for('modules.sell') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M20 12H6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 6v12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Sell
+        </a>
+
+        <a href="{{ url_for('modules.mitra_earnings') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            My Earnings
+        </a>
+
+        <a href="{{ url_for('modules.finance') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            Financial Assistance
+        </a>
+
+        <a href="{{ url_for('modules.insurance') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Insurance Support
+        </a>
+
+        <a href="{{ url_for('modules.transactions') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 15l3 3-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Transactions
+        </a>
+
+        <a href="{{ url_for('modules.support') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 13v-2M16 13v-2M11 19h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Support
+        </a>
+    {% endif %}
+
+    {% if session.get('role') == 'farmer' %}
+        <a href="{{ url_for('modules.profile') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1.2-4.3 4-6.5 8-6.5s6.8 2.2 8 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Profile
+        </a>
+
+        <a href="{{ url_for('modules.buy') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M6 6h15l-2 8H8L6 6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 6L5 3H3M9 20h.01M18 20h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </span>
+            Buy
+        </a>
+
+        <a href="{{ url_for('modules.sell') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M20 12H6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 6v12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Sell
+        </a>
+
+        <a href="{{ url_for('modules.finance') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            Finance
+        </a>
+
+        <a href="{{ url_for('modules.insurance') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            Insurance
+        </a>
+
+        <a href="{{ url_for('modules.lms') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5v-12Z" stroke="currentColor" stroke-width="1.8"/><path d="M8 7h8M8 11h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            LMS
+        </a>
+
+        <a href="{{ url_for('modules.support') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 13v-2M16 13v-2M11 19h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            Support
+        </a>
+
+        <a href="{{ url_for('modules.purchases') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            My Purchases
+        </a>
+    {% endif %}
+</nav>
+
+<div class="sidebar-logout">
+    <a href="{{ url_for('auth.logout') }}">
+        <span class="nav-icon logout-nav-icon">
             <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
             </svg>
-        </a>
-    </header>
-
-    <div class="mobile-overlay" onclick="toggleSidebarMenu()"></div>
-
-    <aside class="sidebar">
-        <div class="brand">UnnatFarm MIS</div>
-        <div class="role-chip">{{ session.get('role','').replace('_',' ').title() }}</div>
-
-        <nav>
-            <a href="{{ url_for('dashboard.home') }}">Dashboard</a>
-            <a href="{{ url_for('modules.profile') }}">My Profile</a>
-
-            {% if session.get('role') in ['super_admin','avpl_admin'] %}
-                <a href="{{ url_for('admin.users') }}">Users / IDs</a>
-                <a href="{{ url_for('validation.queue') }}">Validations</a>
-                <a href="{{ url_for('master.farmers') }}">Farmer Master</a>
-                <a href="{{ url_for('master.ufc_admins') }}">UFC Admin Master</a>
-                <a href="{{ url_for('master.ufc_mitras') }}">UFC Mitra Master</a>
-            {% endif %}
-
-            {% if session.get('role') == 'avpl_admin' %}
-                <a href="{{ url_for('admin.add_product') }}">Products</a>
-                <a href="{{ url_for('admin.product_categories') }}">Product Categories</a>
-                <a href="{{ url_for('admin.lms_upload') }}">LMS Upload</a>
-                <a href="{{ url_for('admin.mitra_bonus_settings') }}">Mitra Bonus Settings</a>
-                <a href="{{ url_for('admin.ufc_mitra_earnings') }}">UFC Mitra Earnings</a>
-                <a href="{{ url_for('modules.finance_leads') }}">Finance Leads</a>
-                <a href="{{ url_for('modules.sales_details') }}">Sales Details</a>
-            {% endif %}
-
-            {% if session.get('role') == 'accounts' %}
-                <a href="{{ url_for('admin.product_list') }}">Product Addition</a>
-                <a href="{{ url_for('modules.transactions') }}">Transactions</a>
-                <a href="{{ url_for('modules.orders') }}">Procurements / Orders</a>
-                <a href="{{ url_for('admin.mitra_bonus_settings') }}">Mitra Bonus Settings</a>
-                <a href="{{ url_for('admin.ufc_mitra_earnings') }}">UFC Mitra Earnings</a>
-                <a href="{{ url_for('modules.finance_leads') }}">Finance Leads</a>
-                <a href="{{ url_for('modules.sales_details') }}">Sales Details</a>
-            {% endif %}
-
-            {% if session.get('role') in ['sales_nelocals', 'sales_unnatfarm'] %}
-                <a href="{{ url_for('modules.transactions') }}">Transactions</a>
-                <a href="{{ url_for('modules.finance_leads') }}">Finance Leads</a>
-            {% endif %}
-
-            {% if session.get('role') == 'sales_nelocals' %}
-                <a href="{{ url_for('modules.products') }}">Products Table</a>
-                <a href="{{ url_for('admin.onboard_trader') }}">Onboard B2B Traders</a>
-            {% endif %}
-
-            {% if session.get('role') == 'sales_unnatfarm' %}
-                <a href="{{ url_for('modules.transactions') }}">Sales Analytics</a>
-                <a href="{{ url_for('modules.sales_details') }}">Sales Details</a>
-            {% endif %}
-
-            {% if session.get('role') == 'ufc_admin' %}
-                <a href="{{ url_for('admin.users') }}">Create UFC Mitra</a>
-                <a href="{{ url_for('master.farmers') }}">Farmers</a>
-                <a href="{{ url_for('master.ufc_mitras') }}">UFC Mitras</a>
-                <a href="{{ url_for('modules.orders') }}">Orders</a>
-                <a href="{{ url_for('modules.pos') }}">POS / Sales</a>
-                <a href="{{ url_for('modules.support') }}">Support</a>
-            {% endif %}
-
-            {% if session.get('role') == 'ufc_mitra' %}
-                <a href="{{ url_for('validation.queue') }}">Validations</a>
-                <a href="{{ url_for('modules.buy') }}">Buy</a>
-                <a href="{{ url_for('modules.sell') }}">Sell</a>
-                <a href="{{ url_for('modules.mitra_earnings') }}">My Earnings</a>
-                <a href="{{ url_for('modules.finance') }}">Financial Assistance</a>
-                <a href="{{ url_for('modules.insurance') }}">Insurance Support</a>
-                <a href="{{ url_for('modules.transactions') }}">Transactions</a>
-                <a href="{{ url_for('modules.support') }}">Support</a>
-            {% endif %}
-
-            {% if session.get('role') == 'farmer' %}
-                <a href="{{ url_for('modules.profile') }}">Profile</a>
-                <a href="{{ url_for('modules.buy') }}">Buy</a>
-                <a href="{{ url_for('modules.sell') }}">Sell</a>
-                <a href="{{ url_for('modules.finance') }}">Finance</a>
-                <a href="{{ url_for('modules.insurance') }}">Insurance</a>
-                <a href="{{ url_for('modules.lms') }}">LMS</a>
-                <a href="{{ url_for('modules.support') }}">Support</a>
-                <a href="{{ url_for('modules.purchases') }}">My Purchases</a>
-            {% endif %}
-        </nav>
-
-        <div class="sidebar-logout">
-            <a href="{{ url_for('auth.logout') }}">Logout</a>
-        </div>
+        </span>
+        Logout
+    </a>
+</div>
     </aside>
-{% endif %}
+    {% endif %}
 
-<main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %} full{% endif %}">
-    {% block content %}{% endblock %}
-</main>
+    <main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %} full{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
 
-{% if session.get('user_id') and request.endpoint not in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %}
-<footer class="footer">
-    <div class="footer-content footer-2line">
-        <div class="footer-row">
-            <span>© 2026 UnnatFarm™ All rights reserved.</span>
+    {% if session.get('user_id') and request.endpoint not in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %}
+    <footer class="footer">
+        <div class="footer-content footer-2line">
+            <div class="footer-row">
+                <span>© 2026 UnnatFarm™ All rights reserved.</span>
+            </div>
+            <div class="footer-row">
+                <span>Powered by —</span>
+                <a href="https://sayanant.com/" target="_blank" rel="noopener noreferrer" class="footer-link">
+                    Sayanant Group, Guwahati Assam
+                </a>
+            </div>
         </div>
-        <div class="footer-row">
-            <span>Powered by —</span>
-            <a href="https://sayanant.com/" target="_blank" rel="noopener noreferrer" class="footer-link">
-                Sayanant Group, Guwahati Assam
-            </a>
-        </div>
-    </div>
-</footer>
-{% endif %}
+    </footer>
+    {% endif %}
 
-<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
-<script>
-    function toggleSidebarMenu(){
+    <script>
+      function toggleSidebarMenu(forceClose = false){
+    const btn = document.querySelector('.mobile-menu-btn');
+
+    if(forceClose){
+        document.body.classList.remove('menu-open');
+    } else {
         document.body.classList.toggle('menu-open');
     }
-</script>
+
+    if(!document.body.classList.contains('menu-open') && btn){
+        btn.blur();
+    }
+}
+    </script>
 </body>
 </html>
