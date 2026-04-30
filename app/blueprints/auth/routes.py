@@ -27,7 +27,7 @@ def login_select():
 def login():
     is_json = request.is_json or request.headers.get('Content-Type') == 'application/json'
 
-    # ---------- APP LOGIN ----------
+    # ---------- APP LOGIN (UPDATED FOR ALL APPS) ----------
     if is_json:
         data = request.get_json(silent=True) or {}
 
@@ -47,12 +47,25 @@ def login():
 
         role = (user.get('role') or '').strip().lower()
 
-        if role != 'ufc_admin':
-            return jsonify({'ok': False, 'message': 'Only UFC Admin allowed in app'}), 403
+        # ✅ ALLOW ALL APP ROLES
+        allowed_roles = ['ufc_admin', 'ufc_mitra', 'farmer']
+
+        if role not in allowed_roles:
+            return jsonify({'ok': False, 'message': 'Role not allowed in mobile app'}), 403
 
         update_last_login(str(user['_id']))
 
-        latest_validation = _latest_validation_for_user(str(user['_id']), 'ufc_admin_profile') or {}
+        # Get latest validation depending on role
+        entity_map = {
+            'ufc_admin': 'ufc_admin_profile',
+            'ufc_mitra': 'ufc_mitra_profile',
+            'farmer': 'farmer'
+        }
+
+        latest_validation = _latest_validation_for_user(
+            str(user['_id']),
+            entity_map.get(role)
+        ) or {}
 
         return jsonify({
             'ok': True,
@@ -61,7 +74,13 @@ def login():
                 'id': str(user['_id']),
                 'username': user.get('username') or user.get('name') or identifier,
                 'role': role,
+
+                # UID fields
                 'centre_uid': user.get('centre_uid') or '',
+                'mitra_uid': user.get('mitra_uid') or '',
+                'mapped_centre_uid': user.get('mapped_centre_uid') or '',
+
+                # approval flow
                 'approval_status': user.get('approval_status') or 'pending_profile',
                 'rejection_reason': (
                     user.get('latest_rejection_reason')
@@ -69,6 +88,8 @@ def login():
                     or latest_validation.get('action_remarks')
                     or ''
                 ),
+
+                # location
                 'state': user.get('state') or '',
                 'district': user.get('district') or '',
                 'block': user.get('block') or '',

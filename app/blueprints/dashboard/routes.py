@@ -122,16 +122,18 @@ def home():
         if not user:
             return jsonify({"ok": False, "message": "User not found"}), 404
 
-        if (user.get("role") or "").strip().lower() != "ufc_admin":
-            return jsonify({"ok": False, "message": "Invalid user role"}), 403
+        role = (user.get("role") or "").strip().lower()
 
         latest_validation = mongo.db.validations.find_one(
-            {"entity_id": user_id, "entity_type": "ufc_admin_profile"},
+            {"entity_id": user_id},
             sort=[("updated_at", -1), ("created_at", -1)]
         ) or {}
 
         approval = user.get("approval_status") or "pending_profile"
 
+        # ─────────────────────────────────────────────
+        # ❌ If NOT approved → return status only
+        # ─────────────────────────────────────────────
         if approval != "approved":
             return jsonify({
                 "ok": True,
@@ -145,19 +147,57 @@ def home():
                 "data": None
             }), 200
 
-        data = get_centre_dashboard(user.get("centre_uid"))
+        # ─────────────────────────────────────────────
+        # ✅ ROLE BASED DASHBOARD
+        # ─────────────────────────────────────────────
 
-        return jsonify({
-            "ok": True,
-            "approval_status": "approved",
-            "rejection_reason": "",
-            "data": {
-                "centre_uid": user.get("centre_uid") or "",
-                "mitra_count": data.get("mitra_count", 0),
-                "farmer_count": data.get("farmer_count", 0),
-                "orders": data.get("orders", [])
-            }
-        }), 200
+        # 🔹 UFC ADMIN DASHBOARD
+        if role == "ufc_admin":
+            data = get_centre_dashboard(user.get("centre_uid"))
+
+            return jsonify({
+                "ok": True,
+                "approval_status": "approved",
+                "role": role,
+                "data": {
+                    "centre_uid": user.get("centre_uid") or "",
+                    "mitra_count": data.get("mitra_count", 0),
+                    "farmer_count": data.get("farmer_count", 0),
+                    "orders": data.get("orders", [])
+                }
+            }), 200
+
+        # 🔹 UFC MITRA DASHBOARD
+        if role == "ufc_mitra":
+            data = get_mitra_dashboard(user.get("mitra_uid"))
+
+            return jsonify({
+                "ok": True,
+                "approval_status": "approved",
+                "role": role,
+                "data": {
+                    "mitra_uid": user.get("mitra_uid") or "",
+                    "farmer_count": data.get("farmer_count", 0),
+                    "input_bonus": data.get("input_bonus", 0),
+                    "output_bonus": data.get("output_bonus", 0),
+                    "monthly_sales": data.get("monthly_sales", []),
+                    "farmers": data.get("farmers", [])
+                }
+            }), 200
+
+        # 🔹 FARMER DASHBOARD
+        if role == "farmer":
+            data = get_farmer_dashboard(user.get("phone"))
+
+            return jsonify({
+                "ok": True,
+                "approval_status": "approved",
+                "role": role,
+                "data": data
+            }), 200
+
+        # ❌ fallback
+        return jsonify({"ok": False, "message": "Invalid role"}), 403
 
     # WEB FLOW BELOW
     if not session.get("user_id"):
