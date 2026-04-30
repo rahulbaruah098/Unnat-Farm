@@ -1,3 +1,5 @@
+from doctest import master
+
 from bson import ObjectId
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort
 from app.extensions import mongo
@@ -45,7 +47,21 @@ def detail(validation_id):
     elif item['entity_type'] == 'farmer_registration':
         master = mongo.db.farmer_master.find_one({'linked_user_id': item['entity_id']})
     master_id = str(master.get('_id')) if master else item.get('metadata', {}).get('master_id')
-    linked_docs = list(mongo.db.documents.find({'$or': [{'linked_user_id': item['entity_id']}, {'linked_master_id': master_id}]}).sort('created_at', -1))
+    doc_or_query = [
+    {'linked_user_id': item['entity_id']},
+    {'linked_user_id': str(item['entity_id'])}
+]
+
+    if master and master.get('_id'):
+        doc_or_query.append({'linked_master_id': master['_id']})
+        doc_or_query.append({'linked_master_id': str(master['_id'])})
+
+    if master_id:
+        doc_or_query.append({'linked_master_id': master_id})
+
+    linked_docs = list(
+        mongo.db.documents.find({'$or': doc_or_query}).sort('created_at', -1)
+)
     return render_template('validations/detail.html', item=item, entity=entity, master=master, linked_docs=linked_docs)
 
 
