@@ -626,22 +626,72 @@ def transactions():
     items = list(mongo.db.transactions.find(query).sort("created_at", -1))
     return render_template("modules/transactions.html", items=items)
 
-
+#changes by atlanta
 @modules_bp.route("/profile")
-@login_required
 def profile():
+    is_app = request.args.get("user_id")
+
+    if is_app:
+        user_id = request.args.get("user_id", "").strip()
+
+        if not user_id:
+            return jsonify({"ok": False, "message": "User ID is required"}), 400
+
+        user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+
+        if not user:
+            return jsonify({"ok": False, "message": "User not found"}), 404
+
+        master = None
+        role = user.get("role")
+
+        if role == "farmer":
+            master = mongo.db.farmer_master.find_one({"linked_user_id": str(user["_id"])})
+        elif role == "ufc_admin":
+            master = mongo.db.ufc_admin_master.find_one({"linked_user_id": str(user["_id"])})
+        elif role == "ufc_mitra":
+            master = mongo.db.ufc_mitra_master.find_one({"linked_user_id": str(user["_id"])})
+
+        docs = list(
+            mongo.db.documents.find({"linked_user_id": str(user["_id"])}).sort("created_at", -1)
+        )
+
+        user["_id"] = str(user["_id"])
+
+        if master and "_id" in master:
+            master["_id"] = str(master["_id"])
+
+        for d in docs:
+            if "_id" in d:
+                d["_id"] = str(d["_id"])
+
+        return jsonify({
+            "ok": True,
+            "user": user,
+            "master": master or {},
+            "docs": docs,
+        })
+
+    if not session.get("user_id"):
+        return redirect(url_for("auth.login_select"))
+
     user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])})
+
     master = None
     role = user.get("role") if user else None
+
     if role == "farmer":
         master = mongo.db.farmer_master.find_one({"linked_user_id": str(user["_id"])})
     elif role == "ufc_admin":
         master = mongo.db.ufc_admin_master.find_one({"linked_user_id": str(user["_id"])})
     elif role == "ufc_mitra":
         master = mongo.db.ufc_mitra_master.find_one({"linked_user_id": str(user["_id"])})
-    docs = list(mongo.db.documents.find({"linked_user_id": str(user["_id"])}).sort("created_at", -1)) if user else []
-    return render_template("modules/profile.html", user=user, master=master, docs=docs)
 
+    docs = list(
+        mongo.db.documents.find({"linked_user_id": str(user["_id"])}).sort("created_at", -1)
+    ) if user else []
+
+    return render_template("modules/profile.html", user=user, master=master, docs=docs)
 
 @modules_bp.route("/purchases")
 @login_required
