@@ -22,6 +22,7 @@
             --uf-shadow:0 22px 55px rgba(23,37,42,.10);
             --uf-shadow2:0 10px 25px rgba(95,168,120,.18);
             --sidebar-w:clamp(245px, 16vw, 292px);
+            --sidebar-collapsed-w:78px;
             --header-h:clamp(64px, 4.4vw, 74px);
             --footer-h:64px;
             --main-x:clamp(14px, 1.45vw, 26px);
@@ -180,6 +181,11 @@
     padding-right:12px;
 }
 
+.sidebar,
+.main{
+    transition:width .25s ease, margin-left .25s ease, max-width .25s ease;
+}
+
   .brand{
     position:relative;
     padding:clamp(68px, 4.4vw, 80px) 0 18px 0;
@@ -302,7 +308,16 @@
             box-shadow:0 12px 25px rgba(23,37,42,.07);
             transform:translateX(4px);
         }
+.sidebar nav a.active{
+    color:var(--uf-ink);
+    background:rgba(255,255,255,.86);
+    box-shadow:0 12px 25px rgba(23,37,42,.08);
+    border:1px solid rgba(79,154,106,.22);
+}
 
+.sidebar nav a.active .nav-icon{
+    color:#2F7548;
+}
         .sidebar nav a:hover::after{ transform:translateX(0); }
 
         .sidebar nav a:hover::before{
@@ -776,6 +791,80 @@
 .logout-nav-icon{
     color:#fff;
 }
+
+.web-sidebar-toggle{
+    display:flex;
+    border:none;
+    cursor:pointer;
+    width:44px;
+    height:44px;
+    border-radius:16px;
+    align-items:center;
+    justify-content:center;
+    background:rgba(216,238,223,.95);
+    color:#316D48;
+    font-size:22px;
+    font-weight:900;
+}
+
+body.sidebar-collapsed .sidebar{
+    width:var(--sidebar-collapsed-w);
+}
+
+body.sidebar-collapsed .main{
+    width:calc(100% - var(--sidebar-collapsed-w));
+    max-width:calc(100% - var(--sidebar-collapsed-w));
+    margin-left:var(--sidebar-collapsed-w);
+}
+
+body.sidebar-collapsed .brand{
+    font-size:0;
+    padding-top:62px;
+}
+
+body.sidebar-collapsed .role-chip{
+    display:none;
+}
+
+body.sidebar-collapsed .sidebar nav{
+    padding-left:8px;
+    padding-right:8px;
+}
+
+body.sidebar-collapsed .sidebar nav a,
+body.sidebar-collapsed .sidebar-logout a{
+    justify-content:center;
+    padding:12px;
+    font-size:0;
+}
+
+body.sidebar-collapsed .nav-icon{
+    position:static;
+    width:24px;
+    height:24px;
+}
+
+body.sidebar-collapsed .sidebar-logout{
+    padding-left:8px;
+    padding-right:8px;
+}
+
+@media (max-width:860px){
+    .web-sidebar-toggle{
+        display:none;
+    }
+
+    body.sidebar-collapsed .sidebar{
+        width:100vw;
+    }
+
+    body.sidebar-collapsed .main{
+        width:100%;
+        max-width:100%;
+        margin-left:0;
+    }
+}
+
     </style>
 </head>
 
@@ -798,6 +887,7 @@
     <header class="app-header">
         <div class="app-header-left">
             <button type="button" class="mobile-menu-btn" onclick="toggleSidebarMenu()" aria-label="Open menu">⋮</button>
+            <button type="button" class="web-sidebar-toggle" onclick="toggleWebSidebar()" aria-label="Collapse sidebar">☰</button>
            <a href="{{ url_for('dashboard.home') }}">
     <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm Logo" class="app-logo">
 </a>
@@ -913,7 +1003,15 @@
             </span>
             Finance Leads
         </a>
-            <a href="{{ url_for('modules.all_orders') }}">All Orders</a>
+           <a href="{{ url_for('modules.all_orders') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+    </span>
+    All Orders
+</a>
         <a href="{{ url_for('modules.sales_details') }}">
             <span class="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1044,8 +1142,14 @@
         </a>
 
             <a href="{{ url_for('modules.centre_orders') }}">
-                Orders
-            </a>
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+    </span>
+    Orders
+</a>
 
         <a href="{{ url_for('modules.pos') }}">
             <span class="nav-icon">
@@ -1084,7 +1188,15 @@
             Sell
         </a>
 
-        <a href="{{ url_for('modules.mitra_stock') }}">My Stock</a>
+      <a href="{{ url_for('modules.mitra_stock') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M4.5 8L12 12.2 19.5 8M12 21v-8.8" stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+    </span>
+    My Stock
+</a>
 
         <a href="{{ url_for('modules.mitra_earnings') }}">
             <span class="nav-icon">
@@ -1100,9 +1212,15 @@
             Financial Assistance
         </a>
 
-        <a href="{{ url_for('modules.insurance_leads') }}">
-            Insurance Support
-        </a>
+       <a href="{{ url_for('modules.insurance_leads') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </span>
+    Insurance Support
+</a>
 
         <a href="{{ url_for('modules.transactions') }}">
             <span class="nav-icon">
@@ -1162,7 +1280,15 @@
             LMS
         </a>
 
-        <a href="{{ url_for('modules.notifications') }}">Notifications</a>
+        <a href="{{ url_for('modules.notifications') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M10 21h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+    </span>
+    Notifications
+</a>
 
         <a href="{{ url_for('modules.support') }}">
             <span class="nav-icon">
@@ -1219,7 +1345,7 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
     <script>
-      function toggleSidebarMenu(forceClose = false){
+function toggleSidebarMenu(forceClose = false){
     const btn = document.querySelector('.mobile-menu-btn');
 
     if(forceClose){
@@ -1232,6 +1358,55 @@
         btn.blur();
     }
 }
-    </script>
+
+/* keep active menu item + sidebar scroll position */
+document.addEventListener('DOMContentLoaded', function(){
+    const sidebarNav = document.querySelector('.sidebar nav');
+    const navLinks = document.querySelectorAll('.sidebar nav a');
+    const currentPath = window.location.pathname;
+
+    if(!sidebarNav) return;
+
+    const savedScroll = sessionStorage.getItem('uf_sidebar_scroll');
+
+    if(savedScroll !== null){
+        sidebarNav.scrollTop = parseInt(savedScroll, 10) || 0;
+    }
+
+    navLinks.forEach(function(link){
+        const linkPath = new URL(link.href, window.location.origin).pathname;
+
+        if(linkPath === currentPath){
+            link.classList.add('active');
+
+            requestAnimationFrame(function(){
+                link.scrollIntoView({
+                    block: 'center',
+                    inline: 'nearest'
+                });
+            });
+        }
+
+        link.addEventListener('click', function(){
+            sessionStorage.setItem('uf_sidebar_scroll', sidebarNav.scrollTop);
+        });
+    });
+});
+
+
+function toggleWebSidebar(){
+    document.body.classList.toggle('sidebar-collapsed');
+    localStorage.setItem(
+        'uf_sidebar_collapsed',
+        document.body.classList.contains('sidebar-collapsed') ? '1' : '0'
+    );
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    if(localStorage.getItem('uf_sidebar_collapsed') === '1'){
+        document.body.classList.add('sidebar-collapsed');
+    }
+});
+</script>
 </body>
 </html>

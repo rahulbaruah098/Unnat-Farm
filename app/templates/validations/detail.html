@@ -1,54 +1,468 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+    .page-card{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        font-family:"Times New Roman", Georgia, serif;
+    }
+
+    .title-row{
+        display:grid;
+        grid-template-columns:42px 1fr;
+        align-items:center;
+        column-gap:12px;
+        margin-bottom:22px;
+    }
+
+    .title-row h2{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
+        font-weight:700;
+        line-height:1.25;
+        letter-spacing:.2px;
+        white-space:nowrap;
+    }
+
+    .back-btn{
+        display:inline-flex;
+        width:42px;
+        height:42px;
+        border:none;
+        border-radius:14px;
+        align-items:center;
+        justify-content:center;
+        background:rgba(228,247,234,.82);
+        color:#3B7D55;
+        font-size:1.65rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 8px 20px rgba(95,168,120,.12);
+        transition:all .2s ease;
+        flex:0 0 auto;
+    }
+
+    .back-btn:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateX(-2px);
+    }
+
+    .info-grid{
+        display:grid;
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+        gap:14px;
+        margin-bottom:24px;
+    }
+
+    .info-box{
+        margin:0;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        padding:15px 16px;
+        background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,251,247,.92));
+        box-shadow:0 10px 24px rgba(23,37,42,.05);
+        color:#425466;
+        font-size:1rem;
+        line-height:1.45;
+        word-break:break-word;
+    }
+
+    .info-box strong{
+        display:block;
+        margin-bottom:6px;
+        color:#17252A;
+        font-weight:700;
+    }
+
+    .page-card h3{
+        margin:28px 0 14px;
+        color:#17252A;
+        font-size:clamp(1.2rem, 1.7vw, 1.45rem);
+        font-weight:700;
+        line-height:1.25;
+        letter-spacing:.2px;
+    }
+
+    .table-wrap{
+        width:100%;
+        overflow-x:auto;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:20px;
+        background:#fff;
+        box-shadow:0 12px 28px rgba(23,37,42,.05);
+        margin-bottom:22px;
+    }
+
+    table{
+        width:100%;
+        border-collapse:separate;
+        border-spacing:0;
+        min-width:760px;
+    }
+
+    th,
+    td{
+        padding:14px 16px;
+        border-bottom:1px solid rgba(220,238,226,.85);
+        color:#425466;
+        font-size:1rem;
+        line-height:1.45;
+        text-align:left;
+        vertical-align:middle;
+        word-break:break-word;
+    }
+
+    th{
+        width:240px;
+        color:#17252A;
+        font-weight:700;
+        background:rgba(228,247,234,.72);
+        white-space:nowrap;
+    }
+
+    thead th{
+        width:auto;
+    }
+
+    tr:last-child th,
+    tr:last-child td{
+        border-bottom:none;
+    }
+
+    tbody tr{
+        transition:background .18s ease;
+    }
+
+    tbody tr:hover{
+        background:rgba(246,251,247,.9);
+    }
+
+    .mobile-card-list{
+        display:none;
+    }
+
+    .detail-card{
+        width:100%;
+        max-width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,251,247,.9));
+        box-shadow:0 10px 24px rgba(23,37,42,.05);
+        padding:15px;
+        margin-bottom:12px;
+        overflow:hidden;
+    }
+
+    .detail-card-label{
+        display:block;
+        margin-bottom:7px;
+        color:#17252A;
+        font-size:1.02rem;
+        font-weight:700;
+        line-height:1.25;
+    }
+
+    .detail-card-value{
+        display:block;
+        color:#425466;
+        font-size:1rem;
+        line-height:1.45;
+        word-break:break-word;
+        overflow-wrap:anywhere;
+    }
+
+    .document-card-actions{
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+        margin-top:10px;
+    }
+
+    .page-card a{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:34px;
+        padding:7px 13px;
+        border-radius:999px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.72);
+        border:1px solid rgba(95,168,120,.25);
+        text-decoration:none;
+        font-weight:700;
+        transition:all .2s ease;
+    }
+
+    .page-card a:hover{
+        color:#fff;
+        background:#5FA878;
+        border-color:#5FA878;
+        transform:translateY(-1px);
+    }
+
+    .grid-form{
+        display:grid;
+        gap:16px;
+        margin-top:20px;
+        padding:20px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:20px;
+        background:rgba(255,255,255,.82);
+        box-shadow:0 12px 28px rgba(23,37,42,.05);
+    }
+
+    .grid-form label{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#17252A;
+        font-size:1.05rem;
+        font-weight:700;
+    }
+
+    .grid-form textarea{
+        width:100%;
+        min-height:110px;
+        padding:12px 14px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:14px;
+        background:#fff;
+        color:#334155;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        outline:none;
+        resize:vertical;
+        transition:all .2s ease;
+    }
+
+    .grid-form textarea:focus{
+        border-color:rgba(95,168,120,.55);
+        box-shadow:0 0 0 4px rgba(95,168,120,.12);
+    }
+
+    .button-row{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:12px;
+        flex-wrap:wrap;
+    }
+
+    .button-row button,
+    .danger-btn{
+        min-height:40px;
+        padding:9px 18px;
+        border:none;
+        border-radius:999px;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:700;
+        cursor:pointer;
+        transition:all .2s ease;
+    }
+
+    .button-row button{
+        background:#5FA878;
+        color:#fff;
+        box-shadow:0 12px 26px rgba(95,168,120,.22);
+    }
+
+    .button-row button:hover{
+        background:#3B7D55;
+        transform:translateY(-1px);
+    }
+
+    .button-row .danger-btn{
+        background:#DC2626;
+        color:#fff;
+        box-shadow:0 12px 26px rgba(220,38,38,.18);
+    }
+
+    .button-row .danger-btn:hover{
+        background:#B91C1C;
+    }
+
+    @media (max-width:860px){
+        .page-card{
+            padding:22px;
+            border-radius:22px;
+        }
+
+        .info-grid{
+            grid-template-columns:1fr;
+        }
+
+        .table-wrap{
+            display:none;
+        }
+
+        .mobile-card-list{
+            display:block;
+            width:100%;
+            max-width:100%;
+            margin-bottom:22px;
+        }
+
+        .button-row{
+            justify-content:stretch;
+        }
+
+        .button-row button{
+            width:100%;
+        }
+
+        .document-card-actions a{
+            flex:1 1 130px;
+        }
+    }
+
+    @media (max-width:420px){
+        .page-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .title-row{
+            grid-template-columns:38px 1fr;
+            column-gap:10px;
+        }
+
+        .title-row h2{
+            font-size:1.45rem;
+        }
+
+        .back-btn{
+            width:38px;
+            height:38px;
+            border-radius:12px;
+            font-size:1.45rem;
+        }
+
+        .grid-form{
+            padding:16px;
+        }
+    }
+</style>
+
 <div class="page-card">
-    <h2>Validation Detail</h2>
-    <p><strong>Entity Type:</strong> {{ item.entity_type }}</p>
-    <p><strong>Status:</strong> {{ item.status }}</p>
-    <p><strong>Remarks:</strong> {{ item.remarks or '-' }}</p>
+    <div class="title-row">
+        <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+        <h2>Validation Detail</h2>
+    </div>
+
+    <div class="info-grid">
+        <p class="info-box"><strong>Entity Type:</strong> {{ item.entity_type }}</p>
+        <p class="info-box"><strong>Status:</strong> {{ item.status }}</p>
+        <p class="info-box"><strong>Remarks:</strong> {{ item.remarks or '-' }}</p>
+    </div>
 
     <h3>Account Information</h3>
-    <table>
-        <tr><th>Name</th><td>{{ entity.name if entity else '-' }}</td></tr>
-        <tr><th>Role</th><td>{{ entity.role if entity else '-' }}</td></tr>
-        <tr><th>Phone</th><td>{{ entity.phone if entity else '-' }}</td></tr>
-        <tr><th>Username</th><td>{{ entity.username if entity else '-' }}</td></tr>
-        <tr><th>Centre UID</th><td>{{ entity.centre_uid or entity.mapped_centre_uid if entity else '-' }}</td></tr>
-        <tr><th>Mitra UID</th><td>{{ entity.mitra_uid or entity.mapped_mitra_uid if entity else '-' }}</td></tr>
-        <tr><th>State</th><td>{{ entity.state if entity else '-' }}</td></tr>
-        <tr><th>District</th><td>{{ entity.district if entity else '-' }}</td></tr>
-        <tr><th>Block</th><td>{{ entity.block if entity else '-' }}</td></tr>
-        <tr><th>Village</th><td>{{ entity.village if entity else '-' }}</td></tr>
-    </table>
+
+    <div class="table-wrap">
+        <table>
+            <tr><th>Name</th><td>{{ entity.name if entity else '-' }}</td></tr>
+            <tr><th>Role</th><td>{{ entity.role if entity else '-' }}</td></tr>
+            <tr><th>Phone</th><td>{{ entity.phone if entity else '-' }}</td></tr>
+            <tr><th>Username</th><td>{{ entity.username if entity else '-' }}</td></tr>
+            <tr><th>Centre UID</th><td>{{ entity.centre_uid or entity.mapped_centre_uid if entity else '-' }}</td></tr>
+            <tr><th>Mitra UID</th><td>{{ entity.mitra_uid or entity.mapped_mitra_uid if entity else '-' }}</td></tr>
+            <tr><th>State</th><td>{{ entity.state if entity else '-' }}</td></tr>
+            <tr><th>District</th><td>{{ entity.district if entity else '-' }}</td></tr>
+            <tr><th>Block</th><td>{{ entity.block if entity else '-' }}</td></tr>
+            <tr><th>Village</th><td>{{ entity.village if entity else '-' }}</td></tr>
+        </table>
+    </div>
+
+    <div class="mobile-card-list">
+        <div class="detail-card"><span class="detail-card-label">Name</span><span class="detail-card-value">{{ entity.name if entity else '-' }}</span></div>
+        <div class="detail-card"><span class="detail-card-label">Role</span><span class="detail-card-value">{{ entity.role if entity else '-' }}</span></div>
+        <div class="detail-card"><span class="detail-card-label">Phone</span><span class="detail-card-value">{{ entity.phone if entity else '-' }}</span></div>
+        <div class="detail-card"><span class="detail-card-label">Username</span><span class="detail-card-value">{{ entity.username if entity else '-' }}</span></div>
+        <div class="detail-card"><span class="detail-card-label">Centre UID</span><span class="detail-card-value">{{ entity.centre_uid or entity.mapped_centre_uid if entity else '-' }}</span></div>
+        <div class="detail-card"><span class="detail-card-label">Mitra UID</span><span class="detail-card-value">{{ entity.mitra_uid or entity.mapped_mitra_uid if entity else '-' }}</span></div>
+        <div class="detail-card"><span class="detail-card-label">State</span><span class="detail-card-value">{{ entity.state if entity else '-' }}</span></div>
+        <div class="detail-card"><span class="detail-card-label">District</span><span class="detail-card-value">{{ entity.district if entity else '-' }}</span></div>
+        <div class="detail-card"><span class="detail-card-label">Block</span><span class="detail-card-value">{{ entity.block if entity else '-' }}</span></div>
+        <div class="detail-card"><span class="detail-card-label">Village</span><span class="detail-card-value">{{ entity.village if entity else '-' }}</span></div>
+    </div>
 
     <h3>Submitted Profile Details</h3>
-    <table>
+
+    <div class="table-wrap">
+        <table>
+            {% if master %}
+                {% set hidden_keys = ['_id', 'linked_user_id', 'created_at', 'updated_at'] %}
+                {% for key, value in master.items() %}
+                    {% if key not in hidden_keys %}
+                        <tr><th>{{ key|replace('_', ' ')|title }}</th><td>{{ value }}</td></tr>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <tr><td>No submitted profile details found.</td></tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <div class="mobile-card-list">
         {% if master %}
             {% set hidden_keys = ['_id', 'linked_user_id', 'created_at', 'updated_at'] %}
             {% for key, value in master.items() %}
                 {% if key not in hidden_keys %}
-                    <tr><th>{{ key|replace('_', ' ')|title }}</th><td>{{ value }}</td></tr>
+                    <div class="detail-card">
+                        <span class="detail-card-label">{{ key|replace('_', ' ')|title }}</span>
+                        <span class="detail-card-value">{{ value }}</span>
+                    </div>
                 {% endif %}
             {% endfor %}
         {% else %}
-            <tr><td>No submitted profile details found.</td></tr>
+            <div class="detail-card">
+                <span class="detail-card-value">No submitted profile details found.</span>
+            </div>
         {% endif %}
-    </table>
+    </div>
 
     <h3>Uploaded Documents</h3>
-    <table>
-        <thead><tr><th>Document Type</th><th>Preview / View</th><th>Download</th></tr></thead>
-        <tbody>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Document Type</th><th>Preview / View</th><th>Download</th></tr></thead>
+            <tbody>
+            {% for d in linked_docs %}
+                <tr>
+                    <td>{{ d.document_type }}</td>
+                    <td><a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">Preview / View</a></td>
+                    <td><a href="{{ url_for('documents.serve', filename=d.filename, download=1) }}">Download</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="3">No uploaded documents found for this validation.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mobile-card-list">
         {% for d in linked_docs %}
-            <tr>
-                <td>{{ d.document_type }}</td>
-                <td><a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">Preview / View</a></td>
-                <td><a href="{{ url_for('documents.serve', filename=d.filename, download=1) }}">Download</a></td>
-            </tr>
+            <div class="detail-card">
+                <span class="detail-card-label">{{ d.document_type }}</span>
+                <div class="document-card-actions">
+                    <a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">Preview / View</a>
+                    <a href="{{ url_for('documents.serve', filename=d.filename, download=1) }}">Download</a>
+                </div>
+            </div>
         {% else %}
-            <tr><td colspan="3">No uploaded documents found for this validation.</td></tr>
+            <div class="detail-card">
+                <span class="detail-card-value">No uploaded documents found for this validation.</span>
+            </div>
         {% endfor %}
-        </tbody>
-    </table>
+    </div>
 
     {% if item.status == 'pending' %}
     <form method="post" action="{{ url_for('validation.take_action', validation_id=item._id) }}" class="grid-form">
@@ -57,4 +471,5 @@
     </form>
     {% endif %}
 </div>
+
 {% endblock %}

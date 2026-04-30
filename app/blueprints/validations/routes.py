@@ -11,7 +11,19 @@ validation_bp = Blueprint('validation', __name__, url_prefix='/validations')
 @login_required
 @roles_required('super_admin', 'avpl_admin', 'ufc_mitra')
 def queue():
+    q = request.args.get("q", "").strip()
+
     items = list_validations_for_role(session['role'], session)
+
+    if q:
+        q_lower = q.lower()
+        items = [
+            item for item in items
+            if q_lower in str(item.get("entity_type", "")).lower()
+            or q_lower in str(item.get("status", "")).lower()
+            or q_lower in str(item.get("created_at", "")).lower()
+        ]
+
     return render_template('validations/queue.html', items=items)
 
 

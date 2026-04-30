@@ -1,33 +1,397 @@
 {% extends 'base.html' %}
 {% block title %}Farmer Registration{% endblock %}
 {% block content %}
+
+<style>
+   .page-card{
+    width:100%;
+    min-height:100vh;
+    margin:0;
+    padding:40px 28px 60px;
+    border:none;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    backdrop-filter:none;
+}
+
+    .farmer-logo-wrap{
+        display:flex;
+        justify-content:center;
+        margin:6px 0 18px;
+    }
+
+    .farmer-logo-wrap img{
+        width:190px;
+        max-width:52vw;
+        height:auto;
+        display:block;
+    }
+
+    .title-row{
+        display:grid;
+        grid-template-columns:44px 1fr 44px;
+        align-items:center;
+        column-gap:12px;
+        margin-bottom:16px;
+    }
+
+   .title-row h2{
+    margin:0;
+    color:#17252A;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:clamp(1.45rem, 2.1vw, 1.9rem);
+    font-weight:600;
+    line-height:1.25;
+    letter-spacing:.2px;
+    text-align:center;
+}
+
+    .back-btn{
+        display:inline-flex;
+        width:44px;
+        height:44px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:14px;
+        align-items:center;
+        justify-content:center;
+        background:rgba(228,247,234,.82);
+        color:#3B7D55;
+        font-size:1.65rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 8px 20px rgba(95,168,120,.12);
+        transition:all .2s ease;
+    }
+
+    .back-btn:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateX(-2px);
+    }
+
+    .muted{
+        display:block;
+        max-width:720px;
+        margin:0 auto 28px;
+        padding:10px 18px;
+        border-radius:14px;
+        background:rgba(210,248,222,.72);
+        color:#225C3A;
+        font-size:1.05rem;
+        line-height:1.55;
+        text-align:center;
+    }
+
+    .grid-form{
+        display:grid;
+        gap:18px;
+    }
+
+    .grid-form.two-col,
+.inner-grid{
+    grid-template-columns:1fr;
+}
+
+.step-panel{
+    width:min(92%, 430px);
+    margin:0 auto;
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:28px;
+    padding:28px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 22px 55px rgba(23,37,42,.10);
+    backdrop-filter:blur(14px);
+}
+
+
+    .grid-form label{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#17252A;
+        font-size:1.05rem;
+        font-weight:700;
+    }
+
+    .grid-form input,
+    .grid-form select{
+        width:100%;
+        min-height:54px;
+        padding:12px 16px;
+        border:1px solid rgba(95,168,120,.35);
+        border-radius:18px;
+        background:rgba(239,247,255,.72);
+        color:#17252A;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1.05rem;
+        outline:none;
+        transition:all .2s ease;
+    }
+
+    .grid-form input:focus,
+    .grid-form select:focus{
+        border-color:rgba(95,168,120,.70);
+        background:rgba(255,255,255,.96);
+        box-shadow:0 0 0 4px rgba(95,168,120,.14);
+    }
+
+
+    .step-panel h3{
+        margin:0 0 20px;
+        color:#17252A;
+        font-size:clamp(1.25rem, 1.8vw, 1.55rem);
+        font-weight:600;
+          font-family:"Times New Roman", Georgia, serif;
+    }
+    
+
+    .step-panel .muted{
+        text-align:left;
+        margin:0 0 18px;
+        max-width:none;
+    }
+
+    .checkbox-grid{
+        display:grid;
+        grid-template-columns:repeat(4, minmax(0, 1fr));
+        gap:12px;
+        margin-top:8px;
+    }
+
+    .checkbox-grid label{
+        display:flex;
+        flex-direction:row;
+        align-items:center;
+        gap:8px;
+        min-height:42px;
+        padding:9px 12px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:14px;
+        background:#fff;
+        color:#334155;
+        font-size:1rem;
+        font-weight:700;
+    }
+
+    .checkbox-grid input{
+        width:auto;
+        min-height:auto;
+    }
+
+    .span-2{
+        grid-column:1 / -1;
+    }
+
+    .span-2 button,
+    #farmerNextBtn{
+        min-height:50px;
+        padding:12px 30px;
+        border:none;
+        border-radius:999px;
+        background:#5FA878;
+        color:#fff;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1.08rem;
+        font-weight:700;
+         width:100%;
+    margin-top:18px;
+        cursor:pointer;
+        box-shadow:0 14px 30px rgba(95,168,120,.26);
+        transition:all .2s ease;
+    }
+
+    .span-2 button:hover,
+    #farmerNextBtn:hover{
+        background:#3B7D55;
+        transform:translateY(-1px);
+    }
+
+    #farmerNextBtn{
+        margin-top:18px;
+    }
+
+    @media (max-width:860px){
+        .page-card{
+            width:min(92%, 620px);
+            padding:28px 26px;
+            border-radius:26px;
+        }
+
+        .grid-form.two-col,
+        .inner-grid{
+            grid-template-columns:1fr;
+        }
+
+        .checkbox-grid{
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+        }
+
+        .span-2 button,
+        #farmerNextBtn{
+            width:100%;
+        }
+    }
+
+    @media (max-width:420px){
+        .page-card{
+            width:92%;
+            padding:22px 18px;
+            border-radius:22px;
+        }
+
+        .farmer-logo-wrap img{
+            width:150px;
+        }
+
+        .title-row{
+            grid-template-columns:40px 1fr 40px;
+            column-gap:10px;
+        }
+
+        .title-row h2{
+            font-size:1.7rem;
+        }
+
+        .back-btn{
+            width:40px;
+            height:40px;
+            border-radius:13px;
+            font-size:1.45rem;
+        }
+
+        .muted{
+            font-size:.98rem;
+            padding:9px 12px;
+        }
+
+        .step-panel{
+            padding:18px;
+            border-radius:20px;
+        }
+
+        .checkbox-grid{
+            grid-template-columns:1fr;
+        }
+
+        .grid-form label{
+            font-size:1rem;
+        }
+    }
+
+    .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    opacity:0;
+    pointer-events:none;
+    transition:.25s ease;
+}
+
+.modal-overlay.active{
+    opacity:1;
+    pointer-events:auto;
+}
+
+.modal-box{
+    width:min(92%, 420px);
+    background:#fff;
+    border-radius:20px;
+    padding:24px;
+    box-shadow:0 30px 60px rgba(15,23,42,.25);
+    font-family:"Times New Roman", Georgia, serif;
+    text-align:center;
+}
+
+.modal-box h3{
+    margin:0 0 10px;
+    color:#17252A;
+    font-size:1.4rem;
+    font-weight:700;
+}
+
+.modal-box p{
+    margin:0 0 20px;
+    color:#475569;
+    font-size:1rem;
+    line-height:1.5;
+}
+
+.modal-actions{
+    display:flex;
+    justify-content:center;
+}
+
+.btn-confirm{
+    min-height:38px;
+    padding:8px 22px;
+    border-radius:999px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:700;
+    cursor:pointer;
+    border:1px solid transparent;
+    background:#5FA878;
+    color:#fff;
+    transition:.2s ease;
+}
+
+.btn-confirm:hover{
+    background:#3B7D55;
+}
+</style>
+
 <div class="page-card">
-    <h2>Farmer Registration</h2>
+    <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+
+    <div class="farmer-logo-wrap">
+        <a href="{{ url_for('auth.login_select') }}" aria-label="Go to main landing page">
+            <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm Logo">
+        </a>
+    </div>
+
+    <div class="title-row">
+        <span></span>
+        <h2>Farmer Registration</h2>
+        <span></span>
+    </div>
+
     <p class="muted">First enter farmer name and contact number, then press Next to complete the full form. Centre UID and UFC Mitra UID are mandatory.</p>
+
     <form method="post" class="grid-form two-col" id="farmerRegistrationForm">
         <div class="span-2 step-panel" id="farmerStep1">
             <h3>Step 1: Basic Details</h3>
             <div class="grid-form two-col inner-grid">
-                <label>Name <input type="text" name="name" id="farmerName" value="{{ data.name if data else '' }}" required></label>
-                <label>Contact No. <input type="text" name="contact_no" id="farmerContact" value="{{ data.contact_no if data else '' }}" required></label>
-                <label>UFC Mitra UID<input type="text" name="mitra_uid" id="farmerMitraUidStep1" data-mitra-lookup value="{{ data.mitra_uid if data else '' }}" required>
-                </label>       
+               <label>Name 
+    <input type="text" name="name" id="farmerName" value="{{ data.name if data else '' }}" placeholder="Enter farmer name" required>
+</label>
+
+<label>Contact No. 
+    <input type="text" name="contact_no" id="farmerContact" value="{{ data.contact_no if data else '' }}" placeholder="Enter contact number" required>
+</label>
+
+<label>UFC Mitra UID
+    <input type="text" name="mitra_uid" id="farmerMitraUidStep1" data-mitra-lookup value="{{ data.mitra_uid if data else '' }}" placeholder="Enter UFC Mitra UID" required>
+</label>
             </div>
             <button type="button" id="farmerNextBtn">Next</button>
         </div>
+
         <div class="span-2 step-panel farmer-full-field" id="farmerStep2">
             <h3>Step 2: Full Farmer Registration</h3>
             <p class="muted">Name and number are reflected from Step 1 and remain editable.</p>
         </div>
+
         <label class="farmer-full-field">Name <input type="text" id="farmerNameMirror" value="{{ data.name if data else '' }}"></label>
         <label class="farmer-full-field">Contact No. <input type="text" id="farmerContactMirror" value="{{ data.contact_no if data else '' }}"></label>
         <label class="farmer-full-field">Gender <select name="gender" required><option value="">Select</option><option {% if data and data.gender == 'Male' %}selected{% endif %}>Male</option><option {% if data and data.gender == 'Female' %}selected{% endif %}>Female</option><option {% if data and data.gender == 'Other' %}selected{% endif %}>Other</option></select></label>
         <label class="farmer-full-field">Age <input type="number" name="age" value="{{ data.age if data else '' }}" required></label>
         <label class="farmer-full-field">Create Password <input type="password" name="password" required></label>
         <label class="farmer-full-field">UnnatFarm Centre UID <input type="text" name="centre_uid" value="{{ data.centre_uid if data else '' }}" required></label>
-        <label class="farmer-full-field">UnnatFarm Centre Mitra UID
-        <input type="text" id="farmerMitraUidMirror" value="{{ data.mitra_uid if data else '' }}" readonly>
-        </label>
+        <label class="farmer-full-field">UnnatFarm Centre Mitra UID <input type="text" id="farmerMitraUidMirror" value="{{ data.mitra_uid if data else '' }}" readonly></label>
         <label class="farmer-full-field">State <select name="state"><option value="">Select</option>{% for s in states %}<option value="{{ s }}" {% if data and data.state == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
         <label class="farmer-full-field">District <input type="text" name="district" value="{{ data.district if data else '' }}" placeholder="Auto-filled from Mitra UID, editable"></label>
         <label class="farmer-full-field">Block <input type="text" name="block" value="{{ data.block if data else '' }}" placeholder="Auto-filled from Mitra UID, editable"></label>
@@ -37,6 +401,17 @@
         <div class="span-2 farmer-full-field"><button type="submit">Submit Registration</button></div>
     </form>
 </div>
+
+<div id="farmerValidationModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3>Required Details Missing</h3>
+        <p>Please enter Farmer Name, Phone Number and UFC Mitra UID first.</p>
+        <div class="modal-actions">
+            <button type="button" class="btn-confirm" onclick="closeFarmerValidationModal()">OK</button>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     const name = document.getElementById('farmerName');
@@ -52,20 +427,20 @@ document.addEventListener('DOMContentLoaded', function(){
         nameMirror.value = name.value;
         contactMirror.value = contact.value;
         mitraUidMirror.value = mitraUid.value;
-}
+    }
 
     function syncFromMirror(){
         name.value = nameMirror.value;
         contact.value = contactMirror.value;
-}
+    }
     
     hideFull();
     if(name.value && contact.value && mitraUid.value){ showFull(); syncFromTop(); }
     document.getElementById('farmerNextBtn').addEventListener('click', function(){
-    if(!name.value.trim() || !contact.value.trim() || !mitraUid.value.trim()){
-        alert('Please enter Farmer Name, Phone Number and UFC Mitra UID first.');
-        return;
-}
+        if(!name.value.trim() || !contact.value.trim() || !mitraUid.value.trim()){
+openFarmerValidationModal();
+return;
+        }
         syncFromTop(); showFull();
     });
     name.addEventListener('input', syncFromTop);
@@ -73,6 +448,16 @@ document.addEventListener('DOMContentLoaded', function(){
     mitraUid.addEventListener('input', syncFromTop);
     nameMirror.addEventListener('input', syncFromMirror);
     contactMirror.addEventListener('input', syncFromMirror);
+
+
+    function openFarmerValidationModal(){
+    document.getElementById('farmerValidationModal').classList.add('active');
+}
+
+window.closeFarmerValidationModal = function(){
+    document.getElementById('farmerValidationModal').classList.remove('active');
+}
+
 });
 </script>
 {% endblock %}

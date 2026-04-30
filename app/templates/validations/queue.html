@@ -1,21 +1,561 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+    .page-card{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        font-family:"Times New Roman", Georgia, serif;
+    }
+
+    .title-row{
+        display:grid;
+        grid-template-columns:42px 1fr;
+        align-items:center;
+        column-gap:12px;
+        margin-bottom:22px;
+    }
+
+    .title-row h2{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
+        font-weight:700;
+        line-height:1.25;
+        letter-spacing:.2px;
+        text-align:left;
+         white-space:nowrap;  
+    }
+
+    .back-btn{
+        display:none;
+        width:42px;
+        height:42px;
+        border:none;
+        border-radius:14px;
+        align-items:center;
+        justify-content:center;
+        background:rgba(228,247,234,.82);
+        color:#3B7D55;
+        font-size:1.65rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 8px 20px rgba(95,168,120,.12);
+        transition:all .2s ease;
+    }
+
+    .back-btn:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateX(-2px);
+    }
+
+    .table-controls{
+        display:flex;
+        align-items:flex-end;
+        justify-content:space-between;
+        gap:16px;
+        margin-bottom:16px;
+        flex-wrap:wrap;
+    }
+
+   .pagination-size{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    font-weight:700;
+    color:#425466;
+}
+
+.pagination-size select{
+    width:120px;
+    min-height:42px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:12px;
+    background:#fff;
+    color:#334155;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:700;
+    padding:8px 12px;
+    outline:none;
+}
+
+.inline-search{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:0;
+    flex-wrap:wrap;
+}
+
+.inline-search input{
+    width:320px;
+    max-width:100%;
+    min-height:42px;
+    padding:9px 14px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:14px;
+    background:#fff;
+    color:#334155;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    outline:none;
+}
+
+.inline-search button{
+    min-height:42px;
+    padding:9px 20px;
+    border:none;
+    border-radius:999px;
+    background:#5FA878;
+    color:#fff;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 12px 26px rgba(95,168,120,.22);
+}
+
+.clear-search-btn{
+    min-height:42px;
+    padding:9px 20px;
+    border:none;
+    border-radius:999px;
+    background:#FEE2E2;
+    color:#B91C1C;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 12px 26px rgba(185,28,28,.10);
+}
+
+.clear-search-btn:hover{
+    background:#B91C1C;
+    color:#fff;
+}
+
+    .table-info{
+        margin-bottom:14px;
+        padding:10px 14px;
+        border:1px solid rgba(95,168,120,.18);
+        border-radius:16px;
+        background:rgba(228,247,234,.42);
+        color:#3B7D55;
+        font-weight:700;
+    }
+
+    .table-wrap{
+        width:100%;
+        overflow-x:auto;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:20px;
+        background:#fff;
+        box-shadow:0 12px 28px rgba(23,37,42,.05);
+    }
+
+    table{
+        width:100%;
+        border-collapse:separate;
+        border-spacing:0;
+        min-width:820px;
+    }
+
+    th,
+    td{
+        padding:14px 16px;
+        border-bottom:1px solid rgba(220,238,226,.85);
+        color:#425466;
+        font-size:1rem;
+        line-height:1.45;
+        text-align:left;
+        vertical-align:middle;
+        word-break:break-word;
+    }
+
+    th{
+        color:#17252A;
+        font-weight:700;
+        background:rgba(228,247,234,.72);
+        white-space:nowrap;
+    }
+
+    .serial-col,
+    .serial-cell{
+        width:78px;
+        text-align:center;
+        color:#3B7D55;
+        font-weight:700;
+    }
+
+    tbody tr{
+        transition:background .18s ease;
+    }
+
+    tbody tr:hover{
+        background:rgba(246,251,247,.9);
+    }
+
+    tbody tr:last-child td{
+        border-bottom:none;
+    }
+
+    .badge{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:30px;
+        padding:6px 12px;
+        border-radius:999px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.78);
+        border:1px solid rgba(95,168,120,.25);
+        font-weight:700;
+        white-space:nowrap;
+    }
+
+    .page-card a{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:34px;
+        padding:7px 13px;
+        border-radius:999px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.72);
+        border:1px solid rgba(95,168,120,.25);
+        text-decoration:none;
+        font-weight:700;
+        transition:all .2s ease;
+    }
+
+    .page-card a:hover{
+        color:#fff;
+        background:#5FA878;
+        border-color:#5FA878;
+        transform:translateY(-1px);
+    }
+
+    .pagination-bar{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:8px;
+        margin-top:16px;
+        flex-wrap:wrap;
+    }
+
+    .page-btn{
+        min-width:38px;
+        height:38px;
+        padding:0 12px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.58);
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:700;
+        cursor:pointer;
+        transition:all .2s ease;
+    }
+
+    .page-btn:hover,
+    .page-btn.active{
+        color:#fff;
+        background:#5FA878;
+        border-color:#5FA878;
+    }
+
+    .page-btn:disabled{
+        opacity:.45;
+        cursor:not-allowed;
+    }
+
+    @media (max-width:860px){
+        .back-btn{
+            display:inline-flex;
+        }
+
+.inline-search,
+.inline-search input,
+.inline-search button,
+.clear-search-btn{
+    width:100%;
+}
+        .page-card{
+            padding:22px;
+            border-radius:22px;
+        }
+
+        .table-controls{
+            align-items:stretch;
+            flex-direction:column;
+        }
+
+        .search-box input{
+            width:100%;
+        }
+
+        .table-wrap{
+            border:none;
+            box-shadow:none;
+            background:transparent;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding-bottom:8px;
+        }
+
+        table{
+            display:flex;
+            min-width:100%;
+            width:max-content;
+        }
+
+        thead{
+            display:none;
+        }
+
+        tbody{
+            display:flex;
+            gap:14px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:4px 2px 8px;
+        }
+
+        tbody tr{
+            min-width:280px;
+            flex:0 0 auto;
+            display:block;
+            border:1px solid rgba(220,238,226,.95);
+            border-radius:18px;
+            background:#fff;
+            padding:14px;
+            box-shadow:0 10px 24px rgba(23,37,42,.06);
+        }
+
+        td{
+            display:block;
+            border:none;
+            padding:7px 0;
+            font-size:.96rem;
+            text-align:left;
+        }
+
+        td::before{
+            content:attr(data-label);
+            display:block;
+            font-weight:700;
+            color:#64748B;
+            font-size:.85rem;
+            margin-bottom:2px;
+        }
+
+        td[colspan]{
+            min-width:280px;
+            text-align:center;
+        }
+
+        td[colspan]::before{
+            display:none;
+        }
+
+        .pagination-bar{
+            justify-content:center;
+        }
+    }
+
+    @media (max-width:420px){
+        .page-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .title-row{
+            grid-template-columns:38px 1fr;
+            column-gap:10px;
+        }
+
+        .back-btn{
+            width:38px;
+            height:38px;
+            border-radius:12px;
+            font-size:1.45rem;
+        }
+
+        tbody tr{
+            min-width:260px;
+        }
+    }
+</style>
+
 <div class="page-card">
-    <h2>Validation Queue</h2>
-    <table>
-        <thead><tr><th>Type</th><th>Status</th><th>Created At</th><th>View</th></tr></thead>
-        <tbody>
-        {% for i in items %}
-            <tr>
-                <td>{{ i.entity_type }}</td>
-                <td><span class="badge">{{ i.status }}</span></td>
-                <td>{{ i.created_at }}</td>
-                <td><a href="{{ url_for('validation.detail', validation_id=i._id) }}">Open</a></td>
-            </tr>
-        {% else %}
-            <tr><td colspan="4">No validation items.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="title-row">
+        <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+        <h2>Validation Queue</h2>
+    </div>
+
+    <div class="table-controls">
+        <label class="pagination-size">
+            <span>Show entries</span>
+            <select id="validationRowsPerPage">
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="1000">1000</option>
+                <option value="250">250</option>
+            </select>
+        </label>
+
+     <form method="get" class="inline-search">
+    <input type="text" name="q" value="{{ request.args.get('q','') }}" placeholder="Search validation items">
+
+    <button type="submit">Search</button>
+
+    {% if request.args.get('q') %}
+        <a href="{{ url_for('validation.queue') }}" class="clear-search-btn">Clear</a>
+    {% endif %}
+</form>
+    </div>
+
+    <div class="table-info" id="validationPaginationInfo"></div>
+
+    <div class="table-wrap">
+        <table id="validationQueueTable">
+            <thead>
+                <tr>
+                    <th class="serial-col">Sl. No.</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>View</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for i in items %}
+                <tr>
+                    <td class="serial-cell" data-label="Sl. No."></td>
+                    <td data-label="Type">{{ i.entity_type }}</td>
+                    <td data-label="Status"><span class="badge">{{ i.status }}</span></td>
+                    <td data-label="Created At">{{ i.created_at }}</td>
+                    <td data-label="View"><a href="{{ url_for('validation.detail', validation_id=i._id) }}">Open</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5">No validation items.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination-bar" id="validationPaginationBar"></div>
 </div>
+
+<script>
+(function(){
+    const table = document.getElementById('validationQueueTable');
+    const select = document.getElementById('validationRowsPerPage');
+    const info = document.getElementById('validationPaginationInfo');
+    const pager = document.getElementById('validationPaginationBar');
+
+if(!table || !select || !info || !pager) return;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const noData = rows.length === 1 && rows[0].querySelector('td[colspan]');
+    let currentPage = 1;
+
+    function renderPagination(){
+        const perPage = parseInt(select.value, 10);
+const filteredRows = noData ? [] : rows;
+const totalRows = filteredRows.length;
+
+        rows.forEach(row => row.style.display = 'none');
+
+        if(noData){
+            info.textContent = 'No validation items';
+            pager.innerHTML = '';
+            rows.forEach(row => row.style.display = '');
+            return;
+        }
+
+        if(totalRows === 0){
+            info.textContent = 'No matching validation items';
+            pager.innerHTML = '';
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+        currentPage = Math.min(currentPage, totalPages);
+
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+
+        filteredRows.forEach((row, filteredIndex) => {
+            const visible = filteredIndex >= start && filteredIndex < end;
+            row.style.display = visible ? '' : 'none';
+
+            const serialCell = row.querySelector('.serial-cell');
+            if(serialCell){
+                serialCell.textContent = filteredIndex + 1;
+            }
+        });
+
+        info.textContent = `Showing ${start + 1} to ${Math.min(end, totalRows)} of ${totalRows} entries`;
+
+        pager.innerHTML = '';
+
+        const prev = document.createElement('button');
+        prev.type = 'button';
+        prev.className = 'page-btn';
+        prev.textContent = 'Prev';
+        prev.disabled = currentPage === 1;
+        prev.onclick = () => {
+            currentPage--;
+            renderPagination();
+        };
+        pager.appendChild(prev);
+
+        for(let i = 1; i <= totalPages; i++){
+            if(i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1){
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+                btn.textContent = i;
+                btn.onclick = () => {
+                    currentPage = i;
+                    renderPagination();
+                };
+                pager.appendChild(btn);
+            }
+        }
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'page-btn';
+        next.textContent = 'Next';
+        next.disabled = currentPage === totalPages;
+        next.onclick = () => {
+            currentPage++;
+            renderPagination();
+        };
+        pager.appendChild(next);
+    }
+
+    select.addEventListener('change', function(){
+        currentPage = 1;
+        renderPagination();
+    });
+
+    renderPagination();
+})();
+</script>
+
 {% endblock %}

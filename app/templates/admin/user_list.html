@@ -138,6 +138,61 @@
         font-weight:700;
     }
 
+    .inline-search{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.inline-search input{
+    width:320px;
+    max-width:100%;
+    min-height:42px;
+    padding:9px 14px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:14px;
+    background:#fff;
+    color:#334155;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    outline:none;
+}
+
+.inline-search button{
+    min-height:42px;
+    padding:9px 20px;
+    border:none;
+    border-radius:999px;
+    background:#5FA878;
+    color:#fff;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 12px 26px rgba(95,168,120,.22);
+}
+
+.clear-search-btn{
+    min-height:42px;
+    padding:9px 20px;
+    border:none;
+    border-radius:999px;
+    background:#FEE2E2;
+    color:#B91C1C;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:700;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+}
+.clear-search-btn:hover{
+    background:#B91C1C;
+    color:#fff;
+}
+
     .table-wrap{
         width:100%;
         overflow-x:auto;
@@ -251,6 +306,13 @@
             flex-direction:column;
             padding:14px;
         }
+
+        .inline-search,
+.inline-search input,
+.inline-search button,
+.clear-search-btn{
+    width:100%;
+}
 
         .pagination-info{
             width:100%;
@@ -441,7 +503,19 @@
 </div>
 
 <div class="table-tools">
+
+    <form method="get" class="inline-search">
+        <input type="text" name="q" value="{{ request.args.get('q','') }}" placeholder="Search users">
+
+        <button type="submit">Search</button>
+
+        {% if request.args.get('q') %}
+          <a href="{{ url_for('admin.users') }}" class="clear-search-btn">Clear</a>
+        {% endif %}
+    </form>
+
     <div class="pagination-info" id="userPaginationInfo"></div>
+
 </div>
 
     <div class="table-wrap">

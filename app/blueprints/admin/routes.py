@@ -18,11 +18,35 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 @roles_required('super_admin', 'avpl_admin', 'ufc_admin')
 def users():
     query = {}
+
     if session.get('role') == 'avpl_admin':
         query['role'] = {'$ne': 'super_admin'}
+
     if session.get('role') == 'ufc_admin':
-        query = {'role': 'ufc_mitra', 'mapped_centre_uid': session.get('centre_uid')}
+        query = {
+            'role': 'ufc_mitra',
+            'mapped_centre_uid': session.get('centre_uid')
+        }
+
     users = list(mongo.db.users.find(query).sort('created_at', -1))
+
+    q = request.args.get("q", "").strip()
+
+    if q:
+        q_lower = q.lower()
+        users = [
+            u for u in users
+            if q_lower in str(u.get("name", "")).lower()
+            or q_lower in str(u.get("role", "")).lower()
+            or q_lower in str(u.get("username", "")).lower()
+            or q_lower in str(u.get("phone", "")).lower()
+            or q_lower in str(u.get("centre_uid", "")).lower()
+            or q_lower in str(u.get("mapped_centre_uid", "")).lower()
+            or q_lower in str(u.get("mitra_uid", "")).lower()
+            or q_lower in str(u.get("mapped_mitra_uid", "")).lower()
+            or q_lower in str(u.get("approval_status", "")).lower()
+        ]
+
     return render_template('admin/user_list.html', users=users)
 
 

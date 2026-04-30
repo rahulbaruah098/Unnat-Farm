@@ -1,5 +1,5 @@
 from bson import ObjectId
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app.extensions import mongo
 from app.utils.decorators import login_required, roles_required
 from app.utils.helpers import now_utc

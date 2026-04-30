@@ -50,6 +50,11 @@ def _find_document_path(filename):
         candidate = safe_join(directory, safe_name)
         if candidate and os.path.isfile(candidate):
             return candidate
+
+        for root, dirs, files in os.walk(directory):
+            if safe_name in files:
+                return os.path.join(root, safe_name)
+
     return None
 
 
