@@ -870,7 +870,22 @@ def pos():
 @login_required
 @roles_required("avpl_admin")
 def all_orders():
+    q = request.args.get("q", "").strip()
+
     orders = list(mongo.db.orders.find({}).sort("created_at", -1))
+
+    if q:
+        q_lower = q.lower()
+        orders = [
+            o for o in orders
+            if q_lower in str(o.get("farmer_name", "")).lower()
+            or q_lower in str(o.get("product_name", "")).lower()
+            or q_lower in str(o.get("quantity", "")).lower()
+            or q_lower in str(o.get("total_amount", "")).lower()
+            or q_lower in str(o.get("status", "")).lower()
+            or q_lower in str(o.get("created_at", "")).lower()
+        ]
+
     return render_template("modules/all_orders.html", orders=orders)
 
 @modules_bp.route('/pos/invoice/<sale_id>')
@@ -964,17 +979,36 @@ def mitra_earnings():
 @roles_required("avpl_admin", "sales_nelocals", "sales_unnatfarm", "accounts", "ufc_mitra")
 def finance_leads():
     role = session.get("role")
+    q = request.args.get("q", "").strip()
 
     if role == "ufc_mitra":
         leads = list(mongo.db.financial_assistance_leads.find({
             "mitra_uid": session.get("mitra_uid")
         }).sort("created_at", -1))
+
     elif role == "accounts":
         leads = list(mongo.db.financial_assistance_leads.find({}).sort("created_at", -1))
+
     else:
         leads = list(mongo.db.financial_assistance_leads.find({
             "visible_to_roles": role
         }).sort("created_at", -1))
+
+    if q:
+        q_lower = q.lower()
+        leads = [
+            lead for lead in leads
+            if q_lower in str(lead.get("created_at", "")).lower()
+            or q_lower in str(lead.get("farmer_name", "")).lower()
+            or q_lower in str(lead.get("farmer_mobile", "")).lower()
+            or q_lower in str(lead.get("farmer_address", "")).lower()
+            or q_lower in str(lead.get("centre_uid", "")).lower()
+            or q_lower in str(lead.get("amount", "")).lower()
+            or q_lower in str(lead.get("purpose", "")).lower()
+            or q_lower in str(lead.get("total_transaction", "")).lower()
+            or q_lower in str(lead.get("status", "")).lower()
+            or q_lower in str(lead.get("mitra_uid", "")).lower()
+        ]
 
     return render_template(
         "modules/finance_leads.html",
@@ -985,12 +1019,32 @@ def finance_leads():
 @login_required
 @roles_required("avpl_admin", "sales_unnatfarm", "accounts")
 def sales_details():
+    q = request.args.get("q", "").strip()
+
     sales = list(mongo.db.pos_sales.find({}).sort("created_at", -1))
+
+    if q:
+        q_lower = q.lower()
+        sales = [
+            s for s in sales
+            if q_lower in str(s.get("created_at", "")).lower()
+            or q_lower in str(s.get("centre_uid", "")).lower()
+            or q_lower in str(s.get("farmer_name", "")).lower()
+            or q_lower in str(s.get("farmer_phone", "")).lower()
+            or q_lower in str(s.get("mitra_uid", "")).lower()
+            or q_lower in str(s.get("product_name", "")).lower()
+            or q_lower in str(s.get("product_category", "")).lower()
+            or q_lower in str(s.get("quantity", "")).lower()
+            or q_lower in str(s.get("unit_price", "")).lower()
+            or q_lower in str(s.get("total_amount", "")).lower()
+            or q_lower in str(s.get("bonus_percentage", "")).lower()
+            or q_lower in str(s.get("bonus_amount", "")).lower()
+        ]
 
     return render_template(
         "modules/sales_details.html",
         sales=sales
-    )    
+    )
     
 @modules_bp.route("/notifications")
 @login_required

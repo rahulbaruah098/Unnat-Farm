@@ -1,66 +1,693 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+    .page-card{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        font-family:"Times New Roman", Georgia, serif;
+    }
+
+    .title-row{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:20px;
+        margin-bottom:24px;
+        flex-wrap:wrap;
+    }
+
+    .title-left{
+        display:flex;
+        align-items:center;
+        gap:12px;
+    }
+
+    .title-left h2{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
+        font-weight:700;
+        line-height:1.25;
+        white-space:nowrap;
+    }
+
+    .back-btn{
+        display:none;
+        width:42px;
+        height:42px;
+        border:none;
+        border-radius:14px;
+        align-items:center;
+        justify-content:center;
+        background:rgba(228,247,234,.82);
+        color:#3B7D55;
+        font-size:1.65rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 8px 20px rgba(95,168,120,.12);
+        transition:all .2s ease;
+    }
+
+    .back-btn:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateX(-2px);
+    }
+
+    .filter-card{
+        margin-bottom:22px;
+        padding:18px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,251,247,.92));
+        box-shadow:0 12px 28px rgba(23,37,42,.05);
+    }
+
+    .filter-form{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr)) auto;
+        align-items:end;
+        gap:16px;
+    }
+
+    .filter-form label{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#17252A;
+        font-size:1.02rem;
+        font-weight:700;
+    }
+
+    .filter-form input,
+    .filter-form select{
+        width:100%;
+        min-height:42px;
+        padding:9px 14px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:14px;
+        background:#fff;
+        color:#334155;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        outline:none;
+    }
+
+    .filter-form input:focus,
+    .filter-form select:focus{
+        border-color:rgba(95,168,120,.55);
+        box-shadow:0 0 0 4px rgba(95,168,120,.12);
+    }
+
+    .filter-actions{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        flex-wrap:wrap;
+    }
+
+    .filter-actions button,
+    .reset-btn{
+        min-height:42px;
+        padding:9px 20px;
+        border:none;
+        border-radius:999px;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:700;
+        cursor:pointer;
+        text-decoration:none;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        transition:all .2s ease;
+    }
+
+    .filter-actions button{
+        background:#5FA878;
+        color:#fff;
+        box-shadow:0 12px 26px rgba(95,168,120,.22);
+    }
+
+    .filter-actions button:hover{
+        background:#3B7D55;
+        transform:translateY(-1px);
+    }
+
+    .reset-btn{
+        background:#FEE2E2;
+        color:#B91C1C;
+    }
+
+    .reset-btn:hover{
+        background:#B91C1C;
+        color:#fff;
+    }
+
+    .table-controls{
+        display:flex;
+        align-items:flex-end;
+        justify-content:space-between;
+        gap:16px;
+        margin-bottom:16px;
+        flex-wrap:wrap;
+    }
+
+    .pagination-size{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#425466;
+        font-weight:700;
+    }
+
+    .pagination-size select{
+        width:120px;
+        min-height:42px;
+        padding:8px 12px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        background:#fff;
+        color:#334155;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:700;
+        outline:none;
+    }
+
+    .table-info{
+        margin-bottom:16px;
+        padding:10px 16px;
+        border:1px solid rgba(95,168,120,.18);
+        border-radius:16px;
+        background:rgba(228,247,234,.42);
+        color:#3B7D55;
+        font-weight:700;
+    }
+
+    .earnings-table-wrap{
+        width:100%;
+        overflow-x:auto;
+        overflow-y:hidden;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:#fff;
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
+        cursor:grab;
+        scrollbar-width:auto;
+        scrollbar-color:#94A3B8 #F1F5F9;
+    }
+
+    .earnings-table-wrap:active{
+        cursor:grabbing;
+    }
+
+    .earnings-table-wrap::-webkit-scrollbar{
+        height:12px;
+    }
+
+    .earnings-table-wrap::-webkit-scrollbar-track{
+        background:#F1F5F9;
+        border-radius:999px;
+    }
+
+    .earnings-table-wrap::-webkit-scrollbar-thumb{
+        background:#94A3B8;
+        border-radius:999px;
+        border:2px solid #F1F5F9;
+    }
+
+    .earnings-table-wrap table{
+        width:max-content;
+        min-width:100%;
+        table-layout:fixed;
+        border-collapse:separate;
+        border-spacing:0;
+        background:#fff;
+    }
+
+    .earnings-table-wrap th,
+    .earnings-table-wrap td{
+        width:160px;
+        height:72px;
+        max-width:160px;
+        min-width:160px;
+        padding:12px 14px;
+        border-right:1px solid rgba(220,238,226,.85);
+        border-bottom:1px solid rgba(220,238,226,.85);
+        color:#425466;
+        font-size:1rem;
+        line-height:1.3;
+        text-align:left;
+        vertical-align:middle;
+        white-space:normal;
+        word-break:break-word;
+        overflow:hidden;
+    }
+
+    .earnings-table-wrap th{
+        height:58px;
+        color:#17252A;
+        font-weight:700;
+        background:rgba(228,247,234,.92);
+    }
+
+    .earnings-table-wrap td{
+        background:#fff;
+    }
+
+    .earnings-table-wrap tr:hover td{
+        background:rgba(246,251,247,.9);
+    }
+
+    .earnings-table-wrap tr:last-child td{
+        border-bottom:none;
+    }
+
+    .earnings-table-wrap th:last-child,
+    .earnings-table-wrap td:last-child{
+        border-right:none;
+    }
+
+    .serial-col,
+    .serial-cell{
+        width:78px !important;
+        min-width:78px !important;
+        max-width:78px !important;
+        text-align:center !important;
+        color:#3B7D55 !important;
+        font-weight:700;
+    }
+
+    .profile-link{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:32px;
+        margin-top:8px;
+        padding:6px 12px;
+        border-radius:999px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.72);
+        border:1px solid rgba(95,168,120,.25);
+        text-decoration:none;
+        font-weight:700;
+        transition:all .2s ease;
+    }
+
+    .profile-link:hover{
+        color:#fff;
+        background:#5FA878;
+        border-color:#5FA878;
+        transform:translateY(-1px);
+    }
+
+    .pagination-bar{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:8px;
+        margin-top:18px;
+        flex-wrap:wrap;
+    }
+
+    .page-btn{
+        min-width:38px;
+        height:38px;
+        padding:0 12px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.58);
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:700;
+        cursor:pointer;
+    }
+
+    .page-btn:hover,
+    .page-btn.active{
+        color:#fff;
+        background:#5FA878;
+        border-color:#5FA878;
+    }
+
+    .page-btn:disabled{
+        opacity:.45;
+        cursor:not-allowed;
+    }
+
+    @media (max-width:860px){
+        .back-btn{
+            display:inline-flex;
+        }
+
+        .page-card{
+            padding:22px;
+            border-radius:22px;
+        }
+
+        .title-row{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .filter-form{
+            grid-template-columns:1fr;
+        }
+
+        .filter-actions,
+        .filter-actions button,
+        .reset-btn{
+            width:100%;
+        }
+
+        .table-controls{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .earnings-table-wrap{
+            border:none;
+            box-shadow:none;
+            background:transparent;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+        }
+
+        .earnings-table-wrap table{
+            display:flex;
+            width:max-content;
+            min-width:100%;
+            background:transparent;
+        }
+
+        .earnings-table-wrap thead{
+            display:none;
+        }
+
+        .earnings-table-wrap tbody{
+            display:flex;
+            gap:14px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:4px 2px 8px;
+        }
+
+        .earnings-table-wrap tbody tr{
+            width:290px;
+            min-width:290px;
+            max-width:290px;
+            min-height:430px;
+            flex:0 0 auto;
+            display:block;
+            border:1px solid rgba(220,238,226,.95);
+            border-radius:18px;
+            background:#fff;
+            padding:15px;
+            box-shadow:0 10px 24px rgba(23,37,42,.06);
+        }
+
+        .earnings-table-wrap td{
+            display:block;
+            width:100%;
+            min-width:0;
+            max-width:none;
+            height:auto;
+            min-height:52px;
+            border:none;
+            padding:7px 0;
+            white-space:normal;
+            word-break:break-word;
+            overflow:visible;
+            background:transparent;
+        }
+
+        .earnings-table-wrap td::before{
+            content:attr(data-label);
+            display:block;
+            color:#64748B;
+            font-size:.85rem;
+            font-weight:700;
+            margin-bottom:2px;
+        }
+
+        .earnings-table-wrap td[colspan]{
+            text-align:center;
+            min-height:auto;
+        }
+
+        .earnings-table-wrap td[colspan]::before{
+            display:none;
+        }
+
+        .pagination-bar{
+            justify-content:center;
+        }
+    }
+
+    @media (max-width:420px){
+        .page-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .title-left h2{
+            font-size:1.45rem;
+        }
+
+        .back-btn{
+            width:38px;
+            height:38px;
+            border-radius:12px;
+            font-size:1.45rem;
+        }
+
+        .earnings-table-wrap tbody tr{
+            width:265px;
+            min-width:265px;
+            max-width:265px;
+        }
+    }
+</style>
+
 <div class="page-card">
-    <h2>UFC Mitra Earnings</h2>
+    <div class="title-row">
+        <div class="title-left">
+            <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+            <h2>UFC Mitra Earnings</h2>
+        </div>
+    </div>
 
-    <form method="get" class="grid-form two-col">
-        <label>Select Month
-            <input type="month" name="month" value="{{ selected_month }}">
-        </label>
+    <div class="filter-card">
+        <form method="get" class="filter-form">
+            <label>
+                Select Month
+                <input type="month" name="month" value="{{ selected_month }}">
+            </label>
 
-        <label>Select UFC Mitra
-            <select name="mitra_uid">
-                <option value="">All Mitras</option>
-                {% for m in mitras %}
-                    <option value="{{ m.mitra_uid }}" {% if selected_mitra_uid == m.mitra_uid %}selected{% endif %}>
-                        {{ m.name }} ({{ m.mitra_uid }})
-                    </option>
-                {% endfor %}
+            <label>
+                Select UFC Mitra
+                <select name="mitra_uid">
+                    <option value="">All Mitras</option>
+                    {% for m in mitras %}
+                        <option value="{{ m.mitra_uid }}" {% if selected_mitra_uid == m.mitra_uid %}selected{% endif %}>
+                            {{ m.name }} ({{ m.mitra_uid }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <div class="filter-actions">
+                <button type="submit">Filter</button>
+                <a href="{{ url_for('admin.ufc_mitra_earnings') }}" class="reset-btn">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-controls">
+        <label class="pagination-size">
+            <span>Show entries</span>
+            <select id="earningsRowsPerPage">
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="1000">1000</option>
+                <option value="250">250</option>
             </select>
         </label>
+    </div>
 
-        <div class="span-2">
-            <button type="submit">Filter</button>
-            <a href="{{ url_for('admin.ufc_mitra_earnings') }}">Reset</a>
-        </div>
-    </form>
+    <div class="table-info" id="earningsPaginationInfo"></div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>UFC Mitra</th>
-                <th>Mitra UID</th>
-                <th>Monthly AVPL Sale Bonus</th>
-                <th>Monthly Farmer Sale Bonus</th>
-                <th>Monthly Total</th>
-                <th>Total AVPL Sale Bonus</th>
-                <th>Total Farmer Sale Bonus</th>
-                <th>Total Earning</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for r in rows %}
-            <tr>
-                <td>
-                    {{ r.mitra_name or '-' }}<br>
-                    {% if r.linked_user_id %}
-                        <a href="{{ url_for('admin.users') }}">View Profile</a>
-                    {% endif %}
-                </td>
-                <td>{{ r.mitra_uid or '-' }}</td>
-                <td>₹{{ r.monthly_avpl_earning }}</td>
-                <td>₹{{ r.monthly_farmer_earning }}</td>
-                <td>₹{{ r.monthly_total_earning }}</td>
-                <td>₹{{ r.total_avpl_earning }}</td>
-                <td>₹{{ r.total_farmer_earning }}</td>
-                <td>₹{{ r.total_earning }}</td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="8">No UFC Mitra earnings found.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="earnings-table-wrap" id="earningsTableScroll">
+        <table id="earningsTable">
+            <thead>
+                <tr>
+                    <th class="serial-col">Sl. No.</th>
+                    <th>UFC Mitra</th>
+                    <th>Mitra UID</th>
+                    <th>Monthly AVPL Sale Bonus</th>
+                    <th>Monthly Farmer Sale Bonus</th>
+                    <th>Monthly Total</th>
+                    <th>Total AVPL Sale Bonus</th>
+                    <th>Total Farmer Sale Bonus</th>
+                    <th>Total Earning</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in rows %}
+                <tr>
+                    <td class="serial-cell" data-label="Sl. No."></td>
+                    <td data-label="UFC Mitra">
+                        {{ r.mitra_name or '-' }}<br>
+                        {% if r.linked_user_id %}
+                            <a href="{{ url_for('admin.users') }}" class="profile-link">View Profile</a>
+                        {% endif %}
+                    </td>
+                    <td data-label="Mitra UID">{{ r.mitra_uid or '-' }}</td>
+                    <td data-label="Monthly AVPL Sale Bonus">₹{{ r.monthly_avpl_earning }}</td>
+                    <td data-label="Monthly Farmer Sale Bonus">₹{{ r.monthly_farmer_earning }}</td>
+                    <td data-label="Monthly Total">₹{{ r.monthly_total_earning }}</td>
+                    <td data-label="Total AVPL Sale Bonus">₹{{ r.total_avpl_earning }}</td>
+                    <td data-label="Total Farmer Sale Bonus">₹{{ r.total_farmer_earning }}</td>
+                    <td data-label="Total Earning">₹{{ r.total_earning }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="9">No UFC Mitra earnings found.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination-bar" id="earningsPaginationBar"></div>
 </div>
+
+<script>
+(function(){
+    const table = document.getElementById('earningsTable');
+    const select = document.getElementById('earningsRowsPerPage');
+    const info = document.getElementById('earningsPaginationInfo');
+    const pager = document.getElementById('earningsPaginationBar');
+    const scrollBox = document.getElementById('earningsTableScroll');
+
+    if(!table || !select || !info || !pager) return;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const noData = rows.length === 1 && rows[0].querySelector('td[colspan]');
+    let currentPage = 1;
+
+    function renderPagination(){
+        const perPage = parseInt(select.value, 10);
+        const filteredRows = noData ? [] : rows;
+        const totalRows = filteredRows.length;
+
+        rows.forEach(row => row.style.display = 'none');
+
+        if(noData){
+            info.textContent = 'No UFC Mitra earnings found';
+            pager.innerHTML = '';
+            rows.forEach(row => row.style.display = '');
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+        currentPage = Math.min(currentPage, totalPages);
+
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+
+        filteredRows.forEach((row, index) => {
+            row.style.display = index >= start && index < end ? '' : 'none';
+
+            const serialCell = row.querySelector('.serial-cell');
+            if(serialCell){
+                serialCell.textContent = index + 1;
+            }
+        });
+
+        info.textContent = `Showing ${start + 1} to ${Math.min(end, totalRows)} of ${totalRows} entries`;
+
+        pager.innerHTML = '';
+
+        const prev = document.createElement('button');
+        prev.type = 'button';
+        prev.className = 'page-btn';
+        prev.textContent = 'Prev';
+        prev.disabled = currentPage === 1;
+        prev.onclick = () => {
+            currentPage--;
+            renderPagination();
+        };
+        pager.appendChild(prev);
+
+        for(let i = 1; i <= totalPages; i++){
+            if(i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1){
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+                btn.textContent = i;
+                btn.onclick = () => {
+                    currentPage = i;
+                    renderPagination();
+                };
+                pager.appendChild(btn);
+            }
+        }
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'page-btn';
+        next.textContent = 'Next';
+        next.disabled = currentPage === totalPages;
+        next.onclick = () => {
+            currentPage++;
+            renderPagination();
+        };
+        pager.appendChild(next);
+    }
+
+    select.addEventListener('change', function(){
+        currentPage = 1;
+        renderPagination();
+    });
+
+    if(scrollBox){
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        scrollBox.addEventListener('mousedown', function(e){
+            isDown = true;
+            startX = e.pageX - scrollBox.offsetLeft;
+            scrollLeft = scrollBox.scrollLeft;
+        });
+
+        scrollBox.addEventListener('mouseleave', function(){
+            isDown = false;
+        });
+
+        scrollBox.addEventListener('mouseup', function(){
+            isDown = false;
+        });
+
+        scrollBox.addEventListener('mousemove', function(e){
+            if(!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - scrollBox.offsetLeft;
+            const walk = (x - startX) * 1.4;
+            scrollBox.scrollLeft = scrollLeft - walk;
+        });
+    }
+
+    renderPagination();
+})();
+</script>
+
 {% endblock %}

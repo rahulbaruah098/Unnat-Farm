@@ -315,7 +315,19 @@ def mitra_bonus_settings():
         flash("Bonus setting saved.", "success")
         return redirect(url_for('admin.mitra_bonus_settings'))
 
+    q = request.args.get("q", "").strip()
+
     settings = list(mongo.db.mitra_bonus_settings.find({}).sort('created_at', -1))
+
+    if q:
+        q_lower = q.lower()
+        settings = [
+            s for s in settings
+            if q_lower in str(s.get("bonus_type", "")).lower()
+            or q_lower in str(s.get("category", "")).lower()
+            or q_lower in str(s.get("mitra_uid", "") or "All").lower()
+            or q_lower in str(s.get("percentage", "")).lower()
+        ]
 
     mitras = list(mongo.db.ufc_mitra_master.find({}).sort('name', 1))
 

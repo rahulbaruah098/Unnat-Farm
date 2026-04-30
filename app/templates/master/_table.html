@@ -2,21 +2,32 @@
     <thead>
         <tr>
             {% if items and items|length > 0 %}
-                {% for key in items[0].keys() if key not in ['_id'] %}<th>{{ key|replace('_',' ')|title }}</th>{% endfor %}
+                <th>Sl. No.</th>
+                {% for key in items[0].keys() if key not in ['_id'] %}
+                    <th>{{ key|replace('_',' ')|title }}</th>
+                {% endfor %}
             {% else %}
                 <th>No Data</th>
             {% endif %}
         </tr>
     </thead>
+
     <tbody>
         {% if items and items|length > 0 %}
             {% for item in items %}
             <tr>
-                {% for key, value in item.items() if key not in ['_id'] %}<td>{{ value }}</td>{% endfor %}
+                <!-- Serial Number -->
+                <td>{{ loop.index }}</td>
+
+                {% for key, value in item.items() if key not in ['_id'] %}
+                    <td>{{ value }}</td>
+                {% endfor %}
             </tr>
             {% endfor %}
         {% else %}
-            <tr><td>No records found.</td></tr>
+            <tr>
+                <td colspan="100%">No records found.</td>
+            </tr>
         {% endif %}
     </tbody>
 </table>
