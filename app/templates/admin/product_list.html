@@ -1,54 +1,656 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="page-card">
-    <h2>Products</h2>
 
-    <p style="margin-bottom:16px;">
-        <a href="{{ url_for('admin.add_product') }}">Add Product</a> |
-        <a href="{{ url_for('admin.product_categories') }}">Manage Categories</a>
-    </p>
+<style>
+.products-page{
+    width:100%;
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:26px;
+    padding:24px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 22px 55px rgba(23,37,42,.10);
+    font-family:"Times New Roman", Georgia, serif;
+}
 
-    <table>
-        <thead>
-            <tr>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Type</th>
-                <th>Available Centres</th>
-                <th>Price</th>
-            </tr>
-        </thead>
-        <tbody>
+.products-title-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+}
+
+.products-title-row h2{
+    margin:0;
+    color:#17252A;
+    font-size:1.8rem;
+    font-weight:700;
+}
+
+.products-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.product-action-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:40px;
+    padding:9px 17px;
+    border-radius:999px;
+    text-decoration:none;
+    font-weight:700;
+    border:1px solid rgba(95,168,120,.25);
+    transition:.2s ease;
+}
+
+.product-action-btn.primary{
+    background:#5FA878;
+    color:#fff;
+    box-shadow:0 12px 26px rgba(95,168,120,.18);
+}
+
+.product-action-btn.secondary{
+    background:rgba(228,247,234,.82);
+    color:#3B7D55;
+}
+
+.product-action-btn:hover{
+    transform:translateY(-1px);
+    background:#3B7D55;
+    color:#fff;
+}
+
+.products-toolbar{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:14px;
+    align-items:center;
+    margin-bottom:16px;
+}
+
+.product-search input{
+    width:100%;
+    min-height:44px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:999px;
+    padding:10px 16px;
+    outline:none;
+    color:#334155;
+    background:#fff;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    box-shadow:0 8px 18px rgba(23,37,42,.04);
+}
+
+.product-search input:focus{
+    border-color:rgba(95,168,120,.6);
+    box-shadow:0 0 0 4px rgba(95,168,120,.12);
+}
+
+.view-toggle{
+    display:flex;
+    gap:8px;
+    padding:5px;
+    border-radius:999px;
+    background:#F1F8F3;
+    border:1px solid rgba(220,238,226,.95);
+}
+
+.view-btn{
+    border:none;
+    border-radius:999px;
+    padding:8px 14px;
+    background:transparent;
+    color:#3B7D55;
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.view-btn.active{
+    background:#5FA878;
+    color:#fff;
+    box-shadow:0 8px 18px rgba(95,168,120,.18);
+}
+
+.product-filter-strip{
+    display:flex;
+    gap:9px;
+    overflow-x:auto;
+    padding-bottom:6px;
+    margin-bottom:12px;
+}
+
+.product-chip{
+    flex:0 0 auto;
+    min-height:38px;
+    padding:8px 15px;
+    border-radius:999px;
+    border:1px solid rgba(220,238,226,.95);
+    background:#fff;
+    color:#425466;
+    font-size:.94rem;
+    font-weight:700;
+    box-shadow:0 6px 14px rgba(23,37,42,.04);
+    cursor:pointer;
+    transition:.2s ease;
+}
+
+.product-chip.active,
+.product-chip:hover{
+    background:#5FA878;
+    color:#fff;
+    border-color:#5FA878;
+}
+
+.product-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:18px;
+    margin-top:14px;
+}
+
+.product-card{
+    overflow:hidden;
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 28px rgba(23,37,42,.07);
+    transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    animation:cardIn .28s ease both;
+}
+
+.product-card:hover{
+    transform:translateY(-4px);
+    border-color:rgba(95,168,120,.45);
+    box-shadow:0 20px 42px rgba(23,37,42,.12);
+}
+
+.product-image-wrap{
+    height:150px;
+    overflow:hidden;
+    background:#EEF8F1;
+}
+
+.product-image-wrap img{
+    width:100%;
+    height:100%;
+    object-fit:contain;   /* ✅ shows full image */
+    background:#EEF8F1;   /* optional clean background */
+}
+
+.product-card:hover .product-image-wrap img{
+    transform:scale(1.045);
+}
+
+.product-no-image{
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#3B7D55;
+    font-size:1.45rem;
+    font-weight:800;
+    background:linear-gradient(135deg,#EEF8F1,#F8FAFC);
+}
+
+.product-content{
+    padding:14px;
+}
+
+.product-name-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+}
+
+.product-name{
+    margin:0;
+    color:#17252A;
+    font-size:1.05rem;
+    font-weight:800;
+    line-height:1.22;
+    min-height:40px;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+}
+
+.product-price{
+    flex:0 0 auto;
+    color:#17252A;
+    font-size:1.05rem;
+    font-weight:900;
+    white-space:nowrap;
+}
+
+.product-meta{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-bottom:10px;
+}
+
+.product-meta span{
+    display:inline-flex;
+    min-height:24px;
+    padding:4px 9px;
+    border-radius:999px;
+    background:rgba(228,247,234,.72);
+    color:#3B7D55;
+    font-size:.78rem;
+    font-weight:700;
+    text-transform:capitalize;
+}
+
+.product-centres{
+    padding-top:10px;
+    border-top:1px solid rgba(220,238,226,.75);
+    color:#64748B;
+    font-size:.84rem;
+    line-height:1.35;
+    min-height:48px;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+}
+
+/* LIST VIEW */
+.product-grid.list-view{
+    grid-template-columns:1fr;
+}
+
+.product-grid.list-view .product-card{
+    display:grid;
+    grid-template-columns:180px 1fr;
+    align-items:stretch;
+}
+
+.product-grid.list-view .product-image-wrap{
+    height:100%;
+    min-height:150px;
+}
+
+.product-grid.list-view .product-content{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+
+.product-grid.list-view .product-name{
+    min-height:unset;
+    font-size:1.18rem;
+}
+
+.product-grid.list-view .product-centres{
+    min-height:unset;
+    -webkit-line-clamp:3;
+}
+
+.product-pagination{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:8px;
+    margin-top:20px;
+    flex-wrap:wrap;
+}
+
+.product-page-btn{
+    min-width:38px;
+    height:38px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:12px;
+    background:rgba(228,247,234,.58);
+    color:#3B7D55;
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.product-page-btn.active,
+.product-page-btn:hover{
+    background:#5FA878;
+    color:#fff;
+}
+
+.product-page-btn:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+}
+
+.empty-products{
+    grid-column:1 / -1;
+    padding:24px;
+    text-align:center;
+    border:1px dashed rgba(95,168,120,.35);
+    border-radius:18px;
+    background:rgba(228,247,234,.38);
+    color:#64748B;
+    font-weight:700;
+}
+
+@keyframes cardIn{
+    from{opacity:0; transform:translateY(8px);}
+    to{opacity:1; transform:translateY(0);}
+}
+
+@media(max-width:1280px){
+    .product-grid{
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media(max-width:900px){
+    .products-page{
+        padding:20px;
+    }
+
+    .products-toolbar{
+        grid-template-columns:1fr;
+    }
+
+    .view-toggle{
+        width:max-content;
+    }
+
+    .product-grid,
+    .product-grid.list-view{
+        display:flex;
+        gap:14px;
+        overflow-x:auto;
+        scroll-snap-type:x mandatory;
+        padding:4px 2px 12px;
+        -webkit-overflow-scrolling:touch;
+    }
+
+    .product-card,
+    .product-grid.list-view .product-card{
+        flex:0 0 280px;
+        display:block;
+        scroll-snap-align:start;
+    }
+
+    .product-image-wrap,
+    .product-grid.list-view .product-image-wrap{
+        height:140px;
+        min-height:140px;
+    }
+
+    .product-content{
+        padding:12px;
+    }
+
+    .product-pagination{
+        justify-content:center;
+    }
+}
+
+@media(max-width:560px){
+    .products-page{
+        padding:16px;
+        border-radius:20px;
+    }
+
+    .products-title-row{
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .products-actions,
+    .product-action-btn{
+        width:100%;
+    }
+
+    .product-card,
+    .product-grid.list-view .product-card{
+        flex-basis:250px;
+    }
+
+    .product-image-wrap,
+    .product-grid.list-view .product-image-wrap{
+        height:128px;
+        min-height:128px;
+    }
+
+    .product-name{
+        font-size:.96rem;
+        min-height:36px;
+    }
+
+    .product-price{
+        font-size:.98rem;
+    }
+
+    .product-centres{
+        font-size:.78rem;
+    }
+}
+
+@media(max-width:390px){
+    .product-card,
+    .product-grid.list-view .product-card{
+        flex-basis:235px;
+    }
+}
+
+/* Hide Grid/List toggle in mobile & tablet */
+@media(max-width:900px){
+    .view-toggle{
+        display:none !important;
+    }
+}
+</style>
+
+<div class="page-card products-page">
+
+    <div class="products-title-row">
+        <h2>Products</h2>
+
+        <div class="products-actions">
+            <a href="{{ url_for('admin.add_product') }}" class="product-action-btn primary">
+                + Add Product
+            </a>
+
+            <a href="{{ url_for('admin.product_categories') }}" class="product-action-btn secondary">
+                Manage Categories
+            </a>
+        </div>
+    </div>
+
+    <div class="products-toolbar">
+        <div class="product-search">
+            <input type="text" id="productSearchInput" placeholder="Search products by name, category, type, centre or price">
+        </div>
+
+        <div class="view-toggle">
+            <button type="button" class="view-btn active" data-view="grid">Grid</button>
+            <button type="button" class="view-btn" data-view="list">List</button>
+        </div>
+    </div>
+
+    <div class="product-filter-strip">
+        <button type="button" class="product-chip active" data-filter="all">All Products</button>
+        <button type="button" class="product-chip" data-filter="input">Input</button>
+        <button type="button" class="product-chip" data-filter="output">Output</button>
+        <button type="button" class="product-chip" data-filter="centre">Centre-wise Availability</button>
+    </div>
+
+    <div class="product-grid" id="productGrid">
         {% for p in products %}
-            <tr>
-                <td>
+            <article class="product-card"
+                     data-type="{{ p.type|lower }}"
+                     data-search="{{ p.name }} {{ p.category }} {{ p.type }} {% if p.available_centres is iterable and p.available_centres is not string %}{{ p.available_centres|join(' ') }}{% else %}{{ p.available_centres }}{% endif %} {{ p.price }}">
+                <div class="product-image-wrap">
                     {% if p.image_name %}
-                        <img src="{{ url_for('documents.serve', filename=p.image_name) }}" 
-                             alt="{{ p.name }}" 
-                             style="width:70px;height:55px;object-fit:cover;border-radius:8px;">
+                        <img src="{{ url_for('documents.serve', filename=p.image_name) }}" alt="{{ p.name }}">
                     {% else %}
-                        -
+                        <div class="product-no-image">UF</div>
                     {% endif %}
-                </td>
-                <td>{{ p.name }}</td>
-                <td>{{ p.category }}</td>
-                <td>{{ p.type }}</td>
-                <td>
-                    {% if p.available_centres is iterable and p.available_centres is not string %}
-                        {{ p.available_centres|join(', ') }}
-                    {% else %}
-                        {{ p.available_centres }}
-                    {% endif %}
-                </td>
-                <td>{{ p.price }}</td>
-            </tr>
+                </div>
+
+                <div class="product-content">
+                    <div class="product-name-row">
+                        <h3 class="product-name">{{ p.name }}</h3>
+                        <div class="product-price">₹{{ p.price }}</div>
+                    </div>
+
+                    <div class="product-meta">
+                        <span>{{ p.category }}</span>
+                        <span>{{ p.type }}</span>
+                    </div>
+
+                    <div class="product-centres">
+                        <strong>Available Centres:</strong>
+                        {% if p.available_centres is iterable and p.available_centres is not string %}
+                            {{ p.available_centres|join(', ') }}
+                        {% else %}
+                            {{ p.available_centres }}
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
         {% else %}
-            <tr>
-                <td colspan="6">No products found.</td>
-            </tr>
+            <div class="empty-products">
+                No products found.
+            </div>
         {% endfor %}
-        </tbody>
-    </table>
+    </div>
+
+    <div class="product-pagination" id="productPagination"></div>
+
 </div>
+
+<script>
+(function(){
+    const grid = document.getElementById('productGrid');
+    const cards = Array.from(document.querySelectorAll('.product-card'));
+    const searchInput = document.getElementById('productSearchInput');
+    const chips = Array.from(document.querySelectorAll('.product-chip'));
+    const viewBtns = Array.from(document.querySelectorAll('.view-btn'));
+    const pagination = document.getElementById('productPagination');
+
+    let activeFilter = 'all';
+    let currentPage = 1;
+    let activeView = 'grid';
+    const perPage = 10;
+
+    function getFilteredCards(){
+        const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+        return cards.filter(card => {
+            const type = (card.dataset.type || '').toLowerCase();
+            const text = (card.dataset.search || card.textContent || '').toLowerCase();
+            const matchesSearch = !query || text.includes(query);
+
+            let matchesFilter = true;
+            if(activeFilter === 'input') matchesFilter = type === 'input';
+            if(activeFilter === 'output') matchesFilter = type === 'output';
+            if(activeFilter === 'centre') matchesFilter = text.includes('as') || text.includes('all');
+
+            return matchesSearch && matchesFilter;
+        });
+    }
+
+    function renderProducts(){
+        const filtered = getFilteredCards();
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / perPage));
+
+        currentPage = Math.min(currentPage, totalPages);
+        cards.forEach(card => card.style.display = 'none');
+
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+
+        filtered.slice(start, end).forEach(card => {
+            card.style.display = '';
+        });
+
+        pagination.innerHTML = '';
+
+        if(cards.length === 0 || total <= perPage) return;
+
+        const prev = document.createElement('button');
+        prev.type = 'button';
+        prev.className = 'product-page-btn';
+        prev.textContent = 'Prev';
+        prev.disabled = currentPage === 1;
+        prev.onclick = function(){
+            currentPage--;
+            renderProducts();
+        };
+        pagination.appendChild(prev);
+
+        for(let i = 1; i <= totalPages; i++){
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'product-page-btn' + (i === currentPage ? ' active' : '');
+            btn.textContent = i;
+            btn.onclick = function(){
+                currentPage = i;
+                renderProducts();
+            };
+            pagination.appendChild(btn);
+        }
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'product-page-btn';
+        next.textContent = 'Next';
+        next.disabled = currentPage === totalPages;
+        next.onclick = function(){
+            currentPage++;
+            renderProducts();
+        };
+        pagination.appendChild(next);
+    }
+
+    chips.forEach(chip => {
+        chip.addEventListener('click', function(){
+            chips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            activeFilter = chip.dataset.filter || 'all';
+            currentPage = 1;
+            renderProducts();
+        });
+    });
+
+    viewBtns.forEach(btn => {
+        btn.addEventListener('click', function(){
+            viewBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            activeView = btn.dataset.view || 'grid';
+
+            if(activeView === 'list'){
+                grid.classList.add('list-view');
+            }else{
+                grid.classList.remove('list-view');
+            }
+
+            currentPage = 1;
+            renderProducts();
+        });
+    });
+
+    if(searchInput){
+        searchInput.addEventListener('input', function(){
+            currentPage = 1;
+            renderProducts();
+        });
+    }
+
+    renderProducts();
+})();
+</script>
+
 {% endblock %}

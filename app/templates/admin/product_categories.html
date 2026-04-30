@@ -1,40 +1,622 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+.page-card{
+    width:100%;
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:24px;
+    padding:26px;
+    background:#fff;
+    box-shadow:0 18px 45px rgba(15,23,42,.08);
+    font-family:"Times New Roman", Georgia, serif;
+}
+
+.title-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+}
+
+.title-left{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.title-left h2{
+    margin:0;
+    font-size:1.6rem;
+    font-weight:700;
+    color:#0F172A;
+}
+
+.back-btn{
+    display:none;
+    width:40px;
+    height:40px;
+    border:none;
+    border-radius:12px;
+    background:#E4F7EA;
+    color:#3B7D55;
+    font-size:18px;
+    cursor:pointer;
+}
+
+.page-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.page-actions a{
+    padding:8px 16px;
+    border-radius:999px;
+    text-decoration:none;
+    font-weight:700;
+    border:1px solid rgba(95,168,120,.25);
+    background:rgba(228,247,234,.82);
+    color:#3B7D55;
+}
+
+.category-form-card{
+    border:1px solid #E2E8F0;
+    border-radius:18px;
+    padding:18px;
+    background:#F8FAFC;
+    margin-bottom:24px;
+}
+
+.grid-form{
+    display:grid;
+    gap:16px;
+}
+
+.grid-form.two-col{
+    grid-template-columns:1fr auto;
+    align-items:end;
+}
+
+.grid-form label{
+    font-weight:700;
+    color:#334155;
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+}
+
+.grid-form input{
+    height:44px;
+    border-radius:12px;
+    border:1px solid #E2E8F0;
+    padding:0 12px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+}
+
+.grid-form input:focus{
+    outline:none;
+    border-color:#5FA878;
+    box-shadow:0 0 0 4px rgba(95,168,120,.12);
+}
+
+.form-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.form-actions button{
+    height:44px;
+    border:none;
+    border-radius:999px;
+    background:#5FA878;
+    color:#fff;
+    padding:0 20px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 12px 26px rgba(95,168,120,.18);
+}
+
+.form-actions a{
+    height:44px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:999px;
+    padding:0 18px;
+    background:rgba(228,247,234,.82);
+    color:#3B7D55;
+    border:1px solid rgba(95,168,120,.25);
+    text-decoration:none;
+    font-weight:700;
+}
+
+.section-title{
+    margin:0 0 14px;
+    color:#17252A;
+    font-size:1.35rem;
+    font-weight:700;
+}
+
+.table-toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+}
+
+.search-box{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.search-box input{
+    width:280px;
+    max-width:100%;
+    height:42px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:999px;
+    padding:0 14px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+}
+
+.search-box input:focus{
+    outline:none;
+    border-color:#5FA878;
+    box-shadow:0 0 0 4px rgba(95,168,120,.12);
+}
+
+.search-box button{
+    height:42px;
+    border:none;
+    border-radius:999px;
+    padding:0 18px;
+    background:#5FA878;
+    color:#fff;
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.search-box .clear-btn{
+    background:rgba(228,247,234,.82);
+    color:#3B7D55;
+    border:1px solid rgba(95,168,120,.25);
+}
+
+.entries-box{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    color:#425466;
+    font-weight:700;
+}
+
+.entries-box select{
+    width:115px;
+    height:40px;
+    border-radius:12px;
+    border:1px solid rgba(95,168,120,.25);
+    padding:0 10px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:700;
+}
+
+.table-info{
+    margin-bottom:14px;
+    padding:10px 14px;
+    border-radius:14px;
+    border:1px solid rgba(95,168,120,.18);
+    background:rgba(228,247,234,.42);
+    color:#3B7D55;
+    font-weight:700;
+}
+
+.table-wrap{
+    width:100%;
+    overflow-x:auto;
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 12px 28px rgba(23,37,42,.05);
+}
+
+.category-table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    min-width:620px;
+}
+
+.category-table th,
+.category-table td{
+    padding:14px 16px;
+    border-bottom:1px solid rgba(220,238,226,.85);
+    color:#425466;
+    font-size:1rem;
+    text-align:left;
+}
+
+.category-table th{
+    background:rgba(228,247,234,.82);
+    color:#17252A;
+    font-weight:700;
+}
+
+.category-table tr:hover td{
+    background:#F8FAFC;
+}
+
+.category-table tr:last-child td{
+    border-bottom:none;
+}
+
+.serial-col{
+    width:90px;
+    text-align:center !important;
+    color:#3B7D55 !important;
+    font-weight:700;
+}
+
+.pagination-bar{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:8px;
+    margin-top:16px;
+    flex-wrap:wrap;
+}
+
+.page-btn{
+    min-width:38px;
+    height:38px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:12px;
+    background:rgba(228,247,234,.58);
+    color:#3B7D55;
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.page-btn.active,
+.page-btn:hover{
+    background:#5FA878;
+    color:#fff;
+}
+
+.page-btn:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+}
+
+@media(max-width:900px){
+    .back-btn{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+    }
+
+    .title-row{
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .page-actions,
+    .page-actions a{
+        width:100%;
+        justify-content:center;
+    }
+
+    .grid-form.two-col{
+        grid-template-columns:1fr;
+    }
+
+    .form-actions,
+    .form-actions button,
+    .form-actions a{
+        width:100%;
+    }
+
+    .table-toolbar{
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .search-box,
+    .search-box input,
+    .search-box button{
+        width:100%;
+    }
+
+    .table-wrap{
+        border:none;
+        box-shadow:none;
+        background:transparent;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+    }
+
+    .category-table{
+        display:flex;
+        min-width:100%;
+        background:transparent;
+    }
+
+    .category-table thead{
+        display:none;
+    }
+
+    .category-table tbody{
+        display:flex;
+        gap:14px;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        padding:4px 2px 8px;
+    }
+
+    .category-table tr{
+        min-width:260px;
+        flex:0 0 auto;
+        display:block;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        background:#fff;
+        padding:14px;
+        box-shadow:0 10px 24px rgba(23,37,42,.06);
+    }
+
+    .category-table td{
+        display:block;
+        border:none;
+        padding:7px 0;
+        white-space:normal;
+        word-break:break-word;
+    }
+
+    .category-table td::before{
+        content:attr(data-label);
+        display:block;
+        color:#64748B;
+        font-size:.85rem;
+        font-weight:700;
+        margin-bottom:2px;
+    }
+
+    .category-table td[colspan]::before{
+        display:none;
+    }
+
+    .pagination-bar{
+        justify-content:center;
+    }
+}
+
+@media(max-width:420px){
+    .page-card{
+        padding:18px;
+        border-radius:18px;
+    }
+
+    .title-left h2{
+        font-size:1.45rem;
+    }
+}
+</style>
+
 <div class="page-card">
-    <h2>Product Categories</h2>
+    <div class="title-row">
+        <div class="title-left">
+            <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+            <h2>Product Categories</h2>
+        </div>
 
-    <form method="post" class="grid-form two-col">
-        <label>Category Name
-            <input type="text" name="name" placeholder="Example: Seeds, Fertilizer, Pig Feed" required>
-        </label>
-
-        <div style="display:flex;align-items:end;gap:10px;">
-            <button type="submit">Add Category</button>
+        <div class="page-actions">
             <a href="{{ url_for('admin.add_product') }}">Back to Add Product</a>
         </div>
-    </form>
+    </div>
 
-    <h3>Available Categories</h3>
+    <div class="category-form-card">
+        <form method="post" class="grid-form two-col">
+            <label>Category Name
+                <input type="text" name="name" placeholder="Example: Seeds, Fertilizer, Pig Feed" required>
+            </label>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Category Name</th>
-                <th>Created At</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for c in categories %}
-            <tr>
-                <td>{{ c.name }}</td>
-                <td>{{ c.created_at }}</td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="2">No product categories added yet.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            <div class="form-actions">
+                <button type="submit">Add Category</button>
+                <a href="{{ url_for('admin.add_product') }}">Back to Add Product</a>
+            </div>
+        </form>
+    </div>
+
+    <h3 class="section-title">Available Categories</h3>
+
+    <div class="table-toolbar">
+        <div class="search-box">
+            <input type="text" id="categorySearchInput" placeholder="Search categories...">
+            <button type="button" id="categorySearchBtn">Search</button>
+            <button type="button" class="clear-btn" id="categoryClearBtn">Clear</button>
+        </div>
+
+        <label class="entries-box">
+            <span>Show entries</span>
+            <select id="categoryRowsPerPage">
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="250">250</option>
+            </select>
+        </label>
+    </div>
+
+    <div class="table-info" id="categoryPaginationInfo"></div>
+
+    <div class="table-wrap">
+        <table class="category-table" id="categoryTable">
+            <thead>
+                <tr>
+                    <th class="serial-col">Sl. No.</th>
+                    <th>Category Name</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in categories %}
+                <tr>
+                    <td class="serial-col serial-cell" data-label="Sl. No."></td>
+                    <td data-label="Category Name">{{ c.name }}</td>
+                    <td data-label="Created At">{{ c.created_at }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="3">No product categories added yet.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination-bar" id="categoryPaginationBar"></div>
 </div>
+
+<script>
+(function(){
+    const table = document.getElementById('categoryTable');
+    const rowsPerPage = document.getElementById('categoryRowsPerPage');
+    const info = document.getElementById('categoryPaginationInfo');
+    const pager = document.getElementById('categoryPaginationBar');
+    const searchInput = document.getElementById('categorySearchInput');
+    const searchBtn = document.getElementById('categorySearchBtn');
+    const clearBtn = document.getElementById('categoryClearBtn');
+
+    if(!table || !rowsPerPage || !info || !pager) return;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const noData = rows.length === 1 && rows[0].querySelector('td[colspan]');
+    let currentPage = 1;
+    let activeSearch = '';
+
+    function getFilteredRows(){
+        if(noData) return [];
+        const query = activeSearch.trim().toLowerCase();
+        if(!query) return rows;
+        return rows.filter(row => row.textContent.toLowerCase().includes(query));
+    }
+
+    function renderPagination(){
+        const perPage = parseInt(rowsPerPage.value, 10);
+        const filteredRows = getFilteredRows();
+        const totalRows = filteredRows.length;
+
+        rows.forEach(row => row.style.display = 'none');
+
+        if(noData){
+            info.textContent = 'No product categories added yet';
+            pager.innerHTML = '';
+            rows.forEach(row => row.style.display = '');
+            return;
+        }
+
+        if(totalRows === 0){
+            info.textContent = 'No matching categories found';
+            pager.innerHTML = '';
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+        currentPage = Math.min(currentPage, totalPages);
+
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+
+        filteredRows.forEach((row, index) => {
+            row.style.display = index >= start && index < end ? '' : 'none';
+
+            const serialCell = row.querySelector('.serial-cell');
+            if(serialCell){
+                serialCell.textContent = index + 1;
+            }
+        });
+
+        info.textContent = `Showing ${start + 1} to ${Math.min(end, totalRows)} of ${totalRows} entries`;
+
+        pager.innerHTML = '';
+
+        const prev = document.createElement('button');
+        prev.type = 'button';
+        prev.className = 'page-btn';
+        prev.textContent = 'Prev';
+        prev.disabled = currentPage === 1;
+        prev.onclick = function(){
+            currentPage--;
+            renderPagination();
+        };
+        pager.appendChild(prev);
+
+        for(let i = 1; i <= totalPages; i++){
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+            btn.textContent = i;
+            btn.onclick = function(){
+                currentPage = i;
+                renderPagination();
+            };
+            pager.appendChild(btn);
+        }
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'page-btn';
+        next.textContent = 'Next';
+        next.disabled = currentPage === totalPages;
+        next.onclick = function(){
+            currentPage++;
+            renderPagination();
+        };
+        pager.appendChild(next);
+    }
+
+    rowsPerPage.addEventListener('change', function(){
+        currentPage = 1;
+        renderPagination();
+    });
+
+    searchBtn.addEventListener('click', function(){
+        activeSearch = searchInput.value;
+        currentPage = 1;
+        renderPagination();
+    });
+
+    searchInput.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+            e.preventDefault();
+            activeSearch = searchInput.value;
+            currentPage = 1;
+            renderPagination();
+        }
+    });
+
+    clearBtn.addEventListener('click', function(){
+        searchInput.value = '';
+        activeSearch = '';
+        currentPage = 1;
+        renderPagination();
+    });
+
+    renderPagination();
+})();
+</script>
+
 {% endblock %}
