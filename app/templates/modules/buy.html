@@ -31,41 +31,58 @@
                     {% endif %}
                 </div>
 
-                <div class="market-body">
-                    <h4>{{ p.product_name }}</h4>
+<div class="market-body">
+    <h4>{{ p.product_name }}</h4>
 
-                    <p><strong>Variety:</strong> {{ p.variety or '-' }}</p>
-                    <p><strong>Average Size:</strong> {{ p.average_size or '-' }}</p>
-                    <p><strong>Farmer:</strong> {{ p.farmer_name or '-' }}</p>
-                    <p><strong>Contact:</strong> {{ p.farmer_contact or '-' }}</p>
-                    <p>
-                        <strong>Area:</strong>
-                        {{ p.village or '-' }}{% if p.block %}, {{ p.block }}{% endif %}{% if p.district %}, {{ p.district }}{% endif %}
-                    </p>
-                    <p><strong>Centre UID:</strong> {{ p.centre_uid or '-' }}</p>
+    <p><strong>Category:</strong> Farmer Product</p>
+    <p><strong>Variety:</strong> {{ p.variety or '-' }}</p>
+    <p><strong>Farmer:</strong> {{ p.farmer_name or '-' }}</p>
+    <p><strong>Centre UID:</strong> {{ p.centre_uid or '-' }}</p>
 
-                    <div class="market-footer">
-                        <div>
-                            <span class="price">₹{{ p.unit_price or '-' }}</span>
-                            <small>Available: {{ p.available_quantity or '-' }}</small>
-                        </div>
+    <div class="market-footer">
+     <div>
+    <span class="price">₹{{ p.unit_price or '-' }}</span>
 
-                        {% if session.get('role') == 'ufc_mitra' %}
-                            <form method="POST" class="buy-form">
-                                <input type="hidden" name="product_id" value="{{ p._id }}">
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
-                                    name="quantity"
-                                    placeholder="Qty"
-                                    required
-                                >
-                                <button type="submit">Buy</button>
-                            </form>
-                        {% endif %}
-                    </div>
-                </div>
+    {% set farmer_stock = p.available_quantity|float %}
+    {% if farmer_stock <= 0 %}
+        <small class="stock-text stock-out">Out of Stock</small>
+    {% else %}
+        <small class="stock-text">Available: {{ p.available_quantity }}</small>
+    {% endif %}
+</div>
+
+{% if session.get('role') == 'farmer' %}
+    {% if farmer_stock <= 0 %}
+        <form class="buy-form">
+            <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="Qty"
+                disabled
+            >
+            <button type="button" disabled>Buy</button>
+        </form>
+    {% else %}
+        <form method="POST" action="{{ url_for('modules.place_farmer_order') }}" class="buy-form">
+            <input type="hidden" name="product_id" value="{{ p._id }}">
+            <input type="hidden" name="product_name" value="{{ p.product_name }}">
+            <input type="hidden" name="unit_price" value="{{ p.unit_price or 0 }}">
+            <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                max="{{ p.available_quantity }}"
+                name="quantity"
+                placeholder="Qty"
+                required
+            >
+            <button type="submit">Buy</button>
+        </form>
+    {% endif %}
+{% endif %}
+    </div>
+</div>
             </div>
         {% else %}
             <div class="empty-market">No farmer products available.</div>
@@ -120,11 +137,28 @@
                     <p><strong>Available Centres:</strong> {{ p.available_centres or '-' }}</p>
 
                     <div class="market-footer">
-                        <div>
-                            <span class="price">₹{{ p.price or '-' }}</span>
-                            <small>AVPL Catalogue Product</small>
-                        </div>
-                    </div>
+    <div>
+        <span class="price">₹{{ p.price or '-' }}</span>
+        <small>AVPL Catalogue Product</small>
+    </div>
+
+    {% if session.get('role') == 'farmer' %}
+        <form method="POST" action="{{ url_for('modules.place_farmer_order') }}" class="buy-form">
+            <input type="hidden" name="product_id" value="{{ p._id }}">
+            <input type="hidden" name="product_name" value="{{ p.name }}">
+            <input type="hidden" name="unit_price" value="{{ p.price or 0 }}">
+            <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                name="quantity"
+                placeholder="Qty"
+                required
+            >
+            <button type="submit">Buy</button>
+        </form>
+    {% endif %}
+</div>
                 </div>
             </div>
         {% else %}
@@ -202,9 +236,27 @@
 
 .marketplace-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
     gap:18px;
     margin-top:16px;
+}
+
+@media(min-width:1200px){
+    .marketplace-grid{
+        grid-template-columns:repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media(min-width:861px) and (max-width:1199px){
+    .marketplace-grid{
+        grid-template-columns:repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media(min-width:521px) and (max-width:860px){
+    .marketplace-grid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
 }
 
 .market-card{
@@ -214,6 +266,10 @@
     overflow:hidden;
     box-shadow:0 14px 34px rgba(15,23,42,.08);
     transition:.2s ease;
+    display:flex;
+    flex-direction:column;
+    min-height:430px;
+    width:100%;
 }
 
 .market-card:hover{
@@ -223,7 +279,7 @@
 
 .market-img-wrap{
     width:100%;
-    height:260px;
+    height:250px;
     background:#F1F5F9;
     display:flex;
     align-items:center;
@@ -260,6 +316,9 @@
 
 .market-body{
     padding:16px;
+    display:flex;
+    flex-direction:column;
+    flex:1;
 }
 
 .market-body h4{
@@ -279,7 +338,7 @@
     justify-content:space-between;
     gap:12px;
     align-items:flex-end;
-    margin-top:14px;
+    margin-top:auto;
     padding-top:12px;
     border-top:1px solid #E2E8F0;
 }
@@ -291,10 +350,28 @@
     font-size:1.15rem;
 }
 
-.market-footer small{
+.stock-text{
     display:block;
     margin-top:3px;
     color:#64748B;
+    font-size:.86rem;
+    font-weight:700;
+}
+
+.stock-out{
+    color:#B91C1C !important;
+    background:#FEE2E2;
+    border:1px solid #FECACA;
+    padding:4px 9px;
+    border-radius:999px;
+    width:max-content;
+}
+
+.buy-form button:disabled{
+    background:#CBD5E1;
+    color:#64748B;
+    cursor:not-allowed;
+    box-shadow:none;
 }
 
 .buy-form{

@@ -130,19 +130,22 @@ def buy():
         flash(f"{quantity} {product.get('product_name')} purchased and added to your stock.", "success")
         return redirect(url_for("modules.buy"))
 
-    # ===== GET LOGIC =====
+   # ===== GET LOGIC =====
     products = list(mongo.db.products.find({}).sort("created_at", -1))
+
+    view_mode = request.args.get("view", "").strip()
 
     farmer_query = {"status": "active"}
 
-    if session.get("role") == "ufc_mitra":
-        farmer_query["mitra_uid"] = session.get("mitra_uid")
+    if view_mode != "all":
+        if session.get("role") == "ufc_mitra":
+            farmer_query["mitra_uid"] = session.get("mitra_uid")
     elif session.get("role") == "ufc_admin":
         farmer_query["centre_uid"] = session.get("centre_uid")
 
     farmer_products = list(
-        mongo.db.farmer_products.find(farmer_query).sort("created_at", -1)
-    )
+    mongo.db.farmer_products.find(farmer_query).sort("created_at", -1)
+)
 
     return render_template(
         "modules/buy.html",
@@ -658,6 +661,7 @@ def insurance_leads():
 def lms():
     audience = session.get("role")
     user_id = session.get("user_id")
+    q = request.args.get("q", "").strip()
 
     query = {
         "$or": [
@@ -667,16 +671,23 @@ def lms():
     }
 
     if audience == "farmer":
-        farmer_profile = mongo.db.farmer_master.find_one({
-            "linked_user_id": user_id
-        })
+        farmer_profile = (
+            mongo.db.farmer_master.find_one({"linked_user_id": user_id})
+            or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(user_id)})
+        )
 
-        if not farmer_profile:
-            farmer_profile = mongo.db.farmer_master.find_one({
-                "linked_user_id": ObjectId(user_id)
-            })
+        farmer_activities = []
 
-        farmer_activities = farmer_profile.get("activities", []) if farmer_profile else []
+        if farmer_profile:
+            for key in ["activities", "registered_activities", "activity", "farmer_activities"]:
+                value = farmer_profile.get(key)
+
+                if isinstance(value, list):
+                    farmer_activities.extend(value)
+                elif isinstance(value, str) and value.strip():
+                    farmer_activities.append(value.strip())
+
+        farmer_activities = list(set(farmer_activities))
 
         query = {
             "$and": [
@@ -689,13 +700,12 @@ def lms():
                 {
                     "$or": [
                         {"activity_category": "all"},
-                        {"activity_category": {"$in": farmer_activities}}
+                        {"activity_category": "All"},
+                        {"activity_category": {"$in": farmer_activities}},
                     ]
                 }
             ]
         }
-
-    q = request.args.get("q", "").strip()
 
     if q:
         query = {
@@ -1566,7 +1576,7 @@ def place_farmer_order():
 
     if quantity <= 0:
         flash("Invalid quantity.", "danger")
-        return redirect(url_for("dashboard.home"))
+        return redirect(url_for("modules.buy"))
 
     user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
 
@@ -1577,6 +1587,96 @@ def place_farmer_order():
     }) or mongo.db.farmer_master.find_one({
         "contact_no": user.get("phone")
     }) or {}
+
+    farmer_product = None
+    avpl_product = None
+    product_source = "avpl_product"
+
+    if product_id:
+        try:
+            farmer_product = mongo.db.farmer_products.find_one({
+                "_id": ObjectId(product_id)
+            })
+        except Exception:
+            farmer_product = None
+
+    if farmer_product:
+        product_source = "farmer_product"
+
+        if str(farmer_product.get("farmer_user_id")) == str(session.get("user_id")):
+            flash("You cannot buy your own listed product.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        available_qty = float(farmer_product.get("available_quantity") or 0)
+
+        if quantity > available_qty:
+            flash("Not enough quantity available.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        product_name = farmer_product.get("product_name")
+        unit_price = float(farmer_product.get("unit_price") or 0)
+
+        # ✅ Reduce farmer product stock
+        update_result = mongo.db.farmer_products.update_one(
+            {
+                "_id": ObjectId(product_id),
+                "available_quantity": {"$gte": quantity}
+            },
+            {
+                "$inc": {
+                    "available_quantity": -quantity
+                },
+                "$set": {
+                    "updated_at": now_utc()
+                }
+            }
+        )
+
+        if update_result.modified_count == 0:
+            flash("Stock changed recently. Please try again.", "danger")
+            return redirect(url_for("modules.buy"))
+
+    else:
+        if product_id:
+            try:
+                avpl_product = mongo.db.products.find_one({
+                    "_id": ObjectId(product_id)
+                })
+            except Exception:
+                avpl_product = None
+
+        if not avpl_product:
+            flash("Product not found.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        product_name = avpl_product.get("name") or avpl_product.get("product_name") or product_name
+        unit_price = float(avpl_product.get("price") or avpl_product.get("unit_price") or unit_price or 0)
+
+        available_qty = float(avpl_product.get("available_quantity") or 0)
+
+        if quantity > available_qty:
+            flash("Not enough quantity available.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        # ✅ Reduce AVPL product stock
+        update_result = mongo.db.products.update_one(
+            {
+                "_id": ObjectId(product_id),
+                "available_quantity": {"$gte": quantity}
+            },
+            {
+                "$inc": {
+                    "available_quantity": -quantity
+                },
+                "$set": {
+                    "updated_at": now_utc()
+                }
+            }
+        )
+
+        if update_result.modified_count == 0:
+            flash("Stock changed recently. Please try again.", "danger")
+            return redirect(url_for("modules.buy"))
 
     total_amount = quantity * unit_price
 
@@ -1593,12 +1693,13 @@ def place_farmer_order():
         "centre_uid": farmer.get("centre_uid"),
         "mitra_uid": farmer.get("mitra_uid"),
         "order_type": "farmer_purchase",
+        "product_source": product_source,
         "status": "placed",
         "created_at": now_utc()
     })
 
     flash("Order placed successfully.", "success")
-    return redirect(url_for("dashboard.home"))
+    return redirect(url_for("modules.buy"))
 
 
 

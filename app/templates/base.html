@@ -1443,6 +1443,18 @@ body.sidebar-collapsed .sidebar-logout{
     All Products
 </a>
 
+<a href="{{ url_for('modules.lms') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5v-12Z"
+                  stroke="currentColor" stroke-width="1.8"/>
+            <path d="M8 7h8M8 11h8"
+                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+    </span>
+    LMS
+</a>
+
             <a href="{{ url_for('modules.centre_orders') }}">
     <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none">
@@ -1469,6 +1481,21 @@ body.sidebar-collapsed .sidebar-logout{
     {% endif %}
 
     {% if session.get('role') == 'ufc_mitra' %}
+
+    <a href="{{ url_for('modules.lms') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4" width="18" height="16" rx="2"
+                  stroke="currentColor" stroke-width="1.8"/>
+            <path d="M7 8h10M7 12h10M7 16h6"
+                  stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round"/>
+        </svg>
+    </span>
+    LMS
+</a>
+
+    
         <a href="{{ url_for('validation.queue') }}">
             <span class="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -1476,14 +1503,26 @@ body.sidebar-collapsed .sidebar-logout{
             Validations
         </a>
 
-        <a href="{{ url_for('modules.buy') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M6 6h15l-2 8H8L6 6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 6L5 3H3M9 20h.01M18 20h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-            </span>
-            Buy
-        </a>
+       <a href="{{ url_for('modules.buy') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 6h15l-2 8H8L6 6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 6L5 3H3M9 20h.01M18 20h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </span>
+    Buy
+</a>
 
-        <a href="{{ url_for('modules.sell') }}">
+<a href="{{ url_for('modules.buy', view='all') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z"
+                  stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M4.5 8L12 12.2 19.5 8M12 21v-8.8"
+                  stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+    </span>
+    All Products
+</a>
+
+<a href="{{ url_for('modules.sell') }}">
             <span class="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M20 12H6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 6v12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
             </span>
@@ -1532,6 +1571,19 @@ body.sidebar-collapsed .sidebar-logout{
             </span>
             Transactions
         </a>
+
+        <a href="{{ url_for('modules.lms') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4" width="18" height="16" rx="2"
+                  stroke="currentColor" stroke-width="1.8"/>
+            <path d="M7 8h10M7 12h10M7 16h6"
+                  stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round"/>
+        </svg>
+    </span>
+    LMS
+</a>
 
         <a href="{{ url_for('modules.support') }}">
             <span class="nav-icon">
