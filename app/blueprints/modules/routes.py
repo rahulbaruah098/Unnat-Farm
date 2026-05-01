@@ -1,3 +1,4 @@
+import re
 from bson import ObjectId
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app.extensions import mongo
@@ -311,6 +312,8 @@ def sell():
             flash("Product sold successfully.", "success")
             return redirect(url_for("modules.sell"))
 
+        q = request.args.get("q", "").strip()
+
         stock_items = list(mongo.db.mitra_product_stock.find({
             "mitra_uid": mitra_uid,
             "available_quantity": {"$gt": 0}
@@ -320,16 +323,30 @@ def sell():
             "centre_uid": centre_uid
         }).sort("name", 1))
 
-        sales = list(mongo.db.mitra_product_sales.find({
+        sales_query = {
             "mitra_uid": mitra_uid
-        }).sort("created_at", -1))
+        }
+
+        if q:
+            sales_query["$or"] = [
+                {"product_name": {"$regex": q, "$options": "i"}},
+                {"buyer_type": {"$regex": q, "$options": "i"}},
+                {"buyer_farmer_name": {"$regex": q, "$options": "i"}},
+                {"status": {"$regex": q, "$options": "i"}},
+                {"centre_uid": {"$regex": q, "$options": "i"}}
+            ]
+
+        sales = list(
+            mongo.db.mitra_product_sales.find(sales_query).sort("created_at", -1)
+        )
 
         return render_template(
             "modules/sell.html",
             mitra_sell_mode=True,
             stock_items=stock_items,
             farmers=farmers,
-            sales=sales
+            sales=sales,
+            q=q
         )
 
     # EXISTING FARMER / OTHER ROLE SELL MODULE - keep unchanged
@@ -423,17 +440,39 @@ def finance():
         flash("Finance request submitted successfully.", "success")
         return redirect(url_for("modules.finance"))
 
+    q = request.args.get("q", "").strip()
+
+    finance_query = {
+        "farmer_user_id": user_id
+    }
+
+    if q:
+        finance_query["$or"] = [
+            {"amount": {"$regex": q, "$options": "i"}},
+            {"purpose": {"$regex": q, "$options": "i"}},
+            {"status": {"$regex": q, "$options": "i"}},
+            {"farmer_name": {"$regex": q, "$options": "i"}},
+            {"farmer_mobile": {"$regex": q, "$options": "i"}},
+            {"centre_uid": {"$regex": q, "$options": "i"}},
+            {"mitra_uid": {"$regex": q, "$options": "i"}}
+        ]
+
+        try:
+            numeric_q = float(q)
+            finance_query["$or"].append({"total_transaction": numeric_q})
+        except ValueError:
+            pass
+
     items = list(
-        mongo.db.financial_assistance_leads.find({
-            "farmer_user_id": user_id
-        }).sort("created_at", -1)
+        mongo.db.financial_assistance_leads.find(finance_query).sort("created_at", -1)
     )
 
     return render_template(
         "modules/finance.html",
         items=items,
         total_transaction=total_transaction,
-        is_eligible=is_eligible
+        is_eligible=is_eligible,
+        q=q
     )
 
 
@@ -501,10 +540,25 @@ def insurance():
         flash("Insurance request submitted.", "success")
         return redirect(url_for("modules.insurance"))
 
+    q = request.args.get("q", "").strip()
+
+    insurance_query = {
+        "requested_by": session["user_id"]
+    }
+
+    if q:
+        insurance_query["$or"] = [
+            {"farmer_name": {"$regex": q, "$options": "i"}},
+            {"farmer_mobile": {"$regex": q, "$options": "i"}},
+            {"livestock_type": {"$regex": q, "$options": "i"}},
+            {"remarks": {"$regex": q, "$options": "i"}},
+            {"status": {"$regex": q, "$options": "i"}},
+            {"centre_uid": {"$regex": q, "$options": "i"}},
+            {"mitra_uid": {"$regex": q, "$options": "i"}}
+        ]
+
     items = list(
-        mongo.db.insurance_requests.find({
-            "requested_by": session["user_id"]
-        }).sort("created_at", -1)
+        mongo.db.insurance_requests.find(insurance_query).sort("created_at", -1)
     )
 
     return render_template(
@@ -512,7 +566,8 @@ def insurance():
         items=items,
         total_transaction=total_transaction,
         is_livestock_farmer=is_livestock_farmer,
-        is_eligible=is_eligible
+        is_eligible=is_eligible,
+        q=q
     )
 
 
@@ -520,11 +575,32 @@ def insurance():
 @login_required
 @roles_required("ufc_mitra")
 def insurance_leads():
-    items = list(mongo.db.insurance_requests.find({
-        "mitra_uid": session.get("mitra_uid")
-    }).sort("created_at", -1))
+    q = request.args.get("q", "").strip()
 
-    return render_template("modules/insurance_leads.html", items=items)
+    query = {
+        "mitra_uid": session.get("mitra_uid")
+    }
+
+    if q:
+        query["$or"] = [
+            {"farmer_name": {"$regex": q, "$options": "i"}},
+            {"farmer_mobile": {"$regex": q, "$options": "i"}},
+            {"livestock_type": {"$regex": q, "$options": "i"}},
+            {"remarks": {"$regex": q, "$options": "i"}},
+            {"status": {"$regex": q, "$options": "i"}},
+        ]
+
+    items = list(
+        mongo.db.insurance_requests
+        .find(query)
+        .sort("created_at", -1)
+    )
+
+    return render_template(
+        "modules/insurance_leads.html",
+        items=items,
+        q=q
+    )
 
 @modules_bp.route("/lms")
 @login_required
@@ -568,11 +644,29 @@ def lms():
             ]
         }
 
+    q = request.args.get("q", "").strip()
+
+    if q:
+        query = {
+            "$and": [
+                query,
+                {
+                    "$or": [
+                        {"title": {"$regex": q, "$options": "i"}},
+                        {"lms_type": {"$regex": q, "$options": "i"}},
+                        {"activity_category": {"$regex": q, "$options": "i"}},
+                        {"description": {"$regex": q, "$options": "i"}},
+                        {"file_name": {"$regex": q, "$options": "i"}}
+                    ]
+                }
+            ]
+        }
+
     items = list(
         mongo.db.lms_materials.find(query).sort("created_at", -1)
     )
 
-    return render_template("modules/lms.html", items=items)
+    return render_template("modules/lms.html", items=items, q=q)
 
 
 @modules_bp.route("/support", methods=["GET", "POST"])
@@ -589,8 +683,29 @@ def support():
         })
         flash("Support ticket submitted.", "success")
         return redirect(url_for("modules.support"))
-    tickets = list(mongo.db.support_tickets.find({"user_id": session["user_id"]}).sort("created_at", -1))
-    return render_template("modules/support.html", tickets=tickets)
+
+    q = request.args.get("q", "").strip()
+
+    ticket_query = {
+        "user_id": session["user_id"]
+    }
+
+    if q:
+        ticket_query["$or"] = [
+            {"subject": {"$regex": q, "$options": "i"}},
+            {"message": {"$regex": q, "$options": "i"}},
+            {"status": {"$regex": q, "$options": "i"}}
+        ]
+
+    tickets = list(
+        mongo.db.support_tickets.find(ticket_query).sort("created_at", -1)
+    )
+
+    return render_template(
+        "modules/support.html",
+        tickets=tickets,
+        q=q
+    )
 
 
 @modules_bp.route("/orders")
@@ -601,8 +716,25 @@ def orders():
         query["centre_uid"] = session.get("centre_uid")
     elif session.get("role") == "ufc_mitra":
         query["mitra_uid"] = session.get("mitra_uid")
+
+    q = request.args.get("q", "").strip()
+
+    if q:
+        query["$or"] = [
+            {"status": {"$regex": q, "$options": "i"}},
+            {"product_name": {"$regex": q, "$options": "i"}},
+            {"centre_uid": {"$regex": q, "$options": "i"}},
+            {"mitra_uid": {"$regex": q, "$options": "i"}}
+        ]
+
+        try:
+            numeric_q = float(q)
+            query["$or"].append({"quantity": numeric_q})
+        except ValueError:
+            pass
+
     items = list(mongo.db.orders.find(query).sort("created_at", -1))
-    return render_template("modules/orders.html", items=items)
+    return render_template("modules/orders.html", items=items, q=q)
 
 
 @modules_bp.route("/products")
@@ -623,8 +755,26 @@ def transactions():
     elif session.get("role") == "farmer":
         user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])})
         query["farmer_contact"] = user.get("phone")
+
+    q = request.args.get("q", "").strip()
+
+    if q:
+        query["$or"] = [
+            {"transaction_type": {"$regex": q, "$options": "i"}},
+            {"product_name": {"$regex": q, "$options": "i"}},
+            {"centre_uid": {"$regex": q, "$options": "i"}},
+            {"mitra_uid": {"$regex": q, "$options": "i"}},
+            {"farmer_contact": {"$regex": q, "$options": "i"}}
+        ]
+
+        try:
+            numeric_q = float(q)
+            query["$or"].append({"amount": numeric_q})
+        except ValueError:
+            pass
+
     items = list(mongo.db.transactions.find(query).sort("created_at", -1))
-    return render_template("modules/transactions.html", items=items)
+    return render_template("modules/transactions.html", items=items, q=q)
 
 #changes by atlanta
 @modules_bp.route("/profile")
@@ -697,11 +847,27 @@ def profile():
 @login_required
 def purchases():
     user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])})
-    items = list(mongo.db.transactions.find({
+    q = request.args.get("q", "").strip()
+
+    purchase_query = {
         "farmer_contact": user.get("phone"),
         "transaction_type": "input_purchase"
-    }).sort("created_at", -1).limit(20))
-    return render_template("modules/purchases.html", items=items)
+    }
+
+    if q:
+        purchase_query["$or"] = [
+            {"product_name": {"$regex": q, "$options": "i"}},
+            {"farmer_contact": {"$regex": q, "$options": "i"}}
+        ]
+
+        try:
+            numeric_q = float(q)
+            purchase_query["$or"].append({"amount": numeric_q})
+        except ValueError:
+            pass
+
+    items = list(mongo.db.transactions.find(purchase_query).sort("created_at", -1).limit(20))
+    return render_template("modules/purchases.html", items=items, q=q)
 
 
 def get_mitra_bonus_percentage(mitra_uid, bonus_type, category):
@@ -795,6 +961,8 @@ def pos():
         farmer_phone = ''
         mitra_uid = request.form.get('mitra_uid', '').strip()
 
+        farmer = None
+
         if sale_type == 'registered':
             farmer_id = request.form.get('farmer_id')
             farmer = mongo.db.farmer_master.find_one({'_id': ObjectId(farmer_id)}) if farmer_id else None
@@ -853,9 +1021,40 @@ def pos():
         flash('Sale recorded successfully. Invoice generated.', 'success')
         return redirect(url_for('modules.pos_invoice', sale_id=str(result.inserted_id)))
 
-    sales = list(mongo.db.pos_sales.find({
+    q = request.args.get("q", "").strip()
+
+    sales_query = {
         'centre_uid': centre_uid
-    }).sort('created_at', -1).limit(20))
+    }
+
+    if q:
+        safe_q = re.escape(q)
+
+        search_conditions = [
+            {'farmer_name': {'$regex': safe_q, '$options': 'i'}},
+            {'farmer_phone': {'$regex': safe_q, '$options': 'i'}},
+            {'product_name': {'$regex': safe_q, '$options': 'i'}},
+            {'product_category': {'$regex': safe_q, '$options': 'i'}},
+            {'mitra_uid': {'$regex': safe_q, '$options': 'i'}},
+            {'invoice_no': {'$regex': safe_q, '$options': 'i'}},
+            {'centre_uid': {'$regex': safe_q, '$options': 'i'}}
+        ]
+
+        try:
+            numeric_q = float(q)
+            search_conditions.extend([
+                {'quantity': numeric_q},
+                {'unit_price': numeric_q},
+                {'total_amount': numeric_q}
+            ])
+        except ValueError:
+            pass
+
+        sales_query['$or'] = search_conditions
+
+    sales = list(
+        mongo.db.pos_sales.find(sales_query).sort('created_at', -1).limit(20)
+    )
 
     return render_template(
         'modules/pos.html',
@@ -863,7 +1062,8 @@ def pos():
         farmers=mapped_farmers,
         mitras=mitras,
         products=products,
-        sales=sales
+        sales=sales,
+        q=q
     )
 
 @modules_bp.route("/all-orders")
@@ -905,6 +1105,7 @@ def pos_invoice(sale_id):
 @roles_required("ufc_mitra")
 def mitra_earnings():
     user_id = session.get("user_id")
+    q = request.args.get("q", "").strip()
 
     mitra_profile = mongo.db.ufc_mitra_master.find_one({
         "linked_user_id": user_id
@@ -955,8 +1156,31 @@ def mitra_earnings():
     current_month_earning = monthly_avpl_earning + monthly_farmer_earning
     total_earning = total_avpl_earning + total_farmer_earning
 
+    recent_sales_source = monthly_pos_sales + monthly_farmer_sales
+
+    if q:
+        q_lower = q.lower()
+
+        def sale_matches_search(s):
+            searchable_text = " ".join([
+                str(s.get("bonus_type") or ""),
+                str(s.get("product_name") or ""),
+                str(s.get("sale_source") or ""),
+                str(s.get("total_amount") or ""),
+                str(s.get("bonus_percentage") or ""),
+                str(s.get("bonus_amount") or ""),
+                str(s.get("created_at") or "")
+            ]).lower()
+
+            return q_lower in searchable_text
+
+        recent_sales_source = [
+            s for s in recent_sales_source
+            if sale_matches_search(s)
+        ]
+
     recent_sales = sorted(
-        monthly_pos_sales + monthly_farmer_sales,
+        recent_sales_source,
         key=lambda x: x.get("created_at"),
         reverse=True
     )[:20]
@@ -971,9 +1195,9 @@ def mitra_earnings():
         total_avpl_earning=total_avpl_earning,
         monthly_farmer_earning=monthly_farmer_earning,
         total_farmer_earning=total_farmer_earning,
-        recent_sales=recent_sales
+        recent_sales=recent_sales,
+        q=q
     )
-
 @modules_bp.route("/finance/leads")
 @login_required
 @roles_required("avpl_admin", "sales_nelocals", "sales_unnatfarm", "accounts", "ufc_mitra")
@@ -1049,10 +1273,21 @@ def sales_details():
 @modules_bp.route("/notifications")
 @login_required
 def notifications():
+    q = request.args.get("q", "").strip()
+
+    notification_query = {
+        "to_user_id": session.get("user_id")
+    }
+
+    if q:
+        notification_query["$or"] = [
+            {"title": {"$regex": q, "$options": "i"}},
+            {"message": {"$regex": q, "$options": "i"}},
+            {"status": {"$regex": q, "$options": "i"}}
+        ]
+
     items = list(
-        mongo.db.notifications.find({
-            "to_user_id": session.get("user_id")
-        }).sort("created_at", -1)
+        mongo.db.notifications.find(notification_query).sort("created_at", -1)
     )
 
     mongo.db.notifications.update_many(
@@ -1068,20 +1303,46 @@ def notifications():
         }
     )
 
-    return render_template("modules/notifications.html", items=items)    
+    return render_template("modules/notifications.html", items=items, q=q)   
 
 @modules_bp.route("/mitra-stock")
 @login_required
 @roles_required("ufc_mitra")
 def mitra_stock():
-    items = list(mongo.db.mitra_product_stock.find({
+    q = request.args.get("q", "").strip()
+
+    stock_query = {
         "mitra_uid": session.get("mitra_uid")
-    }).sort("created_at", -1))
+    }
+
+    if q:
+        stock_query["$or"] = [
+            {"product_name": {"$regex": q, "$options": "i"}},
+            {"centre_uid": {"$regex": q, "$options": "i"}}
+        ]
+
+        try:
+            numeric_q = float(q)
+            stock_query["$or"].append({"available_quantity": numeric_q})
+        except ValueError:
+            pass
+
+    items = list(mongo.db.mitra_product_stock.find(stock_query).sort("created_at", -1))
 
     for item in items:
         item["low_stock"] = float(item.get("available_quantity") or 0) < 5
 
-    return render_template("modules/mitra_stock.html", items=items)
+    if q and q.lower() in ["low", "low stock", "lowstock"]:
+        items = [item for item in items if item.get("low_stock")]
+
+    if q and q.lower() in ["available", "in stock", "stock"]:
+        items = [item for item in items if not item.get("low_stock")]
+
+    return render_template(
+        "modules/mitra_stock.html",
+        items=items,
+        q=q
+    )
 
 @modules_bp.route("/centre-orders", methods=["GET", "POST"])
 @login_required
@@ -1124,11 +1385,31 @@ def centre_orders():
         flash("Order status updated and farmer notified.", "success")
         return redirect(url_for("modules.centre_orders"))
 
-    orders = list(mongo.db.orders.find({
-        "centre_uid": centre_uid
-    }).sort("created_at", -1))
+    q = request.args.get("q", "").strip()
 
-    return render_template("modules/centre_orders.html", orders=orders)
+    query = {
+        "centre_uid": centre_uid
+    }
+
+    if q:
+        query["$or"] = [
+            {"farmer_name": {"$regex": q, "$options": "i"}},
+            {"product_name": {"$regex": q, "$options": "i"}},
+            {"status": {"$regex": q, "$options": "i"}},
+            {"created_at": {"$regex": q, "$options": "i"}},
+            {"mitra_uid": {"$regex": q, "$options": "i"}},
+            {"centre_uid": {"$regex": q, "$options": "i"}}
+        ]
+
+    orders = list(
+        mongo.db.orders.find(query).sort("created_at", -1)
+    )
+
+    return render_template(
+        "modules/centre_orders.html",
+        orders=orders,
+        q=q
+    )
 
 @modules_bp.route("/farmer/order", methods=["POST"])
 @login_required

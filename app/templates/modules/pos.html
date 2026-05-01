@@ -1,9 +1,581 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="page-card">
-    <h2>POS - Sell Products</h2>
 
-    <p><strong>Centre UID:</strong> {{ centre_uid or '-' }}</p>
+<style>
+    .page-card{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        font-family:"Times New Roman", Georgia, serif;
+    }
+
+    .title-row{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:20px;
+        margin-bottom:24px;
+        flex-wrap:wrap;
+    }
+
+    .title-left{
+        display:flex;
+        align-items:center;
+        gap:12px;
+    }
+
+    .title-left h2{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
+        font-weight:700;
+        line-height:1.25;
+        white-space:nowrap;
+    }
+
+    .back-btn{
+        display:none;
+        width:42px;
+        height:42px;
+        border:none;
+        border-radius:14px;
+        align-items:center;
+        justify-content:center;
+        background:rgba(228,247,234,.82);
+        color:#3B7D55;
+        font-size:1.65rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 8px 20px rgba(95,168,120,.12);
+        transition:all .2s ease;
+        line-height:1;
+    }
+
+    .back-btn:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateX(-2px);
+    }
+
+    .centre-info{
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        margin:0 0 22px;
+        padding:10px 16px;
+        border:1px solid rgba(95,168,120,.18);
+        border-radius:16px;
+        background:rgba(228,247,234,.42);
+        color:#3B7D55;
+        font-weight:700;
+    }
+
+    .pos-section-title{
+        margin:30px 0 18px;
+        color:#17252A;
+        font-size:clamp(1.25rem, 1.7vw, 1.55rem);
+        font-weight:700;
+    }
+
+    .grid-form{
+        display:grid;
+        gap:18px;
+    }
+
+    .grid-form.two-col{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-form label{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#17252A;
+        font-size:1.05rem;
+        font-weight:700;
+    }
+
+    .grid-form input,
+    .grid-form select{
+        width:100%;
+        min-height:54px;
+        padding:12px 16px;
+        border:1px solid rgba(95,168,120,.35);
+        border-radius:18px;
+        background:rgba(239,247,255,.72);
+        color:#17252A;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1.05rem;
+        outline:none;
+        transition:all .2s ease;
+    }
+
+    .grid-form input:focus,
+    .grid-form select:focus{
+        border-color:rgba(95,168,120,.70);
+        background:rgba(255,255,255,.96);
+        box-shadow:0 0 0 4px rgba(95,168,120,.14);
+    }
+
+    .span-2{
+        grid-column:1 / -1;
+    }
+
+    .span-2 button{
+        min-height:50px;
+        padding:12px 30px;
+        border:none;
+        border-radius:999px;
+        background:#5FA878;
+        color:#fff;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1.08rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 14px 30px rgba(95,168,120,.26);
+        transition:all .2s ease;
+    }
+
+    .span-2 button:hover{
+        background:#3B7D55;
+        transform:translateY(-1px);
+    }
+
+    .table-header-row{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:20px;
+        margin:30px 0 18px;
+        flex-wrap:wrap;
+    }
+
+    .table-header-row h3{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.25rem, 1.7vw, 1.55rem);
+        font-weight:700;
+    }
+
+    .table-actions{
+    display:grid;
+    grid-template-columns:minmax(220px, 320px) auto auto;
+    align-items:center;
+    gap:10px;
+    margin:0;
+}
+
+    .table-actions input{
+        width:320px;
+        max-width:100%;
+        min-height:42px;
+        padding:9px 14px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:14px;
+        background:#fff;
+        color:#334155;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        outline:none;
+    }
+
+    .table-actions input:focus{
+        border-color:#5FA878;
+        box-shadow:0 0 0 4px rgba(95,168,120,.12);
+    }
+
+    .table-actions button{
+        min-height:42px;
+        padding:9px 20px;
+        border:none;
+        border-radius:999px;
+        background:#5FA878;
+        color:#fff;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 12px 26px rgba(95,168,120,.22);
+        transition:all .2s ease;
+    }
+
+    .table-actions button:hover{
+        background:#3B7D55;
+        transform:translateY(-1px);
+    }
+
+    .table-actions .clear-btn{
+        background:#FEE2E2;
+        color:#B91C1C;
+        border:none;
+        box-shadow:none;
+    }
+
+    .table-actions .clear-btn:hover{
+        background:#B91C1C;
+        color:#fff;
+    }
+
+    .table-actions .clear-link{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:42px;
+        padding:9px 20px;
+        border-radius:999px;
+        text-decoration:none;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:700;
+    }
+
+    .table-controls{
+        display:flex;
+        align-items:flex-end;
+        justify-content:space-between;
+        gap:16px;
+        margin-bottom:16px;
+        flex-wrap:wrap;
+    }
+
+    .pagination-size{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#425466;
+        font-weight:700;
+    }
+
+    .pagination-size select{
+        width:120px;
+        min-height:42px;
+        padding:8px 12px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        background:#fff;
+        color:#334155;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:700;
+        outline:none;
+    }
+
+    .table-info{
+        margin-bottom:16px;
+        padding:10px 16px;
+        border:1px solid rgba(95,168,120,.18);
+        border-radius:16px;
+        background:rgba(228,247,234,.42);
+        color:#3B7D55;
+        font-weight:700;
+    }
+
+    .sales-table-wrap{
+        width:100%;
+        overflow-x:auto;
+        overflow-y:hidden;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:#fff;
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
+        cursor:grab;
+        scrollbar-width:auto;
+        scrollbar-color:#94A3B8 #F1F5F9;
+    }
+
+    .sales-table-wrap:active{
+        cursor:grabbing;
+    }
+
+    .sales-table-wrap::-webkit-scrollbar{
+        height:12px;
+    }
+
+    .sales-table-wrap::-webkit-scrollbar-track{
+        background:#F1F5F9;
+        border-radius:999px;
+    }
+
+    .sales-table-wrap::-webkit-scrollbar-thumb{
+        background:#94A3B8;
+        border-radius:999px;
+        border:2px solid #F1F5F9;
+    }
+
+    .sales-table-wrap table{
+        width:max-content;
+        min-width:100%;
+        table-layout:fixed;
+        border-collapse:separate;
+        border-spacing:0;
+        background:#fff;
+    }
+
+    .sales-table-wrap th,
+    .sales-table-wrap td{
+        width:160px;
+        height:72px;
+        max-width:160px;
+        min-width:160px;
+        padding:12px 14px;
+        border-right:1px solid rgba(220,238,226,.85);
+        border-bottom:1px solid rgba(220,238,226,.85);
+        color:#425466;
+        font-size:1rem;
+        line-height:1.3;
+        text-align:left;
+        vertical-align:middle;
+        white-space:normal;
+        word-break:break-word;
+        overflow:hidden;
+    }
+
+    .sales-table-wrap th{
+        height:58px;
+        color:#17252A;
+        font-weight:700;
+        background:rgba(228,247,234,.92);
+    }
+
+    .sales-table-wrap td{
+        background:#fff;
+    }
+
+    .sales-table-wrap tr:hover td{
+        background:rgba(246,251,247,.9);
+    }
+
+    .sales-table-wrap tr:last-child td{
+        border-bottom:none;
+    }
+
+    .sales-table-wrap th:last-child,
+    .sales-table-wrap td:last-child{
+        border-right:none;
+    }
+
+    .amount-text{
+        color:#14532d;
+        font-weight:700;
+    }
+
+    .invoice-link{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:36px;
+        padding:8px 14px;
+        border-radius:999px;
+        background:rgba(228,247,234,.72);
+        color:#3B7D55;
+        font-weight:700;
+        text-decoration:none;
+        transition:all .2s ease;
+    }
+
+    .invoice-link:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateY(-1px);
+    }
+
+    .pagination-bar{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:8px;
+        margin-top:18px;
+        flex-wrap:wrap;
+    }
+
+    .page-btn{
+        min-width:38px;
+        height:38px;
+        padding:0 12px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.58);
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:700;
+        cursor:pointer;
+    }
+
+    .page-btn:hover,
+    .page-btn.active{
+        color:#fff;
+        background:#5FA878;
+        border-color:#5FA878;
+    }
+
+    .page-btn:disabled{
+        opacity:.45;
+        cursor:not-allowed;
+    }
+
+    @media (max-width:860px){
+        .back-btn{
+            display:inline-flex;
+        }
+
+        .page-card{
+            padding:22px;
+            border-radius:22px;
+        }
+
+        .title-row,
+        .table-header-row{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .grid-form.two-col{
+            grid-template-columns:1fr;
+        }
+
+        .span-2{
+            grid-column:auto;
+        }
+
+        .span-2 button{
+            width:100%;
+        }
+
+       .table-actions{
+    width:100%;
+    grid-template-columns:1fr auto auto;
+}
+
+.table-actions input{
+    width:100%;
+    min-width:0;
+}
+
+.table-actions button,
+.table-actions .clear-link{
+    width:auto;
+    white-space:nowrap;
+    padding-left:16px;
+    padding-right:16px;
+}
+
+        .table-controls{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .sales-table-wrap{
+            border:none;
+            box-shadow:none;
+            background:transparent;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+        }
+
+        .sales-table-wrap table{
+            display:flex;
+            width:max-content;
+            min-width:100%;
+            background:transparent;
+        }
+
+        .sales-table-wrap thead{
+            display:none;
+        }
+
+        .sales-table-wrap tbody{
+            display:flex;
+            gap:14px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:4px 2px 8px;
+        }
+
+        .sales-table-wrap tbody tr{
+            width:290px;
+            min-width:290px;
+            max-width:290px;
+            min-height:430px;
+            flex:0 0 auto;
+            display:block;
+            border:1px solid rgba(220,238,226,.95);
+            border-radius:18px;
+            background:#fff;
+            padding:15px;
+            box-shadow:0 10px 24px rgba(23,37,42,.06);
+        }
+
+        .sales-table-wrap td{
+            display:block;
+            width:100%;
+            min-width:0;
+            max-width:none;
+            height:auto;
+            min-height:50px;
+            border:none;
+            padding:7px 0;
+            white-space:normal;
+            word-break:break-word;
+            overflow:visible;
+            background:transparent;
+        }
+
+        .sales-table-wrap td::before{
+            content:attr(data-label);
+            display:block;
+            color:#64748B;
+            font-size:.85rem;
+            font-weight:700;
+            margin-bottom:3px;
+        }
+
+        .sales-table-wrap tr:hover td{
+            background:transparent;
+        }
+
+        .pagination-bar{
+            justify-content:center;
+        }
+    }
+
+    @media (max-width:420px){
+        .page-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .title-left h2{
+            font-size:1.45rem;
+        }
+
+        .back-btn{
+            width:38px;
+            height:38px;
+            border-radius:12px;
+            font-size:1.45rem;
+        }
+
+        .sales-table-wrap tbody tr{
+            width:265px;
+            min-width:265px;
+            max-width:265px;
+        }
+    }
+</style>
+
+<div class="page-card">
+    <div class="title-row">
+        <div class="title-left">
+            <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+            <h2>POS - Sell Products</h2>
+        </div>
+    </div>
+
+    <p class="centre-info"><strong>Centre UID:</strong> {{ centre_uid or '-' }}</p>
 
     <form method="post" class="grid-form two-col" id="posForm">
         <label>Sale Type
@@ -75,44 +647,92 @@
         </div>
     </form>
 
-    <h3>Recent Sales</h3>
+    <div class="table-header-row">
+        <h3>Recent Sales</h3>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Farmer</th>
-                <th>Phone</th>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Total</th>
-                <th>Invoice</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for s in sales %}
-            <tr>
-                <td>{{ s.created_at }}</td>
-                <td>{{ s.farmer_name }}</td>
-                <td>{{ s.farmer_phone }}</td>
-                <td>{{ s.product_name }}</td>
-                <td>{{ s.quantity }}</td>
-                <td>₹{{ s.unit_price }}</td>
-                <td>₹{{ s.total_amount }}</td>
-                <td>
-                    <a href="{{ url_for('modules.pos_invoice', sale_id=s._id) }}" target="_blank">
-                        View Invoice
-                    </a>
-                </td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="8">No sales recorded yet.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+        <form method="get" class="table-actions" id="salesSearchForm">
+            <input
+                type="text"
+                id="salesSearchInput"
+                name="q"
+                value="{{ q or '' }}"
+                placeholder="Search sales"
+                autocomplete="off"
+            >
+
+            <button type="submit" id="salesSearchBtn">Search</button>
+
+          <a href="{{ request.path }}" 
+   class="clear-btn clear-link" 
+   id="salesClearBtn"
+   style="{% if not (q is defined and q|trim) %}display:none;{% endif %}">
+    Clear
+</a>
+        </form>
+    </div>
+
+    <div class="table-controls">
+        <label class="pagination-size">
+            <span>Show entries</span>
+            <select id="salesRowsPerPage">
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="250">250</option>
+                <option value="1000">1000</option>
+            </select>
+        </label>
+    </div>
+
+<div id="salesAjaxArea">
+    <div class="table-info" id="salesPaginationInfo"></div>
+
+    {% if q %}
+    <div class="table-info" id="salesSearchResultInfo">
+        Search result for "{{ q }}"
+    </div>
+    {% endif %}
+
+    <div class="sales-table-wrap" id="salesTableScroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Farmer</th>
+                    <th>Phone</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                    <th>Invoice</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for s in sales %}
+                <tr>
+                    <td data-label="Date">{{ s.created_at }}</td>
+                    <td data-label="Farmer">{{ s.farmer_name }}</td>
+                    <td data-label="Phone">{{ s.farmer_phone }}</td>
+                    <td data-label="Product">{{ s.product_name }}</td>
+                    <td data-label="Qty">{{ s.quantity }}</td>
+                    <td data-label="Unit Price"><span class="amount-text">₹{{ s.unit_price }}</span></td>
+                    <td data-label="Total"><span class="amount-text">₹{{ s.total_amount }}</span></td>
+                    <td data-label="Invoice">
+                        <a href="{{ url_for('modules.pos_invoice', sale_id=s._id) }}" target="_blank" class="invoice-link">
+                            View Invoice
+                        </a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td data-label="Sales" colspan="8">No sales recorded yet.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+       <div class="pagination-bar" id="salesPaginationBar"></div>
+</div>
 </div>
 
 <script>
@@ -160,5 +780,187 @@ productSelect.addEventListener('change', calculateTotal);
 quantity.addEventListener('input', calculateTotal);
 
 toggleFarmerType();
+
+function initSalesPagination(){
+    const table = document.querySelector('.sales-table-wrap table');
+    const select = document.getElementById('salesRowsPerPage');
+    const info = document.getElementById('salesPaginationInfo');
+    const pager = document.getElementById('salesPaginationBar');
+    const scrollBox = document.getElementById('salesTableScroll');
+
+    if(!table || !select || !info || !pager) return;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const noData = rows.length === 1 && rows[0].querySelector('td[colspan]');
+    let currentPage = 1;
+
+    function renderPagination(){
+        const perPage = parseInt(select.value, 10);
+        const totalRows = noData ? 0 : rows.length;
+
+        rows.forEach(row => row.style.display = 'none');
+
+        if(noData || totalRows === 0){
+            info.textContent = 'No records found';
+            pager.innerHTML = '';
+            rows.forEach(row => row.style.display = '');
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+        currentPage = Math.min(currentPage, totalPages);
+
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+
+        rows.forEach((row, index) => {
+            row.style.display = index >= start && index < end ? '' : 'none';
+        });
+
+        info.textContent = `Showing ${start + 1} to ${Math.min(end, totalRows)} of ${totalRows} entries`;
+
+        pager.innerHTML = '';
+
+        const prev = document.createElement('button');
+        prev.type = 'button';
+        prev.className = 'page-btn';
+        prev.textContent = 'Prev';
+        prev.disabled = currentPage === 1;
+        prev.onclick = () => {
+            currentPage--;
+            renderPagination();
+        };
+        pager.appendChild(prev);
+
+        for(let i = 1; i <= totalPages; i++){
+            if(i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1){
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+                btn.textContent = i;
+                btn.onclick = () => {
+                    currentPage = i;
+                    renderPagination();
+                };
+                pager.appendChild(btn);
+            }
+        }
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'page-btn';
+        next.textContent = 'Next';
+        next.disabled = currentPage === totalPages;
+        next.onclick = () => {
+            currentPage++;
+            renderPagination();
+        };
+        pager.appendChild(next);
+    }
+
+    select.onchange = function(){
+        currentPage = 1;
+        renderPagination();
+    };
+
+    if(scrollBox){
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        scrollBox.onmousedown = function(e){
+            isDown = true;
+            startX = e.pageX - scrollBox.offsetLeft;
+            scrollLeft = scrollBox.scrollLeft;
+        };
+
+        scrollBox.onmouseleave = function(){
+            isDown = false;
+        };
+
+        scrollBox.onmouseup = function(){
+            isDown = false;
+        };
+
+        scrollBox.onmousemove = function(e){
+            if(!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - scrollBox.offsetLeft;
+            const walk = (x - startX) * 1.4;
+            scrollBox.scrollLeft = scrollLeft - walk;
+        };
+    }
+
+    renderPagination();
+}
+
+function initSalesAjaxSearch(){
+    const form = document.getElementById('salesSearchForm');
+    const input = document.getElementById('salesSearchInput');
+    const clearBtn = document.getElementById('salesClearBtn');
+    const ajaxArea = document.getElementById('salesAjaxArea');
+
+    if(!form || !input || !ajaxArea) return;
+
+    async function loadSales(url, searchedText){
+        const oldScrollY = window.scrollY;
+
+        try{
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newAjaxArea = doc.getElementById('salesAjaxArea');
+
+            if(!newAjaxArea) return;
+
+            ajaxArea.innerHTML = newAjaxArea.innerHTML;
+
+            if(searchedText){
+                clearBtn.style.display = '';
+            }else{
+                clearBtn.style.display = 'none';
+            }
+
+            history.pushState({}, '', url);
+
+            initSalesPagination();
+
+            window.scrollTo({
+                top: oldScrollY,
+                behavior: 'instant'
+            });
+        }catch(err){
+            form.submit();
+        }
+    }
+
+    form.addEventListener('submit', function(e){
+        e.preventDefault();
+
+        const q = input.value.trim();
+        const url = q
+            ? `${form.action || window.location.pathname}?q=${encodeURIComponent(q)}`
+            : `${form.action || window.location.pathname}`;
+
+        loadSales(url, q);
+    });
+
+    clearBtn.addEventListener('click', function(e){
+        e.preventDefault();
+
+        input.value = '';
+        loadSales(clearBtn.getAttribute('href'), '');
+    });
+}
+
+initSalesPagination();
+initSalesAjaxSearch();
 </script>
 {% endblock %}

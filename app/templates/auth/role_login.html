@@ -506,6 +506,82 @@ body>main,
 @keyframes toastOut{
   to{opacity:0; transform:translateX(20px)}
 }
+.password-field{
+    position:relative;
+    display:block;
+    width:100%;
+}
+
+.password-field input{
+    padding-right:50px !important;
+    font-size:16px !important;
+    line-height:1.2 !important;
+}
+
+.grid-form .password-toggle{
+    position:absolute !important;
+    right:18px !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+
+    width:24px !important;
+    height:24px !important;
+    min-width:24px !important;
+    min-height:24px !important;
+
+    padding:0 !important;
+    margin:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+
+    background:transparent !important;
+    color:#64748b !important;
+    box-shadow:none !important;
+
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+
+    cursor:pointer;
+    overflow:visible !important;
+    line-height:1 !important;
+    font-size:0 !important;
+}
+
+.grid-form .password-toggle::after{
+    display:none !important;
+    content:none !important;
+}
+
+.grid-form .password-toggle:hover,
+.grid-form .password-toggle:focus,
+.grid-form .password-toggle:active{
+    background:transparent !important;
+    color:#334155 !important;
+    transform:translateY(-50%) !important;
+    box-shadow:none !important;
+    outline:none !important;
+}
+
+.grid-form .password-toggle .password-eye-icon{
+    width:20px !important;
+    height:20px !important;
+    display:block !important;
+    pointer-events:none;
+}
+
+.grid-form .password-toggle.is-visible{
+    color:#14532d !important;
+}
+.grid-form label{
+    font-size:16px !important;
+}
+
+.grid-form input{
+    font-size:16px !important;
+    line-height:1.2 !important;
+    -webkit-text-size-adjust:100%;
+}
 </style>
 
 
@@ -563,10 +639,19 @@ body>main,
   <input type="text" name="identifier" placeholder="Enter your username / Phone no" required>
 </label>
 {% endif %}
+<label>Password
+  <span class="password-field">
+    <input type="password" name="password" id="loginPassword" placeholder="Enter your password" required>
 
-      <label>Password
-        <input type="password" name="password" placeholder="Enter your password" required>
-      </label>
+<button type="button" class="password-toggle" data-password-toggle="loginPassword" aria-label="Show password">
+  <svg class="password-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"></path>
+    <circle cx="12" cy="12" r="2.6"></circle>
+    <line x1="4" y1="20" x2="20" y2="4"></line>
+  </svg>
+</button>
+  </span>
+</label>
 
       <button type="submit">Login</button>
     </form>
@@ -593,6 +678,38 @@ document.addEventListener("click", function(e){
   if (!e.target.closest(".login-toast")) {
     document.querySelectorAll(".login-toast").forEach(t => t.remove());
   }
+});
+
+document.querySelectorAll('[data-password-toggle]').forEach(function(btn){
+  btn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+
+    const inputId = btn.getAttribute('data-password-toggle');
+    const input = document.getElementById(inputId);
+    const svg = btn.querySelector('.password-eye-icon');
+
+    if(!input || !svg) return;
+
+    const isHidden = input.type === 'password';
+
+    input.type = isHidden ? 'text' : 'password';
+    btn.classList.toggle('is-visible', isHidden);
+    btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+
+    if(isHidden){
+      svg.innerHTML = `
+        <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"></path>
+        <circle cx="12" cy="12" r="2.6"></circle>
+      `;
+    }else{
+      svg.innerHTML = `
+        <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"></path>
+        <circle cx="12" cy="12" r="2.6"></circle>
+        <line x1="4" y1="20" x2="20" y2="4"></line>
+      `;
+    }
+  });
 });
 </script>
 {% endblock %}

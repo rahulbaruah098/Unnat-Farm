@@ -4,11 +4,22 @@
 <div class="page-card">
     <h2>Buy Module</h2>
 
+    <div class="buy-search-wrap">
+        <input
+            type="text"
+            id="buySearchInput"
+            placeholder="Search products, farmer, category, centre UID, village..."
+            autocomplete="off"
+        >
+        <button type="button" id="buySearchBtn">Search</button>
+        <button type="button" id="buyClearBtn" class="clear-btn" style="display:none;">Clear</button>
+    </div>
+
     <h3>Farmer Marketplace Products</h3>
 
-    <div class="marketplace-grid">
+    <div class="marketplace-grid" id="farmerProductGrid">
         {% for p in farmer_products %}
-            <div class="market-card">
+            <div class="market-card searchable-card">
                 <div class="market-img-wrap">
                     {% if p.picture %}
                         <img src="{{ url_for('documents.serve', filename=p.picture) }}"
@@ -61,11 +72,15 @@
         {% endfor %}
     </div>
 
+    <div class="empty-market search-empty" id="farmerSearchEmpty" style="display:none;">
+        No matching farmer marketplace products found.
+    </div>
+
     <h3 style="margin-top:30px;">AVPL Product Catalogue</h3>
 
-    <div class="marketplace-grid">
+    <div class="marketplace-grid" id="catalogueProductGrid">
         {% for p in products %}
-            <div class="market-card">
+            <div class="market-card searchable-card">
                 <div class="market-img-wrap">
                     {% if p.image_name %}
                         <img src="{{ url_for('documents.serve', filename=p.image_name) }}"
@@ -111,9 +126,75 @@
             <div class="empty-market">No catalogue products available.</div>
         {% endfor %}
     </div>
+
+    <div class="empty-market search-empty" id="catalogueSearchEmpty" style="display:none;">
+        No matching AVPL catalogue products found.
+    </div>
 </div>
 
 <style>
+.buy-search-wrap{
+    display:grid;
+    grid-template-columns:minmax(220px, 1fr) auto auto;
+    gap:10px;
+    align-items:center;
+    margin:0 0 24px;
+    padding:16px;
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:20px;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 12px 28px rgba(23,37,42,.06);
+}
+
+.buy-search-wrap input{
+    width:100%;
+    min-height:44px;
+    padding:10px 14px;
+    border:1px solid rgba(95,168,120,.28);
+    border-radius:14px;
+    background:#fff;
+    color:#334155;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    outline:none;
+}
+
+.buy-search-wrap input:focus{
+    border-color:#5FA878;
+    box-shadow:0 0 0 4px rgba(95,168,120,.12);
+}
+
+.buy-search-wrap button{
+    min-height:44px;
+    padding:10px 22px;
+    border:none;
+    border-radius:999px;
+    background:#5FA878;
+    color:#fff;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 12px 26px rgba(95,168,120,.22);
+    transition:all .2s ease;
+}
+
+.buy-search-wrap button:hover{
+    background:#3B7D55;
+    transform:translateY(-1px);
+}
+
+.buy-search-wrap .clear-btn{
+    background:#FEE2E2;
+    color:#B91C1C;
+    box-shadow:none;
+}
+
+.buy-search-wrap .clear-btn:hover{
+    background:#B91C1C;
+    color:#fff;
+}
+
 .marketplace-grid{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -231,6 +312,107 @@
     color:#64748B;
     background:#F8FAFC;
 }
+
+.search-empty{
+    margin-top:14px;
+}
+
+@media(max-width:860px){
+    .buy-search-wrap{
+        grid-template-columns:1fr auto auto;
+        padding:14px;
+    }
+
+    .buy-search-wrap button{
+        padding-left:16px;
+        padding-right:16px;
+        white-space:nowrap;
+    }
+}
+
+@media(max-width:420px){
+    .buy-search-wrap{
+        grid-template-columns:1fr;
+    }
+
+    .buy-search-wrap button{
+        width:100%;
+    }
+
+    .marketplace-grid{
+        grid-template-columns:1fr;
+    }
+
+    .market-footer{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .buy-form{
+        width:100%;
+    }
+
+    .buy-form input{
+        flex:1;
+        width:auto;
+    }
+}
 </style>
+
+<script>
+(function(){
+    const searchInput = document.getElementById('buySearchInput');
+    const searchBtn = document.getElementById('buySearchBtn');
+    const clearBtn = document.getElementById('buyClearBtn');
+
+    const farmerGrid = document.getElementById('farmerProductGrid');
+    const catalogueGrid = document.getElementById('catalogueProductGrid');
+
+    const farmerEmpty = document.getElementById('farmerSearchEmpty');
+    const catalogueEmpty = document.getElementById('catalogueSearchEmpty');
+
+    function filterGrid(grid, emptyBox, term){
+        if(!grid) return;
+
+        const cards = Array.from(grid.querySelectorAll('.searchable-card'));
+        let visibleCount = 0;
+
+        cards.forEach(function(card){
+            const match = card.textContent.toLowerCase().includes(term);
+            card.style.display = match ? '' : 'none';
+            if(match) visibleCount++;
+        });
+
+        if(emptyBox){
+            emptyBox.style.display = term && cards.length && visibleCount === 0 ? '' : 'none';
+        }
+    }
+
+    function applySearch(){
+        const term = searchInput.value.trim().toLowerCase();
+
+        filterGrid(farmerGrid, farmerEmpty, term);
+        filterGrid(catalogueGrid, catalogueEmpty, term);
+
+        clearBtn.style.display = term ? '' : 'none';
+    }
+
+    searchBtn.addEventListener('click', applySearch);
+
+    searchInput.addEventListener('input', applySearch);
+
+    searchInput.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+            e.preventDefault();
+            applySearch();
+        }
+    });
+
+    clearBtn.addEventListener('click', function(){
+        searchInput.value = '';
+        applySearch();
+    });
+})();
+</script>
 
 {% endblock %}

@@ -1,10 +1,645 @@
 {% extends 'base.html' %}
 {% block content %}
 
+<style>
+    .page-card{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        font-family:"Times New Roman", Georgia, serif;
+    }
+
+    .title-row{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:20px;
+        margin-bottom:24px;
+        flex-wrap:wrap;
+    }
+
+    .title-left{
+        display:flex;
+        align-items:center;
+        gap:12px;
+    }
+
+    .title-left h2{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
+        font-weight:700;
+        line-height:1.25;
+        white-space:nowrap;
+    }
+
+    .back-btn{
+        display:none;
+        width:42px;
+        height:42px;
+        border:none;
+        border-radius:14px;
+        align-items:center;
+        justify-content:center;
+        background:rgba(228,247,234,.82);
+        color:#3B7D55;
+        font-size:1.65rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 8px 20px rgba(95,168,120,.12);
+        transition:all .2s ease;
+        line-height:1;
+    }
+
+    .back-btn:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateX(-2px);
+    }
+
+    .grid-form{
+        display:grid;
+        gap:18px;
+        margin-bottom:30px;
+    }
+
+    .grid-form.two-col{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-form label{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#17252A;
+        font-size:1.05rem;
+        font-weight:700;
+    }
+
+    .grid-form input,
+    .grid-form select{
+        width:100%;
+        min-height:54px;
+        padding:12px 16px;
+        border:1px solid rgba(95,168,120,.35);
+        border-radius:18px;
+        background:rgba(239,247,255,.72);
+        color:#17252A;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1.05rem;
+        outline:none;
+        transition:all .2s ease;
+    }
+
+    .grid-form input:focus,
+    .grid-form select:focus{
+        border-color:rgba(95,168,120,.70);
+        background:rgba(255,255,255,.96);
+        box-shadow:0 0 0 4px rgba(95,168,120,.14);
+    }
+
+    .span-2{
+        grid-column:1 / -1;
+    }
+
+    .span-2 button,
+    .form-action button{
+        min-height:50px;
+        padding:12px 30px;
+        border:none;
+        border-radius:999px;
+        background:#5FA878;
+        color:#fff;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1.08rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 14px 30px rgba(95,168,120,.26);
+        transition:all .2s ease;
+    }
+
+    .span-2 button:hover,
+    .form-action button:hover{
+        background:#3B7D55;
+        transform:translateY(-1px);
+    }
+
+    .sell-table-header{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:20px;
+        margin:0 0 16px;
+        flex-wrap:wrap;
+    }
+
+    .sell-section-title{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.25rem, 1.7vw, 1.55rem);
+        font-weight:700;
+    }
+
+    .table-actions{
+        display:grid;
+        grid-template-columns:minmax(220px, 320px) auto auto;
+        align-items:center;
+        gap:10px;
+        margin:0;
+    }
+
+    .table-actions input{
+        width:320px;
+        max-width:100%;
+        min-height:42px;
+        padding:9px 14px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:14px;
+        background:#fff;
+        color:#334155;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        outline:none;
+    }
+
+    .table-actions input:focus{
+        border-color:#5FA878;
+        box-shadow:0 0 0 4px rgba(95,168,120,.12);
+    }
+
+    .table-actions button{
+        min-height:42px;
+        padding:9px 20px;
+        border:none;
+        border-radius:999px;
+        background:#5FA878;
+        color:#fff;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:700;
+        cursor:pointer;
+        box-shadow:0 12px 26px rgba(95,168,120,.22);
+        transition:all .2s ease;
+    }
+
+    .table-actions button:hover{
+        background:#3B7D55;
+        transform:translateY(-1px);
+    }
+
+    .table-actions .clear-btn{
+        background:#FEE2E2;
+        color:#B91C1C;
+        border:none;
+        box-shadow:none;
+    }
+
+    .table-actions .clear-btn:hover{
+        background:#B91C1C;
+        color:#fff;
+    }
+
+    .table-actions .clear-link{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:42px;
+        padding:9px 20px;
+        border-radius:999px;
+        text-decoration:none;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:700;
+    }
+
+    .table-controls{
+        display:flex;
+        align-items:flex-end;
+        justify-content:space-between;
+        gap:16px;
+        margin-bottom:16px;
+        flex-wrap:wrap;
+    }
+
+    .pagination-size{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#425466;
+        font-weight:700;
+    }
+
+    .pagination-size select{
+        width:120px;
+        min-height:42px;
+        padding:8px 12px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        background:#fff;
+        color:#334155;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:700;
+        outline:none;
+    }
+
+    .table-info{
+        margin-bottom:16px;
+        padding:10px 16px;
+        border:1px solid rgba(95,168,120,.18);
+        border-radius:16px;
+        background:rgba(228,247,234,.42);
+        color:#3B7D55;
+        font-weight:700;
+    }
+
+    .sell-table-wrap{
+        width:100%;
+        overflow-x:auto;
+        overflow-y:hidden;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:#fff;
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
+        cursor:grab;
+        scrollbar-width:auto;
+        scrollbar-color:#94A3B8 #F1F5F9;
+    }
+
+    .sell-table-wrap:active{
+        cursor:grabbing;
+    }
+
+    .sell-table-wrap::-webkit-scrollbar{
+        height:12px;
+    }
+
+    .sell-table-wrap::-webkit-scrollbar-track{
+        background:#F1F5F9;
+        border-radius:999px;
+    }
+
+    .sell-table-wrap::-webkit-scrollbar-thumb{
+        background:#94A3B8;
+        border-radius:999px;
+        border:2px solid #F1F5F9;
+    }
+
+    .sell-table-wrap table{
+        width:max-content;
+        min-width:100%;
+        table-layout:fixed;
+        border-collapse:separate;
+        border-spacing:0;
+        background:#fff;
+    }
+
+    .sell-table-wrap th,
+    .sell-table-wrap td{
+        width:170px;
+        height:72px;
+        max-width:170px;
+        min-width:170px;
+        padding:12px 14px;
+        border-right:1px solid rgba(220,238,226,.85);
+        border-bottom:1px solid rgba(220,238,226,.85);
+        color:#425466;
+        font-size:1rem;
+        line-height:1.3;
+        text-align:left;
+        vertical-align:middle;
+        white-space:normal;
+        word-break:break-word;
+        overflow:hidden;
+    }
+
+    .sell-table-wrap th{
+        height:58px;
+        color:#17252A;
+        font-weight:700;
+        background:rgba(228,247,234,.92);
+    }
+
+    .sell-table-wrap td{
+        background:#fff;
+    }
+
+    .sell-table-wrap tr:hover td{
+        background:rgba(246,251,247,.9);
+    }
+
+    .sell-table-wrap tr:last-child td{
+        border-bottom:none;
+    }
+
+    .sell-table-wrap th:last-child,
+    .sell-table-wrap td:last-child{
+        border-right:none;
+    }
+
+    .amount-text{
+        color:#14532d;
+        font-weight:800;
+    }
+
+    .status-pill{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:30px;
+        padding:5px 12px;
+        border-radius:999px;
+        background:rgba(228,247,234,.72);
+        color:#3B7D55;
+        font-weight:700;
+        font-size:.95rem;
+        max-width:100%;
+        word-break:break-word;
+    }
+
+    .pagination-bar{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:8px;
+        margin-top:18px;
+        flex-wrap:wrap;
+    }
+
+    .page-btn{
+        min-width:38px;
+        height:38px;
+        padding:0 12px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.58);
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:700;
+        cursor:pointer;
+    }
+
+    .page-btn:hover,
+    .page-btn.active{
+        color:#fff;
+        background:#5FA878;
+        border-color:#5FA878;
+    }
+
+    .page-btn:disabled{
+        opacity:.45;
+        cursor:not-allowed;
+    }
+
+    .farmer-sell-card h2{
+        margin-bottom:22px;
+    }
+
+    .farmer-sell-box{
+        max-width:860px;
+        margin:0 auto 30px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:24px;
+        background:#fff;
+        padding:28px;
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
+    }
+
+    .farmer-sell-form{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:18px;
+    }
+
+    .form-line{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#17252A;
+        font-size:1.05rem;
+        font-weight:700;
+    }
+
+    .form-line.full{
+        grid-column:1 / -1;
+    }
+
+    .form-line strong{
+        font-weight:700;
+    }
+
+    .form-line input[type="text"],
+    .form-line input[type="number"],
+    .form-line select,
+    .form-line input[type="file"]{
+        width:100%;
+        min-height:54px;
+        padding:12px 16px;
+        border:1px solid rgba(95,168,120,.35);
+        border-radius:18px;
+        background:rgba(239,247,255,.72);
+        color:#17252A;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1.05rem;
+        outline:none;
+        transition:all .2s ease;
+    }
+
+    .form-line input:focus,
+    .form-line select:focus{
+        border-color:rgba(95,168,120,.70);
+        background:rgba(255,255,255,.96);
+        box-shadow:0 0 0 4px rgba(95,168,120,.14);
+    }
+
+    .form-action{
+        grid-column:1 / -1;
+        display:flex;
+        justify-content:flex-start;
+        padding-top:4px;
+    }
+
+    @media (max-width:860px){
+        .back-btn{
+            display:inline-flex;
+        }
+
+        .page-card{
+            padding:22px;
+            border-radius:22px;
+        }
+
+        .title-row,
+        .sell-table-header{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .grid-form.two-col,
+        .farmer-sell-form{
+            grid-template-columns:1fr;
+        }
+
+        .span-2,
+        .form-line.full,
+        .form-action{
+            grid-column:auto;
+        }
+
+        .span-2 button,
+        .form-action button{
+            width:100%;
+        }
+
+        .table-actions{
+            width:100%;
+            grid-template-columns:1fr auto auto;
+        }
+
+        .table-actions input{
+            width:100%;
+            min-width:0;
+        }
+
+        .table-actions button,
+        .table-actions .clear-link{
+            width:auto;
+            white-space:nowrap;
+            padding-left:16px;
+            padding-right:16px;
+        }
+
+        .table-controls{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .sell-table-wrap{
+            border:none;
+            box-shadow:none;
+            background:transparent;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+        }
+
+        .sell-table-wrap table{
+            display:flex;
+            width:max-content;
+            min-width:100%;
+            background:transparent;
+        }
+
+        .sell-table-wrap thead{
+            display:none;
+        }
+
+        .sell-table-wrap tbody{
+            display:flex;
+            gap:14px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:4px 2px 8px;
+        }
+
+        .sell-table-wrap tbody tr{
+            width:290px;
+            min-width:290px;
+            max-width:290px;
+            min-height:310px;
+            flex:0 0 auto;
+            display:block;
+            border:1px solid rgba(220,238,226,.95);
+            border-radius:18px;
+            background:#fff;
+            padding:15px;
+            box-shadow:0 10px 24px rgba(23,37,42,.06);
+        }
+
+        .sell-table-wrap td{
+            display:block;
+            width:100%;
+            min-width:0;
+            max-width:none;
+            height:auto;
+            min-height:50px;
+            border:none;
+            padding:7px 0;
+            white-space:normal;
+            word-break:break-word;
+            overflow:visible;
+            background:transparent;
+        }
+
+        .sell-table-wrap td::before{
+            content:attr(data-label);
+            display:block;
+            color:#64748B;
+            font-size:.85rem;
+            font-weight:700;
+            margin-bottom:3px;
+        }
+
+        .sell-table-wrap tr:hover td{
+            background:transparent;
+        }
+
+        .pagination-bar{
+            justify-content:center;
+        }
+    }
+
+    @media (max-width:420px){
+        .page-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .title-left h2{
+            font-size:1.45rem;
+        }
+
+        .back-btn{
+            width:38px;
+            height:38px;
+            border-radius:12px;
+            font-size:1.45rem;
+        }
+
+        .table-actions{
+            grid-template-columns:1fr;
+        }
+
+        .table-actions button,
+        .table-actions .clear-link{
+            width:100%;
+        }
+
+        .sell-table-wrap tbody tr{
+            width:265px;
+            min-width:265px;
+            max-width:265px;
+        }
+
+        .farmer-sell-box{
+            padding:18px;
+            border-radius:20px;
+        }
+    }
+</style>
+
 {% if mitra_sell_mode %}
 
 <div class="page-card">
-    <h2>Sell Farmer Products</h2>
+    <div class="title-row">
+        <div class="title-left">
+            <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+            <h2>Sell Farmer Products</h2>
+        </div>
+    </div>
 
     <form method="post" class="grid-form two-col">
         <label>
@@ -55,36 +690,86 @@
         </div>
     </form>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Product</th>
-                <th>Buyer Type</th>
-                <th>Buyer Farmer</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total Amount</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for sale in sales %}
-            <tr>
-                <td>{{ sale.product_name }}</td>
-                <td>{{ sale.buyer_type|title }}</td>
-                <td>{{ sale.buyer_farmer_name or '-' }}</td>
-                <td>{{ sale.quantity }}</td>
-                <td>₹{{ "%.2f"|format(sale.unit_price) }}</td>
-                <td>₹{{ "%.2f"|format(sale.total_amount) }}</td>
-                <td>{{ sale.status|title }}</td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="7">No Mitra sales found.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="sell-table-header">
+        <h3 class="sell-section-title">Mitra Sales</h3>
+
+        <form method="get" class="table-actions" id="sellSearchForm">
+            <input
+                type="text"
+                id="sellSearchInput"
+                name="q"
+                value="{{ q or '' }}"
+                placeholder="Search sales"
+                autocomplete="off"
+            >
+
+            <button type="submit" id="sellSearchBtn">Search</button>
+
+            <a href="{{ request.path }}"
+               class="clear-btn clear-link"
+               id="sellClearBtn"
+               style="{% if not (q is defined and q|trim) %}display:none;{% endif %}">
+                Clear
+            </a>
+        </form>
+    </div>
+
+    <div id="sellAjaxArea">
+        <div class="table-controls">
+            <label class="pagination-size">
+                <span>Show entries</span>
+                <select id="sellRowsPerPage">
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="250">250</option>
+                    <option value="1000">1000</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="table-info" id="sellPaginationInfo"></div>
+
+        {% if q is defined and q|trim %}
+        <div class="table-info" id="sellSearchResultInfo">
+            Search result for "{{ q }}"
+        </div>
+        {% endif %}
+
+        <div class="sell-table-wrap" id="sellTableScroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Buyer Type</th>
+                        <th>Buyer Farmer</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for sale in sales %}
+                    <tr>
+                        <td data-label="Product">{{ sale.product_name }}</td>
+                        <td data-label="Buyer Type">{{ sale.buyer_type|title }}</td>
+                        <td data-label="Buyer Farmer">{{ sale.buyer_farmer_name or '-' }}</td>
+                        <td data-label="Quantity">{{ sale.quantity }}</td>
+                        <td data-label="Unit Price"><span class="amount-text">₹{{ "%.2f"|format(sale.unit_price) }}</span></td>
+                        <td data-label="Total Amount"><span class="amount-text">₹{{ "%.2f"|format(sale.total_amount) }}</span></td>
+                        <td data-label="Status"><span class="status-pill">{{ sale.status|title }}</span></td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td data-label="Sales" colspan="7">No Mitra sales found.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-bar" id="sellPaginationBar"></div>
+    </div>
 </div>
 
 <script>
@@ -98,7 +783,12 @@ function toggleBuyerFarmer(){
 {% else %}
 
 <div class="page-card farmer-sell-card">
-    <h2>Sell Product</h2>
+    <div class="title-row">
+        <div class="title-left">
+            <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+            <h2>Sell Product</h2>
+        </div>
+    </div>
 
     <div class="farmer-sell-box">
         <form method="post" enctype="multipart/form-data" class="farmer-sell-form">
@@ -148,136 +838,269 @@ function toggleBuyerFarmer(){
         </form>
     </div>
 
-    <h3 style="margin-top:28px;">My Listed Products</h3>
+    <div class="sell-table-header">
+        <h3 class="sell-section-title">My Listed Products</h3>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Product</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Role</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for p in posts %}
-            <tr>
-                <td>{{ p.product_name }}</td>
-                <td>{{ p.quantity }}</td>
-                <td>{{ p.price }}</td>
-                <td>{{ p.role }}</td>
-                <td>{{ p.status }}</td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="5">No posts found.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+        <form method="get" class="table-actions" id="sellSearchForm">
+            <input
+                type="text"
+                id="sellSearchInput"
+                name="q"
+                value="{{ q or '' }}"
+                placeholder="Search listed products"
+                autocomplete="off"
+            >
+
+            <button type="submit" id="sellSearchBtn">Search</button>
+
+            <a href="{{ request.path }}"
+               class="clear-btn clear-link"
+               id="sellClearBtn"
+               style="{% if not (q is defined and q|trim) %}display:none;{% endif %}">
+                Clear
+            </a>
+        </form>
+    </div>
+
+    <div id="sellAjaxArea">
+        <div class="table-controls">
+            <label class="pagination-size">
+                <span>Show entries</span>
+                <select id="sellRowsPerPage">
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="250">250</option>
+                    <option value="1000">1000</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="table-info" id="sellPaginationInfo"></div>
+
+        {% if q is defined and q|trim %}
+        <div class="table-info" id="sellSearchResultInfo">
+            Search result for "{{ q }}"
+        </div>
+        {% endif %}
+
+        <div class="sell-table-wrap" id="sellTableScroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for p in posts %}
+                    <tr>
+                        <td data-label="Product">{{ p.product_name }}</td>
+                        <td data-label="Quantity">{{ p.quantity }}</td>
+                        <td data-label="Price"><span class="amount-text">{{ p.price }}</span></td>
+                        <td data-label="Role">{{ p.role }}</td>
+                        <td data-label="Status"><span class="status-pill">{{ p.status }}</span></td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td data-label="Posts" colspan="5">No posts found.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-bar" id="sellPaginationBar"></div>
+    </div>
 </div>
 
-<style>
-.farmer-sell-card h2{
-    margin-bottom:22px;
-}
-
-.farmer-sell-box{
-    max-width:760px;
-    margin:0 auto;
-    border:1.5px solid #0F172A;
-    background:#fff;
-    padding:30px 46px 24px;
-}
-
-.farmer-sell-form{
-    display:flex;
-    flex-direction:column;
-    gap:22px;
-}
-
-.form-line{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    color:#0F172A;
-}
-
-.form-line strong{
-    min-width:230px;
-    font-weight:700;
-}
-
-.form-line input[type="text"],
-.form-line input[type="number"],
-.form-line select{
-    border:0;
-    border-bottom:1.5px solid #0F172A;
-    border-radius:0;
-    padding:4px 6px;
-    height:30px;
-    outline:none;
-    background:#fff;
-    min-width:220px;
-}
-
-.form-line select{
-    border:1px solid #CBD5E1;
-    border-radius:6px;
-    min-width:240px;
-}
-
-.form-line input[type="file"]{
-    border:1px solid #94A3B8;
-    padding:3px 8px;
-    border-radius:0;
-    background:#fff;
-}
-
-.form-action{
-    display:flex;
-    justify-content:center;
-    padding-top:18px;
-}
-
-.form-action button{
-    background:#DBEAFE;
-    color:#0F172A;
-    border:1px solid #475569;
-    padding:8px 24px;
-    border-radius:0;
-    cursor:pointer;
-}
-
-.form-action button:hover{
-    background:#BFDBFE;
-}
-
-@media(max-width:700px){
-    .farmer-sell-box{
-        padding:24px 18px;
-    }
-
-    .form-line{
-        align-items:flex-start;
-        flex-direction:column;
-        gap:6px;
-    }
-
-    .form-line strong{
-        min-width:0;
-    }
-
-    .form-line input[type="text"],
-    .form-line input[type="number"],
-    .form-line select{
-        width:100%;
-        min-width:0;
-    }
-}
-</style>
-
 {% endif %}
+
+<script>
+(function(){
+    function initSellPagination(){
+        const table = document.querySelector('.sell-table-wrap table');
+        const select = document.getElementById('sellRowsPerPage');
+        const info = document.getElementById('sellPaginationInfo');
+        const pager = document.getElementById('sellPaginationBar');
+        const scrollBox = document.getElementById('sellTableScroll');
+
+        if(!table || !select || !info || !pager) return;
+
+        const rows = Array.from(table.querySelectorAll('tbody tr'));
+        const noData = rows.length === 1 && rows[0].querySelector('td[colspan]');
+        let currentPage = 1;
+
+        function renderPagination(){
+            const perPage = parseInt(select.value, 10);
+            const totalRows = noData ? 0 : rows.length;
+
+            rows.forEach(row => row.style.display = 'none');
+
+            if(noData || totalRows === 0){
+                info.textContent = 'No records found';
+                pager.innerHTML = '';
+                rows.forEach(row => row.style.display = '');
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+            currentPage = Math.min(currentPage, totalPages);
+
+            const start = (currentPage - 1) * perPage;
+            const end = start + perPage;
+
+            rows.forEach((row, index) => {
+                row.style.display = index >= start && index < end ? '' : 'none';
+            });
+
+            info.textContent = `Showing ${start + 1} to ${Math.min(end, totalRows)} of ${totalRows} entries`;
+
+            pager.innerHTML = '';
+
+            const prev = document.createElement('button');
+            prev.type = 'button';
+            prev.className = 'page-btn';
+            prev.textContent = 'Prev';
+            prev.disabled = currentPage === 1;
+            prev.onclick = () => {
+                currentPage--;
+                renderPagination();
+            };
+            pager.appendChild(prev);
+
+            for(let i = 1; i <= totalPages; i++){
+                if(i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1){
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+                    btn.textContent = i;
+                    btn.onclick = () => {
+                        currentPage = i;
+                        renderPagination();
+                    };
+                    pager.appendChild(btn);
+                }
+            }
+
+            const next = document.createElement('button');
+            next.type = 'button';
+            next.className = 'page-btn';
+            next.textContent = 'Next';
+            next.disabled = currentPage === totalPages;
+            next.onclick = () => {
+                currentPage++;
+                renderPagination();
+            };
+            pager.appendChild(next);
+        }
+
+        select.onchange = function(){
+            currentPage = 1;
+            renderPagination();
+        };
+
+        if(scrollBox){
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            scrollBox.onmousedown = function(e){
+                isDown = true;
+                startX = e.pageX - scrollBox.offsetLeft;
+                scrollLeft = scrollBox.scrollLeft;
+            };
+
+            scrollBox.onmouseleave = function(){
+                isDown = false;
+            };
+
+            scrollBox.onmouseup = function(){
+                isDown = false;
+            };
+
+            scrollBox.onmousemove = function(e){
+                if(!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - scrollBox.offsetLeft;
+                const walk = (x - startX) * 1.4;
+                scrollBox.scrollLeft = scrollLeft - walk;
+            };
+        }
+
+        renderPagination();
+    }
+
+    function initSellAjaxSearch(){
+        const form = document.getElementById('sellSearchForm');
+        const input = document.getElementById('sellSearchInput');
+        const clearBtn = document.getElementById('sellClearBtn');
+        const ajaxArea = document.getElementById('sellAjaxArea');
+
+        if(!form || !input || !clearBtn || !ajaxArea) return;
+
+        async function loadSellRecords(url, searchedText){
+            const oldScrollY = window.scrollY;
+
+            try{
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newAjaxArea = doc.getElementById('sellAjaxArea');
+
+                if(!newAjaxArea) return;
+
+                ajaxArea.innerHTML = newAjaxArea.innerHTML;
+
+                if(searchedText){
+                    clearBtn.style.display = '';
+                }else{
+                    clearBtn.style.display = 'none';
+                }
+
+                history.pushState({}, '', url);
+
+                initSellPagination();
+
+                window.scrollTo({
+                    top: oldScrollY,
+                    behavior: 'instant'
+                });
+            }catch(err){
+                form.submit();
+            }
+        }
+
+        form.addEventListener('submit', function(e){
+            e.preventDefault();
+
+            const q = input.value.trim();
+            const baseUrl = form.getAttribute('action') || window.location.pathname;
+            const url = q ? `${baseUrl}?q=${encodeURIComponent(q)}` : baseUrl;
+
+            loadSellRecords(url, q);
+        });
+
+        clearBtn.addEventListener('click', function(e){
+            e.preventDefault();
+
+            input.value = '';
+            loadSellRecords(clearBtn.getAttribute('href'), '');
+        });
+    }
+
+    initSellPagination();
+    initSellAjaxSearch();
+})();
+</script>
 
 {% endblock %}

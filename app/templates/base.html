@@ -865,6 +865,204 @@ body.sidebar-collapsed .sidebar-logout{
     }
 }
 
+
+
+.flash-popup-wrap{
+    position:fixed;
+    top:calc(var(--header-h) + 16px);
+    right:18px;
+    z-index:99999;
+    width:min(420px, calc(100vw - 28px));
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    pointer-events:none;
+}
+
+.flash-popup{
+    position:relative;
+    display:grid;
+    grid-template-columns:38px 1fr 30px;
+    align-items:flex-start;
+    gap:12px;
+    padding:14px 14px;
+    border-radius:18px;
+    background:#fff;
+    border:1px solid rgba(226,232,240,.95);
+    box-shadow:0 22px 55px rgba(15,23,42,.16);
+    font-family:"Times New Roman", Georgia, serif;
+    pointer-events:auto;
+    animation:flashSlideIn .28s ease both;
+    overflow:hidden;
+}
+
+.flash-popup::before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:5px;
+}
+
+.flash-popup-icon{
+    width:38px;
+    height:38px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.15rem;
+    font-weight:900;
+}
+
+.flash-popup-content{
+    min-width:0;
+}
+
+.flash-popup-title{
+    margin:0 0 3px;
+    color:#0F172A;
+    font-size:1.02rem;
+    font-weight:800;
+    line-height:1.25;
+}
+
+.flash-popup-message{
+    margin:0;
+    color:#475569;
+    font-size:.96rem;
+    font-weight:600;
+    line-height:1.45;
+    word-break:break-word;
+}
+
+.flash-popup-close{
+    width:30px;
+    height:30px;
+    border:none;
+    border-radius:10px;
+    background:transparent;
+    color:#64748B;
+    font-size:1.35rem;
+    line-height:1;
+    cursor:pointer;
+    transition:.2s ease;
+}
+
+.flash-popup-close:hover{
+    background:#F1F5F9;
+    color:#0F172A;
+}
+
+.flash-popup.success{
+    background:#F0FDF4;
+    border-color:#BBF7D0;
+}
+
+.flash-popup.success::before{
+    background:#059669;
+}
+
+.flash-popup.success .flash-popup-icon{
+    background:#DCFCE7;
+    color:#059669;
+}
+
+.flash-popup.danger,
+.flash-popup.error{
+    background:#FEF2F2;
+    border-color:#FECACA;
+}
+
+.flash-popup.danger::before,
+.flash-popup.error::before{
+    background:#B91C1C;
+}
+
+.flash-popup.danger .flash-popup-icon,
+.flash-popup.error .flash-popup-icon{
+    background:#FEE2E2;
+    color:#B91C1C;
+}
+
+.flash-popup.warning{
+    background:#FFFBEB;
+    border-color:#FDE68A;
+}
+
+.flash-popup.warning::before{
+    background:#D97706;
+}
+
+.flash-popup.warning .flash-popup-icon{
+    background:#FEF3C7;
+    color:#D97706;
+}
+
+.flash-popup.info,
+.flash-popup.message{
+    background:#EEF2FF;
+    border-color:#C7D2FE;
+}
+
+.flash-popup.info::before,
+.flash-popup.message::before{
+    background:#4F46E5;
+}
+
+.flash-popup.info .flash-popup-icon,
+.flash-popup.message .flash-popup-icon{
+    background:#E0E7FF;
+    color:#4338CA;
+}
+
+.flash-popup.hide{
+    animation:flashSlideOut .22s ease both;
+}
+
+@keyframes flashSlideIn{
+    from{
+        opacity:0;
+        transform:translateX(24px) translateY(-6px);
+    }
+    to{
+        opacity:1;
+        transform:translateX(0) translateY(0);
+    }
+}
+
+@keyframes flashSlideOut{
+    from{
+        opacity:1;
+        transform:translateX(0);
+    }
+    to{
+        opacity:0;
+        transform:translateX(24px);
+    }
+}
+
+@media (max-width:860px){
+    .flash-popup-wrap{
+        top:calc(var(--header-h) + 10px);
+        left:14px;
+        right:14px;
+        width:auto;
+    }
+
+    .flash-popup{
+        grid-template-columns:34px 1fr 28px;
+        border-radius:16px;
+        padding:12px;
+    }
+
+    .flash-popup-icon{
+        width:34px;
+        height:34px;
+        border-radius:12px;
+    }
+}
     </style>
 </head>
 
@@ -882,6 +1080,45 @@ body.sidebar-collapsed .sidebar-logout{
 ] %}
 
 <body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-popup-wrap" id="flashPopupWrap">
+            {% for category, message in messages %}
+                <div class="flash-popup {{ category }}">
+                    <div class="flash-popup-icon">
+                        {% if category == 'success' %}
+                            ✓
+                        {% elif category in ['danger', 'error'] %}
+                            !
+                        {% elif category == 'warning' %}
+                            ⚠
+                        {% else %}
+                            i
+                        {% endif %}
+                    </div>
+
+                    <div class="flash-popup-content">
+                        <h4 class="flash-popup-title">
+                            {% if category == 'success' %}
+                                Success
+                            {% elif category in ['danger', 'error'] %}
+                                Error
+                            {% elif category == 'warning' %}
+                                Warning
+                            {% else %}
+                                Notice
+                            {% endif %}
+                        </h4>
+                        <p class="flash-popup-message">{{ message }}</p>
+                    </div>
+
+                    <button type="button" class="flash-popup-close" onclick="closeFlashPopup(this)" aria-label="Close">×</button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
 {% if session.get('user_id') and request.endpoint not in public_pages %}
 
     <header class="app-header">
@@ -1205,12 +1442,14 @@ body.sidebar-collapsed .sidebar-logout{
             My Earnings
         </a>
 
-        <a href="{{ url_for('modules.finance') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </span>
-            Financial Assistance
-        </a>
+       {# HIDDEN FOR UFC MITRA LOGIN
+<a href="{{ url_for('modules.finance') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </span>
+    Financial Assistance
+</a>
+#}
 
        <a href="{{ url_for('modules.insurance_leads') }}">
     <span class="nav-icon">
@@ -1238,12 +1477,7 @@ body.sidebar-collapsed .sidebar-logout{
     {% endif %}
 
     {% if session.get('role') == 'farmer' %}
-        <a href="{{ url_for('modules.profile') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1.2-4.3 4-6.5 8-6.5s6.8 2.2 8 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Profile
-        </a>
+        
 
         <a href="{{ url_for('modules.buy') }}">
             <span class="nav-icon">
@@ -1342,9 +1576,9 @@ body.sidebar-collapsed .sidebar-logout{
     </footer>
     {% endif %}
 
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
-    <script>
+<script>
 function toggleSidebarMenu(forceClose = false){
     const btn = document.querySelector('.mobile-menu-btn');
 
@@ -1406,6 +1640,43 @@ document.addEventListener('DOMContentLoaded', function(){
     if(localStorage.getItem('uf_sidebar_collapsed') === '1'){
         document.body.classList.add('sidebar-collapsed');
     }
+});
+
+
+/* global flash popup close + auto hide */
+function closeFlashPopup(button){
+    const popup = button.closest('.flash-popup');
+    if(!popup) return;
+
+    popup.classList.add('hide');
+
+    setTimeout(function(){
+        popup.remove();
+
+        const wrap = document.getElementById('flashPopupWrap');
+        if(wrap && !wrap.querySelector('.flash-popup')){
+            wrap.remove();
+        }
+    }, 240);
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.flash-popup').forEach(function(popup){
+        setTimeout(function(){
+            if(!popup || !popup.parentNode) return;
+
+            popup.classList.add('hide');
+
+            setTimeout(function(){
+                popup.remove();
+
+                const wrap = document.getElementById('flashPopupWrap');
+                if(wrap && !wrap.querySelector('.flash-popup')){
+                    wrap.remove();
+                }
+            }, 240);
+        }, 5000);
+    });
 });
 </script>
 </body>

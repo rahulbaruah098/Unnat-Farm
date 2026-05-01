@@ -3,17 +3,17 @@
 {% block content %}
 
 <style>
-   .page-card{
-    width:100%;
-    min-height:100vh;
-    margin:0;
-    padding:40px 28px 60px;
-    border:none;
-    border-radius:0;
-    background:transparent;
-    box-shadow:none;
-    backdrop-filter:none;
-}
+    .page-card{
+        width:100%;
+        min-height:100vh;
+        margin:0;
+        padding:40px 28px 60px;
+        border:none;
+        border-radius:0;
+        background:transparent;
+        box-shadow:none;
+        backdrop-filter:none;
+    }
 
     .farmer-logo-wrap{
         display:flex;
@@ -36,16 +36,16 @@
         margin-bottom:16px;
     }
 
-   .title-row h2{
-    margin:0;
-    color:#17252A;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:clamp(1.45rem, 2.1vw, 1.9rem);
-    font-weight:600;
-    line-height:1.25;
-    letter-spacing:.2px;
-    text-align:center;
-}
+    .title-row h2{
+        margin:0;
+        color:#17252A;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
+        font-weight:600;
+        line-height:1.25;
+        letter-spacing:.2px;
+        text-align:center;
+    }
 
     .back-btn{
         display:inline-flex;
@@ -62,6 +62,7 @@
         cursor:pointer;
         box-shadow:0 8px 20px rgba(95,168,120,.12);
         transition:all .2s ease;
+        text-decoration:none;
     }
 
     .back-btn:hover{
@@ -89,21 +90,32 @@
     }
 
     .grid-form.two-col,
-.inner-grid{
-    grid-template-columns:1fr;
-}
+    .inner-grid{
+        grid-template-columns:1fr;
+    }
 
-.step-panel{
-    width:min(92%, 430px);
-    margin:0 auto;
-    border:1px solid rgba(220,238,226,.95);
-    border-radius:28px;
-    padding:28px;
-    background:rgba(255,255,255,.94);
-    box-shadow:0 22px 55px rgba(23,37,42,.10);
-    backdrop-filter:blur(14px);
-}
+    .farmer-screen{
+        width:100%;
+    }
 
+    .farmer-screen[hidden]{
+        display:none !important;
+    }
+
+    .step-panel{
+        width:min(92%, 430px);
+        margin:0 auto;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:28px;
+        padding:28px;
+        background:rgba(255,255,255,.94);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+    }
+
+    .step-panel-wide{
+        width:min(94%, 980px);
+    }
 
     .grid-form label{
         display:flex;
@@ -136,20 +148,24 @@
         box-shadow:0 0 0 4px rgba(95,168,120,.14);
     }
 
-
     .step-panel h3{
         margin:0 0 20px;
         color:#17252A;
         font-size:clamp(1.25rem, 1.8vw, 1.55rem);
         font-weight:600;
-          font-family:"Times New Roman", Georgia, serif;
+        font-family:"Times New Roman", Georgia, serif;
     }
-    
 
     .step-panel .muted{
         text-align:left;
         margin:0 0 18px;
         max-width:none;
+    }
+
+    .full-form-grid{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:18px;
     }
 
     .checkbox-grid{
@@ -183,43 +199,208 @@
         grid-column:1 / -1;
     }
 
+    .step-actions{
+        display:flex;
+        gap:12px;
+        align-items:center;
+        justify-content:space-between;
+        margin-top:18px;
+    }
+
     .span-2 button,
-    #farmerNextBtn{
+    #farmerNextBtn,
+    .btn-secondary-step{
         min-height:50px;
         padding:12px 30px;
         border:none;
         border-radius:999px;
-        background:#5FA878;
-        color:#fff;
         font-family:"Times New Roman", Georgia, serif;
         font-size:1.08rem;
         font-weight:700;
-         width:100%;
-    margin-top:18px;
         cursor:pointer;
-        box-shadow:0 14px 30px rgba(95,168,120,.26);
         transition:all .2s ease;
     }
 
-    .span-2 button:hover,
-    #farmerNextBtn:hover{
+    #farmerNextBtn,
+    .span-2 button[type="submit"]{
+        background:#5FA878;
+        color:#fff;
+        width:100%;
+        box-shadow:0 14px 30px rgba(95,168,120,.26);
+    }
+
+    #farmerNextBtn:hover,
+    .span-2 button[type="submit"]:hover{
         background:#3B7D55;
         transform:translateY(-1px);
     }
 
-    #farmerNextBtn{
-        margin-top:18px;
+    .btn-secondary-step{
+        background:rgba(228,247,234,.9);
+        color:#225C3A;
+        border:1px solid rgba(95,168,120,.25);
+        box-shadow:0 10px 22px rgba(95,168,120,.12);
+    }
+
+    .btn-secondary-step:hover{
+        background:#5FA878;
+        color:#fff;
+    }
+
+    .farmer-local-flash-wrap{
+        position:fixed;
+        top:22px;
+        right:22px;
+        z-index:99999;
+        display:grid;
+        gap:12px;
+        width:min(92vw, 390px);
+    }
+
+    .farmer-local-flash{
+        display:flex;
+        gap:12px;
+        align-items:flex-start;
+        padding:14px 16px;
+        border-radius:18px;
+        background:rgba(255,255,255,.97);
+        border:1px solid rgba(226,232,240,.95);
+        box-shadow:0 20px 48px rgba(15,23,42,.14);
+        animation:farmerToastIn .22s ease both;
+    }
+
+    .farmer-local-flash .flash-icon{
+        width:34px;
+        height:34px;
+        border-radius:50%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        flex:0 0 34px;
+        background:#dc2626;
+        color:#fff;
+        font-weight:900;
+        font-family:Arial, sans-serif;
+    }
+
+    .farmer-local-flash.success .flash-icon{
+        background:#059669;
+    }
+
+    .farmer-local-flash.warning .flash-icon{
+        background:#d97706;
+    }
+
+    .farmer-local-flash.info .flash-icon{
+        background:#0284c7;
+    }
+
+    .farmer-local-flash strong{
+        display:block;
+        margin:0 0 2px;
+        color:#17252A;
+        font-size:.98rem;
+        line-height:1.2;
+    }
+
+    .farmer-local-flash p{
+        margin:0;
+        color:#475569;
+        font-size:.94rem;
+        line-height:1.35;
+    }
+
+    .farmer-local-flash button{
+        margin-left:auto;
+        border:none;
+        background:transparent;
+        color:#64748B;
+        cursor:pointer;
+        font-size:1.2rem;
+        line-height:1;
+    }
+
+    @keyframes farmerToastIn{
+        from{
+            opacity:0;
+            transform:translateY(-8px);
+        }
+        to{
+            opacity:1;
+            transform:translateY(0);
+        }
+    }
+
+    .modal-overlay{
+        position:fixed;
+        inset:0;
+        background:rgba(15,23,42,.45);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        z-index:9999;
+        opacity:0;
+        pointer-events:none;
+        transition:.25s ease;
+    }
+
+    .modal-overlay.active{
+        opacity:1;
+        pointer-events:auto;
+    }
+
+    .modal-box{
+        width:min(92%, 420px);
+        background:#fff;
+        border-radius:20px;
+        padding:24px;
+        box-shadow:0 30px 60px rgba(15,23,42,.25);
+        font-family:"Times New Roman", Georgia, serif;
+        text-align:center;
+    }
+
+    .modal-box h3{
+        margin:0 0 10px;
+        color:#17252A;
+        font-size:1.4rem;
+        font-weight:700;
+    }
+
+    .modal-box p{
+        margin:0 0 20px;
+        color:#475569;
+        font-size:1rem;
+        line-height:1.5;
+    }
+
+    .modal-actions{
+        display:flex;
+        justify-content:center;
+    }
+
+    .btn-confirm{
+        min-height:38px;
+        padding:8px 22px;
+        border-radius:999px;
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:700;
+        cursor:pointer;
+        border:1px solid transparent;
+        background:#5FA878;
+        color:#fff;
+        transition:.2s ease;
+    }
+
+    .btn-confirm:hover{
+        background:#3B7D55;
     }
 
     @media (max-width:860px){
         .page-card{
-            width:min(92%, 620px);
-            padding:28px 26px;
-            border-radius:26px;
+            padding:28px 18px 44px;
         }
 
-        .grid-form.two-col,
-        .inner-grid{
+        .full-form-grid{
             grid-template-columns:1fr;
         }
 
@@ -227,17 +408,25 @@
             grid-template-columns:repeat(2, minmax(0, 1fr));
         }
 
-        .span-2 button,
-        #farmerNextBtn{
+        .step-actions{
+            flex-direction:column;
+        }
+
+        .step-actions button{
             width:100%;
+        }
+
+        .farmer-local-flash-wrap{
+            top:14px;
+            right:14px;
+            left:14px;
+            width:auto;
         }
     }
 
     @media (max-width:420px){
         .page-card{
-            width:92%;
-            padding:22px 18px;
-            border-radius:22px;
+            padding:22px 12px 34px;
         }
 
         .farmer-logo-wrap img{
@@ -266,6 +455,7 @@
         }
 
         .step-panel{
+            width:94%;
             padding:18px;
             border-radius:20px;
         }
@@ -278,74 +468,37 @@
             font-size:1rem;
         }
     }
-
-    .modal-overlay{
-    position:fixed;
-    inset:0;
-    background:rgba(15,23,42,.45);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:9999;
-    opacity:0;
-    pointer-events:none;
-    transition:.25s ease;
-}
-
-.modal-overlay.active{
-    opacity:1;
-    pointer-events:auto;
-}
-
-.modal-box{
-    width:min(92%, 420px);
-    background:#fff;
-    border-radius:20px;
-    padding:24px;
-    box-shadow:0 30px 60px rgba(15,23,42,.25);
-    font-family:"Times New Roman", Georgia, serif;
-    text-align:center;
-}
-
-.modal-box h3{
-    margin:0 0 10px;
-    color:#17252A;
-    font-size:1.4rem;
-    font-weight:700;
-}
-
-.modal-box p{
-    margin:0 0 20px;
-    color:#475569;
-    font-size:1rem;
-    line-height:1.5;
-}
-
-.modal-actions{
-    display:flex;
-    justify-content:center;
-}
-
-.btn-confirm{
-    min-height:38px;
-    padding:8px 22px;
-    border-radius:999px;
-    font-family:"Times New Roman", Georgia, serif;
-    font-weight:700;
-    cursor:pointer;
-    border:1px solid transparent;
-    background:#5FA878;
-    color:#fff;
-    transition:.2s ease;
-}
-
-.btn-confirm:hover{
-    background:#3B7D55;
-}
 </style>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="farmer-local-flash-wrap" id="farmerLocalFlashWrap">
+            {% for category, message in messages %}
+                <div class="farmer-local-flash {{ category }}">
+                    <span class="flash-icon">!</span>
+                    <div>
+                        <strong>
+                            {% if category == 'success' %}
+                                Registration Update
+                            {% elif category == 'warning' %}
+                                Registration Warning
+                            {% elif category == 'info' %}
+                                Registration Notice
+                            {% else %}
+                                Registration Failed
+                            {% endif %}
+                        </strong>
+                        <p>{{ message }}</p>
+                    </div>
+                    <button type="button" onclick="this.closest('.farmer-local-flash').remove()">×</button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
 <div class="page-card">
-    <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+    <a href="{{ url_for('auth.login_select') }}" class="back-btn" aria-label="Back to main landing page">←</a>
 
     <div class="farmer-logo-wrap">
         <a href="{{ url_for('auth.login_select') }}" aria-label="Go to main landing page">
@@ -359,46 +512,125 @@
         <span></span>
     </div>
 
-    <p class="muted">First enter farmer name and contact number, then press Next to complete the full form. Centre UID and UFC Mitra UID are mandatory.</p>
+    <p class="muted">
+        First enter farmer name and contact number, then press Next to complete the full form.
+        Centre UID and UFC Mitra UID are mandatory.
+    </p>
 
     <form method="post" class="grid-form two-col" id="farmerRegistrationForm">
-        <div class="span-2 step-panel" id="farmerStep1">
-            <h3>Step 1: Basic Details</h3>
-            <div class="grid-form two-col inner-grid">
-               <label>Name 
-    <input type="text" name="name" id="farmerName" value="{{ data.name if data else '' }}" placeholder="Enter farmer name" required>
-</label>
+        <section class="farmer-screen" id="farmerScreen1">
+            <div class="span-2 step-panel" id="farmerStep1">
+                <h3>Step 1: Basic Details</h3>
 
-<label>Contact No. 
-    <input type="text" name="contact_no" id="farmerContact" value="{{ data.contact_no if data else '' }}" placeholder="Enter contact number" required>
-</label>
+                <div class="grid-form two-col inner-grid">
+                    <label>Name
+                        <input type="text" name="name" id="farmerName" value="{{ data.name if data else '' }}" placeholder="Enter farmer name" required>
+                    </label>
 
-<label>UFC Mitra UID
-    <input type="text" name="mitra_uid" id="farmerMitraUidStep1" data-mitra-lookup value="{{ data.mitra_uid if data else '' }}" placeholder="Enter UFC Mitra UID" required>
-</label>
+                    <label>Contact No.
+                        <input type="text" name="contact_no" id="farmerContact" value="{{ data.contact_no if data else '' }}" placeholder="Enter contact number" required>
+                    </label>
+
+                    <label>UFC Mitra UID
+                        <input type="text" name="mitra_uid" id="farmerMitraUidStep1" data-mitra-lookup value="{{ data.mitra_uid if data else '' }}" placeholder="Enter UFC Mitra UID" required>
+                    </label>
+                </div>
+
+                <button type="button" id="farmerNextBtn">Next</button>
             </div>
-            <button type="button" id="farmerNextBtn">Next</button>
-        </div>
+        </section>
 
-        <div class="span-2 step-panel farmer-full-field" id="farmerStep2">
-            <h3>Step 2: Full Farmer Registration</h3>
-            <p class="muted">Name and number are reflected from Step 1 and remain editable.</p>
-        </div>
+        <section class="farmer-screen" id="farmerScreen2" hidden>
+            <div class="span-2 step-panel step-panel-wide" id="farmerStep2">
+                <h3>Step 2: Full Farmer Registration</h3>
+                <p class="muted">Name and number are reflected from Step 1 and remain editable.</p>
 
-        <label class="farmer-full-field">Name <input type="text" id="farmerNameMirror" value="{{ data.name if data else '' }}"></label>
-        <label class="farmer-full-field">Contact No. <input type="text" id="farmerContactMirror" value="{{ data.contact_no if data else '' }}"></label>
-        <label class="farmer-full-field">Gender <select name="gender" required><option value="">Select</option><option {% if data and data.gender == 'Male' %}selected{% endif %}>Male</option><option {% if data and data.gender == 'Female' %}selected{% endif %}>Female</option><option {% if data and data.gender == 'Other' %}selected{% endif %}>Other</option></select></label>
-        <label class="farmer-full-field">Age <input type="number" name="age" value="{{ data.age if data else '' }}" required></label>
-        <label class="farmer-full-field">Create Password <input type="password" name="password" required></label>
-        <label class="farmer-full-field">UnnatFarm Centre UID <input type="text" name="centre_uid" value="{{ data.centre_uid if data else '' }}" required></label>
-        <label class="farmer-full-field">UnnatFarm Centre Mitra UID <input type="text" id="farmerMitraUidMirror" value="{{ data.mitra_uid if data else '' }}" readonly></label>
-        <label class="farmer-full-field">State <select name="state"><option value="">Select</option>{% for s in states %}<option value="{{ s }}" {% if data and data.state == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
-        <label class="farmer-full-field">District <input type="text" name="district" value="{{ data.district if data else '' }}" placeholder="Auto-filled from Mitra UID, editable"></label>
-        <label class="farmer-full-field">Block <input type="text" name="block" value="{{ data.block if data else '' }}" placeholder="Auto-filled from Mitra UID, editable"></label>
-        <label class="farmer-full-field">Village <input type="text" name="village" value="{{ data.village if data else '' }}" placeholder="Auto-filled from Mitra UID, editable" required></label>
-        <div class="span-2 farmer-full-field"><label>Activities</label><div class="checkbox-grid">{% for item in ['Pig','Goat','Poultry','Cattle','Fishery','Agri'] %}<label><input type="checkbox" name="activities" value="{{ item }}" {% if data and item in data.activities %}checked{% endif %}> {{ item }}</label>{% endfor %}</div></div>
-        <div class="span-2 farmer-full-field"><label>Agri Sub-categories</label><div class="checkbox-grid">{% for item in ['Maize','Joha Rice','Mustard Seed','Black Rice','Ginger','Turmeric','Black Pepper'] %}<label><input type="checkbox" name="agri_sub_categories" value="{{ item }}" {% if data and item in data.agri_sub_categories %}checked{% endif %}> {{ item }}</label>{% endfor %}</div></div>
-        <div class="span-2 farmer-full-field"><button type="submit">Submit Registration</button></div>
+                <div class="full-form-grid">
+                    <label>Name
+                        <input type="text" id="farmerNameMirror" value="{{ data.name if data else '' }}">
+                    </label>
+
+                    <label>Contact No.
+                        <input type="text" id="farmerContactMirror" value="{{ data.contact_no if data else '' }}">
+                    </label>
+
+                    <label>Gender
+                        <select name="gender" required>
+                            <option value="">Select</option>
+                            <option {% if data and data.gender == 'Male' %}selected{% endif %}>Male</option>
+                            <option {% if data and data.gender == 'Female' %}selected{% endif %}>Female</option>
+                            <option {% if data and data.gender == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </label>
+
+                    <label>Age
+                        <input type="number" name="age" value="{{ data.age if data else '' }}" required>
+                    </label>
+
+                    <label>Create Password
+                        <input type="password" name="password" required>
+                    </label>
+
+                    <label>UnnatFarm Centre UID
+                        <input type="text" name="centre_uid" value="{{ data.centre_uid if data else '' }}" required>
+                    </label>
+
+                    <label>UnnatFarm Centre Mitra UID
+                        <input type="text" id="farmerMitraUidMirror" value="{{ data.mitra_uid if data else '' }}" readonly>
+                    </label>
+
+                    <label>State
+                        <select name="state">
+                            <option value="">Select</option>
+                            {% for s in states %}
+                                <option value="{{ s }}" {% if data and data.state == s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label>District
+                        <input type="text" name="district" value="{{ data.district if data else '' }}" placeholder="Auto-filled from Mitra UID, editable">
+                    </label>
+
+                    <label>Block
+                        <input type="text" name="block" value="{{ data.block if data else '' }}" placeholder="Auto-filled from Mitra UID, editable">
+                    </label>
+
+                    <label>Village
+                        <input type="text" name="village" value="{{ data.village if data else '' }}" placeholder="Auto-filled from Mitra UID, editable" required>
+                    </label>
+
+                    <div class="span-2">
+                        <label>Activities</label>
+                        <div class="checkbox-grid">
+                            {% for item in ['Pig','Goat','Poultry','Cattle','Fishery','Agri'] %}
+                                <label>
+                                    <input type="checkbox" name="activities" value="{{ item }}" {% if data and item in data.activities %}checked{% endif %}>
+                                    {{ item }}
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="span-2">
+                        <label>Agri Sub-categories</label>
+                        <div class="checkbox-grid">
+                            {% for item in ['Maize','Joha Rice','Mustard Seed','Black Rice','Ginger','Turmeric','Black Pepper'] %}
+                                <label>
+                                    <input type="checkbox" name="agri_sub_categories" value="{{ item }}" {% if data and item in data.agri_sub_categories %}checked{% endif %}>
+                                    {{ item }}
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="span-2 step-actions">
+                        <button type="button" class="btn-secondary-step" id="farmerStepBackBtn">Back</button>
+                        <button type="submit">Submit Registration</button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </form>
 </div>
 
@@ -414,15 +646,30 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+    const form = document.getElementById('farmerRegistrationForm');
+
+    const screen1 = document.getElementById('farmerScreen1');
+    const screen2 = document.getElementById('farmerScreen2');
+
     const name = document.getElementById('farmerName');
     const contact = document.getElementById('farmerContact');
     const mitraUid = document.getElementById('farmerMitraUidStep1');
+
     const nameMirror = document.getElementById('farmerNameMirror');
     const contactMirror = document.getElementById('farmerContactMirror');
     const mitraUidMirror = document.getElementById('farmerMitraUidMirror');
-    const fullFields = Array.from(document.querySelectorAll('.farmer-full-field'));
-    function showFull(){ fullFields.forEach(el => el.style.display='block'); }
-    function hideFull(){ fullFields.forEach(el => el.style.display='none'); }
+
+    const nextBtn = document.getElementById('farmerNextBtn');
+    const stepBackBtn = document.getElementById('farmerStepBackBtn');
+
+    function openFarmerValidationModal(){
+        document.getElementById('farmerValidationModal').classList.add('active');
+    }
+
+    window.closeFarmerValidationModal = function(){
+        document.getElementById('farmerValidationModal').classList.remove('active');
+    };
+
     function syncFromTop(){
         nameMirror.value = name.value;
         contactMirror.value = contact.value;
@@ -433,31 +680,90 @@ document.addEventListener('DOMContentLoaded', function(){
         name.value = nameMirror.value;
         contact.value = contactMirror.value;
     }
-    
-    hideFull();
-    if(name.value && contact.value && mitraUid.value){ showFull(); syncFromTop(); }
-    document.getElementById('farmerNextBtn').addEventListener('click', function(){
+
+    function showStep1(){
+        screen1.hidden = false;
+        screen2.hidden = true;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showStep2(){
+        syncFromTop();
+        screen1.hidden = true;
+        screen2.hidden = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    if(name.value.trim() && contact.value.trim() && mitraUid.value.trim()){
+        showStep2();
+    }else{
+        showStep1();
+    }
+
+    nextBtn.addEventListener('click', function(){
         if(!name.value.trim() || !contact.value.trim() || !mitraUid.value.trim()){
-openFarmerValidationModal();
-return;
+            openFarmerValidationModal();
+            return;
         }
-        syncFromTop(); showFull();
+
+        showStep2();
     });
+
+    stepBackBtn.addEventListener('click', function(){
+        showStep1();
+    });
+
     name.addEventListener('input', syncFromTop);
     contact.addEventListener('input', syncFromTop);
     mitraUid.addEventListener('input', syncFromTop);
+
     nameMirror.addEventListener('input', syncFromMirror);
     contactMirror.addEventListener('input', syncFromMirror);
 
+    form.addEventListener('submit', function(e){
+        syncFromMirror();
 
-    function openFarmerValidationModal(){
-    document.getElementById('farmerValidationModal').classList.add('active');
-}
+        const password = form.querySelector('input[name="password"]');
+        const centreUid = form.querySelector('input[name="centre_uid"]');
+        const gender = form.querySelector('select[name="gender"]');
+        const age = form.querySelector('input[name="age"]');
+        const village = form.querySelector('input[name="village"]');
 
-window.closeFarmerValidationModal = function(){
-    document.getElementById('farmerValidationModal').classList.remove('active');
-}
+        if(!name.value.trim() || !contact.value.trim() || !mitraUid.value.trim()){
+            e.preventDefault();
+            showStep1();
+            openFarmerValidationModal();
+            return;
+        }
 
+        if(
+            !password.value.trim() ||
+            !centreUid.value.trim() ||
+            !gender.value.trim() ||
+            !age.value.trim() ||
+            !village.value.trim()
+        ){
+            e.preventDefault();
+            showStep2();
+            openCustomFarmerModal(
+                'Required Details Missing',
+                'Please fill all mandatory fields including Gender, Age, Password, Centre UID and Village before submitting.'
+            );
+        }
+    });
+
+    function openCustomFarmerModal(title, message){
+        const modal = document.getElementById('farmerValidationModal');
+        modal.querySelector('h3').textContent = title;
+        modal.querySelector('p').textContent = message;
+        modal.classList.add('active');
+    }
+
+    setTimeout(function(){
+        document.querySelectorAll('.farmer-local-flash').forEach(function(item){
+            item.remove();
+        });
+    }, 6500);
 });
 </script>
 {% endblock %}
