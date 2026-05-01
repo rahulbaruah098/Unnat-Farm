@@ -279,8 +279,25 @@ def product_categories():
 @login_required
 def product_list():
     products = list(mongo.db.products.find({}).sort('created_at', -1))
-    return render_template('admin/product_list.html', products=products)
 
+    farmer_products = list(
+        mongo.db.farmer_products
+        .find({"status": "active"})
+        .sort("created_at", -1)
+    )
+
+    centres = list(
+        mongo.db.ufc_admin_master
+        .find({}, {"centre_uid": 1, "name": 1, "name_of_enterprise": 1})
+        .sort("centre_uid", 1)
+    )
+
+    return render_template(
+        'admin/product_list.html',
+        products=products,
+        farmer_products=farmer_products,
+        centres=centres
+    )
 
 @admin_bp.route('/traders/onboard', methods=['GET', 'POST'])
 @login_required

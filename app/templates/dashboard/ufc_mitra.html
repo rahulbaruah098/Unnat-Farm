@@ -14,13 +14,15 @@
     }
 
     .mitra-head{
-        display:flex;
-        align-items:flex-start;
-        justify-content:space-between;
-        gap:18px;
-        flex-wrap:wrap;
-        margin-bottom:22px;
-    }
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:22px;
+    flex-wrap:wrap;
+    margin-bottom:26px;
+    padding-bottom:20px;
+    border-bottom:1px solid rgba(220,238,226,.95);
+}
 
     .mitra-head h2{
         margin:0;
@@ -51,23 +53,28 @@
         box-shadow:0 14px 34px rgba(15,23,42,.08);
     }
 
-    .mitra-photo-wrap{
-        width:104px;
-        height:104px;
-        border-radius:28px;
-        overflow:hidden;
-        flex:0 0 104px;
-        background:#F1F5F9;
-        border:1px solid #E2E8F0;
-        box-shadow:0 12px 28px rgba(15,23,42,.10);
-    }
+  .mitra-photo-wrap{
+    width:150px;
+    height:150px;
+    border-radius:30px;
+    overflow:hidden;
+    flex:0 0 150px;
+    background:#F1F5F9;
+    border:1px solid #E2E8F0;
+    box-shadow:0 14px 34px rgba(15,23,42,.12);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
 
-    .mitra-profile-photo{
-        width:100%;
-        height:100%;
-        object-fit:cover;
-        display:block;
-    }
+ .mitra-profile-photo{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    object-position:center;
+    display:block;
+    background:#F1F5F9;
+}
 
     .mitra-profile-placeholder{
         width:100%;
@@ -287,6 +294,17 @@
             align-items:flex-start;
             padding:16px;
         }
+        .mitra-head{
+    align-items:center;
+    flex-wrap:nowrap;
+}
+
+.mitra-photo-wrap{
+    width:110px;
+    height:110px;
+    flex-basis:110px;
+    border-radius:24px;
+}
 
         .mitra-photo-wrap{
             width:82px;
@@ -319,16 +337,20 @@
             border-radius:18px;
         }
 
-        .mitra-profile-card{
-            flex-direction:column;
-        }
+      .mitra-head{
+    gap:14px;
+}
 
-        .mitra-photo-wrap{
-            width:88px;
-            height:88px;
-            flex-basis:88px;
-        }
+.mitra-head h2{
+    font-size:1.45rem;
+}
 
+.mitra-photo-wrap{
+    width:88px;
+    height:88px;
+    flex-basis:88px;
+    border-radius:20px;
+}
         .uid-card{
             padding:16px;
         }
@@ -336,35 +358,26 @@
 </style>
 
 <div class="mitra-dashboard">
-    <div class="mitra-head">
-        <div>
-          <h2>Welcome, {{ current_display_name }}</h2>
-<p class="mitra-subtitle">UFC Mitra Dashboard</p>
-           
-        </div>
+   <div class="mitra-head">
+    <div>
+        <h2>Welcome, {{ current_display_name }}</h2>
+        <p class="mitra-subtitle">UFC Mitra Dashboard</p>
     </div>
 
-    <div class="mitra-profile-card">
-        <div class="mitra-photo-wrap">
-            {% if data.profile_photo %}
-                <img
-                    src="{{ url_for('documents.serve', filename=data.profile_photo) }}"
-                    alt="Mitra Profile Photo"
-                    class="mitra-profile-photo"
-                >
-            {% else %}
-                <div class="mitra-profile-placeholder">
-                    {{ (data.mitra_name or 'M')[:1]|upper }}
-                </div>
-            {% endif %}
-        </div>
-
-        <div>
-            <span class="mitra-profile-label">UFC Mitra</span>
-            <h3>{{ data.mitra_name or 'Mitra User' }}</h3>
-            <p>{{ session.get('mitra_uid') or '-' }}</p>
-        </div>
+    <div class="mitra-photo-wrap">
+        {% if data.profile_photo %}
+            <img
+                src="{{ url_for('documents.serve', filename=data.profile_photo) }}"
+                alt="Mitra Profile Photo"
+                class="mitra-profile-photo"
+            >
+        {% else %}
+            <div class="mitra-profile-placeholder">
+                {{ (data.mitra_name or 'M')[:1]|upper }}
+            </div>
+        {% endif %}
     </div>
+</div>
 
     <div class="uid-card">
         <span>Your Mitra UID</span>

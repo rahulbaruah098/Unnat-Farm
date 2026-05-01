@@ -570,7 +570,7 @@
 <div class="page-card">
     <div class="title-row">
         <div class="title-left">
-            <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+<button type="button" class="back-btn" onclick="goBackFromPosPage()" aria-label="Back">←</button>
             <h2>POS - Sell Products</h2>
         </div>
     </div>
@@ -962,5 +962,15 @@ function initSalesAjaxSearch(){
 
 initSalesPagination();
 initSalesAjaxSearch();
+</script>
+
+<script>
+function goBackFromPosPage(){
+    if(window.history.length > 1){
+        window.history.back();
+    }else{
+        window.location.href = "{{ url_for('dashboard.home') }}";
+    }
+}
 </script>
 {% endblock %}

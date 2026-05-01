@@ -38,7 +38,7 @@
     }
 
     .back-btn{
-        display:inline-flex;
+           display:none;
         width:42px;
         height:42px;
         border:none;
@@ -303,74 +303,171 @@
         }
     }
 
-    @media print{
-        body *{
-            visibility:hidden;
-        }
-
-        .page-card,
-        .page-card *{
-            visibility:visible;
-        }
-
-        .page-card{
-            position:absolute;
-            left:0;
-            top:0;
-            width:100%;
-            border:none;
-            box-shadow:none;
-            padding:0;
-            background:#fff;
-        }
-
-        .back-btn,
-        .invoice-actions{
-            display:none !important;
-        }
-
-        .title-row{
-            margin-bottom:18px;
-        }
-
-        .invoice-table-wrap{
-            border:1px solid #ddd;
-            box-shadow:none;
-            overflow:visible;
-        }
-
-        .invoice-table-wrap table{
-            min-width:100%;
-            display:table;
-        }
-
-        .invoice-table-wrap tbody{
-            display:table-row-group;
-        }
-
-        .invoice-table-wrap tr{
-            display:table-row;
-            width:auto;
-            min-width:0;
-            max-width:none;
-            border:none;
-            box-shadow:none;
-            padding:0;
-        }
-
-        .invoice-table-wrap th,
-        .invoice-table-wrap td{
-            display:table-cell;
-            border-bottom:1px solid #ddd;
-            padding:12px;
-        }
+    @media(max-width:900px){
+    .back-btn{
+        display:inline-flex;
     }
+}
+
+    @media print{
+    @page{
+        size:A4;
+        margin:14mm;
+    }
+
+    body{
+        margin:0 !important;
+        padding:0 !important;
+        background:#fff !important;
+    }
+
+    body *{
+        visibility:hidden !important;
+    }
+
+    .page-card,
+    .page-card *{
+        visibility:visible !important;
+    }
+
+    .page-card{
+        position:absolute !important;
+        left:0 !important;
+        top:0 !important;
+        width:100% !important;
+        max-width:100% !important;
+        margin:0 !important;
+        padding:0 !important;
+        border:none !important;
+        border-radius:0 !important;
+        box-shadow:none !important;
+        background:#fff !important;
+        color:#000 !important;
+        font-family:"Times New Roman", Georgia, serif !important;
+    }
+
+    .back-btn,
+    .invoice-actions,
+    header,
+    nav,
+    aside,
+    footer,
+    .sidebar,
+    .topbar,
+    .navbar,
+    .mobile-menu-btn,
+    .app-header,
+    .app-footer{
+        display:none !important;
+        visibility:hidden !important;
+    }
+
+    .title-row{
+        display:block !important;
+        margin:0 0 14px !important;
+        padding:0 !important;
+    }
+
+    .title-left{
+        display:block !important;
+    }
+
+    .title-left h2{
+        margin:0 0 12px !important;
+        color:#000 !important;
+        font-size:24pt !important;
+        font-weight:900 !important;
+        line-height:1.2 !important;
+        white-space:normal !important;
+    }
+
+    .info-banner{
+        margin:0 0 16px !important;
+        padding:10px 12px !important;
+        border:1px solid #999 !important;
+        border-radius:6px !important;
+        background:#fff !important;
+        color:#000 !important;
+        font-size:13pt !important;
+        font-weight:900 !important;
+        page-break-inside:avoid !important;
+        break-inside:avoid !important;
+    }
+
+    .invoice-table-wrap{
+        width:100% !important;
+        border:1px solid #999 !important;
+        border-radius:0 !important;
+        box-shadow:none !important;
+        overflow:visible !important;
+        background:#fff !important;
+        page-break-inside:avoid !important;
+        break-inside:avoid !important;
+    }
+
+    .invoice-table-wrap table{
+        width:100% !important;
+        min-width:0 !important;
+        table-layout:fixed !important;
+        border-collapse:collapse !important;
+        border-spacing:0 !important;
+        display:table !important;
+        background:#fff !important;
+    }
+
+    .invoice-table-wrap tbody{
+        display:table-row-group !important;
+    }
+
+    .invoice-table-wrap tr{
+        display:table-row !important;
+        width:auto !important;
+        min-width:0 !important;
+        max-width:none !important;
+        min-height:0 !important;
+        border:none !important;
+        box-shadow:none !important;
+        padding:0 !important;
+        page-break-inside:avoid !important;
+        break-inside:avoid !important;
+    }
+
+    .invoice-table-wrap th,
+    .invoice-table-wrap td{
+        display:table-cell !important;
+        padding:8px 10px !important;
+        border:1px solid #999 !important;
+        color:#000 !important;
+        background:#fff !important;
+        font-size:11.5pt !important;
+        line-height:1.3 !important;
+        vertical-align:middle !important;
+        white-space:normal !important;
+        word-break:normal !important;
+        overflow-wrap:break-word !important;
+    }
+
+    .invoice-table-wrap th{
+        width:34% !important;
+        font-weight:900 !important;
+    }
+
+    .invoice-table-wrap td{
+        width:66% !important;
+        font-weight:700 !important;
+    }
+
+    .amount-text{
+        color:#000 !important;
+        font-weight:900 !important;
+    }
+}
 </style>
 
 <div class="page-card">
     <div class="title-row">
         <div class="title-left">
-            <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+<button type="button" class="back-btn" onclick="goBackFromInvoice()" aria-label="Back">←</button>
             <h2>POS Invoice</h2>
         </div>
     </div>
@@ -402,5 +499,15 @@
         <a href="{{ url_for('modules.pos') }}" class="pos-btn">Back to POS</a>
     </div>
 </div>
+
+<script>
+function goBackFromInvoice(){
+    if(window.history.length > 1){
+        window.history.back();
+    }else{
+        window.location.href = "{{ url_for('modules.pos') }}";
+    }
+}
+</script>
 
 {% endblock %}

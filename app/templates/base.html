@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}UnnatFarm MIS{% endblock %}</title>
+   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/unnatfarmlogo.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     <style>
@@ -191,7 +192,7 @@
     padding:clamp(68px, 4.4vw, 80px) 0 18px 0;
     margin:0 0 14px 0;
     color:var(--uf-ink);
-    font-family:"Times New Roman", Georgia, serif;
+    font-family: "inter" ,"Roboto", Georgia, serif;
     font-size:clamp(1.28rem, 1.25vw, 1.52rem);
     font-weight:800;
     letter-spacing:.2px;
@@ -1177,6 +1178,16 @@ body.sidebar-collapsed .sidebar-logout{
             </span>
             Validations
         </a>
+
+        <a href="{{ url_for('modules.support') }}">
+    <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M8 13v-2M16 13v-2M11 19h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+    </span>
+    Support
+</a>
 
         <a href="{{ url_for('master.farmers') }}">
             <span class="nav-icon">
