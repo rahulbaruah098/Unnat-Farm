@@ -723,30 +723,85 @@ def lms():
 @modules_bp.route("/support", methods=["GET", "POST"])
 @login_required
 def support():
+    role = session.get("role")
+    user_id = session.get("user_id")
+
+    user = {}
+    if user_id:
+        try:
+            user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
+        except Exception:
+            user = {}
+
     if request.method == "POST":
+        if role == "super_admin":
+            flash("Super Admin can update tickets from the ticket table.", "warning")
+            return redirect(url_for("modules.support"))
+
+        subject = request.form.get("subject", "").strip()
+        problem_type = request.form.get("problem_type", "").strip()
+        priority = request.form.get("priority", "").strip()
+        message = request.form.get("message", "").strip()
+
+        if not subject or not problem_type or not priority or not message:
+            flash("Please fill all required support ticket fields.", "danger")
+            return redirect(url_for("modules.support"))
+
+        ticket_ref = "TCK-" + datetime.utcnow().strftime("%Y%m%d%H%M%S")
+
         mongo.db.support_tickets.insert_one({
-            "user_id": session["user_id"],
-            "role": session["role"],
-            "subject": request.form.get("subject"),
-            "message": request.form.get("message"),
+            "ticket_ref": ticket_ref,
+            "user_id": user_id,
+            "user_name": user.get("name") or session.get("name") or session.get("username") or "Unknown User",
+            "username": user.get("username") or session.get("username"),
+            "role": role,
+            "phone": user.get("phone") or user.get("contact_no") or "",
+            "email": user.get("email") or "",
+            "subject": subject,
+            "problem_type": problem_type,
+            "priority": priority,
+            "message": message,
+            "support_email": "ites@sayanant.com",
+            "support_number": "9957367398",
             "status": "open",
+            "progress": "Ticket received",
+            "resolution_note": "",
             "created_at": now_utc(),
+            "updated_at": now_utc(),
+            "resolved_at": None,
+            "updated_by": None
         })
-        flash("Support ticket submitted.", "success")
+
+        flash("Support ticket raised successfully. Super Admin will review it.", "success")
         return redirect(url_for("modules.support"))
 
     q = request.args.get("q", "").strip()
 
-    ticket_query = {
-        "user_id": session["user_id"]
-    }
+    if role == "super_admin":
+        ticket_query = {}
+    else:
+        ticket_query = {"user_id": user_id}
 
     if q:
-        ticket_query["$or"] = [
-            {"subject": {"$regex": q, "$options": "i"}},
-            {"message": {"$regex": q, "$options": "i"}},
-            {"status": {"$regex": q, "$options": "i"}}
-        ]
+        search_filter = {
+            "$or": [
+                {"ticket_ref": {"$regex": q, "$options": "i"}},
+                {"user_name": {"$regex": q, "$options": "i"}},
+                {"username": {"$regex": q, "$options": "i"}},
+                {"role": {"$regex": q, "$options": "i"}},
+                {"subject": {"$regex": q, "$options": "i"}},
+                {"problem_type": {"$regex": q, "$options": "i"}},
+                {"priority": {"$regex": q, "$options": "i"}},
+                {"message": {"$regex": q, "$options": "i"}},
+                {"status": {"$regex": q, "$options": "i"}},
+                {"progress": {"$regex": q, "$options": "i"}}
+            ]
+        }
+
+        if ticket_query:
+            ticket_query = {"$and": [ticket_query, search_filter]}
+        else:
+            ticket_query = search_filter
 
     tickets = list(
         mongo.db.support_tickets.find(ticket_query).sort("created_at", -1)
@@ -755,9 +810,47 @@ def support():
     return render_template(
         "modules/support.html",
         tickets=tickets,
-        q=q
+        q=q,
+        support_email="ites@sayanant.com",
+        support_number="9957367398"
     )
 
+
+@modules_bp.route("/support/<ticket_id>/update", methods=["POST"])
+@login_required
+def update_support_ticket(ticket_id):
+    if session.get("role") != "super_admin":
+        flash("Only Super Admin can update support tickets.", "danger")
+        return redirect(url_for("modules.support"))
+
+    status = request.form.get("status", "").strip()
+    progress = request.form.get("progress", "").strip()
+    resolution_note = request.form.get("resolution_note", "").strip()
+
+    allowed_statuses = ["open", "in_progress", "resolved", "closed"]
+
+    if status not in allowed_statuses:
+        flash("Invalid ticket status selected.", "danger")
+        return redirect(url_for("modules.support"))
+
+    update_doc = {
+        "status": status,
+        "progress": progress,
+        "resolution_note": resolution_note,
+        "updated_at": now_utc(),
+        "updated_by": session.get("username") or "super_admin"
+    }
+
+    if status in ["resolved", "closed"]:
+        update_doc["resolved_at"] = now_utc()
+
+    mongo.db.support_tickets.update_one(
+        {"_id": ObjectId(ticket_id)},
+        {"$set": update_doc}
+    )
+
+    flash("Support ticket progress updated successfully.", "success")
+    return redirect(url_for("modules.support"))
 
 @modules_bp.route("/orders")
 @login_required

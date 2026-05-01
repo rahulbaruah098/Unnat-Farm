@@ -1202,6 +1202,8 @@ body.sidebar-collapsed .sidebar-logout{
             My Profile
         </a>
 
+
+
     {% if session.get('role') in ['super_admin','avpl_admin'] %}
         <a href="{{ url_for('admin.users') }}">
             <span class="nav-icon">

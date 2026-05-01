@@ -2,834 +2,598 @@
 {% block content %}
 
 <style>
-    .page-card{
+    .support-page{
         width:100%;
-        border:1px solid rgba(220,238,226,.95);
-        border-radius:26px;
-        padding:28px;
-        background:rgba(255,255,255,.92);
-        box-shadow:0 22px 55px rgba(23,37,42,.10);
-        backdrop-filter:blur(14px);
-        font-family:"Times New Roman", Georgia, serif;
+        display:grid;
+        gap:22px;
     }
 
-    .title-row{
+    .support-hero{
+        position:relative;
+        overflow:hidden;
+        border:1px solid var(--line, #E2E8F0);
+        border-radius:28px;
+        padding:26px;
+        background:
+            radial-gradient(circle at top right, rgba(79,70,229,.10), transparent 34%),
+            linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+        box-shadow:var(--shadowSoft, 0 16px 40px rgba(15,23,42,.08));
+    }
+
+    .support-title-row{
         display:flex;
         align-items:flex-start;
         justify-content:space-between;
-        gap:20px;
-        margin-bottom:24px;
+        gap:18px;
         flex-wrap:wrap;
     }
 
-    .title-left{
+    .support-title-left{
         display:flex;
         align-items:center;
-        gap:12px;
+        gap:14px;
     }
 
-    .title-left h2{
-        margin:0;
-        color:#17252A;
-        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
-        font-weight:700;
-        line-height:1.25;
-        white-space:nowrap;
-    }
-
-    .back-btn{
-        display:none;
+    .support-back{
         width:42px;
         height:42px;
-        border:none;
-        border-radius:14px;
+        border:1px solid var(--line, #E2E8F0);
+        border-radius:15px;
+        background:#FFFFFF;
+        color:var(--primaryText, #4338CA);
+        display:none;
         align-items:center;
         justify-content:center;
-        background:rgba(228,247,234,.82);
-        color:#3B7D55;
-        font-size:1.65rem;
-        font-weight:700;
+        font-size:1.5rem;
+        font-weight:900;
         cursor:pointer;
-        box-shadow:0 8px 20px rgba(95,168,120,.12);
-        transition:all .2s ease;
-        line-height:1;
+        box-shadow:0 10px 24px rgba(15,23,42,.08);
     }
 
-    .back-btn:hover{
-        background:#5FA878;
-        color:#fff;
-        transform:translateX(-2px);
+    .support-title h2{
+        margin:0;
+        color:var(--ink, #0F172A);
+        font-size:clamp(1.45rem, 2.3vw, 2rem);
+        font-weight:900;
+        letter-spacing:-.03em;
     }
 
-    .info-banner{
-        margin:0 0 22px;
-        padding:14px 18px;
-        border:1px solid rgba(95,168,120,.18);
-        border-radius:16px;
-        background:rgba(228,247,234,.42);
-        color:#3B7D55;
-        font-size:1.05rem;
-        font-weight:700;
+    .support-title p{
+        margin:6px 0 0;
+        color:var(--muted, #475569);
+        font-size:.98rem;
+        line-height:1.55;
     }
 
-    .grid-form{
+    .support-contact-grid{
         display:grid;
-        gap:18px;
-        margin-bottom:30px;
+        grid-template-columns:repeat(2, minmax(180px, 1fr));
+        gap:12px;
+        min-width:min(420px, 100%);
     }
 
-    .grid-form label{
-        display:flex;
-        flex-direction:column;
-        gap:8px;
-        color:#17252A;
-        font-size:1.05rem;
-        font-weight:700;
-    }
-
-    .grid-form input,
-    .grid-form textarea{
-        width:100%;
-        min-height:54px;
-        padding:12px 16px;
-        border:1px solid rgba(95,168,120,.35);
+    .support-contact-card{
+        border:1px solid var(--line, #E2E8F0);
         border-radius:18px;
-        background:rgba(239,247,255,.72);
-        color:#17252A;
-        font-family:"Times New Roman", Georgia, serif;
-        font-size:1.05rem;
-        outline:none;
-        transition:all .2s ease;
-        resize:vertical;
+        padding:14px 16px;
+        background:#FFFFFF;
+        box-shadow:0 12px 28px rgba(15,23,42,.06);
     }
 
-    .grid-form textarea{
-        min-height:120px;
+    .support-contact-card span{
+        display:block;
+        color:var(--muted2, #64748B);
+        font-size:.78rem;
+        font-weight:800;
+        text-transform:uppercase;
+        letter-spacing:.08em;
+        margin-bottom:5px;
+    }
+
+    .support-contact-card strong{
+        color:var(--ink, #0F172A);
+        font-size:1rem;
+        word-break:break-word;
+    }
+
+    .support-form-card,
+    .support-table-card{
+        border:1px solid var(--line, #E2E8F0);
+        border-radius:28px;
+        background:#FFFFFF;
+        box-shadow:var(--shadowSoft, 0 16px 40px rgba(15,23,42,.08));
+        padding:24px;
+    }
+
+    .section-head{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:16px;
+        flex-wrap:wrap;
+        margin-bottom:18px;
+    }
+
+    .section-head h3{
+        margin:0;
+        color:var(--ink, #0F172A);
+        font-size:1.2rem;
+        font-weight:900;
+    }
+
+    .section-head p{
+        margin:5px 0 0;
+        color:var(--muted, #475569);
+        font-size:.92rem;
+    }
+
+    .ticket-form{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:16px;
+    }
+
+    .ticket-form label{
+        display:grid;
+        gap:8px;
+        color:var(--text, #334155);
+        font-size:.92rem;
+        font-weight:800;
+    }
+
+    .ticket-form .full{
+        grid-column:1 / -1;
+    }
+
+    .ticket-form input,
+    .ticket-form select,
+    .ticket-form textarea,
+    .update-form select,
+    .update-form textarea,
+    .search-box input{
+        width:100%;
+        border:1px solid var(--line, #E2E8F0);
+        border-radius:15px;
+        background:#F8FAFC;
+        color:var(--ink, #0F172A);
+        padding:12px 14px;
+        font-size:.95rem;
+        outline:none;
+        transition:.18s ease;
+    }
+
+    .ticket-form textarea,
+    .update-form textarea{
+        min-height:110px;
+        resize:vertical;
         line-height:1.45;
     }
 
-    .grid-form input:focus,
-    .grid-form textarea:focus{
-        border-color:rgba(95,168,120,.70);
-        background:rgba(255,255,255,.96);
-        box-shadow:0 0 0 4px rgba(95,168,120,.14);
+    .ticket-form input:focus,
+    .ticket-form select:focus,
+    .ticket-form textarea:focus,
+    .update-form select:focus,
+    .update-form textarea:focus,
+    .search-box input:focus{
+        border-color:var(--primary, #4F46E5);
+        box-shadow:0 0 0 4px var(--primarySoft, #EEF2FF);
+        background:#FFFFFF;
     }
 
-    .grid-form button{
-        width:max-content;
-        min-height:50px;
-        padding:12px 30px;
-        border:none;
+    .support-btn{
+        border:0;
         border-radius:999px;
-        background:#5FA878;
-        color:#fff;
-        font-family:"Times New Roman", Georgia, serif;
-        font-size:1.08rem;
-        font-weight:700;
+        padding:12px 22px;
+        background:var(--primary, #4F46E5);
+        color:#FFFFFF;
+        font-weight:900;
         cursor:pointer;
-        box-shadow:0 14px 30px rgba(95,168,120,.26);
-        transition:all .2s ease;
+        box-shadow:0 14px 26px rgba(79,70,229,.20);
+        transition:.18s ease;
     }
 
-    .grid-form button:hover{
-        background:#3B7D55;
+    .support-btn:hover{
+        background:var(--primaryDark, #3730A3);
         transform:translateY(-1px);
     }
 
-    .support-table-header{
-        display:flex;
-        align-items:flex-start;
-        justify-content:space-between;
-        gap:20px;
-        margin:0 0 16px;
-        flex-wrap:wrap;
-    }
-
-    .support-section-title{
-        margin:0;
-        color:#17252A;
-        font-size:clamp(1.25rem, 1.7vw, 1.55rem);
-        font-weight:700;
-    }
-
-    .table-actions{
-        display:grid;
-        grid-template-columns:minmax(220px, 320px) auto auto;
-        align-items:center;
-        gap:10px;
-        margin:0;
-    }
-
-    .table-actions input{
-        width:320px;
-        max-width:100%;
-        min-height:42px;
-        padding:9px 14px;
-        border:1px solid rgba(95,168,120,.25);
-        border-radius:14px;
-        background:#fff;
-        color:#334155;
-        font-family:"Times New Roman", Georgia, serif;
-        font-size:1rem;
-        outline:none;
-    }
-
-    .table-actions input:focus{
-        border-color:#5FA878;
-        box-shadow:0 0 0 4px rgba(95,168,120,.12);
-    }
-
-    .table-actions button{
-        min-height:42px;
-        padding:9px 20px;
-        border:none;
-        border-radius:999px;
-        background:#5FA878;
-        color:#fff;
-        font-family:"Times New Roman", Georgia, serif;
-        font-size:1rem;
-        font-weight:700;
-        cursor:pointer;
-        box-shadow:0 12px 26px rgba(95,168,120,.22);
-        transition:all .2s ease;
-    }
-
-    .table-actions button:hover{
-        background:#3B7D55;
-        transform:translateY(-1px);
-    }
-
-    .table-actions .clear-btn{
-        background:#FEE2E2;
-        color:#B91C1C;
-        border:none;
+    .support-btn.soft{
+        background:var(--primarySoft, #EEF2FF);
+        color:var(--primaryText, #4338CA);
         box-shadow:none;
     }
 
-    .table-actions .clear-btn:hover{
-        background:#B91C1C;
-        color:#fff;
+    .support-btn.soft:hover{
+        background:var(--primaryRing, #C7D2FE);
     }
 
-    .table-actions .clear-link{
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        min-height:42px;
-        padding:9px 20px;
-        border-radius:999px;
-        text-decoration:none;
-        font-family:"Times New Roman", Georgia, serif;
-        font-size:1rem;
-        font-weight:700;
-    }
-
-    .table-controls{
+    .search-box{
         display:flex;
-        align-items:flex-end;
-        justify-content:space-between;
-        gap:16px;
-        margin-bottom:16px;
+        align-items:center;
+        gap:10px;
         flex-wrap:wrap;
     }
 
-    .pagination-size{
-        display:flex;
-        flex-direction:column;
-        gap:8px;
-        color:#425466;
-        font-weight:700;
+    .search-box input{
+        width:min(360px, 100%);
+        min-height:44px;
     }
 
-    .pagination-size select{
-        width:120px;
-        min-height:42px;
-        padding:8px 12px;
-        border:1px solid rgba(95,168,120,.25);
-        border-radius:12px;
-        background:#fff;
-        color:#334155;
-        font-family:"Times New Roman", Georgia, serif;
-        font-size:1rem;
-        font-weight:700;
-        outline:none;
-    }
-
-    .table-info{
-        margin-bottom:16px;
-        padding:10px 16px;
-        border:1px solid rgba(95,168,120,.18);
-        border-radius:16px;
-        background:rgba(228,247,234,.42);
-        color:#3B7D55;
-        font-weight:700;
-    }
-
-    .support-table-wrap{
+    .ticket-table-wrap{
         width:100%;
         overflow-x:auto;
-        overflow-y:hidden;
-        border:1px solid rgba(220,238,226,.95);
-        border-radius:22px;
-        background:#fff;
-        box-shadow:0 14px 32px rgba(23,37,42,.06);
-        cursor:grab;
-        scrollbar-width:auto;
-        scrollbar-color:#94A3B8 #F1F5F9;
+        border:1px solid var(--line, #E2E8F0);
+        border-radius:20px;
     }
 
-    .support-table-wrap:active{
-        cursor:grabbing;
-    }
-
-    .support-table-wrap::-webkit-scrollbar{
-        height:12px;
-    }
-
-    .support-table-wrap::-webkit-scrollbar-track{
-        background:#F1F5F9;
-        border-radius:999px;
-    }
-
-    .support-table-wrap::-webkit-scrollbar-thumb{
-        background:#94A3B8;
-        border-radius:999px;
-        border:2px solid #F1F5F9;
-    }
-
-    .support-table-wrap table{
-        width:max-content;
-        min-width:100%;
-        table-layout:fixed;
+    .ticket-table{
+        width:100%;
+        min-width:1050px;
         border-collapse:separate;
         border-spacing:0;
-        background:#fff;
     }
 
-    .support-table-wrap th,
-    .support-table-wrap td{
-        width:240px;
-        height:72px;
-        max-width:240px;
-        min-width:240px;
-        padding:12px 14px;
-        border-right:1px solid rgba(220,238,226,.85);
-        border-bottom:1px solid rgba(220,238,226,.85);
-        color:#425466;
-        font-size:1rem;
-        line-height:1.3;
+    .ticket-table th{
+        background:#F8FAFC;
+        color:var(--muted, #475569);
+        font-size:.78rem;
+        font-weight:900;
+        text-transform:uppercase;
+        letter-spacing:.07em;
+        padding:14px;
         text-align:left;
-        vertical-align:middle;
-        white-space:normal;
-        word-break:break-word;
-        overflow:hidden;
+        border-bottom:1px solid var(--line, #E2E8F0);
+        white-space:nowrap;
     }
 
-    .support-table-wrap th{
-        height:58px;
-        color:#17252A;
-        font-weight:700;
-        background:rgba(228,247,234,.92);
+    .ticket-table td{
+        padding:14px;
+        border-bottom:1px solid var(--line, #E2E8F0);
+        color:var(--text, #334155);
+        font-size:.92rem;
+        vertical-align:top;
     }
 
-    .support-table-wrap td{
-        background:#fff;
+    .ticket-table tr:last-child td{
+        border-bottom:0;
     }
 
-    .support-table-wrap tr:hover td{
-        background:rgba(246,251,247,.9);
+    .ticket-ref{
+        display:inline-flex;
+        padding:6px 10px;
+        border-radius:999px;
+        background:var(--primarySoft, #EEF2FF);
+        color:var(--primaryText, #4338CA);
+        font-weight:900;
+        white-space:nowrap;
     }
 
-    .support-table-wrap tr:last-child td{
-        border-bottom:none;
-    }
-
-    .support-table-wrap th:last-child,
-    .support-table-wrap td:last-child{
-        border-right:none;
-    }
-
+    .role-pill,
+    .priority-pill,
     .status-pill{
         display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        min-height:30px;
-        padding:5px 12px;
+        padding:6px 10px;
         border-radius:999px;
-        background:rgba(228,247,234,.72);
-        color:#3B7D55;
-        font-weight:700;
-        font-size:.95rem;
-        max-width:100%;
-        word-break:break-word;
+        font-size:.78rem;
+        font-weight:900;
+        white-space:nowrap;
     }
 
-    .pagination-bar{
-        display:flex;
-        align-items:center;
-        justify-content:flex-end;
-        gap:8px;
-        margin-top:18px;
-        flex-wrap:wrap;
+    .role-pill{
+        background:#F1F5F9;
+        color:#334155;
     }
 
-    .page-btn{
-        min-width:38px;
-        height:38px;
-        padding:0 12px;
-        border:1px solid rgba(95,168,120,.25);
-        border-radius:12px;
-        color:#3B7D55;
-        background:rgba(228,247,234,.58);
-        font-family:"Times New Roman", Georgia, serif;
-        font-weight:700;
-        cursor:pointer;
+    .priority-low{
+        background:#ECFDF5;
+        color:#047857;
     }
 
-    .page-btn:hover,
-    .page-btn.active{
-        color:#fff;
-        background:#5FA878;
-        border-color:#5FA878;
+    .priority-medium{
+        background:#FFFBEB;
+        color:#B45309;
     }
 
-    .page-btn:disabled{
-        opacity:.45;
-        cursor:not-allowed;
+    .priority-high{
+        background:#FEE2E2;
+        color:#B91C1C;
     }
 
-    @media (max-width:860px){
-        .back-btn{
-            display:inline-flex;
-        }
+    .status-open{
+        background:#E0F2FE;
+        color:#0369A1;
+    }
 
-        .page-card{
-            padding:22px;
+    .status-in_progress{
+        background:#FFFBEB;
+        color:#B45309;
+    }
+
+    .status-resolved{
+        background:#ECFDF5;
+        color:#047857;
+    }
+
+    .status-closed{
+        background:#F1F5F9;
+        color:#334155;
+    }
+
+    .problem-text{
+        max-width:280px;
+        white-space:normal;
+        line-height:1.45;
+    }
+
+    .update-form{
+        min-width:280px;
+        display:grid;
+        gap:10px;
+    }
+
+    .update-form textarea{
+        min-height:76px;
+        font-size:.88rem;
+    }
+
+    .empty-state{
+        padding:30px;
+        text-align:center;
+        color:var(--muted, #475569);
+        font-weight:800;
+    }
+
+    @media(max-width:768px){
+        .support-hero,
+        .support-form-card,
+        .support-table-card{
+            padding:18px;
             border-radius:22px;
         }
 
-        .title-row,
-        .support-table-header{
-            flex-direction:column;
-            align-items:stretch;
-        }
-
-        .table-actions{
-            width:100%;
-            grid-template-columns:1fr auto auto;
-        }
-
-        .table-actions input{
-            width:100%;
-            min-width:0;
-        }
-
-        .table-actions button,
-        .table-actions .clear-link{
-            width:auto;
-            white-space:nowrap;
-            padding-left:16px;
-            padding-right:16px;
-        }
-
-        .grid-form button{
-            width:100%;
-        }
-
-        .table-controls{
-            flex-direction:column;
-            align-items:stretch;
-        }
-
-        .support-table-wrap{
-            border:none;
-            box-shadow:none;
-            background:transparent;
-            overflow-x:auto;
-            -webkit-overflow-scrolling:touch;
-        }
-
-        .support-table-wrap table{
-            display:flex;
-            width:max-content;
-            min-width:100%;
-            background:transparent;
-        }
-
-        .support-table-wrap thead{
-            display:none;
-        }
-
-        .support-table-wrap tbody{
-            display:flex;
-            gap:14px;
-            overflow-x:auto;
-            -webkit-overflow-scrolling:touch;
-            padding:4px 2px 8px;
-        }
-
-        .support-table-wrap tbody tr{
-            width:290px;
-            min-width:290px;
-            max-width:290px;
-            min-height:230px;
-            flex:0 0 auto;
-            display:block;
-            border:1px solid rgba(220,238,226,.95);
-            border-radius:18px;
-            background:#fff;
-            padding:15px;
-            box-shadow:0 10px 24px rgba(23,37,42,.06);
-        }
-
-        .support-table-wrap td{
-            display:block;
-            width:100%;
-            min-width:0;
-            max-width:none;
-            height:auto;
-            min-height:58px;
-            border:none;
-            padding:7px 0;
-            white-space:normal;
-            word-break:break-word;
-            overflow:visible;
-            background:transparent;
-        }
-
-        .support-table-wrap td::before{
-            content:attr(data-label);
-            display:block;
-            color:#64748B;
-            font-size:.85rem;
-            font-weight:700;
-            margin-bottom:3px;
-        }
-
-        .support-table-wrap tr:hover td{
-            background:transparent;
-        }
-
-        .pagination-bar{
-            justify-content:center;
-        }
-    }
-
-    @media (max-width:420px){
-        .page-card{
-            padding:16px;
-            border-radius:18px;
-        }
-
-        .title-left h2{
-            font-size:1.45rem;
-        }
-
-        .back-btn{
-            width:38px;
-            height:38px;
-            border-radius:12px;
-            font-size:1.45rem;
-        }
-
-        .table-actions{
+        .support-contact-grid,
+        .ticket-form{
             grid-template-columns:1fr;
         }
 
-        .table-actions button,
-        .table-actions .clear-link{
+        .support-back{
+            display:inline-flex;
+        }
+
+        .search-box{
             width:100%;
         }
 
-        .support-table-wrap tbody tr{
-            width:265px;
-            min-width:265px;
-            max-width:265px;
+        .search-box input,
+        .search-box button,
+        .search-box a{
+            width:100%;
+            justify-content:center;
+            text-align:center;
         }
     }
 </style>
 
-<div class="page-card">
-    <div class="title-row">
-        <div class="title-left">
-            <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
-            <h2>Support Module</h2>
+<div class="support-page">
+
+    <section class="support-hero">
+        <div class="support-title-row">
+            <div class="support-title-left">
+                <button type="button" class="support-back" onclick="history.back()" aria-label="Back">←</button>
+
+                <div class="support-title">
+                    {% if session.get('role') == 'super_admin' %}
+                        <h2>Support Ticket Control Panel</h2>
+                        <p>View all raised tickets and update the progress/resolution from one place.</p>
+                    {% else %}
+                        <h2>Raise Support Ticket</h2>
+                        <p>Submit your issue to the technical support team. Super Admin will review and update the ticket status.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="support-contact-grid">
+                <div class="support-contact-card">
+                    <span>Tech Support Email</span>
+                    <strong>{{ support_email }}</strong>
+                </div>
+
+                <div class="support-contact-card">
+                    <span>Tech Support Number</span>
+                    <strong>{{ support_number }}</strong>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="info-banner">
-        Contact us / Toll-free placeholder can be expanded here.
-    </div>
+    {% if session.get('role') != 'super_admin' %}
+    <section class="support-form-card">
+        <div class="section-head">
+            <div>
+                <h3>Create New Ticket</h3>
+                <p>Fill the problem details properly so the support team can resolve it faster.</p>
+            </div>
+        </div>
 
-    <form method="post" class="grid-form">
-        <label>Subject
-            <input type="text" name="subject" required>
-        </label>
+        <form method="post" class="ticket-form">
+            <label>
+                Subject
+                <input type="text" name="subject" placeholder="Short issue title" required>
+            </label>
 
-        <label>Message
-            <textarea name="message" rows="4" required></textarea>
-        </label>
-
-        <button type="submit">Create Ticket</button>
-    </form>
-
-    <div class="support-table-header">
-        <h3 class="support-section-title">Support Tickets</h3>
-
-        <form method="get" class="table-actions" id="supportSearchForm">
-            <input
-                type="text"
-                id="supportSearchInput"
-                name="q"
-                value="{{ q or '' }}"
-                placeholder="Search tickets"
-                autocomplete="off"
-            >
-
-            <button type="submit" id="supportSearchBtn">Search</button>
-
-            <a href="{{ request.path }}"
-               class="clear-btn clear-link"
-               id="supportClearBtn"
-               style="{% if not (q is defined and q|trim) %}display:none;{% endif %}">
-                Clear
-            </a>
-        </form>
-    </div>
-
-    <div id="supportAjaxArea">
-        <div class="table-controls">
-            <label class="pagination-size">
-                <span>Show entries</span>
-                <select id="supportRowsPerPage">
-                    <option value="25" selected>25</option>
-                    <option value="50">50</option>
-                    <option value="250">250</option>
-                    <option value="1000">1000</option>
+            <label>
+                Problem Type
+                <select name="problem_type" required>
+                    <option value="">Select Problem Type</option>
+                    <option value="Login Issue">Login Issue</option>
+                    <option value="Dashboard Issue">Dashboard Issue</option>
+                    <option value="Product Issue">Product Issue</option>
+                    <option value="Order Issue">Order Issue</option>
+                    <option value="Payment / Transaction Issue">Payment / Transaction Issue</option>
+                    <option value="Profile / Validation Issue">Profile / Validation Issue</option>
+                    <option value="Document Upload Issue">Document Upload Issue</option>
+                    <option value="Other Technical Issue">Other Technical Issue</option>
                 </select>
             </label>
+
+            <label>
+                Priority
+                <select name="priority" required>
+                    <option value="">Select Priority</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </label>
+
+            <label>
+                Support Contact
+                <input type="text" value="{{ support_email }} / {{ support_number }}" readonly>
+            </label>
+
+            <label class="full">
+                Problem Details
+                <textarea name="message" placeholder="Explain the issue you are facing..." required></textarea>
+            </label>
+
+            <div class="full">
+                <button type="submit" class="support-btn">Raise Ticket</button>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+
+    <section class="support-table-card">
+        <div class="section-head">
+            <div>
+                {% if session.get('role') == 'super_admin' %}
+                    <h3>Raised Tickets</h3>
+                    <p>Only Super Admin can update ticket progress and resolution.</p>
+                {% else %}
+                    <h3>My Support Tickets</h3>
+                    <p>Track the status and progress of your submitted tickets.</p>
+                {% endif %}
+            </div>
+
+            <form method="get" class="search-box">
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ q or '' }}"
+                    placeholder="Search tickets"
+                    autocomplete="off"
+                >
+                <button type="submit" class="support-btn">Search</button>
+
+                {% if q %}
+                <a href="{{ request.path }}" class="support-btn soft">Clear</a>
+                {% endif %}
+            </form>
         </div>
 
-        <div class="table-info" id="supportPaginationInfo"></div>
-
-        {% if q is defined and q|trim %}
-        <div class="table-info" id="supportSearchResultInfo">
-            Search result for "{{ q }}"
-        </div>
-        {% endif %}
-
-        <div class="support-table-wrap" id="supportTableScroll">
-            <table>
+        <div class="ticket-table-wrap">
+            <table class="ticket-table">
                 <thead>
                     <tr>
+                        <th>Ticket</th>
+
+                        {% if session.get('role') == 'super_admin' %}
+                            <th>User</th>
+                            <th>Role</th>
+                        {% endif %}
+
                         <th>Subject</th>
+                        <th>Problem</th>
+                        <th>Priority</th>
                         <th>Status</th>
-                        <th>Created At</th>
+                        <th>Progress</th>
+                        <th>Created</th>
+
+                        {% if session.get('role') == 'super_admin' %}
+                            <th>Update</th>
+                        {% endif %}
                     </tr>
                 </thead>
+
                 <tbody>
                 {% for t in tickets %}
                     <tr>
-                        <td data-label="Subject">{{ t.subject }}</td>
-                        <td data-label="Status"><span class="status-pill">{{ t.status }}</span></td>
-                        <td data-label="Created At">{{ t.created_at }}</td>
+                        <td>
+                            <span class="ticket-ref">{{ t.ticket_ref or ('TCK-' ~ t._id|string) }}</span>
+                        </td>
+
+                        {% if session.get('role') == 'super_admin' %}
+                            <td>
+                                <strong>{{ t.user_name or 'Unknown User' }}</strong><br>
+                                <small>{{ t.username or '' }}</small><br>
+                                <small>{{ t.phone or '' }} {{ t.email or '' }}</small>
+                            </td>
+                            <td>
+                                <span class="role-pill">{{ t.role or '-' }}</span>
+                            </td>
+                        {% endif %}
+
+                        <td>
+                            <strong>{{ t.subject }}</strong><br>
+                            <small>{{ t.problem_type or '-' }}</small>
+                        </td>
+
+                        <td class="problem-text">{{ t.message }}</td>
+
+                        <td>
+                            <span class="priority-pill priority-{{ t.priority or 'medium' }}">
+                                {{ (t.priority or 'medium')|replace('_', ' ')|title }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="status-pill status-{{ t.status or 'open' }}">
+                                {{ (t.status or 'open')|replace('_', ' ')|title }}
+                            </span>
+                        </td>
+
+                        <td class="problem-text">
+                            {{ t.progress or 'Ticket received' }}
+                            {% if t.resolution_note %}
+                                <br><small><strong>Resolution:</strong> {{ t.resolution_note }}</small>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ t.created_at }}</td>
+
+                        {% if session.get('role') == 'super_admin' %}
+                        <td>
+                            <form method="post"
+                                  action="{{ url_for('modules.update_support_ticket', ticket_id=t._id) }}"
+                                  class="update-form">
+
+                                <select name="status" required>
+                                    <option value="open" {% if t.status == 'open' %}selected{% endif %}>Open</option>
+                                    <option value="in_progress" {% if t.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="resolved" {% if t.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                                    <option value="closed" {% if t.status == 'closed' %}selected{% endif %}>Closed</option>
+                                </select>
+
+                                <textarea name="progress" placeholder="Progress update">{{ t.progress or '' }}</textarea>
+
+                                <textarea name="resolution_note" placeholder="Resolution note">{{ t.resolution_note or '' }}</textarea>
+
+                                <button type="submit" class="support-btn">Update</button>
+                            </form>
+                        </td>
+                        {% endif %}
                     </tr>
                 {% else %}
                     <tr>
-                        <td data-label="Tickets" colspan="3">No support tickets.</td>
+                        <td colspan="{% if session.get('role') == 'super_admin' %}10{% else %}7{% endif %}">
+                            <div class="empty-state">No support tickets found.</div>
+                        </td>
                     </tr>
                 {% endfor %}
                 </tbody>
             </table>
         </div>
-
-        <div class="pagination-bar" id="supportPaginationBar"></div>
-    </div>
+    </section>
 </div>
-
-<script>
-(function(){
-    function initSupportPagination(){
-        const table = document.querySelector('.support-table-wrap table');
-        const select = document.getElementById('supportRowsPerPage');
-        const info = document.getElementById('supportPaginationInfo');
-        const pager = document.getElementById('supportPaginationBar');
-        const scrollBox = document.getElementById('supportTableScroll');
-
-        if(!table || !select || !info || !pager) return;
-
-        const rows = Array.from(table.querySelectorAll('tbody tr'));
-        const noData = rows.length === 1 && rows[0].querySelector('td[colspan]');
-        let currentPage = 1;
-
-        function renderPagination(){
-            const perPage = parseInt(select.value, 10);
-            const totalRows = noData ? 0 : rows.length;
-
-            rows.forEach(row => row.style.display = 'none');
-
-            if(noData || totalRows === 0){
-                info.textContent = 'No records found';
-                pager.innerHTML = '';
-                rows.forEach(row => row.style.display = '');
-                return;
-            }
-
-            const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
-            currentPage = Math.min(currentPage, totalPages);
-
-            const start = (currentPage - 1) * perPage;
-            const end = start + perPage;
-
-            rows.forEach((row, index) => {
-                row.style.display = index >= start && index < end ? '' : 'none';
-            });
-
-            info.textContent = `Showing ${start + 1} to ${Math.min(end, totalRows)} of ${totalRows} entries`;
-
-            pager.innerHTML = '';
-
-            const prev = document.createElement('button');
-            prev.type = 'button';
-            prev.className = 'page-btn';
-            prev.textContent = 'Prev';
-            prev.disabled = currentPage === 1;
-            prev.onclick = () => {
-                currentPage--;
-                renderPagination();
-            };
-            pager.appendChild(prev);
-
-            for(let i = 1; i <= totalPages; i++){
-                if(i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1){
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
-                    btn.textContent = i;
-                    btn.onclick = () => {
-                        currentPage = i;
-                        renderPagination();
-                    };
-                    pager.appendChild(btn);
-                }
-            }
-
-            const next = document.createElement('button');
-            next.type = 'button';
-            next.className = 'page-btn';
-            next.textContent = 'Next';
-            next.disabled = currentPage === totalPages;
-            next.onclick = () => {
-                currentPage++;
-                renderPagination();
-            };
-            pager.appendChild(next);
-        }
-
-        select.onchange = function(){
-            currentPage = 1;
-            renderPagination();
-        };
-
-        if(scrollBox){
-            let isDown = false;
-            let startX;
-            let scrollLeft;
-
-            scrollBox.onmousedown = function(e){
-                isDown = true;
-                startX = e.pageX - scrollBox.offsetLeft;
-                scrollLeft = scrollBox.scrollLeft;
-            };
-
-            scrollBox.onmouseleave = function(){
-                isDown = false;
-            };
-
-            scrollBox.onmouseup = function(){
-                isDown = false;
-            };
-
-            scrollBox.onmousemove = function(e){
-                if(!isDown) return;
-                e.preventDefault();
-                const x = e.pageX - scrollBox.offsetLeft;
-                const walk = (x - startX) * 1.4;
-                scrollBox.scrollLeft = scrollLeft - walk;
-            };
-        }
-
-        renderPagination();
-    }
-
-    function initSupportAjaxSearch(){
-        const form = document.getElementById('supportSearchForm');
-        const input = document.getElementById('supportSearchInput');
-        const clearBtn = document.getElementById('supportClearBtn');
-        const ajaxArea = document.getElementById('supportAjaxArea');
-
-        if(!form || !input || !clearBtn || !ajaxArea) return;
-
-        async function loadSupportTickets(url, searchedText){
-            const oldScrollY = window.scrollY;
-
-            try{
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const newAjaxArea = doc.getElementById('supportAjaxArea');
-
-                if(!newAjaxArea) return;
-
-                ajaxArea.innerHTML = newAjaxArea.innerHTML;
-
-                if(searchedText){
-                    clearBtn.style.display = '';
-                }else{
-                    clearBtn.style.display = 'none';
-                }
-
-                history.pushState({}, '', url);
-
-                initSupportPagination();
-
-                window.scrollTo({
-                    top: oldScrollY,
-                    behavior: 'instant'
-                });
-            }catch(err){
-                form.submit();
-            }
-        }
-
-        form.addEventListener('submit', function(e){
-            e.preventDefault();
-
-            const q = input.value.trim();
-            const baseUrl = form.getAttribute('action') || window.location.pathname;
-            const url = q ? `${baseUrl}?q=${encodeURIComponent(q)}` : baseUrl;
-
-            loadSupportTickets(url, q);
-        });
-
-        clearBtn.addEventListener('click', function(e){
-            e.preventDefault();
-
-            input.value = '';
-            loadSupportTickets(clearBtn.getAttribute('href'), '');
-        });
-    }
-
-    initSupportPagination();
-    initSupportAjaxSearch();
-})();
-</script>
 
 {% endblock %}
