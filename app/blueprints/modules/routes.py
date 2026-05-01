@@ -1506,3 +1506,7 @@ def place_farmer_order():
 
     flash("Order placed successfully.", "success")
     return redirect(url_for("dashboard.home"))
+
+
+
+
