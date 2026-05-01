@@ -720,6 +720,14 @@ padding-bottom:calc(clamp(12px,1.5vw,22px) + var(--taskbar-safe));
     .uf-register-btn{min-width:100%;font-size:20px;padding:17px 22px}
     .uf-footer{font-size:13px;line-height:1.5}
 }
+
+.uf-icon img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:50%;
+}
+
 </style>
 
 <div class="uf-splash" id="ufSplash">
@@ -794,14 +802,9 @@ padding-bottom:calc(clamp(12px,1.5vw,22px) + var(--taskbar-safe));
 
                 <a href="{{ url_for('auth.login_authority') }}" class="uf-login-card">
                     <div class="uf-card-left">
-                        <div class="uf-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="7" r="3.2" fill="#2563EB"/>
-                                <path d="M5.5 20c.8-4.1 3.2-6.2 6.5-6.2s5.7 2.1 6.5 6.2" fill="#DBEAFE"/>
-                                <path d="M5.5 20c.8-4.1 3.2-6.2 6.5-6.2s5.7 2.1 6.5 6.2" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round"/>
-                                <path d="M17.7 6.8l1.1.45v1.2c0 1.65-.9 2.95-2.25 3.45-1.35-.5-2.25-1.8-2.25-3.45v-1.2l1.1-.45 1.15-.47 1.15.47Z" fill="#22C55E" stroke="#15803D" stroke-width=".9"/>
-                            </svg>
-                        </div>
+                      <div class="uf-icon">
+    <img src="{{ url_for('static', filename='images/admin.jpg') }}">
+</div>
                         <div>
                             <span class="uf-card-title">Authority Login</span>
                             <span class="uf-card-sub">Admin and management access</span>
@@ -816,14 +819,9 @@ padding-bottom:calc(clamp(12px,1.5vw,22px) + var(--taskbar-safe));
 
                 <a href="{{ url_for('auth.login_centre') }}" class="uf-login-card">
                     <div class="uf-card-left">
-                        <div class="uf-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <path d="M4 10.2L12 5l8 5.2v9.3a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5v-9.3Z" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.5"/>
-                                <path d="M9 21v-6h6v6" fill="#BAE6FD" stroke="#0284C7" stroke-width="1.4"/>
-                                <path d="M7 11.5h2.2M14.8 11.5H17M7 15h2.2M14.8 15H17" stroke="#0369A1" stroke-width="1.5" stroke-linecap="round"/>
-                                <path d="M12 4v3" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round"/>
-                            </svg>
-                        </div>
+                       <div class="uf-icon">
+    <img src="{{ url_for('static', filename='images/centre.jpg') }}">
+</div>
                         <div>
                             <span class="uf-card-title">UnnatFarm Centre Login</span>
                             <span class="uf-card-sub">Centre operations dashboard</span>
@@ -838,15 +836,9 @@ padding-bottom:calc(clamp(12px,1.5vw,22px) + var(--taskbar-safe));
 
                 <a href="{{ url_for('auth.login_mitra') }}" class="uf-login-card">
                     <div class="uf-card-left">
-                        <div class="uf-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <circle cx="8" cy="8" r="2.7" fill="#F59E0B"/>
-                                <circle cx="16" cy="8" r="2.7" fill="#22C55E"/>
-                                <path d="M4.7 19.5c.45-3.1 1.95-4.8 4.1-4.8 1.25 0 2.25.55 2.95 1.55" stroke="#B45309" stroke-width="1.5" stroke-linecap="round"/>
-                                <path d="M12.2 16.25c.7-1 1.7-1.55 2.95-1.55 2.15 0 3.65 1.7 4.1 4.8" stroke="#15803D" stroke-width="1.5" stroke-linecap="round"/>
-                                <path d="M9.2 13.3l2.8 2.8 2.8-2.8" stroke="#2563EB" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
+                       <div class="uf-icon">
+    <img src="{{ url_for('static', filename='images/mitra.jpg') }}">
+</div>
                         <div>
                             <span class="uf-card-title">UnnatFarm Mitra Login</span>
                             <span class="uf-card-sub">Field support and farmer services</span>
@@ -861,15 +853,9 @@ padding-bottom:calc(clamp(12px,1.5vw,22px) + var(--taskbar-safe));
 
                 <a href="{{ url_for('auth.login_farmer') }}" class="uf-login-card">
                     <div class="uf-card-left">
-                        <div class="uf-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <path d="M12 21V10" stroke="#15803D" stroke-width="1.7" stroke-linecap="round"/>
-                                <path d="M12 13c-4.6-.45-6.4-3.05-6.6-7.4 4.35.4 6.45 2.9 6.6 7.4Z" fill="#22C55E"/>
-                                <path d="M12 16c4.6-.45 6.4-3.05 6.6-7.4-4.35.4-6.45 2.9-6.6 7.4Z" fill="#84CC16"/>
-                                <path d="M8 21h8" stroke="#7C2D12" stroke-width="1.7" stroke-linecap="round"/>
-                                <path d="M9 21h6l1-5H8l1 5Z" fill="#F59E0B"/>
-                            </svg>
-                        </div>
+<div class="uf-icon">
+    <img src="{{ url_for('static', filename='images/farmer.jpg') }}">
+</div>
                         <div>
                             <span class="uf-card-title">Farmer Login</span>
                             <span class="uf-card-sub">Farmer account and services</span>
@@ -907,30 +893,48 @@ padding-bottom:calc(clamp(12px,1.5vw,22px) + var(--taskbar-safe));
     const splash = document.getElementById("ufSplash");
     if (!splash) return;
 
-    const splashKey = "unnatfarm_login_select_splash_seen";
-    const currentUrl = window.location.href;
-    const lastUrl = sessionStorage.getItem("unnatfarm_last_url") || "";
-    const hasSeen = sessionStorage.getItem(splashKey) === "1";
-
     const navEntry = performance.getEntriesByType("navigation")[0];
     const navType = navEntry ? navEntry.type : "navigate";
 
-    const shouldShowSplash =
-        !hasSeen ||
-        (navType === "reload" && lastUrl === currentUrl);
+    const params = new URLSearchParams(window.location.search);
 
-    sessionStorage.setItem("unnatfarm_last_url", currentUrl);
+    /*
+      Splash will show ONLY in these cases:
+      1. URL contains ?splash=1
+      2. sessionStorage has unnatfarm_show_splash_once = 1
+      3. User manually reloads this exact login select page
+    */
+    const explicitUrlSplash = params.get("splash") === "1";
+    const explicitSessionSplash = sessionStorage.getItem("unnatfarm_show_splash_once") === "1";
+    const manualReload = navType === "reload";
+
+    const shouldShowSplash =
+        explicitUrlSplash ||
+        explicitSessionSplash ||
+        manualReload;
+
+    sessionStorage.removeItem("unnatfarm_show_splash_once");
 
     if (!shouldShowSplash) {
-        splash.classList.add("is-hidden");
+        splash.remove();
         return;
     }
 
-    sessionStorage.setItem(splashKey, "1");
+    splash.classList.add("is-active");
 
     window.setTimeout(function () {
         splash.classList.add("is-hidden");
+
+        window.setTimeout(function () {
+            splash.remove();
+        }, 700);
     }, 2600);
+
+    window.addEventListener("pageshow", function (event) {
+        if (event.persisted && splash.parentNode) {
+            splash.remove();
+        }
+    });
 })();
 </script>
 

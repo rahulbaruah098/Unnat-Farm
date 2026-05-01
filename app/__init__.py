@@ -1,3 +1,4 @@
+from bson import ObjectId
 import os
 from flask import Flask, app, session, request, redirect, url_for
 
@@ -33,11 +34,11 @@ def create_app():
     )
     app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024
     app.config["ALLOWED_EXTENSIONS"] = {
-    "pdf",
-    "png", "jpg", "jpeg", "webp",
-    "doc", "docx",
-    "mp4", "mov", "avi", "mkv", "webm"
-}
+        "pdf",
+        "png", "jpg", "jpeg", "webp",
+        "doc", "docx",
+        "mp4", "mov", "avi", "mkv", "webm"
+    }
 
     mongo.init_app(app)
     ensure_upload_folder(app)
@@ -110,5 +111,37 @@ def create_app():
                 return redirect(url_for("dashboard.pending_access"))
 
         return None
+
+    @app.context_processor
+    def inject_current_user_name():
+        display_name = (
+            session.get("name")
+            or session.get("username")
+            or session.get("user_name")
+            or ""
+        )
+
+        if not display_name and session.get("user_id"):
+            try:
+                user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
+                display_name = (
+                    user.get("name")
+                    or user.get("username")
+                    or user.get("phone")
+                    or ""
+                )
+            except Exception:
+                display_name = ""
+
+        if not display_name:
+            display_name = (
+                session.get("role", "User")
+                .replace("_", " ")
+                .title()
+            )
+
+        return {
+            "current_display_name": display_name
+        }
 
     return app

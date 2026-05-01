@@ -349,23 +349,74 @@ def sell():
             q=q
         )
 
-    # EXISTING FARMER / OTHER ROLE SELL MODULE - keep unchanged
+        # FARMER / OTHER ROLE SELL MODULE - save into farmer_products so it appears in Buy page
     if request.method == "POST":
-        mongo.db.marketplace_posts.insert_one({
-            "posted_by": session["user_id"],
-            "role": session["role"],
-            "product_name": request.form.get("product_name"),
-            "quantity": request.form.get("quantity"),
-            "price": request.form.get("price"),
-            "centre_uid": session.get("centre_uid") or session.get("mapped_centre_uid"),
+        user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
+
+        farmer = (
+            mongo.db.farmer_master.find_one({"linked_user_id": session["user_id"]})
+            or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(session["user_id"])})
+            or mongo.db.farmer_master.find_one({"contact_no": user.get("phone")})
+            or {}
+        )
+
+        picture = None
+        file = request.files.get("product_picture")
+        if file and file.filename:
+            try:
+                picture = save_file(file, "farmer_product")
+            except ValueError as exc:
+                flash(str(exc), "danger")
+                return redirect(url_for("modules.sell"))
+
+        mongo.db.farmer_products.insert_one({
+            "farmer_user_id": session["user_id"],
+            "farmer_name": farmer.get("name") or user.get("name"),
+            "farmer_contact": farmer.get("contact_no") or user.get("phone"),
+            "centre_uid": farmer.get("centre_uid") or user.get("centre_uid") or user.get("mapped_centre_uid"),
+            "mitra_uid": farmer.get("mitra_uid") or user.get("mitra_uid") or user.get("mapped_mitra_uid"),
+            "state": farmer.get("state") or user.get("state"),
+            "district": farmer.get("district") or user.get("district"),
+            "block": farmer.get("block") or user.get("block"),
+            "village": farmer.get("village") or user.get("village"),
+            "product_name": request.form.get("product_name", "").strip(),
+            "variety": request.form.get("variety", "").strip(),
+            "average_size": request.form.get("average_size", "").strip(),
+            "available_quantity": float(request.form.get("quantity") or 0),
+            "unit_price": float(request.form.get("price") or 0),
+            "picture": picture,
             "status": "active",
             "created_at": now_utc(),
+            "updated_at": now_utc(),
         })
+
         flash("Product posted for selling.", "success")
         return redirect(url_for("modules.sell"))
 
-    posts = list(mongo.db.marketplace_posts.find({}).sort("created_at", -1))
-    return render_template("modules/sell.html", posts=posts, mitra_sell_mode=False)
+    q = request.args.get("q", "").strip()
+
+    posts_query = {
+        "farmer_user_id": session["user_id"]
+    }
+
+    if q:
+        posts_query["$or"] = [
+            {"product_name": {"$regex": q, "$options": "i"}},
+            {"variety": {"$regex": q, "$options": "i"}},
+            {"average_size": {"$regex": q, "$options": "i"}},
+            {"status": {"$regex": q, "$options": "i"}},
+        ]
+
+    posts = list(
+        mongo.db.farmer_products.find(posts_query).sort("created_at", -1)
+    )
+
+    return render_template(
+        "modules/sell.html",
+        posts=posts,
+        mitra_sell_mode=False,
+        q=q
+    )
 
 
 @modules_bp.route("/finance", methods=["GET", "POST"])

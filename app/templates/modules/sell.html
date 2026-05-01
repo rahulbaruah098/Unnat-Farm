@@ -896,14 +896,20 @@ function toggleBuyerFarmer(){
                 </thead>
                 <tbody>
                 {% for p in posts %}
-                    <tr>
-                        <td data-label="Product">{{ p.product_name }}</td>
-                        <td data-label="Quantity">{{ p.quantity }}</td>
-                        <td data-label="Price"><span class="amount-text">{{ p.price }}</span></td>
-                        <td data-label="Role">{{ p.role }}</td>
-                        <td data-label="Status"><span class="status-pill">{{ p.status }}</span></td>
-                    </tr>
-                {% else %}
+    <tr>
+        <td data-label="Product">{{ p.product_name or '-' }}</td>
+        <td data-label="Quantity">{{ p.available_quantity or '-' }}</td>
+        <td data-label="Price">
+            <span class="amount-text">
+                ₹{{ p.unit_price or '-' }}
+            </span>
+        </td>
+        <td data-label="Role">{{ p.farmer_name or 'Farmer' }}</td>
+        <td data-label="Status">
+            <span class="status-pill">{{ p.status or '-' }}</span>
+        </td>
+    </tr>
+{% else %}
                     <tr>
                         <td data-label="Posts" colspan="5">No posts found.</td>
                     </tr>

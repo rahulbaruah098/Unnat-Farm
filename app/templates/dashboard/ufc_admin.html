@@ -1,69 +1,356 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="page-card">
-    <h2>UFC Admin Dashboard</h2>
+
+<style>
+    .ufc-admin-dashboard{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.94);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        font-family:"Times New Roman", Georgia, serif;
+    }
+
+    .admin-head{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:18px;
+        flex-wrap:wrap;
+        margin-bottom:22px;
+    }
+
+    .admin-head h2{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.5rem, 2vw, 2rem);
+        font-weight:800;
+        line-height:1.2;
+    }
+
+    .admin-subtitle{
+        margin:6px 0 0;
+        color:#64748B;
+        font-size:1rem;
+        font-weight:600;
+    }
+
+    .uid-card{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:16px;
+        margin:0 0 20px;
+        padding:18px 20px;
+        border:1px solid rgba(95,168,120,.22);
+        border-radius:22px;
+        background:rgba(228,247,234,.45);
+        box-shadow:0 12px 28px rgba(95,168,120,.10);
+    }
+
+    .uid-card span{
+        color:#475569;
+        font-size:1rem;
+        font-weight:800;
+    }
+
+    .uid-card strong{
+        margin-left:auto;
+        color:#17252A;
+        font-size:1.25rem;
+        letter-spacing:1px;
+        font-weight:900;
+    }
+
+    .btn-soft{
+        border:none;
+        min-width:42px;
+        min-height:42px;
+        border-radius:14px;
+        background:#FFFFFF;
+        color:#3B7D55;
+        cursor:pointer;
+        font-size:1.1rem;
+        box-shadow:0 8px 20px rgba(95,168,120,.14);
+        transition:all .2s ease;
+    }
+
+    .btn-soft:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateY(-1px);
+    }
+
+    .stat-grid{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:18px;
+        margin:0 0 28px;
+    }
+
+    .stat{
+        position:relative;
+        overflow:hidden;
+        min-height:112px;
+        padding:20px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:#FFFFFF;
+        box-shadow:0 14px 34px rgba(15,23,42,.07);
+        transition:all .2s ease;
+    }
+
+    .stat::after{
+    display:none;
+}
+
+    .stat:hover{
+        transform:translateY(-2px);
+        box-shadow:0 18px 42px rgba(15,23,42,.10);
+    }
+
+    .stat span{
+        display:block;
+        color:#64748B;
+        font-size:.98rem;
+        font-weight:800;
+        margin-bottom:10px;
+    }
+
+    .stat strong{
+        display:block;
+        color:#17252A;
+        font-size:clamp(1.45rem, 1.9vw, 2rem);
+        font-weight:900;
+        line-height:1.1;
+    }
+
+    .section-title{
+        margin:28px 0 14px;
+        color:#17252A;
+        font-size:clamp(1.22rem, 1.55vw, 1.55rem);
+        font-weight:900;
+    }
+
+    .table-shell{
+        width:100%;
+        overflow-x:auto;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:#fff;
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
+        margin-bottom:24px;
+    }
+
+    .admin-table{
+        width:100%;
+        min-width:760px;
+        border-collapse:separate;
+        border-spacing:0;
+    }
+
+    .admin-table th,
+    .admin-table td{
+        padding:15px 16px;
+        border-right:1px solid rgba(220,238,226,.85);
+        border-bottom:1px solid rgba(220,238,226,.85);
+        text-align:left;
+        vertical-align:middle;
+        color:#425466;
+        font-size:1rem;
+        line-height:1.35;
+    }
+
+    .admin-table th{
+        background:rgba(228,247,234,.92);
+        color:#17252A;
+        font-weight:900;
+    }
+
+    .admin-table td{
+        background:#fff;
+    }
+
+    .admin-table tr:hover td{
+        background:rgba(246,251,247,.9);
+    }
+
+    .admin-table tr:last-child td{
+        border-bottom:none;
+    }
+
+    .admin-table th:last-child,
+    .admin-table td:last-child{
+        border-right:none;
+    }
+
+    .amount-text{
+        color:#059669;
+        font-weight:900;
+    }
+
+    .status-pill{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:30px;
+        padding:5px 12px;
+        border-radius:999px;
+        background:#ECFDF5;
+        color:#059669;
+        font-weight:800;
+        font-size:.92rem;
+    }
+
+    @media(max-width:860px){
+        .ufc-admin-dashboard{
+            padding:22px;
+            border-radius:22px;
+        }
+
+        .stat-grid{
+            grid-template-columns:1fr;
+        }
+
+        .uid-card{
+            align-items:flex-start;
+            flex-direction:column;
+        }
+
+        .uid-card strong{
+            margin-left:0;
+        }
+
+        .table-shell{
+            border-radius:18px;
+        }
+    }
+
+    @media(max-width:460px){
+        .ufc-admin-dashboard{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .uid-card{
+            padding:16px;
+        }
+    }
+</style>
+
+<div class="ufc-admin-dashboard">
+    <div class="admin-head">
+        <div>
+          <h2>Welcome, {{ current_display_name }}</h2>
+<p class="admin-subtitle">UFC Admin Dashboard</p>
+           
+        </div>
+    </div>
+
     <div class="uid-card">
         <span>Your Centre UID</span>
         <strong class="masked-uid" data-real-uid="{{ session.get('centre_uid') or '' }}">********</strong>
         <button type="button" class="btn-soft uid-toggle">👁</button>
     </div>
+
     <div class="stat-grid">
-        <div class="stat"><span>Mapped UFC Mitras</span><strong>{{ data.mitra_count }}</strong></div>
-        <div class="stat"><span>Mapped Farmers</span><strong>{{ data.farmer_count }}</strong></div>
+        <div class="stat">
+            <span>Mapped UFC Mitras</span>
+            <strong>{{ data.mitra_count }}</strong>
+        </div>
+
+        <div class="stat">
+            <span>Mapped Farmers</span>
+            <strong>{{ data.farmer_count }}</strong>
+        </div>
     </div>
 
-    <h3>Mitra-wise Sales</h3>
-<table>
-    <thead>
-        <tr>
-            <th>Mitra UID</th>
-            <th>Total Orders</th>
-            <th>Total Sales</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for row in data.mitra_sales %}
-        <tr>
-            <td>{{ row.mitra_uid }}</td>
-            <td>{{ row.total_orders }}</td>
-            <td>₹{{ "%.2f"|format(row.total_sales) }}</td>
-        </tr>
-    {% else %}
-        <tr>
-            <td colspan="3">No Mitra sales found.</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+    <h3 class="section-title">Mitra-wise Sales</h3>
 
-<h3>Farmer-wise Sales</h3>
-<table>
-    <thead>
-        <tr>
-            <th>Farmer Name</th>
-            <th>Phone</th>
-            <th>Total Orders</th>
-            <th>Total Sales</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for row in data.farmer_sales %}
-        <tr>
-            <td>{{ row.farmer_name }}</td>
-            <td>{{ row.farmer_phone }}</td>
-            <td>{{ row.total_orders }}</td>
-            <td>₹{{ "%.2f"|format(row.total_sales) }}</td>
-        </tr>
-    {% else %}
-        <tr>
-            <td colspan="4">No Farmer sales found.</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
-    <h3>Recent Orders</h3>
-    <table><thead><tr><th>Status</th><th>Product</th><th>Quantity</th><th>Farmer / Source</th></tr></thead><tbody>
-    {% for o in data.orders %}<tr><td>{{ o.status }}</td><td>{{ o.product_name }}</td><td>{{ o.quantity }}</td><td>{{ o.farmer_contact or o.source }}</td></tr>{% else %}<tr><td colspan="4">No orders yet.</td></tr>{% endfor %}
-    </tbody></table>
+    <div class="table-shell">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Mitra UID</th>
+                    <th>Total Orders</th>
+                    <th>Total Sales</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in data.mitra_sales %}
+                <tr>
+                    <td>{{ row.mitra_uid }}</td>
+                    <td>{{ row.total_orders }}</td>
+                    <td><span class="amount-text">₹{{ "%.2f"|format(row.total_sales) }}</span></td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="3">No Mitra sales found.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h3 class="section-title">Farmer-wise Sales</h3>
+
+    <div class="table-shell">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Farmer Name</th>
+                    <th>Phone</th>
+                    <th>Total Orders</th>
+                    <th>Total Sales</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in data.farmer_sales %}
+                <tr>
+                    <td>{{ row.farmer_name }}</td>
+                    <td>{{ row.farmer_phone }}</td>
+                    <td>{{ row.total_orders }}</td>
+                    <td><span class="amount-text">₹{{ "%.2f"|format(row.total_sales) }}</span></td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4">No Farmer sales found.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h3 class="section-title">Recent Orders</h3>
+
+    <div class="table-shell">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Farmer / Source</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for o in data.orders %}
+                <tr>
+                    <td><span class="status-pill">{{ o.status }}</span></td>
+                    <td>{{ o.product_name }}</td>
+                    <td>{{ o.quantity }}</td>
+                    <td>{{ o.farmer_contact or o.source }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4">No orders yet.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
 {% endblock %}

@@ -1,11 +1,280 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="page-card">
-    <h2>Access Restricted</h2>
+<style>
+    .pending-access-wrap{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.94);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        font-family:"Times New Roman", Georgia, serif;
+    }
+
+    .pending-head{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:18px;
+        flex-wrap:wrap;
+        margin-bottom:22px;
+    }
+
+    .pending-head h2{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.5rem, 2vw, 2rem);
+        font-weight:800;
+        line-height:1.2;
+    }
+
+    .pending-subtitle{
+        margin:6px 0 0;
+        color:#64748B;
+        font-size:1rem;
+        font-weight:600;
+    }
+
+    .status-overview{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:16px;
+        margin:0 0 22px;
+        padding:18px 20px;
+        border:1px solid rgba(95,168,120,.18);
+        border-radius:22px;
+        background:rgba(228,247,234,.36);
+        box-shadow:0 12px 28px rgba(95,168,120,.08);
+        flex-wrap:wrap;
+    }
+
+    .status-overview span{
+        color:#475569;
+        font-size:1rem;
+        font-weight:800;
+    }
+
+    .status-badge{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:38px;
+        padding:8px 16px;
+        border-radius:999px;
+        font-weight:900;
+        font-size:.98rem;
+        letter-spacing:.2px;
+        text-transform:capitalize;
+        border:1px solid transparent;
+    }
+
+    .status-badge.rejected{
+        background:#FEE2E2;
+        color:#B91C1C;
+        border-color:#FECACA;
+    }
+
+    .status-badge.pending_profile{
+        background:#FFFBEB;
+        color:#D97706;
+        border-color:#FDE68A;
+    }
+
+    .status-badge.pending{
+        background:#E0F2FE;
+        color:#0284C7;
+        border-color:#BAE6FD;
+    }
+
+    .access-card{
+        position:relative;
+        overflow:hidden;
+        border-radius:24px;
+        padding:26px;
+        border:1px solid rgba(220,238,226,.95);
+        background:#fff;
+        box-shadow:0 14px 34px rgba(15,23,42,.08);
+    }
+
+    .access-card::after{
+        content:"";
+        position:absolute;
+        right:-40px;
+        top:-40px;
+        width:120px;
+        height:120px;
+        border-radius:50%;
+        opacity:.14;
+    }
+
+    .access-card h3{
+        margin:0 0 12px;
+        font-size:1.45rem;
+        line-height:1.2;
+        font-weight:900;
+        color:#17252A;
+    }
+
+    .access-card p{
+        margin:0 0 12px;
+        color:#475569;
+        font-size:1rem;
+        line-height:1.6;
+        font-weight:600;
+    }
+
+    .access-card p strong{
+        color:#17252A;
+    }
+
+    .access-card.rejected{
+        background:linear-gradient(135deg,#FFFFFF 0%,#FFF7F7 100%);
+        border-color:#FECACA;
+    }
+
+    .access-card.rejected::after{
+        background:#FCA5A5;
+    }
+
+    .access-card.rejected h3{
+        color:#B91C1C;
+    }
+
+    .access-card.pending-profile{
+        background:linear-gradient(135deg,#FFFFFF 0%,#FFFDF2 100%);
+        border-color:#FDE68A;
+    }
+
+    .access-card.pending-profile::after{
+        background:#FCD34D;
+    }
+
+    .access-card.pending-profile h3{
+        color:#B45309;
+    }
+
+    .access-card.pending{
+        background:linear-gradient(135deg,#FFFFFF 0%,#F5FBFF 100%);
+        border-color:#BAE6FD;
+    }
+
+    .access-card.pending::after{
+        background:#7DD3FC;
+    }
+
+    .access-card.pending h3{
+        color:#0369A1;
+    }
+
+    .action-row{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        flex-wrap:wrap;
+        margin-top:14px;
+    }
+
+    .button-link{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:44px;
+        padding:0 18px;
+        border-radius:14px;
+        text-decoration:none;
+        font-size:1rem;
+        font-weight:800;
+        transition:all .2s ease;
+        box-shadow:0 10px 24px rgba(15,23,42,.10);
+    }
+
+    .access-card.rejected .button-link{
+        background:#B91C1C;
+        color:#fff;
+    }
+
+    .access-card.rejected .button-link:hover{
+        background:#991B1B;
+        transform:translateY(-1px);
+    }
+
+    .access-card.pending-profile .button-link{
+        background:#D97706;
+        color:#fff;
+    }
+
+    .access-card.pending-profile .button-link:hover{
+        background:#B45309;
+        transform:translateY(-1px);
+    }
+
+    .info-note{
+        margin-top:10px;
+        color:#64748B;
+        font-size:.96rem;
+        font-weight:700;
+    }
+
+    .text-danger{
+        color:#B91C1C;
+        font-weight:800;
+        margin-top:8px !important;
+    }
+
+    @media(max-width:860px){
+        .pending-access-wrap{
+            padding:22px;
+            border-radius:22px;
+        }
+
+        .status-overview{
+            align-items:flex-start;
+            flex-direction:column;
+        }
+
+        .access-card{
+            padding:20px;
+            border-radius:20px;
+        }
+    }
+
+    @media(max-width:460px){
+        .pending-access-wrap{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .access-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .button-link{
+            width:100%;
+        }
+    }
+</style>
+
+<div class="pending-access-wrap">
+    <div class="pending-head">
+        <div>
+            <h2>Access Restricted</h2>
+            <p class="pending-subtitle">Your account access depends on profile completion and AVPL validation status.</p>
+        </div>
+    </div>
+
+    <div class="status-overview">
+        <span>Current Status</span>
+        <strong class="status-badge {{ session.get('approval_status', 'pending') }}">
+            {{ session.get('approval_status', 'pending') }}
+        </strong>
+    </div>
 
     {% if session.get('approval_status') == 'rejected' %}
-        <div class="alert-box danger">
+        <div class="access-card rejected">
             <h3>Application Rejected</h3>
 
             <p>Your application has been rejected by AVPL Admin.</p>
@@ -16,9 +285,11 @@
             </p>
 
             {% if correction_url %}
-                <a class="button-link" href="{{ correction_url }}">
-                    Continue
-                </a>
+                <div class="action-row">
+                    <a class="button-link" href="{{ correction_url }}">
+                        Continue
+                    </a>
+                </div>
             {% else %}
                 <p class="text-danger">
                     Correction form link is missing. Please contact Super Admin.
@@ -27,15 +298,17 @@
         </div>
 
     {% elif session.get('approval_status') == 'pending_profile' %}
-        <div class="alert-box warning">
+        <div class="access-card pending-profile">
             <h3>Profile Completion Required</h3>
 
             <p>You must complete your profile before validation can be done.</p>
 
             {% if correction_url %}
-                <a class="button-link" href="{{ correction_url }}">
-                    Complete Registration
-                </a>
+                <div class="action-row">
+                    <a class="button-link" href="{{ correction_url }}">
+                        Complete Registration
+                    </a>
+                </div>
             {% else %}
                 <p class="text-danger">
                     Registration form link is missing. Please contact Super Admin.
@@ -44,12 +317,11 @@
         </div>
 
     {% else %}
-        <div class="alert-box info">
+        <div class="access-card pending">
             <h3>Approval Pending</h3>
             <p>Your account is submitted and waiting for approval.</p>
+            <p class="info-note">Please wait while AVPL Admin reviews your profile and validation details.</p>
         </div>
     {% endif %}
-
-    <p>Status: <strong>{{ session.get('approval_status', 'pending') }}</strong></p>
 </div>
 {% endblock %}

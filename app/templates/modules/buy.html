@@ -76,6 +76,11 @@
         No matching farmer marketplace products found.
     </div>
 
+    <div class="farmer-product-pagination-wrap">
+    <div class="farmer-product-page-info" id="farmerProductPageInfo"></div>
+    <div class="farmer-product-pagination" id="farmerProductPagination"></div>
+</div>
+
     <h3 style="margin-top:30px;">AVPL Product Catalogue</h3>
 
     <div class="marketplace-grid" id="catalogueProductGrid">
@@ -218,15 +223,30 @@
 
 .market-img-wrap{
     width:100%;
-    height:170px;
+    height:260px;
+    background:#F1F5F9;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+}
+
+.market-img-wrap img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
     background:#F1F5F9;
 }
 
-.market-img-wrap img,
 .no-image{
     width:100%;
-    height:170px;
-    object-fit:cover;
+    height:260px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#64748B;
+    font-weight:700;
+    background:#F1F5F9;
 }
 
 .no-image{
@@ -317,6 +337,58 @@
     margin-top:14px;
 }
 
+.farmer-product-pagination-wrap{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    margin:18px 0 26px;
+    flex-wrap:wrap;
+}
+
+.farmer-product-page-info{
+    padding:10px 16px;
+    border:1px solid rgba(95,168,120,.18);
+    border-radius:16px;
+    background:rgba(228,247,234,.42);
+    color:#3B7D55;
+    font-weight:700;
+    font-family:"Times New Roman", Georgia, serif;
+}
+
+.farmer-product-pagination{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.farmer-product-page-btn{
+    min-width:38px;
+    height:38px;
+    padding:0 12px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:12px;
+    color:#3B7D55;
+    background:rgba(228,247,234,.58);
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.farmer-product-page-btn:hover,
+.farmer-product-page-btn.active{
+    color:#fff;
+    background:#5FA878;
+    border-color:#5FA878;
+}
+
+.farmer-product-page-btn:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+}
+
 @media(max-width:860px){
     .buy-search-wrap{
         grid-template-columns:1fr auto auto;
@@ -328,6 +400,14 @@
         padding-right:16px;
         white-space:nowrap;
     }
+    .farmer-product-pagination-wrap{
+    flex-direction:column;
+    align-items:stretch;
+}
+
+.farmer-product-pagination{
+    justify-content:center;
+}
 }
 
 @media(max-width:420px){
@@ -371,10 +451,117 @@
     const farmerEmpty = document.getElementById('farmerSearchEmpty');
     const catalogueEmpty = document.getElementById('catalogueSearchEmpty');
 
-    function filterGrid(grid, emptyBox, term){
-        if(!grid) return;
+    const farmerPageInfo = document.getElementById('farmerProductPageInfo');
+    const farmerPagination = document.getElementById('farmerProductPagination');
 
-        const cards = Array.from(grid.querySelectorAll('.searchable-card'));
+    const farmerPerPage = 6;
+    let farmerCurrentPage = 1;
+
+    function getFarmerCards(){
+        if(!farmerGrid) return [];
+        return Array.from(farmerGrid.querySelectorAll('.searchable-card'));
+    }
+
+    function getFilteredFarmerCards(term){
+        const cards = getFarmerCards();
+
+        if(!term){
+            return cards;
+        }
+
+        return cards.filter(function(card){
+            return card.textContent.toLowerCase().includes(term);
+        });
+    }
+
+    function renderFarmerPagination(){
+        const term = searchInput.value.trim().toLowerCase();
+        const allCards = getFarmerCards();
+        const filteredCards = getFilteredFarmerCards(term);
+
+        allCards.forEach(function(card){
+            card.style.display = 'none';
+        });
+
+        if(filteredCards.length === 0){
+            if(farmerEmpty){
+                farmerEmpty.style.display = term ? '' : 'none';
+            }
+
+            if(farmerPageInfo){
+                farmerPageInfo.textContent = 'No farmer products found';
+            }
+
+            if(farmerPagination){
+                farmerPagination.innerHTML = '';
+            }
+
+            return;
+        }
+
+        if(farmerEmpty){
+            farmerEmpty.style.display = 'none';
+        }
+
+        const totalPages = Math.max(1, Math.ceil(filteredCards.length / farmerPerPage));
+        farmerCurrentPage = Math.min(farmerCurrentPage, totalPages);
+
+        const start = (farmerCurrentPage - 1) * farmerPerPage;
+        const end = start + farmerPerPage;
+
+        filteredCards.forEach(function(card, index){
+            card.style.display = index >= start && index < end ? '' : 'none';
+        });
+
+        if(farmerPageInfo){
+            farmerPageInfo.textContent = `Showing ${start + 1} to ${Math.min(end, filteredCards.length)} of ${filteredCards.length} farmer products`;
+        }
+
+        if(!farmerPagination) return;
+
+        farmerPagination.innerHTML = '';
+
+        const prev = document.createElement('button');
+        prev.type = 'button';
+        prev.className = 'farmer-product-page-btn';
+        prev.textContent = 'Prev';
+        prev.disabled = farmerCurrentPage === 1;
+        prev.onclick = function(){
+            farmerCurrentPage--;
+            renderFarmerPagination();
+        };
+        farmerPagination.appendChild(prev);
+
+        for(let i = 1; i <= totalPages; i++){
+            if(i === 1 || i === totalPages || Math.abs(i - farmerCurrentPage) <= 1){
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'farmer-product-page-btn' + (i === farmerCurrentPage ? ' active' : '');
+                btn.textContent = i;
+                btn.onclick = function(){
+                    farmerCurrentPage = i;
+                    renderFarmerPagination();
+                };
+                farmerPagination.appendChild(btn);
+            }
+        }
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'farmer-product-page-btn';
+        next.textContent = 'Next';
+        next.disabled = farmerCurrentPage === totalPages;
+        next.onclick = function(){
+            farmerCurrentPage++;
+            renderFarmerPagination();
+        };
+        farmerPagination.appendChild(next);
+    }
+
+    function filterCatalogueGrid(term){
+        if(!catalogueGrid) return;
+
+        const cards = Array.from(catalogueGrid.querySelectorAll('.searchable-card'));
         let visibleCount = 0;
 
         cards.forEach(function(card){
@@ -383,35 +570,44 @@
             if(match) visibleCount++;
         });
 
-        if(emptyBox){
-            emptyBox.style.display = term && cards.length && visibleCount === 0 ? '' : 'none';
+        if(catalogueEmpty){
+            catalogueEmpty.style.display = term && cards.length && visibleCount === 0 ? '' : 'none';
         }
     }
 
     function applySearch(){
         const term = searchInput.value.trim().toLowerCase();
 
-        filterGrid(farmerGrid, farmerEmpty, term);
-        filterGrid(catalogueGrid, catalogueEmpty, term);
+        farmerCurrentPage = 1;
+        renderFarmerPagination();
+        filterCatalogueGrid(term);
 
         clearBtn.style.display = term ? '' : 'none';
     }
 
-    searchBtn.addEventListener('click', applySearch);
+    if(searchBtn){
+        searchBtn.addEventListener('click', applySearch);
+    }
 
-    searchInput.addEventListener('input', applySearch);
+    if(searchInput){
+        searchInput.addEventListener('input', applySearch);
 
-    searchInput.addEventListener('keydown', function(e){
-        if(e.key === 'Enter'){
-            e.preventDefault();
+        searchInput.addEventListener('keydown', function(e){
+            if(e.key === 'Enter'){
+                e.preventDefault();
+                applySearch();
+            }
+        });
+    }
+
+    if(clearBtn){
+        clearBtn.addEventListener('click', function(){
+            searchInput.value = '';
             applySearch();
-        }
-    });
+        });
+    }
 
-    clearBtn.addEventListener('click', function(){
-        searchInput.value = '';
-        applySearch();
-    });
+    renderFarmerPagination();
 })();
 </script>
 

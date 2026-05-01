@@ -517,7 +517,44 @@ def complete_ufc_mitra():
 
         for field, label in doc_map.items():
             file = request.files.get(field)
+
             if file and file.filename:
+
+                # Profile photo validation: image only, max 2 MB
+                if field == 'passport_photo_file':
+                    allowed_image_types = {
+                        'image/jpeg',
+                        'image/png',
+                        'image/jpg',
+                        'image/webp'
+                    }
+
+                    file.seek(0, 2)
+                    file_size = file.tell()
+                    file.seek(0)
+
+                    if file.content_type not in allowed_image_types:
+                        flash('Only JPG, PNG or WEBP image files are allowed for profile photo.', 'danger')
+                        return render_template(
+                            'auth/complete_ufc_mitra_profile.html',
+                            user=user,
+                            states=states,
+                            master=master,
+                            rejection_reason=rejection_reason,
+                            latest_validation=latest_validation
+                        )
+
+                    if file_size > 2 * 1024 * 1024:
+                        flash('Profile photo must be less than or equal to 2 MB.', 'danger')
+                        return render_template(
+                            'auth/complete_ufc_mitra_profile.html',
+                            user=user,
+                            states=states,
+                            master=master,
+                            rejection_reason=rejection_reason,
+                            latest_validation=latest_validation
+                        )
+
                 store_document(
                     file,
                     session['user_id'],

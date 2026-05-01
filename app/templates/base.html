@@ -1081,44 +1081,46 @@ body.sidebar-collapsed .sidebar-logout{
 
 <body>
 
+{% block base_flash_popup %}
     {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div class="flash-popup-wrap" id="flashPopupWrap">
-            {% for category, message in messages %}
-                <div class="flash-popup {{ category }}">
-                    <div class="flash-popup-icon">
-                        {% if category == 'success' %}
-                            ✓
-                        {% elif category in ['danger', 'error'] %}
-                            !
-                        {% elif category == 'warning' %}
-                            ⚠
-                        {% else %}
-                            i
-                        {% endif %}
-                    </div>
-
-                    <div class="flash-popup-content">
-                        <h4 class="flash-popup-title">
+        {% if messages %}
+            <div class="flash-popup-wrap" id="flashPopupWrap">
+                {% for category, message in messages %}
+                    <div class="flash-popup {{ category }}">
+                        <div class="flash-popup-icon">
                             {% if category == 'success' %}
-                                Success
+                                ✓
                             {% elif category in ['danger', 'error'] %}
-                                Error
+                                !
                             {% elif category == 'warning' %}
-                                Warning
+                                ⚠
                             {% else %}
-                                Notice
+                                i
                             {% endif %}
-                        </h4>
-                        <p class="flash-popup-message">{{ message }}</p>
-                    </div>
+                        </div>
 
-                    <button type="button" class="flash-popup-close" onclick="closeFlashPopup(this)" aria-label="Close">×</button>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %}
+                        <div class="flash-popup-content">
+                            <h4 class="flash-popup-title">
+                                {% if category == 'success' %}
+                                    Success
+                                {% elif category in ['danger', 'error'] %}
+                                    Error
+                                {% elif category == 'warning' %}
+                                    Warning
+                                {% else %}
+                                    Notice
+                                {% endif %}
+                            </h4>
+                            <p class="flash-popup-message">{{ message }}</p>
+                        </div>
+
+                        <button type="button" class="flash-popup-close" onclick="closeFlashPopup(this)" aria-label="Close">×</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+{% endblock %}
 {% if session.get('user_id') and request.endpoint not in public_pages %}
 
     <header class="app-header">

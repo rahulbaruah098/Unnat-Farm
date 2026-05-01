@@ -254,6 +254,41 @@ def home():
 
     if role == "ufc_mitra":
         data = get_mitra_dashboard(session.get("mitra_uid"))
+
+        mitra_master = (
+            mongo.db.ufc_mitra_master.find_one({"linked_user_id": session.get("user_id")})
+            or mongo.db.ufc_mitra_master.find_one({"linked_user_id": ObjectId(session.get("user_id"))})
+            or mongo.db.ufc_mitra_master.find_one({"mitra_uid": session.get("mitra_uid")})
+            or {}
+        )
+
+        passport_doc = mongo.db.documents.find_one(
+            {
+                "linked_user_id": session.get("user_id"),
+                "$or": [
+                    {"document_type": "Passport Size Photo"},
+                    {"label": "Passport Size Photo"},
+                    {"title": "Passport Size Photo"},
+                    {"doc_type": "Passport Size Photo"},
+                ]
+            },
+            sort=[("created_at", -1)]
+        )
+
+        data["profile_photo"] = (
+            mitra_master.get("passport_photo_file")
+            or (passport_doc or {}).get("file_path")
+            or (passport_doc or {}).get("filename")
+            or (passport_doc or {}).get("file_name")
+        )
+
+        data["mitra_name"] = (
+            mitra_master.get("name")
+            or (user or {}).get("name")
+            or session.get("name")
+            or "Mitra User"
+        )
+
         return render_template("dashboard/ufc_mitra.html", data=data)
 
     if role == "farmer":
