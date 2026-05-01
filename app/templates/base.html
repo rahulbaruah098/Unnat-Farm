@@ -1064,6 +1064,44 @@ body.sidebar-collapsed .sidebar-logout{
         border-radius:12px;
     }
 }
+
+.uf-global-lang-switch{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:99999;
+    display:flex;
+    gap:6px;
+    padding:6px;
+    border-radius:999px;
+    background:rgba(255,255,255,.94);
+    border:1px solid rgba(20,83,45,.22);
+    box-shadow:0 14px 34px rgba(15,23,42,.18);
+}
+
+.uf-global-lang-switch button{
+    border:0;
+    cursor:pointer;
+    padding:8px 13px;
+    border-radius:999px;
+    background:transparent;
+    color:#14532d;
+    font-size:13px;
+    font-weight:800;
+}
+
+.uf-global-lang-switch button.active{
+    background:#14532d;
+    color:#fff;
+}
+
+@media(max-width:640px){
+    .uf-global-lang-switch{
+        right:12px;
+        bottom:72px;
+    }
+}
+
     </style>
 </head>
 
@@ -1704,5 +1742,13 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 });
 </script>
+{% if session.get('role') in ['ufc_admin', 'ufc_mitra', 'farmer'] %}
+<div class="uf-global-lang-switch" aria-label="Language Switcher">
+    <button type="button" id="ufLangEnglish">EN</button>
+    <button type="button" id="ufLangAssamese">অসমীয়া</button>
+</div>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/uf-language.js') }}"></script>
 </body>
 </html>
