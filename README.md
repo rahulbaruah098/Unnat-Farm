@@ -60,11 +60,5 @@ python scripts/seed_demo.py
 python run.py
 ```
 
-## Demo accounts seeded
-- superadmin / admin123
-- avpladmin / admin123
 
-Create all other users from the MIS after login.
 
-## Important note
-This ZIP is intentionally built as a much broader and more implementation-ready project than a mere prompt or skeleton. It still remains an MVP foundation, so certain deep transactional workflows are implemented as practical route/template/database-ready modules rather than final enterprise-complete business engines.
