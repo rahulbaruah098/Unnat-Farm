@@ -348,14 +348,22 @@
 
 .product-meta span{
     display:inline-flex;
+    align-items:center;
+    gap:5px;
     min-height:24px;
-    padding:4px 9px;
+    padding:5px 10px;
     border-radius:999px;
     background:rgba(228,247,234,.72);
     color:#3B7D55;
     font-size:.78rem;
-    font-weight:700;
+    font-weight:800;
+    line-height:1.2;
     text-transform:capitalize;
+}
+
+.product-meta span strong{
+    color:#17252A;
+    font-weight:900;
 }
 
 .product-centres{
@@ -853,9 +861,9 @@
                         <div class="product-price">₹{{ p.price }}</div>
                     </div>
 
-                    <div class="product-meta">
-    <span>{{ p.category }}</span>
-    <span>{{ p.type }}</span>
+        <div class="product-meta">
+    <span><strong>Category:</strong> {{ p.category or '-' }}</span>
+    <span><strong>Type:</strong> {{ p.type|title if p.type else '-' }}</span>
 </div>
 
 <span class="product-qty">
