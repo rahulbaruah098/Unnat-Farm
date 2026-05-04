@@ -262,6 +262,83 @@
     white-space:nowrap;
 }
 
+.product-qty{
+    display:inline-flex;
+    align-items:center;
+    width:max-content;
+    max-width:100%;
+    margin:0 0 10px;
+    padding:6px 12px;
+    border-radius:999px;
+    background:rgba(228,247,234,.72);
+    color:#3B7D55;
+    border:1px solid rgba(95,168,120,.18);
+    font-size:.84rem;
+    font-weight:900;
+}
+
+.restock-form{
+    display:grid;
+    grid-template-columns:minmax(92px, 1fr) auto;
+    gap:8px;
+    margin:0 0 10px;
+    align-items:center;
+}
+
+.restock-form input{
+    width:100%;
+    min-height:36px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:12px;
+    padding:7px 10px;
+    color:#334155;
+    background:#fff;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:.88rem;
+    font-weight:700;
+    outline:none;
+}
+
+.restock-form input:focus{
+    border-color:rgba(95,168,120,.65);
+    box-shadow:0 0 0 4px rgba(95,168,120,.12);
+}
+
+.restock-form button{
+    min-height:36px;
+    border:none;
+    border-radius:999px;
+    padding:7px 13px;
+    background:#5FA878;
+    color:#fff;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:.86rem;
+    font-weight:900;
+    cursor:pointer;
+    box-shadow:0 8px 18px rgba(95,168,120,.18);
+    transition:.2s ease;
+}
+
+.restock-form button:hover{
+    background:#3B7D55;
+    transform:translateY(-1px);
+}
+
+.product-qty{
+    display:inline-flex;
+    align-items:center;
+    width:max-content;
+    max-width:100%;
+    margin:0 0 10px;
+    padding:6px 12px;
+    border-radius:999px;
+    background:rgba(228,247,234,.72);
+    color:#3B7D55;
+    border:1px solid rgba(95,168,120,.18);
+    font-size:.84rem;
+    font-weight:900;
+}
+
 .product-meta{
     display:flex;
     gap:6px;
@@ -780,12 +857,41 @@
                     </div>
 
                     <div class="product-meta">
-                        <span>{{ p.category }}</span>
-                        <span>{{ p.type }}</span>
-                    </div>
+    <span>{{ p.category }}</span>
+    <span>{{ p.type }}</span>
+</div>
 
-                    <div class="product-centres">
-                        <strong>Available Centres:</strong>
+<span class="product-qty">
+    Available:
+    {% if p.available_quantity is defined and p.available_quantity is not none %}
+        {{ p.available_quantity }}
+    {% elif p.quantity is defined and p.quantity is not none %}
+        {{ p.quantity }}
+    {% elif p.stock_quantity is defined and p.stock_quantity is not none %}
+        {{ p.stock_quantity }}
+    {% elif p.stock is defined and p.stock is not none %}
+        {{ p.stock }}
+    {% else %}
+        -
+    {% endif %}
+</span>
+
+<form method="POST"
+      action="{{ url_for('admin.restock_product', product_id=p._id) }}"
+      class="restock-form">
+    <input
+        type="number"
+        name="restock_quantity"
+        min="0.01"
+        step="0.01"
+        placeholder="Refill qty"
+        required
+    >
+    <button type="submit">Refill</button>
+</form>
+
+<div class="product-centres">
+    <strong>Available Centres:</strong>
                         {% if p.available_centres is iterable and p.available_centres is not string %}
                             {{ p.available_centres|join(', ') }}
                         {% else %}
@@ -848,7 +954,15 @@
                     <div class="product-centres">
                         <strong>Farmer:</strong> {{ p.farmer_name or '-' }}<br>
                         <strong>Contact:</strong> {{ p.farmer_contact or '-' }}<br>
-                        <strong>Available:</strong> {{ p.available_quantity or '-' }}<br>
+                      <strong>Available:</strong>
+{% if p.available_quantity is defined and p.available_quantity is not none %}
+    {{ p.available_quantity }}
+{% elif p.quantity is defined and p.quantity is not none %}
+    {{ p.quantity }}
+{% else %}
+    -
+{% endif %}
+<br>
                         <strong>Centre UID:</strong> {{ p.centre_uid or '-' }}<br>
                         <strong>Area:</strong>
                         {{ p.village or '-' }}{% if p.block %}, {{ p.block }}{% endif %}{% if p.district %}, {{ p.district }}{% endif %}
@@ -870,6 +984,8 @@
 <script>
 (function(){
     const grid = document.getElementById('productGrid');
+    const farmerGrid = document.getElementById('farmerProductGrid');
+
     const cards = Array.from(document.querySelectorAll('#productGrid .product-card'));
     const searchInput = document.getElementById('productSearchInput');
     const chips = Array.from(document.querySelectorAll('.product-chip'));
@@ -1106,22 +1222,37 @@ window.addEventListener('scroll', function(){
     });
 
     viewBtns.forEach(btn => {
-        btn.addEventListener('click', function(){
-            viewBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+    btn.addEventListener('click', function(){
+        viewBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-            activeView = btn.dataset.view || 'grid';
+        activeView = btn.dataset.view || 'grid';
 
-            if(activeView === 'list'){
+        if(activeView === 'list'){
+            if(grid){
                 grid.classList.add('list-view');
-            }else{
+            }
+
+            if(farmerGrid){
+                farmerGrid.classList.add('list-view');
+            }
+        }else{
+            if(grid){
                 grid.classList.remove('list-view');
             }
 
-            currentPage = 1;
-            renderProducts();
-        });
+            if(farmerGrid){
+                farmerGrid.classList.remove('list-view');
+            }
+        }
+
+        currentPage = 1;
+        farmerCurrentPage = 1;
+
+        renderProducts();
+        renderFarmerProducts();
     });
+});
 
     if(searchInput){
         searchInput.addEventListener('input', function(){
@@ -1134,7 +1265,7 @@ window.addEventListener('scroll', function(){
 
 
     /* Farmer Products Pagination */
-    const farmerGrid = document.getElementById('farmerProductGrid');
+  
     const farmerCards = Array.from(document.querySelectorAll('#farmerProductGrid .farmer-product-card'));
     const farmerSearchInput = document.getElementById('farmerProductSearchInput');
     const farmerPagination = document.getElementById('farmerProductPagination');

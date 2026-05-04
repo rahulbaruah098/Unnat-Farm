@@ -284,6 +284,60 @@
         font-size:.92rem;
     }
 
+        .mobile-card-list{
+        display:none;
+    }
+
+    .mobile-info-card{
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        background:#fff;
+        padding:15px;
+        box-shadow:0 10px 24px rgba(23,37,42,.06);
+        min-width:265px;
+        max-width:265px;
+        flex:0 0 265px;
+    }
+
+    .mobile-info-row{
+        display:flex;
+        flex-direction:column;
+        gap:3px;
+        padding:8px 0;
+        border-bottom:1px solid rgba(220,238,226,.75);
+    }
+
+    .mobile-info-row:last-child{
+        border-bottom:none;
+    }
+
+    .mobile-info-label{
+        color:#64748B;
+        font-size:.85rem;
+        font-weight:800;
+    }
+
+    .mobile-info-value{
+        color:#17252A;
+        font-size:1rem;
+        font-weight:800;
+        word-break:break-word;
+    }
+
+    .mobile-empty-card{
+        min-width:265px;
+        max-width:265px;
+        flex:0 0 265px;
+        padding:18px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        background:#fff;
+        color:#64748B;
+        font-weight:800;
+        text-align:center;
+        box-shadow:0 10px 24px rgba(23,37,42,.06);
+    }
+
     @media(max-width:860px){
         .mitra-dashboard{
             padding:22px;
@@ -311,6 +365,36 @@
             height:82px;
             flex-basis:82px;
             border-radius:22px;
+        }
+
+
+                .desktop-table-shell{
+            display:none;
+        }
+
+        .mobile-card-list{
+            display:flex;
+            gap:14px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:4px 2px 10px;
+            margin-bottom:24px;
+            scrollbar-width:thin;
+            scrollbar-color:#94A3B8 #F1F5F9;
+        }
+
+        .mobile-card-list::-webkit-scrollbar{
+            height:8px;
+        }
+
+        .mobile-card-list::-webkit-scrollbar-track{
+            background:#F1F5F9;
+            border-radius:999px;
+        }
+
+        .mobile-card-list::-webkit-scrollbar-thumb{
+            background:#94A3B8;
+            border-radius:999px;
         }
 
         .stat-grid{
@@ -404,7 +488,7 @@
 
     <h3 class="section-title">Month-wise Sales</h3>
 
-    <div class="table-shell">
+  <div class="table-shell desktop-table-shell">
         <table class="mitra-table">
             <thead>
                 <tr>
@@ -429,9 +513,32 @@
         </table>
     </div>
 
+    <div class="mobile-card-list">
+    {% for row in data.monthly_sales %}
+        <div class="mobile-info-card">
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Month</span>
+                <span class="mobile-info-value">{{ row._id.month }}/{{ row._id.year }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Total Orders</span>
+                <span class="mobile-info-value">{{ row.total_orders }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Total Sales</span>
+                <span class="mobile-info-value amount-text">₹{{ "%.2f"|format(row.total_sales) }}</span>
+            </div>
+        </div>
+    {% else %}
+        <div class="mobile-empty-card">No sales found.</div>
+    {% endfor %}
+</div>
+
     <h3 class="section-title">Farmer List</h3>
 
-    <div class="table-shell">
+<div class="table-shell desktop-table-shell">
         <table class="mitra-table">
             <thead>
                 <tr>
@@ -461,6 +568,46 @@
             </tbody>
         </table>
     </div>
+
+    <div class="mobile-card-list">
+    {% for f in data.farmers %}
+        <div class="mobile-info-card">
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Name</span>
+                <span class="mobile-info-value">{{ f.name }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Contact</span>
+                <span class="mobile-info-value">{{ f.contact_no }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Centre UID</span>
+                <span class="mobile-info-value">{{ f.centre_uid or '-' }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Mitra UID</span>
+                <span class="mobile-info-value">{{ f.mitra_uid or '-' }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Village</span>
+                <span class="mobile-info-value">{{ f.village }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Status</span>
+                <span class="mobile-info-value">
+                    <span class="status-pill">{{ f.approval_status }}</span>
+                </span>
+            </div>
+        </div>
+    {% else %}
+        <div class="mobile-empty-card">No mapped farmers.</div>
+    {% endfor %}
+</div>
 </div>
 
 {% endblock %}

@@ -76,8 +76,8 @@
         }
 
         .stat-grid {
-            grid-template-columns: 1fr;
-            gap: 14px;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
         }
 
         .stat {
@@ -96,9 +96,25 @@
             border-radius: 18px;
         }
 
-        .stat {
-            border-radius: 18px;
-        }
+        .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.stat {
+    min-height: 105px;
+    padding: 14px;
+}
+
+.stat span {
+    margin-bottom: 12px;
+    font-size: .88rem;
+    line-height: 1.25;
+}
+
+.stat strong {
+    font-size: 1.75rem;
+}
     }
 </style>
 

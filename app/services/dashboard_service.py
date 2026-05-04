@@ -1,8 +1,22 @@
 from app.extensions import mongo
+from app.utils import db
 
 
 def count_documents(coll, query=None):
     return mongo.db[coll].count_documents(query or {})
+
+def normalize_quantity(doc):
+    for key in ("available_quantity", "quantity", "stock_quantity", "stock"):
+        value = doc.get(key)
+
+        if value is not None and value != "":
+            try:
+                number_value = float(value)
+                return int(number_value) if number_value.is_integer() else number_value
+            except (TypeError, ValueError):
+                return value
+
+    return "-"
 
 
 def get_system_overview():
@@ -159,15 +173,21 @@ def get_farmer_dashboard(phone):
     finance_enabled = total_volume >= 30000
     insurance_enabled = is_livestock_farmer and total_volume >= 30000
 
-    # ✅ NEW: RECOMMENDED PRODUCTS
+   # ✅ NEW: RECOMMENDED PRODUCTS
     recommended_products = list(
-        db.products.find({}).sort("created_at", -1).limit(8)
+    db.products.find({}).sort("created_at", -1).limit(8)
     )
+
+    for p in recommended_products:
+        p["available_quantity"] = normalize_quantity(p)
 
     # ✅ NEW: MARKETPLACE (ALL FARMER PRODUCTS)
     farmer_products_marketplace = list(
-        db.farmer_products.find({"status": "active"}).sort("created_at", -1).limit(12)
+    db.farmer_products.find({"status": "active"}).sort("created_at", -1).limit(12)
     )
+
+    for p in farmer_products_marketplace:
+        p["available_quantity"] = normalize_quantity(p)
 
     return {
         "farmer": farmer,

@@ -454,6 +454,27 @@ def home():
 
     if role == "farmer":
         data = get_farmer_dashboard(user.get("phone"))
+
+        farmer_master = (
+            mongo.db.farmer_master.find_one({"linked_user_id": session.get("user_id")})
+            or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(session.get("user_id"))})
+            or mongo.db.farmer_master.find_one({"contact_no": user.get("phone")})
+            or {}
+        )
+
+        data["profile_photo"] = (
+            farmer_master.get("profile_photo")
+            or farmer_master.get("passport_photo_file")
+            or farmer_master.get("photo")
+        )
+
+        data["farmer_name"] = (
+            farmer_master.get("name")
+            or user.get("name")
+            or session.get("name")
+            or "Farmer"
+        )
+
         return render_template("dashboard/farmer.html", data=data)
 
     return render_template("dashboard/pending_access.html")

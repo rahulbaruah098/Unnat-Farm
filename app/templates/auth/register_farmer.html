@@ -89,10 +89,14 @@
         gap:18px;
     }
 
-    .grid-form.two-col,
-    .inner-grid{
-        grid-template-columns:1fr;
-    }
+   .grid-form.two-col,
+.inner-grid{
+    grid-template-columns:1fr;
+}
+
+#farmerStep1 .inner-grid{
+    gap:22px;
+}
 
     .farmer-screen{
         width:100%;
@@ -221,13 +225,17 @@
         transition:all .2s ease;
     }
 
-    #farmerNextBtn,
-    .span-2 button[type="submit"]{
-        background:#5FA878;
-        color:#fff;
-        width:100%;
-        box-shadow:0 14px 30px rgba(95,168,120,.26);
-    }
+   #farmerNextBtn,
+.span-2 button[type="submit"]{
+    background:#5FA878;
+    color:#fff;
+    width:100%;
+    box-shadow:0 14px 30px rgba(95,168,120,.26);
+}
+
+#farmerNextBtn{
+    margin-top:22px;
+}
 
     #farmerNextBtn:hover,
     .span-2 button[type="submit"]:hover{
@@ -442,6 +450,14 @@
             font-size:1.7rem;
         }
 
+        #farmerStep1 .inner-grid{
+    gap:18px;
+}
+
+#farmerNextBtn{
+    margin-top:20px;
+}
+
         .back-btn{
             width:40px;
             height:40px;
@@ -517,7 +533,7 @@
         Centre UID and UFC Mitra UID are mandatory.
     </p>
 
-    <form method="post" class="grid-form two-col" id="farmerRegistrationForm">
+   <form method="post" enctype="multipart/form-data" class="grid-form two-col" id="farmerRegistrationForm">
         <section class="farmer-screen" id="farmerScreen1">
             <div class="span-2 step-panel" id="farmerStep1">
                 <h3>Step 1: Basic Details</h3>
@@ -599,6 +615,16 @@
                     <label>Village
                         <input type="text" name="village" value="{{ data.village if data else '' }}" placeholder="Auto-filled from Mitra UID, editable" required>
                     </label>
+
+       <label>Farmer Profile Photo
+    <input
+        type="file"
+        name="profile_photo"
+        id="farmerProfilePhoto"
+        accept="image/png,image/jpeg,image/jpg,image/webp"
+        required
+    >
+</label>
 
                     <div class="span-2">
                         <label>Activities</label>
@@ -723,11 +749,12 @@ document.addEventListener('DOMContentLoaded', function(){
     form.addEventListener('submit', function(e){
         syncFromMirror();
 
-        const password = form.querySelector('input[name="password"]');
-        const centreUid = form.querySelector('input[name="centre_uid"]');
-        const gender = form.querySelector('select[name="gender"]');
-        const age = form.querySelector('input[name="age"]');
-        const village = form.querySelector('input[name="village"]');
+      const password = form.querySelector('input[name="password"]');
+const centreUid = form.querySelector('input[name="centre_uid"]');
+const gender = form.querySelector('select[name="gender"]');
+const age = form.querySelector('input[name="age"]');
+const village = form.querySelector('input[name="village"]');
+const profilePhoto = form.querySelector('input[name="profile_photo"]');
 
         if(!name.value.trim() || !contact.value.trim() || !mitraUid.value.trim()){
             e.preventDefault();
@@ -736,20 +763,21 @@ document.addEventListener('DOMContentLoaded', function(){
             return;
         }
 
-        if(
-            !password.value.trim() ||
-            !centreUid.value.trim() ||
-            !gender.value.trim() ||
-            !age.value.trim() ||
-            !village.value.trim()
-        ){
-            e.preventDefault();
-            showStep2();
-            openCustomFarmerModal(
-                'Required Details Missing',
-                'Please fill all mandatory fields including Gender, Age, Password, Centre UID and Village before submitting.'
-            );
-        }
+      if(
+    !password.value.trim() ||
+    !centreUid.value.trim() ||
+    !gender.value.trim() ||
+    !age.value.trim() ||
+    !village.value.trim() ||
+    !profilePhoto.files.length
+){
+    e.preventDefault();
+    showStep2();
+    openCustomFarmerModal(
+        'Required Details Missing',
+        'Please fill all mandatory fields including Gender, Age, Password, Centre UID, Village and Farmer Profile Photo before submitting.'
+    );
+}
     });
 
     function openCustomFarmerModal(title, message){

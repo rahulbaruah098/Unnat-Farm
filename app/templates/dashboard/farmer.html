@@ -1,277 +1,1041 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="page-card">
-    <h2>Welcome, {{ current_display_name }}</h2>
-<p class="farmer-subtitle">Farmer Dashboard</p>
-
-    <div class="stat-grid">
-        <div class="stat">
-            <span>Finance Eligibility</span>
-            <strong>{{ 'Enabled' if data.finance_enabled else 'Locked' }}</strong>
-        </div>
-        <div class="stat">
-            <span>Insurance Eligibility</span>
-            <strong>{{ 'Enabled' if data.insurance_enabled else 'Locked' }}</strong>
-        </div>
-    </div>
-
-    <div class="info-banner">
-        Mapped Centre: <strong>{{ data.farmer.centre_uid }}</strong> |
-        Mapped Mitra: <strong>{{ data.farmer.mitra_uid }}</strong>
-    </div>
-
-    <h3>Recent Purchases</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Product</th>
-                <th>Amount</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for p in data.purchases %}
-            <tr>
-                <td>{{ p.product_name }}</td>
-                <td>{{ p.amount }}</td>
-                <td>{{ p.created_at }}</td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="3">No purchases yet.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<h3>My Orders</h3>
-<table>
-    <thead>
-        <tr>
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Total Amount</th>
-            <th>Status</th>
-            <th>Date</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for o in data.my_orders %}
-        <tr>
-            <td>{{ o.product_name }}</td>
-            <td>{{ o.quantity }}</td>
-            <td>₹{{ o.total_amount }}</td>
-            <td>{{ o.status|title }}</td>
-            <td>{{ o.created_at }}</td>
-        </tr>
-    {% else %}
-        <tr>
-            <td colspan="5">No orders placed yet.</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
-
-<h3>Recommended AVPL Products</h3>
-<div class="product-grid">
-    {% for p in data.recommended_products %}
-        <div class="product-card">
-            {% if p.image_name %}
-                <img src="{{ url_for('documents.serve', filename=p.image_name) }}"
-                     alt="{{ p.name }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="no-image" style="display:none;">No Image</div>
-            {% elif p.picture %}
-                <img src="{{ url_for('documents.serve', filename=p.picture) }}"
-                     alt="{{ p.name }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="no-image" style="display:none;">No Image</div>
-            {% elif p.file_path %}
-                <img src="{{ url_for('documents.serve', filename=p.file_path) }}"
-                     alt="{{ p.name }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="no-image" style="display:none;">No Image</div>
-            {% elif p.image %}
-                <img src="{{ url_for('documents.serve', filename=p.image) }}"
-                     alt="{{ p.name }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="no-image" style="display:none;">No Image</div>
-            {% else %}
-                <div class="no-image">No Image</div>
-            {% endif %}
-
-            <h4>{{ p.name }}</h4>
-            <p>{{ p.category or '-' }}</p>
-            <p>{{ p.type or '-' }}</p>
-            <strong>₹{{ p.price or '-' }}</strong>
-        </div>
-    {% else %}
-        <p>No recommended products available.</p>
-    {% endfor %}
-</div>
-
-<h3>Farmer Marketplace</h3>
-<div class="product-grid">
-    {% for p in data.farmer_products_marketplace %}
-        <div class="product-card">
-            {% if p.picture %}
-                <img src="{{ url_for('documents.serve', filename=p.picture) }}"
-                     alt="{{ p.product_name }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="no-image" style="display:none;">No Image</div>
-            {% elif p.file_path %}
-                <img src="{{ url_for('documents.serve', filename=p.file_path) }}"
-                     alt="{{ p.product_name }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="no-image" style="display:none;">No Image</div>
-            {% elif p.image %}
-                <img src="{{ url_for('documents.serve', filename=p.image) }}"
-                     alt="{{ p.product_name }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <div class="no-image" style="display:none;">No Image</div>
-            {% else %}
-                <div class="no-image">No Image</div>
-            {% endif %}
-
-            <h4>{{ p.product_name }}</h4>
-            <p>Variety: {{ p.variety or '-' }}</p>
-            <p>Location: {{ p.village or '-' }}{% if p.block %}, {{ p.block }}{% endif %}</p>
-            <p>Farmer: {{ p.farmer_name or '-' }}</p>
-
-            <div class="product-footer">
-                <div>
-                    <strong>₹{{ p.unit_price or '-' }}</strong>
-                    <small>Available: {{ p.available_quantity or '-' }}</small>
-                </div>
-
-                <form method="POST" action="{{ url_for('modules.place_farmer_order') }}" class="order-form">
-                    <input type="hidden" name="product_id" value="{{ p._id }}">
-                    <input type="hidden" name="product_name" value="{{ p.product_name }}">
-                    <input type="hidden" name="unit_price" value="{{ p.unit_price }}">
-                    <input
-                        type="number"
-                        name="quantity"
-                        min="1"
-                        step="1"
-                        placeholder="Qty"
-                        required
-                    >
-                    <button type="submit">Buy</button>
-                </form>
-            </div>
-        </div>
-    {% else %}
-        <p>No farmer products listed.</p>
-    {% endfor %}
-</div>
 
 <style>
-.product-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:16px;
-    margin:14px 0 28px;
-}
+    .farmer-dashboard{
+        width:100%;
+        display:grid;
+        gap:24px;
+        font-family:"Times New Roman", Georgia, serif;
+    }
 
-.product-card{
-    background:#fff;
+    .page-card,
+    .section-card{
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
+        overflow:hidden;
+    }
+
+    .dashboard-head{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:18px;
+        flex-wrap:wrap;
+        margin-bottom:24px;
+    }
+
+    .farmer-photo-wrap{
+    width:150px;
+    height:150px;
+    border-radius:30px;
+    overflow:hidden;
+    flex:0 0 150px;
+    background:#F1F5F9;
     border:1px solid #E2E8F0;
-    border-radius:18px;
-    padding:16px;
-    box-shadow:0 12px 28px rgba(15,23,42,.08);
+    box-shadow:0 14px 34px rgba(15,23,42,.12);
+    display:flex;
+    align-items:center;
+    justify-content:center;
 }
 
-.product-card img{
+.farmer-profile-photo{
     width:100%;
-    height:220px;
+    height:100%;
     object-fit:contain;
     object-position:center;
-    border-radius:14px;
-    margin-bottom:10px;
-    background:#F1F5F9;
     display:block;
+    background:#F1F5F9;
 }
 
-.no-image{
+.farmer-profile-placeholder{
     width:100%;
-    height:220px;
-    border-radius:14px;
-    margin-bottom:10px;
-    background:#F1F5F9;
-    color:#64748B;
+    height:100%;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-weight:600;
-}
-
-.no-image{
-    background:#F1F5F9;
-    color:#64748B;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:600;
-}
-
-.product-card h4{
-    margin:0 0 8px;
-    color:#0F172A;
-}
-
-.product-card p{
-    margin:4px 0;
-    color:#475569;
-}
-
-.product-card strong{
-    display:block;
-    margin-top:8px;
+    background:#ECFDF5;
     color:#059669;
+    font-size:2.3rem;
+    font-weight:900;
 }
 
-.product-footer{
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:12px;
-    margin-top:12px;
-    padding-top:12px;
-    border-top:1px solid #E2E8F0;
-}
+    .dashboard-title{
+        min-width:0;
+    }
 
-.product-footer small{
-    display:block;
-    margin-top:4px;
-    color:#64748B;
-}
+    .page-kicker{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:30px;
+        padding:6px 14px;
+        margin-bottom:10px;
+        border-radius:999px;
+        background:rgba(228,247,234,.72);
+        color:#3B7D55;
+        border:1px solid rgba(95,168,120,.22);
+        font-size:.82rem;
+        font-weight:800;
+        letter-spacing:.08em;
+        text-transform:uppercase;
+    }
 
-.order-form{
-    display:flex;
+    .dashboard-title h2{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.45rem, 2.4vw, 2.1rem);
+        font-weight:900;
+        line-height:1.2;
+        letter-spacing:.2px;
+        white-space:normal;
+        overflow-wrap:anywhere;
+        word-break:break-word;
+    }
+
+    .farmer-subtitle{
+        margin:10px 0 0;
+        color:#64748B;
+        font-size:1rem;
+        line-height:1.6;
+        font-weight:700;
+        max-width:760px;
+    }
+
+    .stat-grid{
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:18px;
+        margin:0 0 22px;
+    }
+
+    .stat{
+        min-height:126px;
+        padding:22px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,251,247,.92));
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
+        transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+
+    .stat:hover{
+        transform:translateY(-2px);
+        border-color:rgba(95,168,120,.38);
+        box-shadow:0 18px 40px rgba(23,37,42,.10);
+    }
+
+    .stat span{
+        display:block;
+        margin-bottom:14px;
+        color:#64748B;
+        font-size:1rem;
+        font-weight:800;
+        line-height:1.35;
+    }
+
+    .stat strong{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:38px;
+        padding:7px 14px;
+        border-radius:999px;
+        color:#047857;
+        background:#ECFDF5;
+        border:1px solid rgba(5,150,105,.16);
+        font-size:clamp(1.15rem, 2vw, 1.55rem);
+        font-weight:900;
+        line-height:1;
+    }
+
+    .info-banner{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        flex-wrap:wrap;
+        margin:0;
+        padding:14px 16px;
+        border:1px solid rgba(95,168,120,.18);
+        border-radius:18px;
+        background:rgba(228,247,234,.42);
+        color:#475569;
+        font-size:1rem;
+        font-weight:800;
+        line-height:1.5;
+    }
+
+    .info-banner strong{
+        color:#3B7D55;
+        font-weight:900;
+    }
+
+    .section-head{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:16px;
+        flex-wrap:wrap;
+        margin-bottom:18px;
+    }
+
+    .section-head h3{
+        margin:0;
+        color:#17252A;
+        font-size:clamp(1.22rem, 1.8vw, 1.5rem);
+        font-weight:900;
+        line-height:1.25;
+    }
+
+    .section-head p{
+        margin:6px 0 0;
+        color:#64748B;
+        font-size:.95rem;
+        font-weight:700;
+        line-height:1.5;
+    }
+
+    .table-shell{
+        width:100%;
+        overflow-x:auto;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:#fff;
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
+        margin-bottom:0;
+        scrollbar-width:auto;
+        scrollbar-color:#94A3B8 #F1F5F9;
+    }
+
+    .table-shell::-webkit-scrollbar{
+        height:12px;
+    }
+
+    .table-shell::-webkit-scrollbar-track{
+        background:#F1F5F9;
+        border-radius:999px;
+    }
+
+    .table-shell::-webkit-scrollbar-thumb{
+        background:#94A3B8;
+        border-radius:999px;
+        border:2px solid #F1F5F9;
+    }
+
+    .farmer-table{
+        width:100%;
+        min-width:760px;
+        border-collapse:separate;
+        border-spacing:0;
+        background:#fff;
+    }
+
+    .farmer-table th,
+    .farmer-table td{
+        padding:15px 16px;
+        border-right:1px solid rgba(220,238,226,.85);
+        border-bottom:1px solid rgba(220,238,226,.85);
+        text-align:left;
+        vertical-align:middle;
+        color:#425466;
+        font-size:1rem;
+        line-height:1.35;
+        white-space:normal;
+        word-break:break-word;
+    }
+
+    .farmer-table th{
+        background:rgba(228,247,234,.92);
+        color:#17252A;
+        font-weight:900;
+        white-space:nowrap;
+    }
+
+    .farmer-table td{
+        background:#fff;
+        font-weight:700;
+    }
+
+    .farmer-table tr:hover td{
+        background:rgba(246,251,247,.9);
+    }
+
+    .farmer-table tr:last-child td{
+        border-bottom:none;
+    }
+
+    .farmer-table th:last-child,
+    .farmer-table td:last-child{
+        border-right:none;
+    }
+
+    .amount-text{
+        color:#059669;
+        font-weight:900;
+    }
+
+    .status-pill{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:30px;
+        padding:5px 12px;
+        border-radius:999px;
+        background:#ECFDF5;
+        color:#059669;
+        font-weight:900;
+        font-size:.92rem;
+        text-transform:capitalize;
+        white-space:nowrap;
+    }
+
+    .mobile-card-list{
+        display:none;
+    }
+
+    .mobile-info-card{
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        background:#fff;
+        padding:15px;
+        box-shadow:0 10px 24px rgba(23,37,42,.06);
+        min-width:265px;
+        max-width:265px;
+        flex:0 0 265px;
+    }
+
+    .mobile-info-row{
+        display:flex;
+        flex-direction:column;
+        gap:3px;
+        padding:8px 0;
+        border-bottom:1px solid rgba(220,238,226,.75);
+    }
+
+    .mobile-info-row:last-child{
+        border-bottom:none;
+    }
+
+    .mobile-info-label{
+        color:#64748B;
+        font-size:.85rem;
+        font-weight:800;
+    }
+
+    .mobile-info-value{
+        color:#17252A;
+        font-size:1rem;
+        font-weight:800;
+        word-break:break-word;
+    }
+
+    .mobile-empty-card{
+        min-width:265px;
+        max-width:265px;
+        flex:0 0 265px;
+        padding:18px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        background:#fff;
+        color:#64748B;
+        font-weight:800;
+        text-align:center;
+        box-shadow:0 10px 24px rgba(23,37,42,.06);
+    }
+
+    .product-grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));
+        gap:18px;
+        margin:0;
+    }
+
+    .product-card{
+        display:flex;
+        flex-direction:column;
+        min-height:100%;
+        background:#fff;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        padding:16px;
+        box-shadow:0 14px 32px rgba(23,37,42,.07);
+        transition:all .2s ease;
+        overflow:hidden;
+    }
+
+    .product-card:hover{
+        transform:translateY(-2px);
+        box-shadow:0 18px 42px rgba(15,23,42,.10);
+        border-color:rgba(95,168,120,.35);
+    }
+
+    .product-card img,
+    .no-image{
+        width:100%;
+        height:210px;
+        border-radius:16px;
+        margin-bottom:14px;
+        background:#F1F5F9;
+        border:1px solid rgba(226,232,240,.95);
+    }
+
+    .product-card img{
+        object-fit:contain;
+        object-position:center;
+        display:block;
+    }
+
+    .no-image{
+        color:#64748B;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:800;
+    }
+
+    .product-card h4{
+        margin:0 0 8px;
+        color:#17252A;
+        font-size:1.12rem;
+        line-height:1.25;
+        font-weight:900;
+        overflow-wrap:anywhere;
+    }
+
+    .product-card p{
+        margin:4px 0;
+        color:#475569;
+        font-size:.98rem;
+        line-height:1.4;
+        font-weight:700;
+    }
+
+    .product-card strong{
+        display:block;
+        margin-top:8px;
+        color:#059669;
+        font-size:1.08rem;
+        font-weight:900;
+    }
+
+    .product-qty{
+    display:inline-flex;
     align-items:center;
-    gap:8px;
+    width:max-content;
+    max-width:100%;
+    margin-top:8px;
+    padding:6px 12px;
+    border-radius:999px;
+    background:rgba(228,247,234,.72);
+    color:#3B7D55;
+    border:1px solid rgba(95,168,120,.18);
+    font-size:.92rem;
+    font-weight:900;
 }
 
-.order-form input{
-    width:72px;
-    padding:8px 9px;
-    border:1px solid #CBD5E1;
-    border-radius:10px;
+    .product-footer{
+        display:flex;
+        align-items:flex-end;
+        justify-content:space-between;
+        gap:12px;
+        margin-top:auto;
+        padding-top:14px;
+        border-top:1px solid rgba(226,232,240,.95);
+    }
+
+    .product-footer small{
+        display:block;
+        margin-top:4px;
+        color:#64748B;
+        font-weight:800;
+    }
+
+    .order-form{
+        display:flex;
+        align-items:center;
+        gap:8px;
+        flex-wrap:wrap;
+        justify-content:flex-end;
+    }
+
+    .order-form input{
+        width:76px;
+        min-height:38px;
+        padding:8px 9px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        background:#fff;
+        color:#17252A;
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:800;
+        outline:none;
+    }
+
+    .order-form input:focus{
+        border-color:#5FA878;
+        box-shadow:0 0 0 4px rgba(95,168,120,.12);
+    }
+
+    .order-form button{
+        min-height:38px;
+        border:none;
+        border-radius:999px;
+        padding:8px 15px;
+        background:#5FA878;
+        color:#fff;
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:900;
+        cursor:pointer;
+        box-shadow:0 10px 22px rgba(95,168,120,.22);
+        transition:all .2s ease;
+    }
+
+    .order-form button:hover{
+        background:#3B7D55;
+        transform:translateY(-1px);
+    }
+
+    .empty-product{
+        margin:0;
+        padding:18px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        background:#fff;
+        color:#64748B;
+        font-weight:800;
+        text-align:center;
+        box-shadow:0 10px 24px rgba(23,37,42,.06);
+    }
+
+    @media(max-width:860px){
+        .page-card,
+        .section-card{
+            padding:22px;
+            border-radius:22px;
+        }
+
+        .dashboard-title h2{
+            font-size:clamp(1.25rem, 5vw, 1.7rem);
+        }
+
+        .farmer-subtitle{
+            font-size:.95rem;
+        }
+
+        .stat-grid{
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+            gap:12px;
+        }
+
+        .stat{
+            min-height:112px;
+            padding:16px;
+        }
+
+        .stat span{
+            font-size:.92rem;
+            margin-bottom:12px;
+        }
+
+        .stat strong{
+            font-size:1.15rem;
+        }
+
+        .info-banner{
+            align-items:flex-start;
+            flex-direction:column;
+        }
+
+        .desktop-table-shell{
+            display:none;
+        }
+
+        .mobile-card-list{
+            display:flex;
+            gap:14px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:4px 2px 10px;
+            margin-bottom:0;
+            scrollbar-width:thin;
+            scrollbar-color:#94A3B8 #F1F5F9;
+        }
+
+        .mobile-card-list::-webkit-scrollbar{
+            height:8px;
+        }
+
+        .mobile-card-list::-webkit-scrollbar-track{
+            background:#F1F5F9;
+            border-radius:999px;
+        }
+
+        .mobile-card-list::-webkit-scrollbar-thumb{
+            background:#94A3B8;
+            border-radius:999px;
+        }
+
+        .product-grid{
+            display:flex;
+            gap:14px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:4px 2px 10px;
+            scrollbar-width:thin;
+            scrollbar-color:#94A3B8 #F1F5F9;
+        }
+
+        .product-grid::-webkit-scrollbar{
+            height:8px;
+        }
+
+        .product-grid::-webkit-scrollbar-track{
+            background:#F1F5F9;
+            border-radius:999px;
+        }
+
+        .product-grid::-webkit-scrollbar-thumb{
+            background:#94A3B8;
+            border-radius:999px;
+        }
+
+        .product-card{
+            min-width:270px;
+            max-width:270px;
+            flex:0 0 270px;
+            border-radius:18px;
+        }
+
+        .product-card img,
+        .no-image{
+            height:180px;
+            border-radius:14px;
+        }
+
+        .product-footer{
+            align-items:stretch;
+            flex-direction:column;
+        }
+
+        .order-form{
+            justify-content:space-between;
+            width:100%;
+        }
+
+        .order-form input{
+            flex:1 1 auto;
+            width:auto;
+        }
+
+        .order-form button{
+            flex:0 0 auto;
+        }
+        .dashboard-head{
+    align-items:center;
+    flex-wrap:nowrap;
 }
 
-.order-form button{
-    border:none;
-    border-radius:10px;
-    padding:8px 13px;
-    background:#059669;
-    color:#fff;
-    font-weight:700;
-    cursor:pointer;
+.farmer-photo-wrap{
+    width:82px;
+    height:82px;
+    flex-basis:82px;
+    border-radius:22px;
+}
+    }
+
+    @media(max-width:520px){
+        .stat-grid{
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+            gap:10px;
+        }
+
+        .stat{
+            min-height:100px;
+            padding:13px;
+            border-radius:18px;
+        }
+
+        .stat span{
+            font-size:.82rem;
+            line-height:1.25;
+        }
+
+        .stat strong{
+            min-height:34px;
+            padding:6px 10px;
+            font-size:1rem;
+        }
+    }
+
+    @media(max-width:420px){
+        .page-card,
+        .section-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .page-kicker{
+            font-size:.72rem;
+            padding:5px 11px;
+        }
+
+        .dashboard-title h2{
+            font-size:1.22rem;
+            line-height:1.25;
+        }
+
+        .section-head h3{
+            font-size:1.15rem;
+        }
+
+        .section-head p{
+            font-size:.9rem;
+        }
+
+        .dashboard-head{
+    gap:14px;
 }
 
-.order-form button:hover{
-    background:#047857;
+.farmer-photo-wrap{
+    width:76px;
+    height:76px;
+    flex-basis:76px;
+    border-radius:20px;
 }
+
+        .mobile-info-card,
+        .mobile-empty-card{
+            min-width:255px;
+            max-width:255px;
+            flex-basis:255px;
+        }
+
+        .product-card{
+            min-width:255px;
+            max-width:255px;
+            flex-basis:255px;
+        }
+
+        .product-card img,
+        .no-image{
+            height:165px;
+        }
+    }
 </style>
+
+<div class="farmer-dashboard">
+
+    <div class="page-card">
+        <div class="dashboard-head">
+    <div class="dashboard-title">
+        <span class="page-kicker">Farmer Overview</span>
+        <h2>Welcome, {{ current_display_name }}</h2>
+        <p class="farmer-subtitle">Farmer Dashboard</p>
+    </div>
+
+    <div class="farmer-photo-wrap">
+        {% if data.profile_photo %}
+            <img
+                src="{{ url_for('documents.serve', filename=data.profile_photo) }}"
+                alt="Farmer Profile Photo"
+                class="farmer-profile-photo"
+            >
+        {% else %}
+            <div class="farmer-profile-placeholder">
+                {{ (data.farmer_name or current_display_name or 'F')[:1]|upper }}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+        <div class="stat-grid">
+            <div class="stat">
+                <span>Finance Eligibility</span>
+                <strong>{{ 'Enabled' if data.finance_enabled else 'Locked' }}</strong>
+            </div>
+
+            <div class="stat">
+                <span>Insurance Eligibility</span>
+                <strong>{{ 'Enabled' if data.insurance_enabled else 'Locked' }}</strong>
+            </div>
+        </div>
+
+        <div class="info-banner">
+            <span>Mapped Centre: <strong>{{ data.farmer.centre_uid }}</strong></span>
+            <span>Mapped Mitra: <strong>{{ data.farmer.mitra_uid }}</strong></span>
+        </div>
+    </div>
+
+    <section class="section-card">
+        <div class="section-head">
+            <div>
+                <h3>Recent Purchases</h3>
+                <p>Your latest purchase records are shown below.</p>
+            </div>
+        </div>
+
+        <div class="table-shell desktop-table-shell">
+            <table class="farmer-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for p in data.purchases %}
+                    <tr>
+                        <td>{{ p.product_name }}</td>
+                        <td><span class="amount-text">{{ p.amount }}</span></td>
+                        <td>{{ p.created_at }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="3">No purchases yet.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mobile-card-list">
+            {% for p in data.purchases %}
+                <div class="mobile-info-card">
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-label">Product</span>
+                        <span class="mobile-info-value">{{ p.product_name }}</span>
+                    </div>
+
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-label">Amount</span>
+                        <span class="mobile-info-value amount-text">{{ p.amount }}</span>
+                    </div>
+
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-label">Date</span>
+                        <span class="mobile-info-value">{{ p.created_at }}</span>
+                    </div>
+                </div>
+            {% else %}
+                <div class="mobile-empty-card">No purchases yet.</div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="section-card">
+        <div class="section-head">
+            <div>
+                <h3>My Orders</h3>
+                <p>Track your product orders and latest order status.</p>
+            </div>
+        </div>
+
+        <div class="table-shell desktop-table-shell">
+            <table class="farmer-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for o in data.my_orders %}
+                    <tr>
+                        <td>{{ o.product_name }}</td>
+                        <td>{{ o.quantity }}</td>
+                        <td><span class="amount-text">₹{{ o.total_amount }}</span></td>
+                        <td><span class="status-pill">{{ o.status|title }}</span></td>
+                        <td>{{ o.created_at }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5">No orders placed yet.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mobile-card-list">
+            {% for o in data.my_orders %}
+                <div class="mobile-info-card">
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-label">Product</span>
+                        <span class="mobile-info-value">{{ o.product_name }}</span>
+                    </div>
+
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-label">Qty</span>
+                        <span class="mobile-info-value">{{ o.quantity }}</span>
+                    </div>
+
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-label">Total Amount</span>
+                        <span class="mobile-info-value amount-text">₹{{ o.total_amount }}</span>
+                    </div>
+
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-label">Status</span>
+                        <span class="mobile-info-value">
+                            <span class="status-pill">{{ o.status|title }}</span>
+                        </span>
+                    </div>
+
+                    <div class="mobile-info-row">
+                        <span class="mobile-info-label">Date</span>
+                        <span class="mobile-info-value">{{ o.created_at }}</span>
+                    </div>
+                </div>
+            {% else %}
+                <div class="mobile-empty-card">No orders placed yet.</div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="section-card">
+        <div class="section-head">
+            <div>
+                <h3>Recommended AVPL Products</h3>
+                <p>Suggested products available for your farming needs.</p>
+            </div>
+        </div>
+
+        <div class="product-grid">
+            {% for p in data.recommended_products %}
+                <div class="product-card">
+                    {% if p.image_name %}
+                        <img src="{{ url_for('documents.serve', filename=p.image_name) }}"
+                             alt="{{ p.name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% elif p.picture %}
+                        <img src="{{ url_for('documents.serve', filename=p.picture) }}"
+                             alt="{{ p.name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% elif p.file_path %}
+                        <img src="{{ url_for('documents.serve', filename=p.file_path) }}"
+                             alt="{{ p.name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% elif p.image %}
+                        <img src="{{ url_for('documents.serve', filename=p.image) }}"
+                             alt="{{ p.name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% else %}
+                        <div class="no-image">No Image</div>
+                    {% endif %}
+
+                 <h4>{{ p.name }}</h4>
+<p>{{ p.category or '-' }}</p>
+<p>{{ p.type or '-' }}</p>
+
+<span class="product-qty">
+    Available:
+    {% if p.available_quantity is defined and p.available_quantity is not none %}
+        {{ p.available_quantity }}
+    {% elif p.quantity is defined and p.quantity is not none %}
+        {{ p.quantity }}
+    {% elif p.stock_quantity is defined and p.stock_quantity is not none %}
+        {{ p.stock_quantity }}
+    {% elif p.stock is defined and p.stock is not none %}
+        {{ p.stock }}
+    {% else %}
+        -
+    {% endif %}
+</span>
+
+<strong>₹{{ p.price or '-' }}</strong>
+                </div>
+            {% else %}
+                <p class="empty-product">No recommended products available.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="section-card">
+        <div class="section-head">
+            <div>
+                <h3>Farmer Marketplace</h3>
+                <p>Explore farmer-listed products and place orders directly.</p>
+            </div>
+        </div>
+
+        <div class="product-grid">
+            {% for p in data.farmer_products_marketplace %}
+                <div class="product-card">
+                    {% if p.picture %}
+                        <img src="{{ url_for('documents.serve', filename=p.picture) }}"
+                             alt="{{ p.product_name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% elif p.file_path %}
+                        <img src="{{ url_for('documents.serve', filename=p.file_path) }}"
+                             alt="{{ p.product_name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% elif p.image %}
+                        <img src="{{ url_for('documents.serve', filename=p.image) }}"
+                             alt="{{ p.product_name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% else %}
+                        <div class="no-image">No Image</div>
+                    {% endif %}
+
+                    <h4>{{ p.product_name }}</h4>
+                    <p>Variety: {{ p.variety or '-' }}</p>
+                    <p>Location: {{ p.village or '-' }}{% if p.block %}, {{ p.block }}{% endif %}</p>
+                    <p>Farmer: {{ p.farmer_name or '-' }}</p>
+
+                    <div class="product-footer">
+                        <div>
+             <strong>₹{{ p.unit_price or '-' }}</strong>
+
+<span class="product-qty">
+    Available:
+    {% if p.available_quantity is defined and p.available_quantity is not none %}
+        {{ p.available_quantity }}
+    {% elif p.quantity is defined and p.quantity is not none %}
+        {{ p.quantity }}
+    {% else %}
+        -
+    {% endif %}
+</span>
+                        </div>
+
+                        <form method="POST" action="{{ url_for('modules.place_farmer_order') }}" class="order-form">
+                            <input type="hidden" name="product_id" value="{{ p._id }}">
+                            <input type="hidden" name="product_name" value="{{ p.product_name }}">
+                            <input type="hidden" name="unit_price" value="{{ p.unit_price }}">
+                            <input
+                                type="number"
+                                name="quantity"
+                                min="1"
+                                step="1"
+                                placeholder="Qty"
+                                required
+                            >
+                            <button type="submit">Buy</button>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <p class="empty-product">No farmer products listed.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+</div>
+
 {% endblock %}

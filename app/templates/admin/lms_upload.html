@@ -14,6 +14,40 @@
     color:#17252A;
 }
 
+.lms-title-line{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    margin:14px 0 8px;
+    position:relative;
+}
+
+.lms-mobile-back{
+    display:none;
+    width:42px;
+    height:42px;
+    border:none;
+    border-radius:14px;
+    align-items:center;
+    justify-content:center;
+    background:rgba(228,247,234,.82);
+    color:#3B7D55;
+    font-size:1.65rem;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 8px 20px rgba(95,168,120,.12);
+    transition:all .2s ease;
+    line-height:1;
+    flex:0 0 auto;
+}
+
+.lms-mobile-back:hover{
+    background:#5FA878;
+    color:#fff;
+    transform:translateX(-2px);
+}
+
 .lms-header{
     text-align:center;
     margin-bottom:28px;
@@ -33,7 +67,7 @@
 }
 
 .lms-header h2{
-    margin:14px 0 8px;
+    margin:0;
     color:#17252A;
     font-size:clamp(1.7rem, 3vw, 2.5rem);
     font-weight:700;
@@ -220,6 +254,10 @@
         border-radius:20px;
     }
 
+    .lms-mobile-back{
+    display:inline-flex;
+}
+
     .grid-form{
         grid-template-columns:1fr;
     }
@@ -239,7 +277,12 @@
 
     <div class="lms-header">
         <span class="lms-kicker">Learning Material System</span>
-        <h2>LMS Upload</h2>
+
+        <div class="lms-title-line">
+            <button type="button" class="lms-mobile-back" onclick="history.back()" aria-label="Back">←</button>
+            <h2>LMS Upload</h2>
+        </div>
+
         <p>Upload and manage PDF or video based learning materials for farmers, UFC Mitras, UFC Admins, or all audiences.</p>
     </div>
 

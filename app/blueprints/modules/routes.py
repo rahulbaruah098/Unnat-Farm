@@ -1259,12 +1259,20 @@ def all_orders():
 
 @modules_bp.route('/pos/invoice/<sale_id>')
 @login_required
-@roles_required('ufc_admin')
+@roles_required('ufc_admin', 'avpl_admin', 'sales_unnatfarm', 'accounts')
 def pos_invoice(sale_id):
-    sale = mongo.db.pos_sales.find_one({'_id': ObjectId(sale_id)})
+    try:
+        sale = mongo.db.pos_sales.find_one({'_id': ObjectId(sale_id)})
+    except Exception:
+        flash('Invalid invoice ID.', 'danger')
+        if session.get('role') in ['avpl_admin', 'sales_unnatfarm', 'accounts']:
+            return redirect(url_for('modules.sales_details'))
+        return redirect(url_for('modules.pos'))
 
     if not sale:
         flash('Invoice not found.', 'danger')
+        if session.get('role') in ['avpl_admin', 'sales_unnatfarm', 'accounts']:
+            return redirect(url_for('modules.sales_details'))
         return redirect(url_for('modules.pos'))
 
     return render_template('modules/pos_invoice.html', sale=sale)

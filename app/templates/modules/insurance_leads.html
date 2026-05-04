@@ -23,19 +23,24 @@
     }
 
     .title-left{
-        display:flex;
-        align-items:center;
-        gap:12px;
-    }
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-width:0;
+    width:100%;
+}
 
-    .title-left h2{
-        margin:0;
-        color:#17252A;
-        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
-        font-weight:700;
-        line-height:1.25;
-        white-space:nowrap;
-    }
+   .title-left h2{
+    margin:0;
+    color:#17252A;
+    font-size:clamp(1.18rem, 4.8vw, 1.9rem);
+    font-weight:700;
+    line-height:1.25;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+    min-width:0;
+}
 
     .back-btn{
         display:none;
@@ -188,6 +193,10 @@
         background:rgba(228,247,234,.42);
         color:#3B7D55;
         font-weight:700;
+    }
+
+        .is-hidden{
+        display:none !important;
     }
 
     .insurance-table-wrap{
@@ -493,12 +502,11 @@
 
             <button type="submit" id="insuranceSearchBtn">Search</button>
 
-            <a href="{{ request.path }}"
-               class="clear-btn clear-link"
-               id="insuranceClearBtn"
-               style="{% if not (q is defined and q|trim) %}display:none;{% endif %}">
-                Clear
-            </a>
+           <a href="{{ request.path }}"
+   class="clear-btn clear-link {% if not (q is defined and q|trim) %}is-hidden{% endif %}"
+   id="insuranceClearBtn">
+    Clear
+</a>
         </form>
     </div>
 
@@ -518,9 +526,8 @@
       <div class="table-info" id="insurancePaginationInfo"></div>
 
 <div
-    class="table-info"
+    class="table-info {% if not (q is defined and q|trim) %}is-hidden{% endif %}"
     id="insuranceSearchResultInfo"
-    style="{% if not (q is defined and q|trim) %}display:none;{% endif %}"
 >
     {% if q is defined and q|trim %}
         Search is active for "<strong>{{ q }}</strong>".

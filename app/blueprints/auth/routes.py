@@ -1,4 +1,5 @@
 from bson import ObjectId
+from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app.extensions import mongo
 from app.utils.security import verify_password
@@ -251,23 +252,98 @@ def register_farmer():
             'activities': request.form.getlist('activities'),
             'agri_sub_categories': request.form.getlist('agri_sub_categories'),
         }
+
         if not form['centre_uid'] or not form['mitra_uid']:
             flash('Centre UID and UFC Mitra UID are mandatory for farmer registration.', 'danger')
             return render_template('auth/register_farmer.html', data=form, states=states)
+
         valid, message = validate_farmer_mapping(form['centre_uid'], form['mitra_uid'])
         if not valid:
             flash(message, 'danger')
             return render_template('auth/register_farmer.html', data=form, states=states)
+
         if mongo.db.users.find_one({'phone': form['contact_no']}):
             flash('Phone number already registered.', 'danger')
             return render_template('auth/register_farmer.html', data=form, states=states)
+
+        profile_photo_file = request.files.get('profile_photo')
+
+        if not profile_photo_file or not profile_photo_file.filename:
+            flash('Farmer profile photo is mandatory.', 'danger')
+            return render_template('auth/register_farmer.html', data=form, states=states)
+
+        if profile_photo_file and profile_photo_file.filename:
+            allowed_image_types = {
+                'image/jpeg',
+                'image/png',
+                'image/jpg',
+                'image/webp'
+            }
+
+            profile_photo_file.seek(0, 2)
+            file_size = profile_photo_file.tell()
+            profile_photo_file.seek(0)
+
+            if profile_photo_file.content_type not in allowed_image_types:
+                flash('Only JPG, PNG or WEBP image files are allowed for farmer profile photo.', 'danger')
+                return render_template('auth/register_farmer.html', data=form, states=states)
+
+            if file_size > 2 * 1024 * 1024:
+                flash('Farmer profile photo must be less than or equal to 2 MB.', 'danger')
+                return render_template('auth/register_farmer.html', data=form, states=states)
+
         try:
-            create_farmer_registration(form)
+            farmer_user = create_farmer_registration(form)
         except ValueError as exc:
             flash(str(exc), 'danger')
             return render_template('auth/register_farmer.html', data=form, states=states)
+
+        if profile_photo_file and profile_photo_file.filename:
+            farmer_user_id = str(farmer_user['_id'])
+
+            farmer_master = mongo.db.farmer_master.find_one({
+                'linked_user_id': farmer_user_id
+            }) or {}
+
+            doc = store_document(
+                profile_photo_file,
+                farmer_user_id,
+                farmer_master.get('_id'),
+                farmer_user_id,
+                'farmer',
+                'Passport Size Photo'
+            )
+
+            profile_photo_path = (
+                doc.get('file_path')
+                or doc.get('filename')
+                or doc.get('file_name')
+            ) if doc else None
+
+            if profile_photo_path:
+                mongo.db.farmer_master.update_one(
+                    {'linked_user_id': farmer_user_id},
+                    {
+                        '$set': {
+                            'profile_photo': profile_photo_path,
+                            'updated_at': datetime.utcnow()
+                        }
+                    }
+                )
+
+                mongo.db.users.update_one(
+                    {'_id': farmer_user['_id']},
+                    {
+                        '$set': {
+                            'profile_photo': profile_photo_path,
+                            'updated_at': datetime.utcnow()
+                        }
+                    }
+                )
+
         flash('Farmer registration submitted. Wait for UFC Mitra validation.', 'success')
         return redirect(url_for('auth.login'))
+
     return render_template('auth/register_farmer.html', states=states)
 
 #changes by atlanta

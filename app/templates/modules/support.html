@@ -6,103 +6,144 @@
         width:100%;
         display:grid;
         gap:22px;
+        font-family:"Times New Roman", Georgia, serif;
     }
 
     .support-hero{
-        position:relative;
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
+        padding:28px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 22px 55px rgba(23,37,42,.10);
+        backdrop-filter:blur(14px);
         overflow:hidden;
-        border:1px solid var(--line, #E2E8F0);
-        border-radius:28px;
-        padding:26px;
-        background:
-            radial-gradient(circle at top right, rgba(79,70,229,.10), transparent 34%),
-            linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
-        box-shadow:var(--shadowSoft, 0 16px 40px rgba(15,23,42,.08));
     }
 
     .support-title-row{
         display:flex;
         align-items:flex-start;
         justify-content:space-between;
-        gap:18px;
+        gap:20px;
         flex-wrap:wrap;
     }
 
     .support-title-left{
         display:flex;
-        align-items:center;
-        gap:14px;
+        align-items:flex-start;
+        gap:12px;
+        min-width:0;
+        flex:1 1 auto;
     }
 
     .support-back{
+        display:none;
         width:42px;
         height:42px;
-        border:1px solid var(--line, #E2E8F0);
-        border-radius:15px;
-        background:#FFFFFF;
-        color:var(--primaryText, #4338CA);
-        display:none;
+        border:none;
+        border-radius:14px;
         align-items:center;
         justify-content:center;
-        font-size:1.5rem;
-        font-weight:900;
+        background:rgba(228,247,234,.82);
+        color:#3B7D55;
+        font-size:1.65rem;
+        font-weight:700;
         cursor:pointer;
-        box-shadow:0 10px 24px rgba(15,23,42,.08);
+        box-shadow:0 8px 20px rgba(95,168,120,.12);
+        transition:all .2s ease;
+        flex:0 0 auto;
+        line-height:1;
+    }
+
+    .support-back:hover{
+        background:#5FA878;
+        color:#fff;
+        transform:translateX(-2px);
+    }
+
+    .support-title{
+        min-width:0;
+    }
+
+    .support-kicker{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:30px;
+        padding:6px 14px;
+        margin-bottom:10px;
+        border-radius:999px;
+        background:rgba(228,247,234,.72);
+        color:#3B7D55;
+        border:1px solid rgba(95,168,120,.22);
+        font-size:.82rem;
+        font-weight:800;
+        letter-spacing:.08em;
+        text-transform:uppercase;
     }
 
     .support-title h2{
         margin:0;
-        color:var(--ink, #0F172A);
-        font-size:clamp(1.45rem, 2.3vw, 2rem);
-        font-weight:900;
-        letter-spacing:-.03em;
+        color:#17252A;
+        font-size:clamp(1.45rem, 2.4vw, 2.1rem);
+        font-weight:800;
+        line-height:1.2;
+        letter-spacing:.2px;
+        white-space:normal;
+        overflow-wrap:anywhere;
+        word-break:break-word;
     }
 
     .support-title p{
-        margin:6px 0 0;
-        color:var(--muted, #475569);
-        font-size:.98rem;
-        line-height:1.55;
+        margin:10px 0 0;
+        color:#64748B;
+        font-size:1rem;
+        line-height:1.6;
+        font-weight:600;
+        max-width:720px;
     }
 
     .support-contact-grid{
         display:grid;
         grid-template-columns:repeat(2, minmax(180px, 1fr));
         gap:12px;
-        min-width:min(420px, 100%);
+        min-width:min(430px, 100%);
     }
 
     .support-contact-card{
-        border:1px solid var(--line, #E2E8F0);
+        border:1px solid rgba(220,238,226,.95);
         border-radius:18px;
-        padding:14px 16px;
+        padding:15px 16px;
         background:#FFFFFF;
-        box-shadow:0 12px 28px rgba(15,23,42,.06);
+        box-shadow:0 12px 28px rgba(23,37,42,.05);
     }
 
     .support-contact-card span{
         display:block;
-        color:var(--muted2, #64748B);
+        color:#64748B;
         font-size:.78rem;
         font-weight:800;
         text-transform:uppercase;
         letter-spacing:.08em;
-        margin-bottom:5px;
+        margin-bottom:6px;
     }
 
     .support-contact-card strong{
-        color:var(--ink, #0F172A);
+        color:#17252A;
         font-size:1rem;
+        font-weight:800;
         word-break:break-word;
     }
 
     .support-form-card,
     .support-table-card{
-        border:1px solid var(--line, #E2E8F0);
-        border-radius:28px;
-        background:#FFFFFF;
-        box-shadow:var(--shadowSoft, 0 16px 40px rgba(15,23,42,.08));
+        width:100%;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:26px;
         padding:24px;
+        background:rgba(255,255,255,.92);
+        box-shadow:0 18px 45px rgba(15,23,42,.08);
+        overflow:hidden;
     }
 
     .section-head{
@@ -116,28 +157,36 @@
 
     .section-head h3{
         margin:0;
-        color:var(--ink, #0F172A);
-        font-size:1.2rem;
-        font-weight:900;
+        color:#17252A;
+        font-size:clamp(1.22rem, 1.8vw, 1.5rem);
+        font-weight:800;
+        line-height:1.25;
     }
 
     .section-head p{
-        margin:5px 0 0;
-        color:var(--muted, #475569);
-        font-size:.92rem;
+        margin:6px 0 0;
+        color:#64748B;
+        font-size:.95rem;
+        line-height:1.5;
+        font-weight:600;
     }
 
     .ticket-form{
         display:grid;
         grid-template-columns:repeat(2, minmax(0, 1fr));
         gap:16px;
+        padding:22px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,251,247,.92));
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
     }
 
     .ticket-form label{
         display:grid;
         gap:8px;
-        color:var(--text, #334155);
-        font-size:.92rem;
+        color:#17252A;
+        font-size:1rem;
         font-weight:800;
     }
 
@@ -152,14 +201,22 @@
     .update-form textarea,
     .search-box input{
         width:100%;
-        border:1px solid var(--line, #E2E8F0);
-        border-radius:15px;
-        background:#F8FAFC;
-        color:var(--ink, #0F172A);
-        padding:12px 14px;
-        font-size:.95rem;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:14px;
+        background:#fff;
+        color:#334155;
+        padding:11px 14px;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
         outline:none;
-        transition:.18s ease;
+        transition:all .2s ease;
+    }
+
+    .ticket-form input,
+    .ticket-form select,
+    .search-box input,
+    .update-form select{
+        min-height:42px;
     }
 
     .ticket-form textarea,
@@ -175,36 +232,87 @@
     .update-form select:focus,
     .update-form textarea:focus,
     .search-box input:focus{
-        border-color:var(--primary, #4F46E5);
-        box-shadow:0 0 0 4px var(--primarySoft, #EEF2FF);
-        background:#FFFFFF;
+        border-color:rgba(95,168,120,.58);
+        box-shadow:0 0 0 4px rgba(95,168,120,.12);
     }
 
     .support-btn{
-        border:0;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-height:42px;
+        padding:9px 20px;
+        border:none;
         border-radius:999px;
-        padding:12px 22px;
-        background:var(--primary, #4F46E5);
-        color:#FFFFFF;
-        font-weight:900;
+        background:#5FA878;
+        color:#fff;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:800;
+        text-decoration:none;
         cursor:pointer;
-        box-shadow:0 14px 26px rgba(79,70,229,.20);
-        transition:.18s ease;
+        box-shadow:0 12px 26px rgba(95,168,120,.22);
+        transition:all .2s ease;
+        white-space:nowrap;
     }
 
     .support-btn:hover{
-        background:var(--primaryDark, #3730A3);
+        background:#3B7D55;
+        color:#fff;
         transform:translateY(-1px);
     }
 
     .support-btn.soft{
-        background:var(--primarySoft, #EEF2FF);
-        color:var(--primaryText, #4338CA);
+        background:#FEE2E2;
+        color:#B91C1C;
+        border:none;
         box-shadow:none;
     }
 
     .support-btn.soft:hover{
-        background:var(--primaryRing, #C7D2FE);
+        background:#B91C1C;
+        color:#fff;
+    }
+
+    .table-controls{
+        display:flex;
+        align-items:flex-end;
+        justify-content:space-between;
+        gap:16px;
+        margin-bottom:16px;
+        flex-wrap:wrap;
+    }
+
+    .pagination-size{
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+        color:#425466;
+        font-weight:800;
+    }
+
+    .pagination-size select{
+        width:120px;
+        min-height:42px;
+        padding:8px 12px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        background:#fff;
+        color:#334155;
+        font-family:"Times New Roman", Georgia, serif;
+        font-size:1rem;
+        font-weight:800;
+        outline:none;
+    }
+
+    .table-info{
+        margin-bottom:16px;
+        padding:10px 16px;
+        border:1px solid rgba(95,168,120,.18);
+        border-radius:16px;
+        background:rgba(228,247,234,.42);
+        color:#3B7D55;
+        font-weight:800;
     }
 
     .search-box{
@@ -212,69 +320,160 @@
         align-items:center;
         gap:10px;
         flex-wrap:wrap;
+        margin:0;
     }
 
     .search-box input{
-        width:min(360px, 100%);
-        min-height:44px;
+        width:320px;
+        max-width:100%;
     }
 
     .ticket-table-wrap{
         width:100%;
         overflow-x:auto;
-        border:1px solid var(--line, #E2E8F0);
-        border-radius:20px;
+        overflow-y:hidden;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:22px;
+        background:#fff;
+        box-shadow:0 14px 32px rgba(23,37,42,.06);
+        scrollbar-width:auto;
+        scrollbar-color:#94A3B8 #F1F5F9;
+    }
+
+    .ticket-table-wrap::-webkit-scrollbar{
+        height:12px;
+    }
+
+    .ticket-table-wrap::-webkit-scrollbar-track{
+        background:#F1F5F9;
+        border-radius:999px;
+    }
+
+    .ticket-table-wrap::-webkit-scrollbar-thumb{
+        background:#94A3B8;
+        border-radius:999px;
+        border:2px solid #F1F5F9;
     }
 
     .ticket-table{
         width:100%;
-        min-width:1050px;
+        min-width:1320px;
         border-collapse:separate;
         border-spacing:0;
+        table-layout:auto;
+        background:#fff;
+    }
+
+    .ticket-table th,
+    .ticket-table td{
+        padding:13px 14px;
+        border-right:1px solid rgba(220,238,226,.85);
+        border-bottom:1px solid rgba(220,238,226,.85);
+        color:#425466;
+        font-size:.98rem;
+        line-height:1.35;
+        text-align:left;
+        vertical-align:top;
+        white-space:normal;
+        word-break:break-word;
+        overflow-wrap:anywhere;
     }
 
     .ticket-table th{
-        background:#F8FAFC;
-        color:var(--muted, #475569);
-        font-size:.78rem;
-        font-weight:900;
-        text-transform:uppercase;
-        letter-spacing:.07em;
-        padding:14px;
-        text-align:left;
-        border-bottom:1px solid var(--line, #E2E8F0);
+        color:#17252A;
+        font-weight:800;
+        background:rgba(228,247,234,.92);
+        vertical-align:middle;
         white-space:nowrap;
     }
 
-    .ticket-table td{
-        padding:14px;
-        border-bottom:1px solid var(--line, #E2E8F0);
-        color:var(--text, #334155);
-        font-size:.92rem;
-        vertical-align:top;
+    .ticket-table tr:hover td{
+        background:rgba(246,251,247,.9);
     }
 
     .ticket-table tr:last-child td{
-        border-bottom:0;
+        border-bottom:none;
+    }
+
+    .ticket-table th:last-child,
+    .ticket-table td:last-child{
+        border-right:none;
+    }
+
+    .serial-col,
+    .serial-cell{
+        width:76px;
+        min-width:76px;
+        max-width:76px;
+        text-align:center !important;
+        color:#3B7D55 !important;
+        font-weight:900;
+    }
+
+    .ticket-col{
+        width:180px;
+        min-width:180px;
+    }
+
+    .user-col{
+        width:210px;
+        min-width:210px;
+    }
+
+    .role-col{
+        width:120px;
+        min-width:120px;
+    }
+
+    .subject-col{
+        width:190px;
+        min-width:190px;
+    }
+
+    .problem-col,
+    .progress-col{
+        width:250px;
+        min-width:250px;
+    }
+
+    .small-col{
+        width:130px;
+        min-width:130px;
+    }
+
+    .created-col{
+        width:190px;
+        min-width:190px;
+    }
+
+    .update-col{
+        width:310px;
+        min-width:310px;
     }
 
     .ticket-ref{
         display:inline-flex;
+        max-width:100%;
         padding:6px 10px;
         border-radius:999px;
-        background:var(--primarySoft, #EEF2FF);
-        color:var(--primaryText, #4338CA);
+        background:rgba(228,247,234,.72);
+        color:#3B7D55;
+        border:1px solid rgba(95,168,120,.18);
         font-weight:900;
         white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
     }
 
     .role-pill,
     .priority-pill,
     .status-pill{
         display:inline-flex;
+        align-items:center;
+        justify-content:center;
         padding:6px 10px;
         border-radius:999px;
-        font-size:.78rem;
+        font-size:.82rem;
         font-weight:900;
         white-space:nowrap;
     }
@@ -320,35 +519,91 @@
     }
 
     .problem-text{
-        max-width:280px;
         white-space:normal;
         line-height:1.45;
     }
 
     .update-form{
-        min-width:280px;
         display:grid;
         gap:10px;
+        min-width:0;
     }
 
     .update-form textarea{
         min-height:76px;
-        font-size:.88rem;
+        font-size:.92rem;
+    }
+
+    .update-form .support-btn{
+        width:100%;
     }
 
     .empty-state{
         padding:30px;
         text-align:center;
-        color:var(--muted, #475569);
+        color:#64748B;
         font-weight:800;
     }
 
-    @media(max-width:768px){
+    .pagination-bar{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:8px;
+        margin-top:18px;
+        flex-wrap:wrap;
+    }
+
+    .page-btn{
+        min-width:38px;
+        height:38px;
+        padding:0 12px;
+        border:1px solid rgba(95,168,120,.25);
+        border-radius:12px;
+        color:#3B7D55;
+        background:rgba(228,247,234,.58);
+        font-family:"Times New Roman", Georgia, serif;
+        font-weight:800;
+        cursor:pointer;
+        transition:all .2s ease;
+    }
+
+    .page-btn:hover,
+    .page-btn.active{
+        color:#fff;
+        background:#5FA878;
+        border-color:#5FA878;
+    }
+
+    .page-btn:disabled{
+        opacity:.45;
+        cursor:not-allowed;
+    }
+
+    @media(max-width:860px){
         .support-hero,
         .support-form-card,
         .support-table-card{
-            padding:18px;
+            padding:22px;
             border-radius:22px;
+        }
+
+        .support-back{
+            display:inline-flex;
+        }
+
+        .support-title-row{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .support-title-left{
+            width:100%;
+            align-items:flex-start;
+        }
+
+        .support-title h2{
+            font-size:clamp(1.25rem, 5vw, 1.7rem);
         }
 
         .support-contact-grid,
@@ -356,20 +611,163 @@
             grid-template-columns:1fr;
         }
 
-        .support-back{
-            display:inline-flex;
+        .ticket-form{
+            padding:18px;
         }
 
-        .search-box{
-            width:100%;
+        .ticket-form .full{
+            grid-column:1;
         }
 
+        .section-head{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .search-box,
         .search-box input,
         .search-box button,
         .search-box a{
             width:100%;
+        }
+
+        .table-controls{
+            flex-direction:column;
+            align-items:stretch;
+        }
+
+        .ticket-table-wrap{
+            border:none;
+            box-shadow:none;
+            background:transparent;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+        }
+
+        .ticket-table{
+            display:flex;
+            width:max-content;
+            min-width:100%;
+            background:transparent;
+        }
+
+        .ticket-table thead{
+            display:none;
+        }
+
+        .ticket-table tbody{
+            display:flex;
+            gap:14px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:4px 2px 8px;
+        }
+
+        .ticket-table tbody tr{
+            width:292px;
+            min-width:292px;
+            max-width:292px;
+            flex:0 0 auto;
+            display:block;
+            border:1px solid rgba(220,238,226,.95);
+            border-radius:18px;
+            background:#fff;
+            padding:15px;
+            box-shadow:0 10px 24px rgba(23,37,42,.06);
+        }
+
+        .ticket-table td{
+            display:block;
+            width:100%;
+            min-width:0;
+            max-width:none;
+            height:auto;
+            border:none;
+            padding:7px 0;
+            white-space:normal;
+            word-break:break-word;
+            overflow:visible;
+            background:transparent;
+            text-align:left !important;
+        }
+
+        .ticket-table td::before{
+            content:attr(data-label);
+            display:block;
+            color:#64748B;
+            font-size:.85rem;
+            font-weight:800;
+            margin-bottom:3px;
+        }
+
+        .ticket-table td[colspan]{
+            text-align:center !important;
+            min-height:auto;
+        }
+
+        .ticket-table td[colspan]::before{
+            display:none;
+        }
+
+        .ticket-table tr:hover td{
+            background:transparent;
+        }
+
+        .serial-cell{
+            text-align:left !important;
+        }
+
+        .update-form{
+            min-width:0;
+        }
+
+        .pagination-bar{
             justify-content:center;
-            text-align:center;
+        }
+    }
+
+    @media(max-width:420px){
+        .support-hero,
+        .support-form-card,
+        .support-table-card{
+            padding:16px;
+            border-radius:18px;
+        }
+
+        .support-back{
+            width:38px;
+            height:38px;
+            border-radius:12px;
+            font-size:1.45rem;
+        }
+
+        .support-title-left{
+            gap:10px;
+        }
+
+        .support-title h2{
+            font-size:1.22rem;
+            line-height:1.25;
+        }
+
+        .support-title p{
+            font-size:.9rem;
+        }
+
+        .support-kicker{
+            font-size:.72rem;
+            padding:5px 11px;
+        }
+
+        .ticket-form{
+            padding:15px;
+            border-radius:18px;
+        }
+
+        .ticket-table tbody tr{
+            width:266px;
+            min-width:266px;
+            max-width:266px;
         }
     }
 </style>
@@ -382,6 +780,8 @@
                 <button type="button" class="support-back" onclick="history.back()" aria-label="Back">←</button>
 
                 <div class="support-title">
+                    <span class="support-kicker">Support Desk</span>
+
                     {% if session.get('role') == 'super_admin' %}
                         <h2>Support Ticket Control Panel</h2>
                         <p>View all raised tickets and update the progress/resolution from one place.</p>
@@ -491,26 +891,47 @@
             </form>
         </div>
 
-        <div class="ticket-table-wrap">
-            <table class="ticket-table">
+        <div class="table-controls">
+            <label class="pagination-size">
+                <span>Show entries</span>
+                <select id="supportRowsPerPage">
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="250">250</option>
+                    <option value="1000">1000</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="table-info" id="supportPaginationInfo"></div>
+
+        {% if q %}
+        <div class="table-info">
+            Search result for "{{ q }}"
+        </div>
+        {% endif %}
+
+        <div class="ticket-table-wrap" id="supportTableScroll">
+            <table class="ticket-table" id="supportTicketsTable">
                 <thead>
                     <tr>
-                        <th>Ticket</th>
+                        <th class="serial-col">Sl. No.</th>
+                        <th class="ticket-col">Ticket</th>
 
                         {% if session.get('role') == 'super_admin' %}
-                            <th>User</th>
-                            <th>Role</th>
+                            <th class="user-col">User</th>
+                            <th class="role-col">Role</th>
                         {% endif %}
 
-                        <th>Subject</th>
-                        <th>Problem</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Progress</th>
-                        <th>Created</th>
+                        <th class="subject-col">Subject</th>
+                        <th class="problem-col">Problem</th>
+                        <th class="small-col">Priority</th>
+                        <th class="small-col">Status</th>
+                        <th class="progress-col">Progress</th>
+                        <th class="created-col">Created</th>
 
                         {% if session.get('role') == 'super_admin' %}
-                            <th>Update</th>
+                            <th class="update-col">Update</th>
                         {% endif %}
                     </tr>
                 </thead>
@@ -518,51 +939,54 @@
                 <tbody>
                 {% for t in tickets %}
                     <tr>
-                        <td>
+                        <td class="serial-cell" data-label="Sl. No."></td>
+
+                        <td data-label="Ticket">
                             <span class="ticket-ref">{{ t.ticket_ref or ('TCK-' ~ t._id|string) }}</span>
                         </td>
 
                         {% if session.get('role') == 'super_admin' %}
-                            <td>
+                            <td data-label="User">
                                 <strong>{{ t.user_name or 'Unknown User' }}</strong><br>
                                 <small>{{ t.username or '' }}</small><br>
                                 <small>{{ t.phone or '' }} {{ t.email or '' }}</small>
                             </td>
-                            <td>
+
+                            <td data-label="Role">
                                 <span class="role-pill">{{ t.role or '-' }}</span>
                             </td>
                         {% endif %}
 
-                        <td>
+                        <td data-label="Subject">
                             <strong>{{ t.subject }}</strong><br>
                             <small>{{ t.problem_type or '-' }}</small>
                         </td>
 
-                        <td class="problem-text">{{ t.message }}</td>
+                        <td data-label="Problem" class="problem-text">{{ t.message }}</td>
 
-                        <td>
+                        <td data-label="Priority">
                             <span class="priority-pill priority-{{ t.priority or 'medium' }}">
                                 {{ (t.priority or 'medium')|replace('_', ' ')|title }}
                             </span>
                         </td>
 
-                        <td>
+                        <td data-label="Status">
                             <span class="status-pill status-{{ t.status or 'open' }}">
                                 {{ (t.status or 'open')|replace('_', ' ')|title }}
                             </span>
                         </td>
 
-                        <td class="problem-text">
+                        <td data-label="Progress" class="problem-text">
                             {{ t.progress or 'Ticket received' }}
                             {% if t.resolution_note %}
                                 <br><small><strong>Resolution:</strong> {{ t.resolution_note }}</small>
                             {% endif %}
                         </td>
 
-                        <td>{{ t.created_at }}</td>
+                        <td data-label="Created">{{ t.created_at }}</td>
 
                         {% if session.get('role') == 'super_admin' %}
-                        <td>
+                        <td data-label="Update">
                             <form method="post"
                                   action="{{ url_for('modules.update_support_ticket', ticket_id=t._id) }}"
                                   class="update-form">
@@ -585,7 +1009,7 @@
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="{% if session.get('role') == 'super_admin' %}10{% else %}7{% endif %}">
+                        <td colspan="{% if session.get('role') == 'super_admin' %}11{% else %}8{% endif %}">
                             <div class="empty-state">No support tickets found.</div>
                         </td>
                     </tr>
@@ -593,7 +1017,129 @@
                 </tbody>
             </table>
         </div>
+
+        <div class="pagination-bar" id="supportPaginationBar"></div>
     </section>
 </div>
+
+<script>
+(function(){
+    const table = document.getElementById('supportTicketsTable');
+    const select = document.getElementById('supportRowsPerPage');
+    const info = document.getElementById('supportPaginationInfo');
+    const pager = document.getElementById('supportPaginationBar');
+    const scrollBox = document.getElementById('supportTableScroll');
+
+    if(!table || !select || !info || !pager) return;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const noData = rows.length === 1 && rows[0].querySelector('td[colspan]');
+    let currentPage = 1;
+
+    function renderPagination(){
+        const perPage = parseInt(select.value, 10);
+        const totalRows = noData ? 0 : rows.length;
+
+        rows.forEach(row => row.style.display = 'none');
+
+        if(noData || totalRows === 0){
+            info.textContent = 'No support tickets found';
+            pager.innerHTML = '';
+            rows.forEach(row => row.style.display = '');
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+        currentPage = Math.min(currentPage, totalPages);
+
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+
+        rows.forEach((row, index) => {
+            row.style.display = index >= start && index < end ? '' : 'none';
+
+            const serialCell = row.querySelector('.serial-cell');
+            if(serialCell){
+                serialCell.textContent = index + 1;
+            }
+        });
+
+        info.textContent = `Showing ${start + 1} to ${Math.min(end, totalRows)} of ${totalRows} entries`;
+
+        pager.innerHTML = '';
+
+        const prev = document.createElement('button');
+        prev.type = 'button';
+        prev.className = 'page-btn';
+        prev.textContent = 'Prev';
+        prev.disabled = currentPage === 1;
+        prev.onclick = () => {
+            currentPage--;
+            renderPagination();
+        };
+        pager.appendChild(prev);
+
+        for(let i = 1; i <= totalPages; i++){
+            if(i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1){
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+                btn.textContent = i;
+                btn.onclick = () => {
+                    currentPage = i;
+                    renderPagination();
+                };
+                pager.appendChild(btn);
+            }
+        }
+
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'page-btn';
+        next.textContent = 'Next';
+        next.disabled = currentPage === totalPages;
+        next.onclick = () => {
+            currentPage++;
+            renderPagination();
+        };
+        pager.appendChild(next);
+    }
+
+    select.addEventListener('change', function(){
+        currentPage = 1;
+        renderPagination();
+    });
+
+    if(scrollBox){
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        scrollBox.addEventListener('mousedown', function(e){
+            isDown = true;
+            startX = e.pageX - scrollBox.offsetLeft;
+            scrollLeft = scrollBox.scrollLeft;
+        });
+
+        scrollBox.addEventListener('mouseleave', function(){
+            isDown = false;
+        });
+
+        scrollBox.addEventListener('mouseup', function(){
+            isDown = false;
+        });
+
+        scrollBox.addEventListener('mousemove', function(e){
+            if(!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - scrollBox.offsetLeft;
+            const walk = (x - startX) * 1.4;
+            scrollBox.scrollLeft = scrollLeft - walk;
+        });
+    }
+
+    renderPagination();
+})();
+</script>
 
 {% endblock %}

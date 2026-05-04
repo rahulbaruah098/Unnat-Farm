@@ -138,11 +138,42 @@
 
                     <div class="market-footer">
     <div>
-        <span class="price">₹{{ p.price or '-' }}</span>
-        <small>AVPL Catalogue Product</small>
-    </div>
+    <span class="price">₹{{ p.price or '-' }}</span>
+
+    {% set avpl_stock = (
+        p.available_quantity
+        if p.available_quantity is defined and p.available_quantity is not none
+        else p.quantity
+        if p.quantity is defined and p.quantity is not none
+        else p.stock_quantity
+        if p.stock_quantity is defined and p.stock_quantity is not none
+        else p.stock
+        if p.stock is defined and p.stock is not none
+        else none
+    ) %}
+
+    {% if avpl_stock is not none and avpl_stock|float <= 0 %}
+        <small class="stock-text stock-out">Out of Stock</small>
+    {% elif avpl_stock is not none %}
+        <small class="stock-text">Available: {{ avpl_stock }}</small>
+    {% else %}
+        <small class="stock-text">Available: -</small>
+    {% endif %}
+</div>
 
     {% if session.get('role') == 'farmer' %}
+    {% if avpl_stock is not none and avpl_stock|float <= 0 %}
+        <form class="buy-form">
+            <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="Qty"
+                disabled
+            >
+            <button type="button" disabled>Buy</button>
+        </form>
+    {% else %}
         <form method="POST" action="{{ url_for('modules.place_farmer_order') }}" class="buy-form">
             <input type="hidden" name="product_id" value="{{ p._id }}">
             <input type="hidden" name="product_name" value="{{ p.name }}">
@@ -151,6 +182,7 @@
                 type="number"
                 step="0.01"
                 min="0.01"
+                {% if avpl_stock is not none %}max="{{ avpl_stock }}"{% endif %}
                 name="quantity"
                 placeholder="Qty"
                 required
@@ -158,6 +190,7 @@
             <button type="submit">Buy</button>
         </form>
     {% endif %}
+{% endif %}
 </div>
                 </div>
             </div>
@@ -236,27 +269,12 @@
 
 .marketplace-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
-    gap:18px;
-    margin-top:16px;
-}
-
-@media(min-width:1200px){
-    .marketplace-grid{
-        grid-template-columns:repeat(4, minmax(0, 1fr));
-    }
-}
-
-@media(min-width:861px) and (max-width:1199px){
-    .marketplace-grid{
-        grid-template-columns:repeat(3, minmax(0, 1fr));
-    }
-}
-
-@media(min-width:521px) and (max-width:860px){
-    .marketplace-grid{
-        grid-template-columns:repeat(2, minmax(0, 1fr));
-    }
+    grid-template-columns:repeat(auto-fit, minmax(min(100%, clamp(235px, 30vw, 320px)), 1fr));
+    gap:clamp(12px, 1.4vw, 20px);
+    margin-top:clamp(12px, 1.2vw, 18px);
+    width:100%;
+    max-width:100%;
+    overflow:visible;
 }
 
 .market-card{
@@ -268,8 +286,9 @@
     transition:.2s ease;
     display:flex;
     flex-direction:column;
-    min-height:430px;
+    min-height:100%;
     width:100%;
+    max-width:100%;
 }
 
 .market-card:hover{
@@ -279,7 +298,7 @@
 
 .market-img-wrap{
     width:100%;
-    height:250px;
+    height:clamp(150px, 18vw, 230px);
     background:#F1F5F9;
     display:flex;
     align-items:center;
@@ -294,18 +313,11 @@
     background:#F1F5F9;
 }
 
-.no-image{
-    width:100%;
-    height:260px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#64748B;
-    font-weight:700;
-    background:#F1F5F9;
-}
 
 .no-image{
+    width:100%;
+    height:100%;
+    min-height:150px;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -334,13 +346,14 @@
 }
 
 .market-footer{
-    display:flex;
-    justify-content:space-between;
-    gap:12px;
-    align-items:flex-end;
+    display:grid;
+    grid-template-columns:minmax(0, 1fr);
+    gap:clamp(8px, .9vw, 12px);
+    align-items:stretch;
     margin-top:auto;
-    padding-top:12px;
+    padding-top:clamp(10px, 1vw, 14px);
     border-top:1px solid #E2E8F0;
+    min-width:0;
 }
 
 .price{
@@ -375,26 +388,33 @@
 }
 
 .buy-form{
-    display:flex;
-    gap:8px;
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    gap:clamp(7px, .8vw, 10px);
     align-items:center;
+    width:100%;
+    min-width:0;
 }
 
 .buy-form input{
-    width:76px;
-    padding:8px 10px;
+    width:100%;
+    min-width:0;
+    min-height:clamp(38px, 3vw, 44px);
+    padding:9px 10px;
     border:1px solid #CBD5E1;
-    border-radius:10px;
+    border-radius:clamp(10px, .8vw, 12px);
 }
 
 .buy-form button{
-    padding:8px 14px;
+    min-height:clamp(38px, 3vw, 44px);
+    padding:9px clamp(13px, 1.1vw, 18px);
     border:none;
-    border-radius:10px;
+    border-radius:clamp(10px, .8vw, 12px);
     background:#059669;
     color:#fff;
     font-weight:700;
     cursor:pointer;
+    white-space:nowrap;
 }
 
 .buy-form button:hover{
@@ -466,6 +486,27 @@
     cursor:not-allowed;
 }
 
+@media(max-width:720px){
+    .marketplace-grid{
+        grid-template-columns:minmax(0, 1fr);
+    }
+
+    .market-footer{
+        grid-template-columns:1fr;
+        align-items:stretch;
+    }
+
+    .buy-form{
+        grid-template-columns:minmax(0, 1fr) auto;
+        width:100%;
+    }
+
+    .stock-out{
+        width:max-content;
+        max-width:100%;
+    }
+}
+
 @media(max-width:860px){
     .buy-search-wrap{
         grid-template-columns:1fr auto auto;
@@ -497,21 +538,61 @@
     }
 
     .marketplace-grid{
-        grid-template-columns:1fr;
+        grid-template-columns:minmax(0, 1fr);
+        gap:14px;
+    }
+
+    .market-card{
+        border-radius:18px;
+    }
+
+    .market-img-wrap{
+        height:160px;
+    }
+
+    .market-body{
+        padding:14px;
+    }
+
+    .market-body h4{
+        font-size:1rem;
+        word-break:break-word;
+    }
+
+    .market-body p{
+        font-size:.88rem;
+        word-break:break-word;
     }
 
     .market-footer{
-        flex-direction:column;
+        grid-template-columns:1fr;
         align-items:stretch;
     }
 
     .buy-form{
         width:100%;
+        grid-template-columns:1fr auto;
+    }
+}
+
+.market-body p{
+    overflow-wrap:anywhere;
+}
+
+
+@media(max-width:1180px){
+    .marketplace-grid{
+        grid-template-columns:repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    }
+}
+
+@media(max-width:560px){
+    .marketplace-grid{
+        grid-template-columns:minmax(0, 1fr);
     }
 
-    .buy-form input{
-        flex:1;
-        width:auto;
+    .buy-form{
+        grid-template-columns:minmax(0, 1fr) auto;
     }
 }
 </style>

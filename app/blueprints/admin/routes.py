@@ -1,6 +1,6 @@
 from bson import ObjectId
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from app.extensions import mongo
 from app.utils.decorators import login_required, roles_required
 from app.utils.helpers import now_utc
@@ -137,22 +137,52 @@ def delete_user(user_id):
 @roles_required('super_admin')
 def reset_user_password(user_id):
     user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+
     if not user:
         flash('User not found.', 'danger')
         return redirect(url_for('admin.users'))
+
     if request.method == 'POST':
         new_password = request.form.get('password', '').strip()
         confirm_password = request.form.get('confirm_password', '').strip()
+
         if not new_password:
             flash('New password is required.', 'danger')
-            return render_template('admin/reset_password.html', user=user)
+            return redirect(url_for('admin.reset_user_password', user_id=user_id))
+
+        if len(new_password) < 6:
+            flash('Password must be at least 6 characters long.', 'danger')
+            return redirect(url_for('admin.reset_user_password', user_id=user_id))
+
         if new_password != confirm_password:
             flash('Password and confirm password do not match.', 'danger')
-            return render_template('admin/reset_password.html', user=user)
-        mongo.db.users.update_one({'_id': ObjectId(user_id)}, {'$set': {'password_hash': generate_password_hash(new_password), 'updated_at': now_utc()}})
+            return redirect(url_for('admin.reset_user_password', user_id=user_id))
+
+        old_password_hash = (
+            user.get('password_hash')
+            or user.get('password')
+            or user.get('passwordHash')
+            or ''
+        )
+
+        if old_password_hash and check_password_hash(old_password_hash, new_password):
+            flash('New password cannot be the same as the current password.', 'danger')
+            return redirect(url_for('admin.reset_user_password', user_id=user_id))
+
+        mongo.db.users.update_one(
+            {'_id': ObjectId(user_id)},
+            {
+                '$set': {
+                    'password_hash': generate_password_hash(new_password),
+                    'updated_at': now_utc()
+                }
+            }
+        )
+
         log_action(session['user_id'], 'reset_password', 'user', user_id)
         flash('Password reset successfully.', 'success')
         return redirect(url_for('admin.users'))
+
     return render_template('admin/reset_password.html', user=user)
 
 
@@ -224,12 +254,20 @@ def add_product():
             )
             image_name = doc['filename'] if doc else None
 
+        available_quantity = request.form.get('available_quantity', '').strip()
+
+        try:
+            available_quantity = float(available_quantity or 0)
+        except ValueError:
+            available_quantity = 0
+
         mongo.db.products.insert_one({
             'name': request.form.get('name', '').strip(),
             'category': request.form.get('category', '').strip(),
             'type': request.form.get('type', '').strip(),
             'available_centres': request.form.getlist('available_centres'),
             'price': request.form.get('price', '').strip(),
+            'available_quantity': available_quantity,
             'image_name': image_name,
             'created_by': session['user_id'],
             'created_at': now_utc()
@@ -272,7 +310,12 @@ def product_categories():
         flash('Product category added.', 'success')
         return redirect(url_for('admin.product_categories'))
 
-    categories = list(mongo.db.product_categories.find({}).sort('name', 1))
+    categories = list(
+    mongo.db.product_categories.find({}).sort([
+        ('created_at', 1),
+        ('_id', 1)
+    ])
+)
     return render_template('admin/product_categories.html', categories=categories)
 
 @admin_bp.route('/products')
@@ -299,14 +342,119 @@ def product_list():
         centres=centres
     )
 
+@admin_bp.route('/products/<product_id>/restock', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def restock_product(product_id):
+    product = mongo.db.products.find_one({'_id': ObjectId(product_id)})
+
+    if not product:
+        flash('Product not found.', 'danger')
+        return redirect(url_for('admin.product_list'))
+
+    restock_quantity_raw = request.form.get('restock_quantity', '').strip()
+
+    try:
+        restock_quantity = float(restock_quantity_raw or 0)
+    except ValueError:
+        restock_quantity = 0
+
+    if restock_quantity <= 0:
+        flash('Please enter a valid restock quantity greater than 0.', 'danger')
+        return redirect(url_for('admin.product_list'))
+
+    current_quantity_raw = product.get('available_quantity', 0)
+
+    try:
+        current_quantity = float(current_quantity_raw or 0)
+    except (TypeError, ValueError):
+        current_quantity = 0
+
+    new_quantity = current_quantity + restock_quantity
+
+    mongo.db.products.update_one(
+        {'_id': ObjectId(product_id)},
+        {
+            '$set': {
+                'available_quantity': new_quantity,
+                'updated_at': now_utc(),
+                'last_restock_at': now_utc(),
+                'last_restock_by': session.get('user_id')
+            },
+            '$push': {
+                'restock_history': {
+                    'quantity_added': restock_quantity,
+                    'previous_quantity': current_quantity,
+                    'new_quantity': new_quantity,
+                    'restocked_by': session.get('user_id'),
+                    'restocked_at': now_utc()
+                }
+            }
+        }
+    )
+
+    log_action(
+        session['user_id'],
+        'restock_product',
+        'product',
+        product_id,
+        metadata={
+            'quantity_added': restock_quantity,
+            'previous_quantity': current_quantity,
+            'new_quantity': new_quantity
+        }
+    )
+
+    flash(f'Product restocked successfully. New available quantity: {new_quantity:g}', 'success')
+    return redirect(url_for('admin.product_list'))
+
 @admin_bp.route('/traders/onboard', methods=['GET', 'POST'])
 @login_required
 @roles_required('sales_nelocals')
 def onboard_trader():
     if request.method == 'POST':
-        mongo.db.trader_onboarding.insert_one({'business_name': request.form.get('business_name'), 'contact_person': request.form.get('contact_person'), 'phone': request.form.get('phone'), 'address': request.form.get('address'), 'status': 'pending', 'created_by': session['user_id'], 'created_at': now_utc()})
+        business_name = request.form.get('business_name', '').strip()
+        contact_person = request.form.get('contact_person', '').strip()
+        phone = request.form.get('phone', '').strip()
+        address = request.form.get('address', '').strip()
+
+        if not business_name:
+            flash('Business name is required.', 'danger')
+            return redirect(url_for('admin.onboard_trader'))
+
+        if not contact_person:
+            flash('Contact person is required.', 'danger')
+            return redirect(url_for('admin.onboard_trader'))
+
+        if not phone:
+            flash('Phone number is required.', 'danger')
+            return redirect(url_for('admin.onboard_trader'))
+
+        if not address:
+            flash('Address is required.', 'danger')
+            return redirect(url_for('admin.onboard_trader'))
+
+        existing_phone = mongo.db.trader_onboarding.find_one({
+            'phone': phone
+        })
+
+        if existing_phone:
+            flash('This phone number is already registered with another trader.', 'danger')
+            return redirect(url_for('admin.onboard_trader'))
+
+        mongo.db.trader_onboarding.insert_one({
+            'business_name': business_name,
+            'contact_person': contact_person,
+            'phone': phone,
+            'address': address,
+            'status': 'pending',
+            'created_by': session['user_id'],
+            'created_at': now_utc()
+        })
+
         flash('Trader onboarding saved.', 'success')
         return redirect(url_for('admin.onboard_trader'))
+
     traders = list(mongo.db.trader_onboarding.find({}).sort('created_at', -1))
     return render_template('admin/trader_onboarding.html', traders=traders)
 
@@ -334,7 +482,13 @@ def mitra_bonus_settings():
 
     q = request.args.get("q", "").strip()
 
-    settings = list(mongo.db.mitra_bonus_settings.find({}).sort('created_at', -1))
+    settings = list(
+    mongo.db.mitra_bonus_settings.find({}).sort([
+        ('created_at', 1),
+        ('_id', 1)
+    ])
+)
+
 
     if q:
         q_lower = q.lower()

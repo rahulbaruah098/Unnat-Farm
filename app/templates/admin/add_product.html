@@ -374,11 +374,15 @@ select:focus{
         </label>
 
         <label>Price
-            <input type="text" name="price" required>
-        </label>
+    <input type="text" name="price" required>
+</label>
 
-        <div class="full">
-            <label>Available Centres</label>
+<label>Available Quantity
+    <input type="number" name="available_quantity" min="0" step="0.01" placeholder="Enter available quantity" required>
+</label>
+
+<div class="full">
+    <label>Available Centres</label>
 
             <div class="centre-dropdown" id="centreDropdown">
                 <button type="button" class="centre-select-display" id="centreToggle">

@@ -204,6 +204,60 @@
         font-size:.92rem;
     }
 
+    .mobile-card-list{
+        display:none;
+    }
+
+    .mobile-info-card{
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        background:#fff;
+        padding:15px;
+        box-shadow:0 10px 24px rgba(23,37,42,.06);
+        min-width:265px;
+        max-width:265px;
+        flex:0 0 265px;
+    }
+
+    .mobile-info-row{
+        display:flex;
+        flex-direction:column;
+        gap:3px;
+        padding:8px 0;
+        border-bottom:1px solid rgba(220,238,226,.75);
+    }
+
+    .mobile-info-row:last-child{
+        border-bottom:none;
+    }
+
+    .mobile-info-label{
+        color:#64748B;
+        font-size:.85rem;
+        font-weight:800;
+    }
+
+    .mobile-info-value{
+        color:#17252A;
+        font-size:1rem;
+        font-weight:800;
+        word-break:break-word;
+    }
+
+    .mobile-empty-card{
+        min-width:265px;
+        max-width:265px;
+        flex:0 0 265px;
+        padding:18px;
+        border:1px solid rgba(220,238,226,.95);
+        border-radius:18px;
+        background:#fff;
+        color:#64748B;
+        font-weight:800;
+        text-align:center;
+        box-shadow:0 10px 24px rgba(23,37,42,.06);
+    }
+
     @media(max-width:860px){
         .ufc-admin-dashboard{
             padding:22px;
@@ -225,6 +279,35 @@
 
         .table-shell{
             border-radius:18px;
+        }
+
+                .desktop-table-shell{
+            display:none;
+        }
+
+        .mobile-card-list{
+            display:flex;
+            gap:14px;
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            padding:4px 2px 10px;
+            margin-bottom:24px;
+            scrollbar-width:thin;
+            scrollbar-color:#94A3B8 #F1F5F9;
+        }
+
+        .mobile-card-list::-webkit-scrollbar{
+            height:8px;
+        }
+
+        .mobile-card-list::-webkit-scrollbar-track{
+            background:#F1F5F9;
+            border-radius:999px;
+        }
+
+        .mobile-card-list::-webkit-scrollbar-thumb{
+            background:#94A3B8;
+            border-radius:999px;
         }
     }
 
@@ -269,7 +352,7 @@
 
     <h3 class="section-title">Mitra-wise Sales</h3>
 
-    <div class="table-shell">
+<div class="table-shell desktop-table-shell">
         <table class="admin-table">
             <thead>
                 <tr>
@@ -294,9 +377,32 @@
         </table>
     </div>
 
+    <div class="mobile-card-list">
+    {% for row in data.mitra_sales %}
+        <div class="mobile-info-card">
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Mitra UID</span>
+                <span class="mobile-info-value">{{ row.mitra_uid }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Total Orders</span>
+                <span class="mobile-info-value">{{ row.total_orders }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Total Sales</span>
+                <span class="mobile-info-value amount-text">₹{{ "%.2f"|format(row.total_sales) }}</span>
+            </div>
+        </div>
+    {% else %}
+        <div class="mobile-empty-card">No Mitra sales found.</div>
+    {% endfor %}
+</div>
+
     <h3 class="section-title">Farmer-wise Sales</h3>
 
-    <div class="table-shell">
+<div class="table-shell desktop-table-shell">
         <table class="admin-table">
             <thead>
                 <tr>
@@ -323,9 +429,38 @@
         </table>
     </div>
 
+
+<div class="mobile-card-list">
+    {% for row in data.farmer_sales %}
+        <div class="mobile-info-card">
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Farmer Name</span>
+                <span class="mobile-info-value">{{ row.farmer_name }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Phone</span>
+                <span class="mobile-info-value">{{ row.farmer_phone }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Total Orders</span>
+                <span class="mobile-info-value">{{ row.total_orders }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Total Sales</span>
+                <span class="mobile-info-value amount-text">₹{{ "%.2f"|format(row.total_sales) }}</span>
+            </div>
+        </div>
+    {% else %}
+        <div class="mobile-empty-card">No Farmer sales found.</div>
+    {% endfor %}
+</div>
+
     <h3 class="section-title">Recent Orders</h3>
 
-    <div class="table-shell">
+    <div class="table-shell desktop-table-shell">
         <table class="admin-table">
             <thead>
                 <tr>
@@ -351,6 +486,37 @@
             </tbody>
         </table>
     </div>
+
+    <div class="mobile-card-list">
+    {% for o in data.orders %}
+        <div class="mobile-info-card">
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Status</span>
+                <span class="mobile-info-value">
+                    <span class="status-pill">{{ o.status }}</span>
+                </span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Product</span>
+                <span class="mobile-info-value">{{ o.product_name }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Quantity</span>
+                <span class="mobile-info-value">{{ o.quantity }}</span>
+            </div>
+
+            <div class="mobile-info-row">
+                <span class="mobile-info-label">Farmer / Source</span>
+                <span class="mobile-info-value">{{ o.farmer_contact or o.source }}</span>
+            </div>
+        </div>
+    {% else %}
+        <div class="mobile-empty-card">No orders yet.</div>
+    {% endfor %}
+</div>
+
 </div>
 
 {% endblock %}
