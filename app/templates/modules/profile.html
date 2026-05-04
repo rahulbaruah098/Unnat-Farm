@@ -350,7 +350,7 @@
 <div class="page-card">
     <div class="title-row">
         <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
-        <h2>My Profile</h2>
+<h2>{{ profile_title or 'My Profile' }}</h2>
     </div>
     {% if user %}
 
@@ -401,88 +401,90 @@
       </tbody>
     </table>
 
-    <h3>Request Document / Photo Update</h3>
+        {% if not readonly_profile %}
+        <h3>Request Document / Photo Update</h3>
 
-    {% if pending_profile_update %}
-        <p>
-            Your profile update request has been sent for AVPL Admin approval.
-            Until approval, your old approved profile/documents will remain active.
-        </p>
-    {% else %}
-        <form method="POST"
-              action="{{ url_for('modules.request_profile_update') }}"
-              enctype="multipart/form-data"
-              class="grid-form two-col"
-              style="margin-top:16px;">
-
-           <label>
-    Profile Photo
-
-    {% set current_profile_photo =
-        user.profile_photo
-        or (master.profile_photo if master and master.profile_photo else none)
-        or (master.passport_photo_file if master and master.passport_photo_file else none)
-    %}
-
-    <small class="current-file-text">
-        Current:
-        {% if current_profile_photo %}
-            {{ current_profile_photo }}
+        {% if pending_profile_update %}
+            <p>
+                Your profile update request has been sent for AVPL Admin approval.
+                Until approval, your old approved profile/documents will remain active.
+            </p>
         {% else %}
-            Not uploaded
+            <form method="POST"
+                  action="{{ url_for('modules.request_profile_update') }}"
+                  enctype="multipart/form-data"
+                  class="grid-form two-col"
+                  style="margin-top:16px;">
+
+                <label>
+                    Profile Photo
+
+                    {% set current_profile_photo =
+                        user.profile_photo
+                        or (master.profile_photo if master and master.profile_photo else none)
+                        or (master.passport_photo_file if master and master.passport_photo_file else none)
+                    %}
+
+                    <small class="current-file-text">
+                        Current:
+                        {% if current_profile_photo %}
+                            {{ current_profile_photo }}
+                        {% else %}
+                            Not uploaded
+                        {% endif %}
+                    </small>
+
+                    {% if current_profile_photo %}
+                        <div class="current-file-preview">
+                            <img
+                                src="{{ url_for('documents.serve', filename=current_profile_photo) }}"
+                                alt="Current Profile Photo"
+                                class="current-profile-img"
+                            >
+                            <a href="{{ url_for('documents.serve', filename=current_profile_photo) }}" target="_blank">
+                                View Current
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/jpg,image/webp">
+                </label>
+
+                {% if user.role != 'farmer' %}
+                    <label>
+                        Government ID / Identity Document
+                        <small class="current-file-text">
+                            Current:
+                            {% if master and master.government_id_file %}
+                                {{ master.government_id_file }}
+                            {% else %}
+                                Not uploaded
+                            {% endif %}
+                        </small>
+
+                        <input type="file" name="government_id_file" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                    </label>
+
+                    <label>
+                        Supporting Document
+                        <small class="current-file-text">
+                            Current:
+                            {% if master and master.supporting_document %}
+                                {{ master.supporting_document }}
+                            {% else %}
+                                Not uploaded
+                            {% endif %}
+                        </small>
+
+                        <input type="file" name="supporting_document" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                    </label>
+                {% endif %}
+
+                <div class="span-2">
+                    <button type="submit">Send Update Request</button>
+                </div>
+            </form>
         {% endif %}
-    </small>
-
-    {% if current_profile_photo %}
-        <div class="current-file-preview">
-            <img
-                src="{{ url_for('documents.serve', filename=current_profile_photo) }}"
-                alt="Current Profile Photo"
-                class="current-profile-img"
-            >
-            <a href="{{ url_for('documents.serve', filename=current_profile_photo) }}" target="_blank">
-                View Current
-            </a>
-        </div>
-    {% endif %}
-
-    <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/jpg,image/webp">
-</label>
-
-            {% if user.role != 'farmer' %}
-                <label>
-                    Government ID / Identity Document
-                    <small class="current-file-text">
-                        Current:
-                        {% if master and master.government_id_file %}
-                            {{ master.government_id_file }}
-                        {% else %}
-                            Not uploaded
-                        {% endif %}
-                    </small>
-
-                    <input type="file" name="government_id_file" accept=".pdf,.jpg,.jpeg,.png,.webp">
-                </label>
-
-                <label>
-                    Supporting Document
-                    <small class="current-file-text">
-                        Current:
-                        {% if master and master.supporting_document %}
-                            {{ master.supporting_document }}
-                        {% else %}
-                            Not uploaded
-                        {% endif %}
-                    </small>
-
-                    <input type="file" name="supporting_document" accept=".pdf,.jpg,.jpeg,.png,.webp">
-                </label>
-            {% endif %}
-
-            <div class="span-2">
-                <button type="submit">Send Update Request</button>
-            </div>
-        </form>
     {% endif %}
 
     {% else %}

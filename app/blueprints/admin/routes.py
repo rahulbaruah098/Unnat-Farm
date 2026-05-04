@@ -583,3 +583,71 @@ def ufc_mitra_earnings():
         selected_month=selected_month,
         selected_mitra_uid=selected_mitra_uid
     )    
+
+@admin_bp.route('/mitra-profile/<mitra_uid>')
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def view_mitra_profile(mitra_uid):
+    mitra = mongo.db.ufc_mitra_master.find_one({
+        'mitra_uid': mitra_uid
+    }) or mongo.db.ufc_mitra_master.find_one({
+        'mapped_mitra_uid': mitra_uid
+    })
+
+    if not mitra:
+        flash('Mitra profile not found.', 'danger')
+        return redirect(url_for('admin.ufc_mitra_earnings'))
+
+    linked_user_id = mitra.get('linked_user_id')
+
+    user = None
+    if linked_user_id:
+        try:
+            user = mongo.db.users.find_one({'_id': ObjectId(linked_user_id)})
+        except Exception:
+            user = None
+
+        if not user:
+            user = mongo.db.users.find_one({'_id': linked_user_id})
+
+    if not user:
+        user = mongo.db.users.find_one({
+            '$or': [
+                {'mitra_uid': mitra_uid},
+                {'mapped_mitra_uid': mitra_uid},
+                {'username': mitra.get('phone')},
+                {'phone': mitra.get('phone')},
+            ]
+        }) or {}
+
+    doc_query = []
+
+    if linked_user_id:
+        doc_query.append({'linked_user_id': str(linked_user_id)})
+        try:
+            doc_query.append({'linked_user_id': ObjectId(linked_user_id)})
+        except Exception:
+            pass
+
+    if user and user.get('_id'):
+        doc_query.append({'linked_user_id': str(user['_id'])})
+        doc_query.append({'user_id': str(user['_id'])})
+        doc_query.append({'uploaded_by': str(user['_id'])})
+
+    if mitra.get('_id'):
+        doc_query.append({'linked_master_id': str(mitra['_id'])})
+        doc_query.append({'linked_master_id': mitra['_id']})
+
+    docs = list(
+        mongo.db.documents.find({'$or': doc_query}).sort('created_at', -1)
+    ) if doc_query else []
+
+    return render_template(
+        'modules/profile.html',
+        user=user,
+        master=mitra,
+        docs=docs,
+        pending_profile_update=None,
+        readonly_profile=True,
+        profile_title='UFC Mitra Profile'
+    )

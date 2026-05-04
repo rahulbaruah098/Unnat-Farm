@@ -545,9 +545,11 @@
                     <td class="serial-cell" data-label="Sl. No."></td>
                     <td data-label="UFC Mitra">
                         {{ r.mitra_name or '-' }}<br>
-                        {% if r.linked_user_id %}
-                            <a href="{{ url_for('admin.users') }}" class="profile-link">View Profile</a>
-                        {% endif %}
+                        {% if r.mitra_uid %}
+    <a href="{{ url_for('admin.view_mitra_profile', mitra_uid=r.mitra_uid) }}" class="profile-link">
+        View Profile
+    </a>
+{% endif %}
                     </td>
                     <td data-label="Mitra UID">{{ r.mitra_uid or '-' }}</td>
                     <td data-label="Monthly AVPL Sale Bonus">₹{{ r.monthly_avpl_earning }}</td>
