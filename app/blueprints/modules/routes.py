@@ -956,8 +956,23 @@ def profile():
         elif role == "ufc_mitra":
             master = mongo.db.ufc_mitra_master.find_one({"linked_user_id": str(user["_id"])})
 
+        uid_str = str(user["_id"])
+
         docs = list(
-            mongo.db.documents.find({"linked_user_id": str(user["_id"])}).sort("created_at", -1)
+            mongo.db.documents.find({
+                "$or": [
+                    {"linked_user_id": uid_str},
+                    {"linked_user_id": ObjectId(uid_str)},
+                    {"user_id": uid_str},
+                    {"user_id": ObjectId(uid_str)},
+                    {"farmer_user_id": uid_str},
+                    {"farmer_user_id": ObjectId(uid_str)},
+                    {"entity_id": uid_str},
+                    {"entity_id": ObjectId(uid_str)},
+                    {"uploaded_by": uid_str},
+                    {"uploaded_by": ObjectId(uid_str)},
+                ]
+            }).sort("created_at", -1)
         )
 
         user["_id"] = str(user["_id"])

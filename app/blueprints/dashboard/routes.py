@@ -1,6 +1,8 @@
 from bson import ObjectId
-from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify
+from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, current_app, send_file, abort
+from app.blueprints.documents.routes import _find_document_path
 from app.extensions import mongo
+from pathlib import Path
 from app.utils.decorators import login_required
 from datetime import datetime, timedelta
 from app.services.dashboard_service import (
@@ -18,6 +20,157 @@ def _to_number(value):
         return float(value or 0)
     except (TypeError, ValueError):
         return 0
+
+def json_safe(value):
+    if isinstance(value, ObjectId):
+        return str(value)
+
+    if isinstance(value, datetime):
+        return value.isoformat()
+
+    if isinstance(value, list):
+        return [json_safe(item) for item in value]
+
+    if isinstance(value, dict):
+        return {
+            key: json_safe(val)
+            for key, val in value.items()
+        }
+
+    return value
+
+#changes by atlanta
+def _product_image_value(item):
+    if not item:
+        return ""
+
+    # Direct image fields
+    for key in [
+        "image",
+        "picture",
+        "product_image",
+        "image_url",
+        "image_path",
+        "file_path",
+        "filename",
+        "file_name",
+        "stored_name",
+        "image_name",
+    ]:
+        value = item.get(key)
+        if value:
+            return str(value)
+
+    # Nested file dict support
+    file_data = item.get("file")
+    if isinstance(file_data, dict):
+        for key in ["file_path", "filename", "file_name", "stored_name"]:
+            value = file_data.get(key)
+            if value:
+                return str(value)
+
+    return ""
+
+#changes by atlanta
+def _normalize_product_for_app(item):
+    item = dict(item or {})
+
+    if "_id" in item:
+        item["_id"] = str(item["_id"])
+
+    image_value = _product_image_value(item)
+
+    image_name = (
+        item.get("image_name")
+        or item.get("filename")
+        or item.get("file_name")
+        or item.get("stored_name")
+    )
+
+    # Products table stores image reference, actual image details are in documents.
+    if image_name:
+        doc = mongo.db.documents.find_one({
+            "$or": [
+                {"filename": image_name},
+                {"file_name": image_name},
+                {"stored_name": image_name},
+                {"original_name": image_name},
+                {"file_path": {"$regex": image_name, "$options": "i"}},
+                {"path": {"$regex": image_name, "$options": "i"}},
+            ]
+        })
+
+        if doc:
+            image_value = (
+                doc.get("file_path")
+                or doc.get("path")
+                or doc.get("url")
+                or doc.get("filename")
+                or doc.get("file_name")
+                or doc.get("stored_name")
+                or image_name
+            )
+
+    if image_value:
+        image_value = str(image_value).replace("\\", "/")
+
+        if (
+            not image_value.startswith("http")
+            and not image_value.startswith("/")
+            and not image_value.startswith("uploads/")
+            and not image_value.startswith("static/")
+        ):
+            image_value = f"/dashboard/app-image/{image_value}"
+
+        item["image"] = image_value
+        item["image_url"] = image_value
+        item["picture"] = image_value
+
+    return item
+
+def _get_app_farmer_products(user, limit=30):
+    user_id = str(user.get("_id"))
+
+    exclude_ids = [user_id]
+
+    try:
+        exclude_ids.append(ObjectId(user_id))
+    except Exception:
+        pass
+
+    query = {
+        "status": "active",
+        "farmer_user_id": {"$nin": exclude_ids},
+        "$or": [
+            {"available_quantity": {"$gt": 0}},
+            {"quantity": {"$gt": 0}},
+            {"available_quantity": {"$exists": False}},
+        ],
+    }
+
+    items = list(
+        mongo.db.farmer_products
+        .find(query)
+        .sort("created_at", -1)
+        .limit(limit)
+    )
+
+    return [_normalize_product_for_app(item) for item in items]
+
+
+def _normalize_dashboard_products(data):
+    if not isinstance(data, dict):
+        return {}
+
+    for key in ["recommended_products", "products", "avpl_products"]:
+        if isinstance(data.get(key), list):
+            data[key] = [
+                _normalize_product_for_app(item)
+                for item in data.get(key, [])
+                if isinstance(item, dict)
+            ]
+
+    return data
 
 
 def get_farmer_product_dashboard():
@@ -155,7 +308,7 @@ def home():
         if role == "ufc_admin":
             data = get_centre_dashboard(user.get("centre_uid"))
 
-            return jsonify({
+            return jsonify(json_safe({
                 "ok": True,
                 "approval_status": "approved",
                 "role": role,
@@ -165,13 +318,13 @@ def home():
                     "farmer_count": data.get("farmer_count", 0),
                     "orders": data.get("orders", [])
                 }
-            }), 200
+            })), 200
 
         # 🔹 UFC MITRA DASHBOARD
         if role == "ufc_mitra":
             data = get_mitra_dashboard(user.get("mitra_uid"))
 
-            return jsonify({
+            return jsonify(json_safe({
                 "ok": True,
                 "approval_status": "approved",
                 "role": role,
@@ -183,18 +336,26 @@ def home():
                     "monthly_sales": data.get("monthly_sales", []),
                     "farmers": data.get("farmers", [])
                 }
-            }), 200
+            })), 200
 
         # 🔹 FARMER DASHBOARD
         if role == "farmer":
             data = get_farmer_dashboard(user.get("phone"))
 
-            return jsonify({
+            if not isinstance(data, dict):
+                data = {}
+
+            data = _normalize_dashboard_products(data)
+
+            # Add farmer marketplace products directly for app dashboard.
+            data["farmer_products"] = _get_app_farmer_products(user)
+
+            return jsonify(json_safe({
                 "ok": True,
                 "approval_status": "approved",
                 "role": role,
                 "data": data
-            }), 200
+            })), 200
 
         # ❌ fallback
         return jsonify({"ok": False, "message": "Invalid role"}), 403
@@ -343,3 +504,48 @@ def pending_access():
         correction_url=correction_url,
     )
 
+#changes by atlanta
+@dashboard_bp.route("/app-image/<path:filename>")
+def app_image(filename):
+    if not filename:
+        abort(404)
+
+    filename = str(filename).replace("\\", "/").strip()
+    clean_name = Path(filename).name
+
+    doc = mongo.db.documents.find_one({
+        "$or": [
+            {"filename": filename},
+            {"filename": clean_name},
+            {"file_name": filename},
+            {"file_name": clean_name},
+            {"stored_name": filename},
+            {"stored_name": clean_name},
+            {"original_name": filename},
+            {"original_name": clean_name},
+            {"file_path": {"$regex": clean_name, "$options": "i"}},
+            {"path": {"$regex": clean_name, "$options": "i"}},
+        ]
+    })
+
+    possible_names = [clean_name]
+
+    if doc:
+        for key in ["file_path", "path", "url", "filename", "file_name", "stored_name", "original_name"]:
+            value = doc.get(key)
+            if value:
+                possible_names.append(Path(str(value).replace("\\", "/")).name)
+
+    possible_names = list(dict.fromkeys(possible_names))
+
+    for name in possible_names:
+        file_path = _find_document_path(name)
+        if file_path:
+            return send_file(
+                file_path,
+                as_attachment=False,
+                download_name=Path(file_path).name,
+                conditional=True,
+            )
+
+    abort(404)
