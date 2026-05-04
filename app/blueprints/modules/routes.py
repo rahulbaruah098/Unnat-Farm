@@ -1010,7 +1010,125 @@ def profile():
         mongo.db.documents.find({"linked_user_id": str(user["_id"])}).sort("created_at", -1)
     ) if user else []
 
-    return render_template("modules/profile.html", user=user, master=master, docs=docs)
+    pending_profile_update = mongo.db.profile_update_requests.find_one({
+    "user_id": str(user["_id"]),
+    "status": "pending"
+}) if user else None
+
+    return render_template(
+    "modules/profile.html",
+    user=user,
+    master=master,
+    docs=docs,
+    pending_profile_update=pending_profile_update
+)
+
+
+@modules_bp.route("/profile/update-request", methods=["POST"])
+@login_required
+def request_profile_update():
+    user_id = session.get("user_id")
+    role = session.get("role")
+
+    if role not in ["farmer", "ufc_mitra", "ufc_admin"]:
+        flash("Profile update request is available only for Centre, Mitra and Farmer users.", "danger")
+        return redirect(url_for("modules.profile"))
+
+    existing_pending = mongo.db.profile_update_requests.find_one({
+        "user_id": str(user_id),
+        "status": "pending"
+    })
+
+    if existing_pending:
+        flash("You already have a profile update request pending for AVPL Admin approval.", "warning")
+        return redirect(url_for("modules.profile"))
+
+    if role == "farmer":
+        upload_map = {
+        "profile_photo": "Passport Size Photo",
+    }
+    else:
+            upload_map = {
+            "profile_photo": "Passport Size Photo",
+            "government_id_file": "Government ID / Identity Document",
+            "supporting_document": "Supporting Document",
+        }
+
+    uploaded_docs = []
+
+    for field, label in upload_map.items():
+        file = request.files.get(field)
+
+        if file and file.filename:
+            if field == "profile_photo":
+                allowed_image_types = {
+                    "image/jpeg",
+                    "image/png",
+                    "image/jpg",
+                    "image/webp"
+                }
+
+                file.seek(0, 2)
+                file_size = file.tell()
+                file.seek(0)
+
+                if file.content_type not in allowed_image_types:
+                    flash("Only JPG, PNG or WEBP files are allowed for profile photo.", "danger")
+                    return redirect(url_for("modules.profile"))
+
+                if file_size > 2 * 1024 * 1024:
+                    flash("Profile photo must be less than or equal to 2 MB.", "danger")
+                    return redirect(url_for("modules.profile"))
+
+            try:
+                filename = save_file(file, "profile_update")
+            except ValueError as exc:
+                flash(str(exc), "danger")
+                return redirect(url_for("modules.profile"))
+
+            uploaded_docs.append({
+                "field": field,
+                "label": label,
+                "filename": filename,
+                "document_type": label,
+                "uploaded_at": now_utc()
+            })
+
+    if not uploaded_docs:
+        flash("Please upload at least one document or image to request an update.", "danger")
+        return redirect(url_for("modules.profile"))
+
+    request_doc = {
+        "user_id": str(user_id),
+        "role": role,
+        "status": "pending",
+        "uploaded_docs": uploaded_docs,
+        "requested_at": now_utc(),
+        "reviewed_by": None,
+        "reviewed_at": None,
+        "rejection_reason": ""
+    }
+
+    request_id = mongo.db.profile_update_requests.insert_one(request_doc).inserted_id
+
+    mongo.db.validations.insert_one({
+        "entity_id": str(request_id),
+        "entity_type": "profile_update_request",
+        "submitted_by": str(user_id),
+        "submitted_role": role,
+        "status": "pending",
+        "created_at": now_utc(),
+        "updated_at": now_utc(),
+        "title": "Profile / Document Update Request",
+        "metadata": {
+            "request_id": str(request_id),
+            "user_id": str(user_id),
+            "role": role
+        }
+    })
+
+    flash("Profile update request sent for AVPL Admin approval.", "success")
+    return redirect(url_for("modules.profile"))
 
 @modules_bp.route("/purchases")
 @login_required

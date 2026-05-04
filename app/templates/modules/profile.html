@@ -248,6 +248,103 @@
     font-size:1.45rem;
 }
     }
+
+    .grid-form{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:16px;
+    margin-bottom:24px;
+}
+
+.grid-form label{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    color:#17252A;
+    font-size:1rem;
+    font-weight:700;
+}
+
+.grid-form input{
+    width:100%;
+    min-height:46px;
+    padding:10px 14px;
+    border:1px solid rgba(95,168,120,.28);
+    border-radius:14px;
+    background:#fff;
+    color:#334155;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+}
+
+.span-2{
+    grid-column:1 / -1;
+}
+
+.grid-form button{
+    min-height:46px;
+    padding:10px 22px;
+    border:none;
+    border-radius:999px;
+    background:#5FA878;
+    color:#fff;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:800;
+    cursor:pointer;
+    box-shadow:0 12px 26px rgba(95,168,120,.22);
+}
+
+.grid-form button:hover{
+    background:#3B7D55;
+}
+.current-file-preview{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin:6px 0 10px;
+    padding:8px 10px;
+    border:1px solid rgba(95,168,120,.18);
+    border-radius:14px;
+    background:rgba(228,247,234,.28);
+    width:max-content;
+    max-width:100%;
+}
+
+.current-profile-img{
+    width:52px;
+    height:52px;
+    border-radius:12px;
+    object-fit:cover;
+    object-position:center;
+    border:1px solid rgba(95,168,120,.25);
+    background:#F1F5F9;
+    box-shadow:0 8px 16px rgba(23,37,42,.07);
+}
+
+.current-file-preview a{
+    min-height:30px;
+    padding:5px 11px;
+    font-size:.88rem;
+}
+
+@media(max-width:420px){
+    .current-profile-img{
+        width:46px;
+        height:46px;
+        border-radius:11px;
+    }
+
+    .current-file-preview{
+        width:100%;
+    }
+}
+@media(max-width:760px){
+    .grid-form{
+        grid-template-columns:1fr;
+    }
+}
 </style>
 
 <div class="page-card">
@@ -275,13 +372,21 @@
         {% if user.block %}<tr><th>Block</th><td>{{ user.block }}</td></tr>{% endif %}
         {% if user.village %}<tr><th>Village</th><td>{{ user.village }}</td></tr>{% endif %}
         {% if user.approval_status %}<tr><th>Approval Status</th><td>{{ user.approval_status }}</td></tr>{% endif %}
-        {% if user.created_at %}<tr><th>Created At</th><td>{{ user.created_at }}</td></tr>{% endif %}
         {% if user.last_login %}<tr><th>Last Login</th><td>{{ user.last_login }}</td></tr>{% endif %}
     </tbody></table>
 
     {% if master %}
     <h3>Master/Profile Details</h3>
-    <table><tbody>{% for key, value in master.items() if key not in ['_id'] and value is not none and value != '-' and value != '' %}<tr><th>{{ key|replace('_',' ')|title }}</th><td>{{ value }}</td></tr>{% endfor %}</tbody></table>
+<table>
+    <tbody>
+        {% for key, value in master.items() if key not in ['_id', 'created_at', 'updated_at'] and value is not none and value != '-' and value != '' %}
+            <tr>
+                <th>{{ key|replace('_',' ')|title }}</th>
+                <td>{{ value }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
     {% endif %}
 
     <h3>Uploaded Documents</h3>
@@ -295,7 +400,95 @@
       {% endfor %}
       </tbody>
     </table>
-    {% else %}<p>User not found.</p>{% endif %}
+
+    <h3>Request Document / Photo Update</h3>
+
+    {% if pending_profile_update %}
+        <p>
+            Your profile update request has been sent for AVPL Admin approval.
+            Until approval, your old approved profile/documents will remain active.
+        </p>
+    {% else %}
+        <form method="POST"
+              action="{{ url_for('modules.request_profile_update') }}"
+              enctype="multipart/form-data"
+              class="grid-form two-col"
+              style="margin-top:16px;">
+
+           <label>
+    Profile Photo
+
+    {% set current_profile_photo =
+        user.profile_photo
+        or (master.profile_photo if master and master.profile_photo else none)
+        or (master.passport_photo_file if master and master.passport_photo_file else none)
+    %}
+
+    <small class="current-file-text">
+        Current:
+        {% if current_profile_photo %}
+            {{ current_profile_photo }}
+        {% else %}
+            Not uploaded
+        {% endif %}
+    </small>
+
+    {% if current_profile_photo %}
+        <div class="current-file-preview">
+            <img
+                src="{{ url_for('documents.serve', filename=current_profile_photo) }}"
+                alt="Current Profile Photo"
+                class="current-profile-img"
+            >
+            <a href="{{ url_for('documents.serve', filename=current_profile_photo) }}" target="_blank">
+                View Current
+            </a>
+        </div>
+    {% endif %}
+
+    <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/jpg,image/webp">
+</label>
+
+            {% if user.role != 'farmer' %}
+                <label>
+                    Government ID / Identity Document
+                    <small class="current-file-text">
+                        Current:
+                        {% if master and master.government_id_file %}
+                            {{ master.government_id_file }}
+                        {% else %}
+                            Not uploaded
+                        {% endif %}
+                    </small>
+
+                    <input type="file" name="government_id_file" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                </label>
+
+                <label>
+                    Supporting Document
+                    <small class="current-file-text">
+                        Current:
+                        {% if master and master.supporting_document %}
+                            {{ master.supporting_document }}
+                        {% else %}
+                            Not uploaded
+                        {% endif %}
+                    </small>
+
+                    <input type="file" name="supporting_document" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                </label>
+            {% endif %}
+
+            <div class="span-2">
+                <button type="submit">Send Update Request</button>
+            </div>
+        </form>
+    {% endif %}
+
+    {% else %}
+        <p>User not found.</p>
+    {% endif %}
 </div>
 
 {% endblock %}
+
