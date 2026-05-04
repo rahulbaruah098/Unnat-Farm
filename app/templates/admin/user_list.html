@@ -31,6 +31,37 @@
         letter-spacing:.2px;
     }
 
+    .title-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-width:0;
+}
+
+.back-btn{
+    display:none;
+    width:42px;
+    height:42px;
+    border:none;
+    border-radius:14px;
+    align-items:center;
+    justify-content:center;
+    background:rgba(228,247,234,.82);
+    color:#3B7D55;
+    font-size:1.65rem;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 8px 20px rgba(95,168,120,.12);
+    transition:all .2s ease;
+    flex:0 0 auto;
+}
+
+.back-btn:hover{
+    background:#5FA878;
+    color:#fff;
+    transform:translateX(-2px);
+}
+
     .btn-link,
     .danger-btn{
         display:inline-flex;
@@ -300,7 +331,9 @@
             padding:20px;
             border-radius:22px;
         }
-
+.back-btn{
+    display:inline-flex;
+}
         .table-tools{
             align-items:stretch;
             flex-direction:column;
@@ -336,8 +369,19 @@
         }
 
         .title-row{
-            align-items:stretch;
-        }
+    align-items:center;
+}
+
+.title-left{
+    width:100%;
+}
+
+.back-btn{
+    width:38px;
+    height:38px;
+    border-radius:12px;
+    font-size:1.45rem;
+}
 
         .pagination-size{
             justify-content:space-between;
@@ -482,7 +526,11 @@
 
 <div class="page-card">
     <div class="title-row">
-        <h2>User Accounts</h2>
+        <div class="title-left">
+            <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+            <h2>User Accounts</h2>
+        </div>
+
         <a class="btn-link" href="{{ url_for('admin.create_user_view') }}">Create User</a>
     </div>
 

@@ -31,10 +31,11 @@ body>main,
 .role-login-page{
   position:relative;
   width:100vw;
-  min-height:100svh;
-  display:grid;
-  place-items:center;
-  padding:clamp(10px,2.4vw,28px);
+  min-height:100dvh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 14px;
   overflow:hidden;
   isolation:isolate;
   background:
@@ -70,7 +71,7 @@ body>main,
 .role-card{
   position:relative;
   width:min(520px, calc(100vw - 28px));
-  max-height:calc(100svh - 22px);
+  max-height:calc(100dvh - 12px);
   padding:clamp(20px,4.8vh,46px) clamp(22px,3.8vw,48px) clamp(18px,3.6vh,34px);
   border-radius:clamp(16px,2vw,22px);
   background:rgba(245,255,242,.58);
@@ -358,9 +359,19 @@ body>main,
 }
 
 @media(max-width:700px){
+  html,
+  body{
+    min-height:100dvh;
+    height:100%;
+    overflow:hidden;
+  }
+
   .role-login-page{
-    min-height:100svh;
-    padding:clamp(8px,3vw,16px);
+    min-height:100dvh;
+    height:100dvh;
+    padding:0 12px;
+    align-items:center;
+    justify-content:center;
   }
 
   .role-login-page::before{
@@ -370,6 +381,7 @@ body>main,
 
   .role-card{
     width:min(100%, 430px);
+    max-height:calc(100dvh - 12px);
   }
 }
 
@@ -587,10 +599,10 @@ body>main,
 }
 
 .role-back{
-  position:fixed;
+  position:absolute;
   top:14px;
   left:14px;
-  z-index:99999;
+  z-index:5;
 
   width:44px;
   height:44px;
@@ -626,6 +638,64 @@ body>main,
 .role-back:hover{
   transform:translateX(-2px);
   background:#ffffff;
+}
+
+/* FINAL MOBILE FULL-SCREEN LOGIN FIX */
+@media(max-width:700px){
+  html,
+  body{
+    width:100% !important;
+    height:100% !important;
+    min-height:100dvh !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    background:url("{{ url_for('static', filename='images/loginbackground.png') }}") center center / cover no-repeat fixed !important;
+  }
+
+  body > .container,
+  body > main,
+  .content,
+  .main-content{
+    width:100% !important;
+    height:100dvh !important;
+    min-height:100dvh !important;
+    margin:0 !important;
+    padding:0 !important;
+    max-width:none !important;
+    overflow:hidden !important;
+    background:transparent !important;
+  }
+
+  .role-login-page{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100dvh !important;
+    min-height:100dvh !important;
+    margin:0 !important;
+    padding:0 12px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    overflow:hidden !important;
+    background:transparent !important;
+  }
+
+  .role-login-page::before{
+    inset:0 !important;
+    background-image:url("{{ url_for('static', filename='images/loginbackground.png') }}") !important;
+    background-size:cover !important;
+    background-position:center center !important;
+    background-repeat:no-repeat !important;
+    opacity:.88 !important;
+  }
+
+  .role-card{
+    margin:0 !important;
+    width:min(100%, 430px) !important;
+    max-height:calc(100dvh - 10px) !important;
+  }
 }
 </style>
 
