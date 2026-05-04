@@ -232,10 +232,90 @@ def logout():
     flash('Logged out successfully.', 'success')
     return redirect(url_for(last_login_page))
 
-
+#Changes by atlanta
 @auth_bp.route('/register/farmer', methods=['GET', 'POST'])
 def register_farmer():
+    is_json = request.is_json or request.headers.get('Content-Type') == 'application/json'
     states = list_states()
+
+    # ---------- APP / JSON FARMER REGISTRATION ----------
+    if is_json:
+        data = request.get_json(silent=True) or {}
+
+        form = {
+            'name': (data.get('name') or '').strip(),
+            'gender': (data.get('gender') or '').strip(),
+            'age': str(data.get('age') or '').strip(),
+            'contact_no': (data.get('contact_no') or '').strip(),
+            'password': (data.get('password') or '').strip(),
+            'centre_uid': (data.get('centre_uid') or '').strip(),
+            'mitra_uid': (data.get('mitra_uid') or '').strip(),
+            'state': (data.get('state') or '').strip(),
+            'district': (data.get('district') or '').strip(),
+            'block': (data.get('block') or '').strip(),
+            'village': (data.get('village') or '').strip(),
+            'activities': data.get('activities') or [],
+            'agri_sub_categories': data.get('agri_sub_categories') or [],
+        }
+
+        required_fields = [
+            'name',
+            'gender',
+            'age',
+            'contact_no',
+            'password',
+            'centre_uid',
+            'mitra_uid',
+            'village',
+        ]
+
+        missing = [field for field in required_fields if not form.get(field)]
+
+        if missing:
+            return jsonify({
+                'ok': False,
+                'message': 'Please fill all required fields.',
+                'missing_fields': missing
+            }), 400
+
+        if not isinstance(form['activities'], list):
+            form['activities'] = []
+
+        if not isinstance(form['agri_sub_categories'], list):
+            form['agri_sub_categories'] = []
+
+        valid, message = validate_farmer_mapping(
+            form['centre_uid'],
+            form['mitra_uid']
+        )
+
+        if not valid:
+            return jsonify({
+                'ok': False,
+                'message': message
+            }), 400
+
+        if mongo.db.users.find_one({'phone': form['contact_no']}):
+            return jsonify({
+                'ok': False,
+                'message': 'Phone number already registered.'
+            }), 409
+
+        try:
+            create_farmer_registration(form)
+        except ValueError as exc:
+            return jsonify({
+                'ok': False,
+                'message': str(exc)
+            }), 400
+
+        return jsonify({
+            'ok': True,
+            'message': 'Farmer registration submitted. Wait for UFC Mitra validation.',
+            'approval_status': 'pending'
+        }), 201
+
+    # ---------- WEB FARMER REGISTRATION ----------
     if request.method == 'POST':
         form = {
             'name': request.form.get('name', '').strip(),
@@ -258,6 +338,7 @@ def register_farmer():
             return render_template('auth/register_farmer.html', data=form, states=states)
 
         valid, message = validate_farmer_mapping(form['centre_uid'], form['mitra_uid'])
+
         if not valid:
             flash(message, 'danger')
             return render_template('auth/register_farmer.html', data=form, states=states)
