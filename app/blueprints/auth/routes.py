@@ -1,5 +1,6 @@
 from bson import ObjectId
 from datetime import datetime
+import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app.extensions import mongo
 from app.utils.security import verify_password
@@ -235,28 +236,155 @@ def logout():
 #Changes by atlanta
 @auth_bp.route('/register/farmer', methods=['GET', 'POST'])
 def register_farmer():
-    is_json = request.is_json or request.headers.get('Content-Type') == 'application/json'
     states = list_states()
 
-    # ---------- APP / JSON FARMER REGISTRATION ----------
-    if is_json:
-        data = request.get_json(silent=True) or {}
+    is_json = request.is_json or request.headers.get('Content-Type') == 'application/json'
+    is_app_multipart = request.form.get('app') == '1'
 
-        form = {
-            'name': (data.get('name') or '').strip(),
-            'gender': (data.get('gender') or '').strip(),
-            'age': str(data.get('age') or '').strip(),
-            'contact_no': (data.get('contact_no') or '').strip(),
-            'password': (data.get('password') or '').strip(),
-            'centre_uid': (data.get('centre_uid') or '').strip(),
-            'mitra_uid': (data.get('mitra_uid') or '').strip(),
-            'state': (data.get('state') or '').strip(),
-            'district': (data.get('district') or '').strip(),
-            'block': (data.get('block') or '').strip(),
-            'village': (data.get('village') or '').strip(),
-            'activities': data.get('activities') or [],
-            'agri_sub_categories': data.get('agri_sub_categories') or [],
+    def _as_list(value):
+        if value is None:
+            return []
+
+        if isinstance(value, list):
+            return value
+
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return []
+
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                pass
+
+            return [value]
+
+        return []
+
+    def _validate_profile_photo(file):
+        if not file or not file.filename:
+            return True, ""
+
+        allowed_image_types = {
+            'image/jpeg',
+            'image/png',
+            'image/jpg',
+            'image/webp'
         }
+
+        file.seek(0, 2)
+        file_size = file.tell()
+        file.seek(0)
+
+        file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+        allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+
+        if file.content_type not in allowed_image_types and file_ext not in allowed_extensions:
+            return False, 'Only JPG, PNG or WEBP image files are allowed for farmer profile photo.'
+
+        if file_size > 2 * 1024 * 1024:
+            return False, 'Farmer profile photo must be less than or equal to 2 MB.'
+
+        return True, ""
+
+    def _save_initial_profile_photo(profile_photo_file, farmer_user, farmer_user_id):
+        if not profile_photo_file or not profile_photo_file.filename:
+            return None
+
+        farmer_master = mongo.db.farmer_master.find_one({
+            'linked_user_id': farmer_user_id
+        }) or {}
+
+        doc = store_document(
+            profile_photo_file,
+            farmer_user_id,
+            farmer_master.get('_id'),
+            farmer_user_id,
+            'farmer',
+            'Passport Size Photo'
+        )
+
+        profile_photo_path = (
+            doc.get('file_path')
+            or doc.get('filename')
+            or doc.get('file_name')
+        ) if doc else None
+
+        if profile_photo_path:
+            mongo.db.farmer_master.update_one(
+                {
+                    '$or': [
+                        {'linked_user_id': farmer_user_id},
+                        {'linked_user_id': farmer_user['_id']},
+                        {'contact_no': farmer_user.get('phone')},
+                    ]
+                },
+                {
+                    '$set': {
+                        'profile_photo': profile_photo_path,
+                        'profile_photo_file': profile_photo_path,
+                        'updated_at': datetime.utcnow()
+                    }
+                }
+            )
+
+            mongo.db.users.update_one(
+                {'_id': farmer_user['_id']},
+                {
+                    '$set': {
+                        'profile_photo': profile_photo_path,
+                        'profile_photo_file': profile_photo_path,
+                        'updated_at': datetime.utcnow()
+                    }
+                }
+            )
+
+        return profile_photo_path
+
+    # ---------- APP JSON / APP MULTIPART REGISTRATION ----------
+    if is_json or is_app_multipart:
+        if is_json:
+            data = request.get_json(silent=True) or {}
+
+            form = {
+                'name': (data.get('name') or '').strip(),
+                'gender': (data.get('gender') or '').strip(),
+                'age': str(data.get('age') or '').strip(),
+                'contact_no': (data.get('contact_no') or '').strip(),
+                'password': (data.get('password') or '').strip(),
+                'centre_uid': (data.get('centre_uid') or '').strip(),
+                'mitra_uid': (data.get('mitra_uid') or '').strip(),
+                'state': (data.get('state') or '').strip(),
+                'district': (data.get('district') or '').strip(),
+                'block': (data.get('block') or '').strip(),
+                'village': (data.get('village') or '').strip(),
+                'activities': data.get('activities') or [],
+                'agri_sub_categories': data.get('agri_sub_categories') or [],
+            }
+
+            profile_photo_file = None
+
+        else:
+            form = {
+                'name': request.form.get('name', '').strip(),
+                'gender': request.form.get('gender', '').strip(),
+                'age': request.form.get('age', '').strip(),
+                'contact_no': request.form.get('contact_no', '').strip(),
+                'password': request.form.get('password', '').strip(),
+                'centre_uid': request.form.get('centre_uid', '').strip(),
+                'mitra_uid': request.form.get('mitra_uid', '').strip(),
+                'state': request.form.get('state', '').strip(),
+                'district': request.form.get('district', '').strip(),
+                'block': request.form.get('block', '').strip(),
+                'village': request.form.get('village', '').strip(),
+                'activities': _as_list(request.form.get('activities')),
+                'agri_sub_categories': _as_list(request.form.get('agri_sub_categories')),
+            }
+
+            profile_photo_file = request.files.get('profile_photo')
 
         required_fields = [
             'name',
@@ -301,18 +429,33 @@ def register_farmer():
                 'message': 'Phone number already registered.'
             }), 409
 
+        photo_ok, photo_message = _validate_profile_photo(profile_photo_file)
+        if not photo_ok:
+            return jsonify({
+                'ok': False,
+                'message': photo_message
+            }), 400
+
         try:
-            create_farmer_registration(form)
+            farmer_user = create_farmer_registration(form)
         except ValueError as exc:
             return jsonify({
                 'ok': False,
                 'message': str(exc)
             }), 400
 
+        farmer_user_id = str(farmer_user['_id'])
+        profile_photo_path = _save_initial_profile_photo(
+            profile_photo_file,
+            farmer_user,
+            farmer_user_id
+        )
+
         return jsonify({
             'ok': True,
             'message': 'Farmer registration submitted. Wait for UFC Mitra validation.',
-            'approval_status': 'pending'
+            'approval_status': 'pending',
+            'profile_photo': profile_photo_path or ''
         }), 201
 
     # ---------- WEB FARMER REGISTRATION ----------
@@ -349,29 +492,10 @@ def register_farmer():
 
         profile_photo_file = request.files.get('profile_photo')
 
-        if not profile_photo_file or not profile_photo_file.filename:
-            flash('Farmer profile photo is mandatory.', 'danger')
+        photo_ok, photo_message = _validate_profile_photo(profile_photo_file)
+        if not photo_ok:
+            flash(photo_message, 'danger')
             return render_template('auth/register_farmer.html', data=form, states=states)
-
-        if profile_photo_file and profile_photo_file.filename:
-            allowed_image_types = {
-                'image/jpeg',
-                'image/png',
-                'image/jpg',
-                'image/webp'
-            }
-
-            profile_photo_file.seek(0, 2)
-            file_size = profile_photo_file.tell()
-            profile_photo_file.seek(0)
-
-            if profile_photo_file.content_type not in allowed_image_types:
-                flash('Only JPG, PNG or WEBP image files are allowed for farmer profile photo.', 'danger')
-                return render_template('auth/register_farmer.html', data=form, states=states)
-
-            if file_size > 2 * 1024 * 1024:
-                flash('Farmer profile photo must be less than or equal to 2 MB.', 'danger')
-                return render_template('auth/register_farmer.html', data=form, states=states)
 
         try:
             farmer_user = create_farmer_registration(form)
@@ -379,53 +503,14 @@ def register_farmer():
             flash(str(exc), 'danger')
             return render_template('auth/register_farmer.html', data=form, states=states)
 
-        if profile_photo_file and profile_photo_file.filename:
-            farmer_user_id = str(farmer_user['_id'])
-
-            farmer_master = mongo.db.farmer_master.find_one({
-                'linked_user_id': farmer_user_id
-            }) or {}
-
-            doc = store_document(
-                profile_photo_file,
-                farmer_user_id,
-                farmer_master.get('_id'),
-                farmer_user_id,
-                'farmer',
-                'Passport Size Photo'
-            )
-
-            profile_photo_path = (
-                doc.get('file_path')
-                or doc.get('filename')
-                or doc.get('file_name')
-            ) if doc else None
-
-            if profile_photo_path:
-                mongo.db.farmer_master.update_one(
-                    {'linked_user_id': farmer_user_id},
-                    {
-                        '$set': {
-                            'profile_photo': profile_photo_path,
-                            'updated_at': datetime.utcnow()
-                        }
-                    }
-                )
-
-                mongo.db.users.update_one(
-                    {'_id': farmer_user['_id']},
-                    {
-                        '$set': {
-                            'profile_photo': profile_photo_path,
-                            'updated_at': datetime.utcnow()
-                        }
-                    }
-                )
+        farmer_user_id = str(farmer_user['_id'])
+        _save_initial_profile_photo(profile_photo_file, farmer_user, farmer_user_id)
 
         flash('Farmer registration submitted. Wait for UFC Mitra validation.', 'success')
         return redirect(url_for('auth.login'))
 
     return render_template('auth/register_farmer.html', states=states)
+
 
 #changes by atlanta
 @auth_bp.route('/profile/ufc-admin/complete', methods=['GET', 'POST'])
@@ -689,9 +774,13 @@ def complete_ufc_mitra():
                     file.seek(0, 2)
                     file_size = file.tell()
                     file.seek(0)
+                    
+                    file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+                    allowed_extensions = {"jpg", "jpeg", "png", "webp"}
 
-                    if file.content_type not in allowed_image_types:
-                        flash('Only JPG, PNG or WEBP image files are allowed for profile photo.', 'danger')
+                    if file.content_type not in allowed_image_types and file_ext not in allowed_extensions:
+                        flash('Only JPG, PNG or WEBP image files are allowed for farmer profile photo.')
+
                         return render_template(
                             'auth/complete_ufc_mitra_profile.html',
                             user=user,

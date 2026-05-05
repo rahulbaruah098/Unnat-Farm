@@ -9,6 +9,23 @@ from datetime import datetime
 
 modules_bp = Blueprint("modules", __name__, url_prefix="/modules")
 
+def json_safe(value):
+    if isinstance(value, ObjectId):
+        return str(value)
+
+    if isinstance(value, datetime):
+        return value.isoformat()
+
+    if isinstance(value, list):
+        return [json_safe(item) for item in value]
+
+    if isinstance(value, dict):
+        return {
+            key: json_safe(item)
+            for key, item in value.items()
+        }
+
+    return value
 
 @modules_bp.route("/buy", methods=["GET", "POST"])
 @login_required
@@ -957,23 +974,82 @@ def profile():
             master = mongo.db.ufc_mitra_master.find_one({"linked_user_id": str(user["_id"])})
 
         uid_str = str(user["_id"])
+        uid_oid = ObjectId(uid_str)
 
         docs = list(
             mongo.db.documents.find({
                 "$or": [
                     {"linked_user_id": uid_str},
-                    {"linked_user_id": ObjectId(uid_str)},
+                    {"linked_user_id": uid_oid},
+
                     {"user_id": uid_str},
-                    {"user_id": ObjectId(uid_str)},
+                    {"user_id": uid_oid},
+
                     {"farmer_user_id": uid_str},
-                    {"farmer_user_id": ObjectId(uid_str)},
+                    {"farmer_user_id": uid_oid},
+
                     {"entity_id": uid_str},
-                    {"entity_id": ObjectId(uid_str)},
+                    {"entity_id": uid_oid},
+
                     {"uploaded_by": uid_str},
-                    {"uploaded_by": ObjectId(uid_str)},
+                    {"uploaded_by": uid_oid},
+
+                    {"uploaded_by_user_id": uid_str},
+                    {"uploaded_by_user_id": uid_oid},
+
+                    {"uploader_user_id": uid_str},
+                    {"uploader_user_id": uid_oid},
+
+                    {"uploaded_user_id": uid_str},
+                    {"uploaded_user_id": uid_oid},
                 ]
             }).sort("created_at", -1)
         )
+
+        profile_photo_value = (
+            user.get("profile_photo")
+            or user.get("profile_photo_file")
+            or ""
+        )
+
+        if not profile_photo_value and master:
+            profile_photo_value = (
+                master.get("profile_photo")
+                or master.get("profile_photo_file")
+                or ""
+            )
+
+        if not profile_photo_value:
+            for doc in docs:
+                doc_type = str(
+                    doc.get("document_type")
+                    or doc.get("doc_type")
+                    or doc.get("label")
+                    or doc.get("title")
+                    or ""
+                ).lower()
+
+                if (
+                    "passport size photo" in doc_type
+                    or "profile photo" in doc_type
+                    or "farmer profile photo" in doc_type
+                ):
+                    profile_photo_value = (
+                        doc.get("file_path")
+                        or doc.get("filename")
+                        or doc.get("file_name")
+                        or doc.get("stored_name")
+                        or ""
+                    )
+                    break
+
+        if profile_photo_value:
+            user["profile_photo"] = profile_photo_value
+            user["profile_photo_file"] = profile_photo_value
+
+            if master:
+                master["profile_photo"] = profile_photo_value
+                master["profile_photo_file"] = profile_photo_value
 
         user["_id"] = str(user["_id"])
 
@@ -984,12 +1060,12 @@ def profile():
             if "_id" in d:
                 d["_id"] = str(d["_id"])
 
-        return jsonify({
+        return jsonify(json_safe({
             "ok": True,
             "user": user,
             "master": master or {},
             "docs": docs,
-        })
+        }))
 
     if not session.get("user_id"):
         return redirect(url_for("auth.login_select"))
@@ -1025,13 +1101,54 @@ def profile():
 
 
 @modules_bp.route("/profile/update-request", methods=["POST"])
-@login_required
 def request_profile_update():
-    user_id = session.get("user_id")
-    role = session.get("role")
+    is_app = bool(request.form.get("user_id")) or request.headers.get("Accept") == "application/json"
+
+    print("PROFILE UPDATE is_app:", is_app)
+    print("PROFILE UPDATE form:", dict(request.form))
+    print("PROFILE UPDATE files:", request.files.keys())
+
+    if is_app:
+        user_id = request.form.get("user_id", "").strip()
+
+        if not user_id:
+            return jsonify({
+                "ok": False,
+                "message": "User ID is required."
+            }), 400
+
+        try:
+            user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
+        except Exception:
+            return jsonify({
+                "ok": False,
+                "message": "Invalid user ID."
+            }), 400
+
+        if not user:
+            return jsonify({
+                "ok": False,
+                "message": "User not found."
+            }), 404
+
+        role = user.get("role")
+    else:
+        if not session.get("user_id"):
+            return redirect(url_for("auth.login_select"))
+
+        user_id = session.get("user_id")
+        role = session.get("role")
 
     if role not in ["farmer", "ufc_mitra", "ufc_admin"]:
-        flash("Profile update request is available only for Centre, Mitra and Farmer users.", "danger")
+        message = "Profile update request is available only for Centre, Mitra and Farmer users."
+
+        if is_app:
+            return jsonify({
+                "ok": False,
+                "message": message
+            }), 403
+
+        flash(message, "danger")
         return redirect(url_for("modules.profile"))
 
     existing_pending = mongo.db.profile_update_requests.find_one({
@@ -1040,7 +1157,15 @@ def request_profile_update():
     })
 
     if existing_pending:
-        flash("You already have a profile update request pending for AVPL Admin approval.", "warning")
+        message = "You already have a profile update request pending for AVPL Admin approval."
+
+        if is_app:
+            return jsonify({
+                "ok": False,
+                "message": message
+            }), 409
+
+        flash(message, "warning")
         return redirect(url_for("modules.profile"))
 
     if role == "farmer":
@@ -1072,18 +1197,46 @@ def request_profile_update():
                 file_size = file.tell()
                 file.seek(0)
 
-                if file.content_type not in allowed_image_types:
-                    flash("Only JPG, PNG or WEBP files are allowed for profile photo.", "danger")
+                file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+
+                allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+
+                if file.content_type not in allowed_image_types and file_ext not in allowed_extensions:
+                    message = "Only JPG, PNG or WEBP files are allowed for profile photo."
+
+                    if is_app:
+                        return jsonify({
+                            "ok": False,
+                            "message": message
+                        }), 400
+
+                    flash(message, "danger")
                     return redirect(url_for("modules.profile"))
 
                 if file_size > 2 * 1024 * 1024:
-                    flash("Profile photo must be less than or equal to 2 MB.", "danger")
+                    message = "Profile photo must be less than or equal to 2 MB."
+
+                    if is_app:
+                        return jsonify({
+                            "ok": False,
+                            "message": message
+                        }), 400
+
+                    flash(message, "danger")
                     return redirect(url_for("modules.profile"))
 
             try:
                 filename = save_file(file, "profile_update")
             except ValueError as exc:
-                flash(str(exc), "danger")
+                message = str(exc)
+
+                if is_app:
+                    return jsonify({
+                        "ok": False,
+                        "message": message
+                    }), 400
+
+                flash(message, "danger")
                 return redirect(url_for("modules.profile"))
 
             uploaded_docs.append({
@@ -1095,7 +1248,15 @@ def request_profile_update():
             })
 
     if not uploaded_docs:
-        flash("Please upload at least one document or image to request an update.", "danger")
+        message = "Please upload at least one document or image to request an update."
+
+        if is_app:
+            return jsonify({
+                "ok": False,
+                "message": message
+            }), 400
+
+        flash(message, "danger")
         return redirect(url_for("modules.profile"))
 
     request_doc = {
@@ -1127,7 +1288,17 @@ def request_profile_update():
         }
     })
 
-    flash("Profile update request sent for AVPL Admin approval.", "success")
+    message = "Profile update request sent for AVPL Admin approval."
+
+    if is_app:
+        return jsonify({
+            "ok": True,
+            "message": message,
+            "approval_status": "pending",
+            "request_id": str(request_id)
+        }), 201
+
+    flash(message, "success")
     return redirect(url_for("modules.profile"))
 
 @modules_bp.route("/purchases")
