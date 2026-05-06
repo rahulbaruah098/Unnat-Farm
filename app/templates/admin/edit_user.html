@@ -1,0 +1,845 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+.edit-card{
+    width:100%;
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:26px;
+    padding:28px;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 22px 55px rgba(23,37,42,.10);
+    font-family:"Times New Roman", Georgia, serif;
+}
+
+.edit-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+}
+
+.edit-title-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-width:0;
+}
+
+.back-btn{
+    display:inline-flex;
+    width:42px;
+    height:42px;
+    border:none;
+    border-radius:14px;
+    align-items:center;
+    justify-content:center;
+    background:rgba(228,247,234,.82);
+    color:#3B7D55;
+    font-size:1.65rem;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 8px 20px rgba(95,168,120,.12);
+    transition:all .2s ease;
+    flex:0 0 auto;
+    text-decoration:none;
+}
+
+.back-btn:hover{
+    background:#5FA878;
+    color:#fff;
+    transform:translateX(-2px);
+}
+
+.edit-head h2{
+    margin:0;
+    color:#17252A;
+    font-size:clamp(1.45rem, 2.1vw, 1.9rem);
+    font-weight:700;
+}
+
+.edit-form{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:16px;
+}
+
+.edit-form label{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    color:#17252A;
+    font-weight:700;
+}
+
+.edit-form input{
+    width:100%;
+    min-height:46px;
+    padding:10px 14px;
+    border:1px solid rgba(95,168,120,.28);
+    border-radius:14px;
+    background:#fff;
+    color:#334155;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    outline:none;
+}
+
+.readonly-box{
+    min-height:46px;
+    padding:10px 14px;
+    border:1px solid rgba(95,168,120,.20);
+    border-radius:14px;
+    background:rgba(228,247,234,.40);
+    color:#425466;
+    font-size:1rem;
+    display:flex;
+    align-items:center;
+}
+
+.centre-picker{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.centre-picker-btn{
+    width:100%;
+    min-height:46px;
+    padding:10px 14px;
+    border:1px solid rgba(95,168,120,.28) !important;
+    border-radius:14px;
+    background:#FFFFFF !important;
+    color:#334155 !important;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:700;
+    text-align:left;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    box-shadow:none !important;
+    outline:none !important;
+    appearance:none;
+    -webkit-appearance:none;
+}
+
+.centre-picker-btn:hover,
+.centre-picker-btn:focus,
+.centre-picker-btn:active{
+    background:#FFFFFF !important;
+    color:#334155 !important;
+    border-color:#5FA878 !important;
+    box-shadow:0 0 0 4px rgba(95,168,120,.10) !important;
+    outline:none !important;
+}
+
+.centre-picker-btn span:last-child{
+    color:#3B7D55;
+    font-size:1.1rem;
+    font-weight:900;
+}
+
+.centre-dropdown{
+    position:absolute;
+    left:0;
+    right:0;
+    top:calc(100% + 8px);
+    z-index:80;
+    display:none;
+    padding:14px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:18px;
+    background:#FFFFFF;
+    box-shadow:0 24px 54px rgba(23,37,42,.18);
+}
+
+.centre-dropdown.active{
+    display:block;
+}
+
+.centre-search{
+    width:100%;
+    min-height:42px;
+    padding:9px 13px;
+    margin-bottom:12px;
+    border:1px solid rgba(95,168,120,.25);
+    border-radius:13px;
+    background:#FFFFFF;
+    color:#334155;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    outline:none;
+}
+
+.centre-search:focus{
+    border-color:#5FA878;
+    box-shadow:0 0 0 4px rgba(95,168,120,.10);
+}
+
+.centre-list{
+    max-height:260px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding-right:4px;
+}
+
+.centre-option{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid rgba(95,168,120,.18);
+    border-radius:14px;
+    background:#F8FAFC !important;
+    color:#334155 !important;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+    text-align:left;
+    outline:none !important;
+    box-shadow:none !important;
+}
+
+.centre-option:hover,
+.centre-option:focus{
+    background:rgba(228,247,234,.82) !important;
+    color:#2F6F49 !important;
+    border-color:rgba(95,168,120,.38) !important;
+}
+
+.centre-option.active{
+    background:rgba(228,247,234,.95) !important;
+    color:#2F6F49 !important;
+    border-color:#5FA878 !important;
+    box-shadow:inset 4px 0 0 #5FA878 !important;
+}
+
+.span-2{
+    grid-column:1 / -1;
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:8px;
+}
+
+.btn-main,
+.btn-soft,
+.btn-danger-soft,
+.btn-enable-soft,
+.btn-disabled-state{
+    min-height:44px;
+    padding:10px 22px;
+    border:none;
+    border-radius:999px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:800;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+}
+
+.disable-modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    opacity:0;
+    pointer-events:none;
+    transition:.25s ease;
+}
+
+.disable-modal-overlay.active{
+    opacity:1;
+    pointer-events:auto;
+}
+
+.disable-modal-box{
+    width:min(92%, 430px);
+    background:#fff;
+    border-radius:22px;
+    padding:26px;
+    box-shadow:0 30px 70px rgba(15,23,42,.25);
+    border:1px solid rgba(220,238,226,.95);
+    font-family:"Times New Roman", Georgia, serif;
+    text-align:center;
+}
+
+.disable-modal-icon{
+    width:54px;
+    height:54px;
+    margin:0 auto 14px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#FEE2E2;
+    color:#B91C1C;
+    font-size:1.55rem;
+    font-weight:900;
+    border:1px solid #FECACA;
+}
+
+.disable-modal-box h3{
+    margin:0 0 10px;
+    color:#17252A;
+    font-size:1.45rem;
+    font-weight:800;
+}
+
+.disable-modal-box p{
+    margin:0 0 22px;
+    color:#64748B;
+    font-size:1rem;
+    line-height:1.5;
+    font-weight:600;
+}
+
+.disable-modal-actions{
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.disable-cancel-btn,
+.disable-confirm-btn{
+    min-height:42px;
+    padding:9px 22px;
+    border-radius:999px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:800;
+    cursor:pointer;
+    border:1px solid transparent;
+    transition:.2s ease;
+}
+
+.disable-cancel-btn{
+    background:rgba(228,247,234,.75);
+    color:#3B7D55;
+    border-color:rgba(95,168,120,.25);
+}
+
+.disable-cancel-btn:hover{
+    background:#5FA878;
+    color:#fff;
+}
+
+.disable-confirm-btn{
+    background:#B91C1C;
+    color:#fff;
+    box-shadow:0 12px 26px rgba(185,28,28,.18);
+}
+
+.disable-confirm-btn:hover{
+    background:#991B1B;
+    transform:translateY(-1px);
+}
+
+.btn-main{
+    background:#5FA878;
+    color:#fff;
+    box-shadow:0 12px 26px rgba(95,168,120,.22);
+}
+
+.btn-main:hover{
+    background:#3B7D55;
+}
+
+.btn-soft{
+    background:rgba(228,247,234,.75);
+    color:#3B7D55;
+    border:1px solid rgba(95,168,120,.25);
+}
+
+.btn-soft:hover{
+    background:#5FA878;
+    color:#fff;
+}
+
+.btn-danger-soft{
+    background:#FEE2E2;
+    color:#B91C1C;
+    border:1px solid #FECACA;
+}
+
+.btn-danger-soft:hover{
+    background:#B91C1C;
+    color:#fff;
+}
+
+.btn-enable-soft{
+    background:rgba(228,247,234,.75);
+    color:#2F6F49;
+    border:1px solid rgba(95,168,120,.25);
+}
+
+.btn-enable-soft:hover{
+    background:#5FA878;
+    color:#fff;
+}
+
+.btn-disabled-state{
+    background:#F1F5F9;
+    color:#64748B;
+    border:1px solid #CBD5E1;
+    cursor:not-allowed;
+}
+
+@media(max-width:760px){
+    .edit-card{
+        padding:20px;
+        border-radius:22px;
+    }
+
+    .edit-form{
+        grid-template-columns:1fr;
+    }
+
+    .span-2{
+        flex-direction:column;
+    }
+
+ .btn-main,
+.btn-soft,
+.btn-danger-soft,
+.btn-enable-soft,
+.btn-disabled-state{
+    width:100%;
+}
+
+    .centre-dropdown{
+        position:fixed;
+        left:16px;
+        right:16px;
+        top:120px;
+        max-height:70vh;
+        overflow:hidden;
+    }
+
+    .centre-list{
+        max-height:50vh;
+    }
+    .disable-modal-actions{
+    flex-direction:column;
+}
+
+.disable-cancel-btn,
+.disable-confirm-btn{
+    width:100%;
+}
+}
+</style>
+
+<div class="edit-card">
+<div class="edit-head">
+    <div class="edit-title-left">
+        <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
+        <h2>Edit User Account</h2>
+    </div>
+</div>
+
+    <form method="POST" class="edit-form">
+        <label>
+            Name
+            <input type="text" name="name" value="{{ user.name or '' }}" required>
+        </label>
+
+        <label>
+            Role
+            <div class="readonly-box">{{ user.role|replace('_',' ')|title }}</div>
+        </label>
+
+        <label>
+            Username
+            <input type="text" name="username" value="{{ user.username or '' }}">
+        </label>
+
+        <label>
+            Phone
+            <input type="text" name="phone" value="{{ user.phone or '' }}">
+        </label>
+
+      <label>
+    Centre UID
+    <div class="readonly-box">
+        {{ user.centre_uid or user.mapped_centre_uid or '-' }}
+    </div>
+</label>
+
+       {% if user.role == 'farmer' %}
+    {% set selected_mitra = user.mitra_uid or user.mapped_mitra_uid or '' %}
+
+    <div class="centre-picker" id="mitraPicker">
+        <label>
+            Mitra UID
+            <input type="hidden" name="mapped_mitra_uid" id="mappedMitraUid" value="{{ selected_mitra }}">
+
+            <button type="button" class="centre-picker-btn" id="mitraPickerBtn">
+                <span id="mitraPickerText">
+                    {% if selected_mitra %}
+                        {{ selected_mitra }}
+                    {% else %}
+                        Select Mitra
+                    {% endif %}
+                </span>
+                <span>⌄</span>
+            </button>
+        </label>
+
+        <div class="centre-dropdown" id="mitraDropdown">
+            <input type="text" class="centre-search" id="mitraSearch" placeholder="Search Mitra UID or name">
+
+            <div class="centre-list" id="mitraList">
+                {% for m in mitras %}
+                    {% set mid = m.mitra_uid or m.mapped_mitra_uid %}
+                    {% set mlabel = mid ~ (' - ' ~ m.name if m.name else '') %}
+                    <button
+                        type="button"
+                        class="centre-option {% if selected_mitra == mid %}active{% endif %}"
+                        data-value="{{ mid }}"
+                        data-label="{{ mlabel }}"
+                    >
+                        {{ mlabel }}
+                    </button>
+                {% else %}
+                    <button type="button" class="centre-option" disabled>No Mitras found</button>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% else %}
+    <label>
+        Mitra UID
+        <div class="readonly-box">{{ user.mitra_uid or user.mapped_mitra_uid or '-' }}</div>
+    </label>
+{% endif %}
+
+        {% if user.role == 'ufc_mitra' %}
+            {% set selected_centre = user.mapped_centre_uid or user.centre_uid or '' %}
+
+            <div class="centre-picker span-2" id="centrePicker">
+                <label>
+                    Mapped Centre UID
+                    <input type="hidden" name="mapped_centre_uid" id="mappedCentreUid" value="{{ selected_centre }}">
+
+                    <button type="button" class="centre-picker-btn" id="centrePickerBtn">
+                        <span id="centrePickerText">
+                            {% if selected_centre %}
+                                {{ selected_centre }}
+                            {% else %}
+                                Select Centre
+                            {% endif %}
+                        </span>
+                        <span>⌄</span>
+                    </button>
+                </label>
+
+                <div class="centre-dropdown" id="centreDropdown">
+                    <input type="text" class="centre-search" id="centreSearch" placeholder="Search centre UID or name">
+
+                    <div class="centre-list" id="centreList">
+                        {% for c in centres %}
+                            {% set label = c.centre_uid ~ (' - ' ~ (c.name_of_enterprise or c.name) if (c.name_of_enterprise or c.name) else '') %}
+                            <button
+                                type="button"
+                                class="centre-option {% if selected_centre == c.centre_uid %}active{% endif %}"
+                                data-value="{{ c.centre_uid }}"
+                                data-label="{{ label }}"
+                            >
+                                {{ label }}
+                            </button>
+                        {% else %}
+                            <button type="button" class="centre-option" disabled>No centres found</button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+       <div class="span-2">
+    <button type="submit" class="btn-main">Update User</button>
+
+    {% if user.active is not defined or user.active %}
+        <button
+            type="button"
+            class="btn-danger-soft"
+            onclick="openDisableModal();"
+        >
+            Disable Account
+        </button>
+    {% else %}
+        <button
+            type="button"
+            class="btn-enable-soft"
+            onclick="openEnableModal();"
+        >
+            Enable Account
+        </button>
+    {% endif %}
+
+    <a href="{{ url_for('admin.users') }}" class="btn-soft">Cancel</a>
+</div>
+    </form>
+
+    <form
+    method="post"
+    action="{{ url_for('admin.disable_user', user_id=user._id) }}"
+    id="disableAccountForm"
+    style="display:none;">
+</form>
+
+<div class="disable-modal-overlay" id="disableAccountModal">
+    <div class="disable-modal-box">
+        <div class="disable-modal-icon">!</div>
+
+        <h3>Disable Account?</h3>
+
+        <p>
+            This user will no longer be able to login. The account data will remain saved in the system.
+        </p>
+
+        <div class="disable-modal-actions">
+            <button type="button" class="disable-cancel-btn" onclick="closeDisableModal()">
+                Cancel
+            </button>
+
+            <button type="button" class="disable-confirm-btn" onclick="submitDisableAccount()">
+                Disable Account
+            </button>
+        </div>
+    </div>
+</div>
+
+<form
+    method="post"
+    action="{{ url_for('admin.enable_user', user_id=user._id) }}"
+    id="enableAccountForm"
+    style="display:none;">
+</form>
+
+<div class="disable-modal-overlay" id="enableAccountModal">
+    <div class="disable-modal-box">
+        <div class="disable-modal-icon" style="background:rgba(228,247,234,.95); color:#2F6F49; border-color:rgba(95,168,120,.28);">✓</div>
+
+        <h3>Enable Account?</h3>
+
+        <p>
+            This user will be able to login again after the account is enabled.
+        </p>
+
+        <div class="disable-modal-actions">
+            <button type="button" class="disable-cancel-btn" onclick="closeEnableModal()">
+                Cancel
+            </button>
+
+            <button type="button" class="disable-confirm-btn" style="background:#5FA878;" onclick="submitEnableAccount()">
+                Enable Account
+            </button>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+(function(){
+    const picker = document.getElementById('centrePicker');
+    if(!picker) return;
+
+    const btn = document.getElementById('centrePickerBtn');
+    const dropdown = document.getElementById('centreDropdown');
+    const search = document.getElementById('centreSearch');
+    const hidden = document.getElementById('mappedCentreUid');
+    const text = document.getElementById('centrePickerText');
+    const options = Array.from(document.querySelectorAll('.centre-option[data-value]'));
+
+    btn.addEventListener('click', function(){
+        dropdown.classList.toggle('active');
+        if(dropdown.classList.contains('active')){
+            search.focus();
+        }
+    });
+
+    options.forEach(function(option){
+        option.addEventListener('click', function(){
+            const value = option.dataset.value;
+            const label = option.dataset.label;
+
+            hidden.value = value;
+            text.textContent = label;
+
+            options.forEach(o => o.classList.remove('active'));
+            option.classList.add('active');
+
+            dropdown.classList.remove('active');
+            search.value = '';
+
+            options.forEach(o => {
+                o.style.display = '';
+            });
+        });
+    });
+
+    search.addEventListener('input', function(){
+        const q = search.value.toLowerCase().trim();
+
+        options.forEach(function(option){
+            const label = option.dataset.label.toLowerCase();
+            option.style.display = label.includes(q) ? '' : 'none';
+        });
+    });
+
+    document.addEventListener('click', function(e){
+        if(!picker.contains(e.target)){
+            dropdown.classList.remove('active');
+        }
+    });
+})();
+</script>
+
+
+<script>
+(function(){
+    const picker = document.getElementById('mitraPicker');
+    if(!picker) return;
+
+    const btn = document.getElementById('mitraPickerBtn');
+    const dropdown = document.getElementById('mitraDropdown');
+    const search = document.getElementById('mitraSearch');
+    const hidden = document.getElementById('mappedMitraUid');
+    const text = document.getElementById('mitraPickerText');
+    const options = Array.from(document.querySelectorAll('#mitraList .centre-option[data-value]'));
+
+    btn.addEventListener('click', function(){
+        dropdown.classList.toggle('active');
+        if(dropdown.classList.contains('active')){
+            search.focus();
+        }
+    });
+
+    options.forEach(function(option){
+        option.addEventListener('click', function(){
+            const value = option.dataset.value;
+            const label = option.dataset.label;
+
+            hidden.value = value;
+            text.textContent = label;
+
+            options.forEach(o => o.classList.remove('active'));
+            option.classList.add('active');
+
+            dropdown.classList.remove('active');
+            search.value = '';
+
+            options.forEach(o => {
+                o.style.display = '';
+            });
+        });
+    });
+
+    search.addEventListener('input', function(){
+        const q = search.value.toLowerCase().trim();
+
+        options.forEach(function(option){
+            const label = option.dataset.label.toLowerCase();
+            option.style.display = label.includes(q) ? '' : 'none';
+        });
+    });
+
+    document.addEventListener('click', function(e){
+        if(!picker.contains(e.target)){
+            dropdown.classList.remove('active');
+        }
+    });
+})();
+</script>
+
+
+<script>
+function openDisableModal(){
+    const modal = document.getElementById('disableAccountModal');
+    if(modal){
+        modal.classList.add('active');
+    }
+}
+
+function closeDisableModal(){
+    const modal = document.getElementById('disableAccountModal');
+    if(modal){
+        modal.classList.remove('active');
+    }
+}
+
+function submitDisableAccount(){
+    const form = document.getElementById('disableAccountForm');
+    if(form){
+        form.submit();
+    }
+}
+
+document.addEventListener('click', function(e){
+    const modal = document.getElementById('disableAccountModal');
+
+    if(modal && e.target === modal){
+        closeDisableModal();
+    }
+});
+
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+        closeDisableModal();
+    }
+});
+</script>
+
+
+<script>
+function openEnableModal(){
+    const modal = document.getElementById('enableAccountModal');
+    if(modal){
+        modal.classList.add('active');
+    }
+}
+
+function closeEnableModal(){
+    const modal = document.getElementById('enableAccountModal');
+    if(modal){
+        modal.classList.remove('active');
+    }
+}
+
+function submitEnableAccount(){
+    const form = document.getElementById('enableAccountForm');
+    if(form){
+        form.submit();
+    }
+}
+
+document.addEventListener('click', function(e){
+    const modal = document.getElementById('enableAccountModal');
+
+    if(modal && e.target === modal){
+        closeEnableModal();
+    }
+});
+
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+        closeEnableModal();
+    }
+});
+</script>
+{% endblock %}

@@ -148,7 +148,13 @@ def buy():
         return redirect(url_for("modules.buy"))
 
    # ===== GET LOGIC =====
-    products = list(mongo.db.products.find({}).sort("created_at", -1))
+   # ===== GET LOGIC =====
+    products = list(
+    mongo.db.products.find({
+        "is_deleted": {"$ne": True},
+        "is_active": {"$ne": False}
+    }).sort("created_at", -1)
+)
 
     view_mode = request.args.get("view", "").strip()
 
@@ -911,7 +917,12 @@ def orders():
 @modules_bp.route("/products")
 @login_required
 def products():
-    items = list(mongo.db.products.find({}).sort("created_at", -1))
+    items = list(
+        mongo.db.products.find({
+            "is_deleted": {"$ne": True},
+            "is_active": {"$ne": False}
+        }).sort("created_at", -1)
+    )
     return render_template("modules/products.html", items=items)
 
 
@@ -1082,22 +1093,60 @@ def profile():
     elif role == "ufc_mitra":
         master = mongo.db.ufc_mitra_master.find_one({"linked_user_id": str(user["_id"])})
 
-    docs = list(
-        mongo.db.documents.find({"linked_user_id": str(user["_id"])}).sort("created_at", -1)
+    all_docs = list(
+        mongo.db.documents.find({
+            "linked_user_id": str(user["_id"]),
+            "status": "active"
+        }).sort("created_at", -1)
     ) if user else []
 
-    pending_profile_update = mongo.db.profile_update_requests.find_one({
-    "user_id": str(user["_id"]),
-    "status": "pending"
-}) if user else None
+    docs = []
+    seen_doc_types = set()
+
+    for doc in all_docs:
+        doc_type = (doc.get("document_type") or "").strip().lower()
+
+        if not doc_type:
+            continue
+
+        if doc_type in seen_doc_types:
+            continue
+
+        seen_doc_types.add(doc_type)
+        docs.append(doc)
+
+    latest_profile_update = mongo.db.profile_update_requests.find_one(
+        {
+            "user_id": str(user["_id"])
+        },
+        sort=[
+            ("requested_at", -1),
+            ("reviewed_at", -1),
+            ("_id", -1)
+        ]
+    ) if user else None
+
+    pending_profile_update = (
+        latest_profile_update
+        if latest_profile_update and latest_profile_update.get("status") == "pending"
+        else None
+    )
+
+    rejected_profile_update = (
+        latest_profile_update
+        if latest_profile_update and latest_profile_update.get("status") == "rejected"
+        else None
+    )
 
     return render_template(
-    "modules/profile.html",
-    user=user,
-    master=master,
-    docs=docs,
-    pending_profile_update=pending_profile_update
-)
+        "modules/profile.html",
+        user=user,
+        master=master,
+        docs=docs,
+        latest_profile_update=latest_profile_update,
+        pending_profile_update=pending_profile_update,
+        rejected_profile_update=rejected_profile_update
+    )
 
 
 @modules_bp.route("/profile/update-request", methods=["POST"])
@@ -1405,10 +1454,12 @@ def pos():
     }).sort('name', 1))
 
     products = list(mongo.db.products.find({
-        '$or': [
-            {'available_centres': 'all'},
-            {'available_centres': {'$in': ['all', centre_uid]}}
-        ]
+    "is_deleted": {"$ne": True},
+    "is_active": {"$ne": False},
+    '$or': [
+        {'available_centres': 'all'},
+        {'available_centres': {'$in': ['all', centre_uid]}}
+    ]
     }).sort('name', 1))
 
     if request.method == 'POST':
@@ -1435,7 +1486,19 @@ def pos():
             mitra_uid = request.form.get('mitra_uid', '').strip()
 
         product_id = request.form.get('product_id')
-        product = mongo.db.products.find_one({'_id': ObjectId(product_id)}) if product_id else None
+        product = mongo.db.products.find_one({
+            '_id': ObjectId(product_id),
+            "is_deleted": {"$ne": True},
+            "is_active": {"$ne": False}
+        }) if product_id else None
+
+        if not product:
+            flash("This product is currently unavailable.", "danger")
+            return redirect(url_for("modules.pos"))
+
+        if not product:
+            flash("This product is currently unavailable.", "danger")
+            return redirect(url_for("modules.pos"))
 
         quantity = float(request.form.get('quantity') or 0)
         price = float(product.get('price') or 0) if product else 0
@@ -1952,13 +2015,15 @@ def place_farmer_order():
         if product_id:
             try:
                 avpl_product = mongo.db.products.find_one({
-                    "_id": ObjectId(product_id)
+                    "_id": ObjectId(product_id),
+                    "is_deleted": {"$ne": True},
+                    "is_active": {"$ne": False}
                 })
             except Exception:
                 avpl_product = None
 
         if not avpl_product:
-            flash("Product not found.", "danger")
+            flash("This product is currently unavailable.", "danger")
             return redirect(url_for("modules.buy"))
 
         product_name = avpl_product.get("name") or avpl_product.get("product_name") or product_name
@@ -1974,7 +2039,9 @@ def place_farmer_order():
         update_result = mongo.db.products.update_one(
             {
                 "_id": ObjectId(product_id),
-                "available_quantity": {"$gte": quantity}
+                "available_quantity": {"$gte": quantity},
+                "is_deleted": {"$ne": True},
+                "is_active": {"$ne": False}
             },
             {
                 "$inc": {

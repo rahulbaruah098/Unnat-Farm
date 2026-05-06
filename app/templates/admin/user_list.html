@@ -570,12 +570,13 @@ th:nth-child(10), td.action-cell{
 }
 .modal-overlay{
     position:fixed;
-    inset:0;
+    top:0;
+    left:0;
+    width:100vw;
+    height:100vh;
+    height:100dvh;
     background:rgba(15,23,42,.45);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:9999;
+    z-index:999999;
     opacity:0;
     pointer-events:none;
     transition:.25s ease;
@@ -587,7 +588,13 @@ th:nth-child(10), td.action-cell{
 }
 
 .modal-box{
-    width:min(92%, 420px);
+    position:fixed;
+    top:50%;
+    left:50%;
+    width:min(92vw, 420px);
+    max-height:calc(100vh - 40px);
+    overflow-y:auto;
+    transform:translate(-50%, -50%);
     background:#fff;
     border-radius:20px;
     padding:24px;
@@ -857,23 +864,63 @@ th:nth-child(10), td.action-cell{
 <script>
 let deleteFormRef = null;
 
+const deleteModal = document.getElementById('deleteModal');
+
+if(deleteModal && deleteModal.parentElement !== document.body){
+    document.body.appendChild(deleteModal);
+}
+
+function lockBodyScroll(){
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+}
+
+function unlockBodyScroll(){
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+}
+
 function handleDelete(e, form){
     e.preventDefault();
     deleteFormRef = form;
-    document.getElementById('deleteModal').classList.add('active');
+
+    if(deleteModal){
+        deleteModal.classList.add('active');
+        lockBodyScroll();
+    }
+
     return false;
 }
 
 function closeModal(){
-    document.getElementById('deleteModal').classList.remove('active');
+    if(deleteModal){
+        deleteModal.classList.remove('active');
+    }
+
+    unlockBodyScroll();
     deleteFormRef = null;
 }
 
 function confirmDelete(){
     if(deleteFormRef){
+        unlockBodyScroll();
         deleteFormRef.submit();
     }
 }
+
+if(deleteModal){
+    deleteModal.addEventListener('click', function(e){
+        if(e.target === deleteModal){
+            closeModal();
+        }
+    });
+}
+
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+        closeModal();
+    }
+});
 </script>
 
 

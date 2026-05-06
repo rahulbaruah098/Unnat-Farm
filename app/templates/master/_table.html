@@ -1,11 +1,46 @@
+{% set farmer_columns = [
+    ('name', 'Name'),
+    ('contact_no', 'Contact'),
+    ('gender', 'Gender'),
+    ('age', 'Age'),
+    ('centre_uid', 'Centre UID'),
+    ('mitra_uid', 'Mitra UID'),
+    ('state', 'State'),
+    ('district', 'District'),
+    ('block', 'Block'),
+    ('village', 'Village'),
+    ('activities', 'Activities'),
+    ('agri_sub_categories', 'Sub Categories'),
+    ('approval_status', 'Approval Status'),
+    ('created_at', 'Created At'),
+    ('updated_at', 'Updated At')
+] %}
+
+{% set hidden_keys = [
+    '_id',
+    'linked_user_id',
+    'profile_photo',
+    'profile_photo_file',
+    'password',
+    'password_hash',
+    'latest_rejection_reason'
+] %}
+
 <table class="data-table">
     <thead>
         <tr>
             {% if items and items|length > 0 %}
                 <th>Sl. No.</th>
-                {% for key in items[0].keys() if key not in ['_id'] %}
-                    <th>{{ key|replace('_',' ')|title }}</th>
-                {% endfor %}
+
+                {% if title and 'Farmer' in title %}
+                    {% for key, label in farmer_columns %}
+                        <th>{{ label }}</th>
+                    {% endfor %}
+                {% else %}
+                    {% for key in items[0].keys() if key not in hidden_keys %}
+                        <th>{{ key|replace('_',' ')|title }}</th>
+                    {% endfor %}
+                {% endif %}
             {% else %}
                 <th>No Data</th>
             {% endif %}
@@ -16,12 +51,30 @@
         {% if items and items|length > 0 %}
             {% for item in items %}
             <tr>
-                <!-- Serial Number -->
-                <td>{{ loop.index }}</td>
+                <td data-label="Sl. No.">{{ loop.index }}</td>
 
-                {% for key, value in item.items() if key not in ['_id'] %}
-                    <td>{{ value }}</td>
-                {% endfor %}
+                {% if title and 'Farmer' in title %}
+                    {% for key, label in farmer_columns %}
+                        {% set value = item.get(key, '-') %}
+                        <td data-label="{{ label }}">
+                            {% if value is sequence and value is not string %}
+                                {{ value|join(', ') if value else '-' }}
+                            {% else %}
+                                {{ value if value else '-' }}
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                {% else %}
+                    {% for key, value in item.items() if key not in hidden_keys %}
+                        <td data-label="{{ key|replace('_',' ')|title }}">
+                            {% if value is sequence and value is not string %}
+                                {{ value|join(', ') if value else '-' }}
+                            {% else %}
+                                {{ value if value else '-' }}
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                {% endif %}
             </tr>
             {% endfor %}
         {% else %}

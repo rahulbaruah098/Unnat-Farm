@@ -31,6 +31,50 @@ def queue():
             if str(update_item.get("_id")) not in existing_ids:
                 items.append(update_item)
 
+    for item in items:
+        linked_user = None
+        linked_user_id = item.get("entity_id")
+
+        if item.get("entity_type") == "profile_update_request":
+            update_request = None
+
+            try:
+                update_request = mongo.db.profile_update_requests.find_one({
+                    "_id": ObjectId(str(item.get("entity_id")))
+                })
+            except Exception:
+                update_request = None
+
+            if update_request:
+                linked_user_id = update_request.get("user_id")
+
+        if linked_user_id:
+            linked_user_id_str = str(linked_user_id)
+
+            try:
+                linked_user = mongo.db.users.find_one({
+                    "_id": ObjectId(linked_user_id_str)
+                })
+            except Exception:
+                linked_user = None
+
+            if not linked_user:
+                linked_user = mongo.db.users.find_one({
+                    "_id": linked_user_id_str
+                })
+
+            if not linked_user:
+                linked_user = mongo.db.users.find_one({
+                    "linked_user_id": linked_user_id_str
+                })
+
+        item["display_username"] = (
+            linked_user.get("username")
+            or linked_user.get("name")
+            or linked_user.get("phone")
+            or str(linked_user_id or "-")
+        ) if linked_user else str(linked_user_id or "-")
+
     if q:
         q_lower = q.lower()
         items = [
@@ -38,6 +82,7 @@ def queue():
             if q_lower in str(item.get("entity_type", "")).lower()
             or q_lower in str(item.get("status", "")).lower()
             or q_lower in str(item.get("created_at", "")).lower()
+            or q_lower in str(item.get("display_username", "")).lower()
         ]
 
     return render_template('validations/queue.html', items=items)
@@ -126,9 +171,29 @@ def detail(validation_id):
     if master_id:
         doc_or_query.append({'linked_master_id': master_id})
 
-    linked_docs = list(
-        mongo.db.documents.find({'$or': doc_or_query}).sort('created_at', -1)
+        all_docs = list(
+        mongo.db.documents.find({
+            "$and": [
+                {"$or": doc_or_query},
+                {"status": "active"}
+            ]
+        }).sort('created_at', -1)
     )
+
+    linked_docs = []
+    seen_document_types = set()
+
+    for doc in all_docs:
+        doc_type = (doc.get("document_type") or "").strip().lower()
+
+        if not doc_type:
+            continue
+
+        if doc_type in seen_document_types:
+            continue
+
+        seen_document_types.add(doc_type)
+        linked_docs.append(doc)
 
     return render_template(
         'validations/detail.html',
@@ -184,16 +249,57 @@ def take_action(validation_id):
                 elif field == "supporting_document":
                     update_fields["supporting_document"] = filename
 
+                document_type = doc.get("label") or doc.get("document_type")
+
+                same_type_names = [document_type]
+
+                if field == "profile_photo":
+                    same_type_names = [
+                    "Passport Size Photo",
+                    "Profile Photo",
+                    "Farmer Profile Photo"
+                ]
+                elif field == "government_id_file":
+                    same_type_names = [
+                    "Government ID / Identity Document",
+                    "Government-Issued Identity Card",
+                    "Government-issued Identity Card",
+                    "Government ID",
+                    "Identity Document"
+                ]
+                elif field == "supporting_document":
+                    same_type_names = [
+                        "Supporting Document",
+                        "Support Document"
+                ]
+
+                mongo.db.documents.update_many(
+    {
+        "linked_user_id": str(user_id),
+        "document_type": {"$in": same_type_names},
+        "status": "active"
+    },
+    {
+        "$set": {
+            "status": "replaced",
+            "replaced_at": now_utc(),
+            "updated_at": now_utc()
+        }
+    }
+)
+
                 mongo.db.documents.insert_one({
-                    "linked_user_id": user_id,
-                    "linked_master_id": update_request.get("master_id"),
+                    "linked_user_id": str(user_id),
+                    "linked_master_id": str(update_request.get("master_id")) if update_request.get("master_id") else None,
                     "filename": filename,
-                    "document_type": doc.get("label") or doc.get("document_type"),
+                    "document_type": document_type,
                     "uploaded_by": user_id,
                     "uploaded_role": role,
+                    "status": "active",
                     "created_at": now_utc(),
+                    "updated_at": now_utc(),
                     "approved_from_update_request": str(update_request["_id"])
-                })
+        })
 
             master_collection = None
 
@@ -221,16 +327,34 @@ def take_action(validation_id):
             )
 
             mongo.db.profile_update_requests.update_one(
-                {"_id": ObjectId(item["entity_id"])},
-                {
-                    "$set": {
-                        "status": "approved",
-                        "reviewed_by": session.get("user_id"),
-                        "reviewed_at": now_utc(),
-                        "rejection_reason": ""
-                    }
-                }
-            )
+    {"_id": ObjectId(item["entity_id"])},
+    {
+        "$set": {
+            "status": "approved",
+            "reviewed_by": session.get("user_id"),
+            "reviewed_at": now_utc(),
+            "updated_at": now_utc(),
+            "rejection_reason": ""
+        }
+    }
+)
+
+            mongo.db.profile_update_requests.update_many(
+            {
+            "user_id": str(user_id),
+            "status": "pending",
+            "_id": {"$ne": ObjectId(item["entity_id"])}
+        },
+        {
+            "$set": {
+            "status": "cancelled",
+            "reviewed_by": session.get("user_id"),
+            "reviewed_at": now_utc(),
+            "updated_at": now_utc(),
+            "rejection_reason": "Cancelled because a newer/related profile update request was already approved."
+        }
+    }
+)
 
             mongo.db.validations.update_one(
                 {"_id": ObjectId(validation_id)},
@@ -251,14 +375,15 @@ def take_action(validation_id):
             mongo.db.profile_update_requests.update_one(
                 {"_id": ObjectId(item["entity_id"])},
                 {
-                    "$set": {
-                        "status": "rejected",
-                        "reviewed_by": session.get("user_id"),
-                        "reviewed_at": now_utc(),
-                        "rejection_reason": remarks
-                    }
-                }
-            )
+                "$set": {
+                "status": "rejected",
+                "reviewed_by": session.get("user_id"),
+                "reviewed_at": now_utc(),
+                "updated_at": now_utc(),
+                "rejection_reason": remarks
+            }
+        }
+    )
 
             mongo.db.validations.update_one(
                 {"_id": ObjectId(validation_id)},

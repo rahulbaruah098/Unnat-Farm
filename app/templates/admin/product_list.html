@@ -761,6 +761,222 @@
     }
 }
 
+
+.product-card.is-disabled{
+    opacity:.72;
+}
+
+.product-status-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    flex-wrap:wrap;
+    margin:0 0 10px;
+}
+
+.product-status-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:28px;
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:.8rem;
+    font-weight:900;
+    border:1px solid rgba(95,168,120,.22);
+}
+
+.product-status-pill.active{
+    color:#047857;
+    background:#ECFDF5;
+    border-color:#A7F3D0;
+}
+
+.product-status-pill.disabled{
+    color:#B45309;
+    background:#FFFBEB;
+    border-color:#FDE68A;
+}
+
+.product-admin-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid rgba(220,238,226,.75);
+}
+
+.inline-action-form{
+    margin:0;
+}
+
+.product-admin-btn{
+    min-height:34px;
+    border:none;
+    border-radius:999px;
+    padding:7px 13px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:.84rem;
+    font-weight:900;
+    cursor:pointer;
+    transition:.2s ease;
+}
+
+.product-admin-btn.enable{
+    background:#ECFDF5;
+    color:#047857;
+    border:1px solid #A7F3D0;
+}
+
+.product-admin-btn.disable{
+    background:#FFFBEB;
+    color:#B45309;
+    border:1px solid #FDE68A;
+}
+
+.product-admin-btn.delete{
+    background:#FEE2E2;
+    color:#B91C1C;
+    border:1px solid #FECACA;
+}
+
+.product-admin-btn:hover{
+    transform:translateY(-1px);
+    filter:brightness(.96);
+}
+
+@media(max-width:560px){
+    .product-admin-actions,
+    .inline-action-form,
+    .product-admin-btn{
+        width:100%;
+    }
+}
+
+.product-confirm-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100vw;
+    height:100vh;
+    height:100dvh;
+    z-index:999999;
+    display:none;
+    background:rgba(15,23,42,.38);
+    backdrop-filter:blur(6px);
+}
+
+.product-confirm-overlay.show{
+    display:block;
+}
+
+.product-confirm-modal{
+    position:fixed;
+    top:50%;
+    left:50%;
+    width:min(440px, calc(100vw - 34px));
+    max-height:calc(100vh - 40px);
+    overflow-y:auto;
+    transform:translate(-50%, -50%);
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:24px;
+    background:#fff;
+    box-shadow:0 30px 80px rgba(15,23,42,.22);
+    padding:24px;
+    font-family:"Times New Roman", Georgia, serif;
+    animation:confirmPop .18s ease both;
+}
+
+.product-confirm-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:32px;
+    padding:6px 13px;
+    border-radius:999px;
+    background:#E4F7EA;
+    color:#3B7D55;
+    font-weight:900;
+    border:1px solid rgba(95,168,120,.25);
+    margin-bottom:12px;
+}
+
+.product-confirm-title{
+    margin:0 0 8px;
+    color:#17252A;
+    font-size:1.45rem;
+    font-weight:900;
+}
+
+.product-confirm-text{
+    margin:0;
+    color:#64748B;
+    font-size:1rem;
+    line-height:1.5;
+    font-weight:700;
+}
+
+.product-confirm-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:22px;
+    flex-wrap:wrap;
+}
+
+.product-confirm-btn{
+    min-height:42px;
+    border:none;
+    border-radius:999px;
+    padding:9px 18px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:900;
+    cursor:pointer;
+    transition:.2s ease;
+}
+
+.product-confirm-btn.cancel{
+    background:#E4F7EA;
+    color:#3B7D55;
+    border:1px solid rgba(95,168,120,.25);
+}
+
+.product-confirm-btn.confirm{
+    background:#5FA878;
+    color:#fff;
+    box-shadow:0 12px 26px rgba(95,168,120,.20);
+}
+
+.product-confirm-btn.danger{
+    background:#B91C1C;
+    color:#fff;
+    box-shadow:0 12px 26px rgba(185,28,28,.18);
+}
+
+.product-confirm-btn:hover{
+    transform:translateY(-1px);
+}
+
+@keyframes confirmPop{
+    from{
+        opacity:0;
+        transform:translate(-50%, -46%) scale(.98);
+    }
+    to{
+        opacity:1;
+        transform:translate(-50%, -50%) scale(1);
+    }
+}
+
+@media(max-width:560px){
+    .product-confirm-actions,
+    .product-confirm-btn{
+        width:100%;
+    }
+}
 </style>
 
 <div class="page-card products-page">
@@ -843,8 +1059,10 @@
 
     <div class="product-grid" id="productGrid">
         {% for p in products %}
-            <article class="product-card"
+    {% set product_is_active = p.get('is_active', True) %}
+    <article class="product-card {% if not product_is_active %}is-disabled{% endif %}"
          data-type="{{ p.type|lower }}"
+         data-status="{{ 'active' if product_is_active else 'disabled' }}"
          data-centres="{% if p.available_centres is iterable and p.available_centres is not string %}{{ p.available_centres|join('|') }}{% else %}{{ p.available_centres }}{% endif %}"
          data-search="{{ p.name }} {{ p.category }} {{ p.type }} {% if p.available_centres is iterable and p.available_centres is not string %}{{ p.available_centres|join(' ') }}{% else %}{{ p.available_centres }}{% endif %} {{ p.price }}">
                 <div class="product-image-wrap">
@@ -864,6 +1082,14 @@
         <div class="product-meta">
     <span><strong>Category:</strong> {{ p.category or '-' }}</span>
     <span><strong>Type:</strong> {{ p.type|title if p.type else '-' }}</span>
+</div>
+
+<div class="product-status-row">
+    {% if product_is_active %}
+        <span class="product-status-pill active">Active</span>
+    {% else %}
+        <span class="product-status-pill disabled">Disabled</span>
+    {% endif %}
 </div>
 
 <span class="product-qty">
@@ -894,6 +1120,33 @@
     >
     <button type="submit">Refill</button>
 </form>
+
+{% if session.get('role') in ['avpl_admin', 'accounts'] %}
+<div class="product-admin-actions">
+    <form method="POST"
+          action="{{ url_for('admin.toggle_product_status', product_id=p._id) }}"
+          class="inline-action-form product-confirm-form"
+          data-confirm-type="{{ 'enable' if not product_is_active else 'disable' }}"
+          data-confirm-title="{{ 'Enable Product' if not product_is_active else 'Disable Product' }}"
+          data-confirm-message="{{ 'Are you sure you want to enable this product?' if not product_is_active else 'Are you sure you want to disable this product?' }}">
+        <button type="submit"
+                class="product-admin-btn {{ 'enable' if not product_is_active else 'disable' }}">
+            {{ 'Enable' if not product_is_active else 'Disable' }}
+        </button>
+    </form>
+
+    <form method="POST"
+          action="{{ url_for('admin.delete_product', product_id=p._id) }}"
+          class="inline-action-form product-confirm-form"
+          data-confirm-type="delete"
+          data-confirm-title="Delete Product"
+          data-confirm-message="Are you sure you want to delete this product? This will remove it from the product list.">
+        <button type="submit" class="product-admin-btn delete">
+            Delete
+        </button>
+    </form>
+</div>
+{% endif %}
 
 <div class="product-centres">
     <strong>Available Centres:</strong>
@@ -986,6 +1239,23 @@
 
 </div>
 
+<div class="product-confirm-overlay" id="productConfirmOverlay">
+    <div class="product-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="productConfirmTitle">
+        <div class="product-confirm-badge" id="productConfirmBadge">Product Action</div>
+        <h3 class="product-confirm-title" id="productConfirmTitle">Confirm Action</h3>
+        <p class="product-confirm-text" id="productConfirmText">Are you sure?</p>
+
+        <div class="product-confirm-actions">
+            <button type="button" class="product-confirm-btn cancel" id="productConfirmCancel">
+                Cancel
+            </button>
+            <button type="button" class="product-confirm-btn confirm" id="productConfirmSubmit">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 (function(){
     const grid = document.getElementById('productGrid');
@@ -1010,6 +1280,98 @@
     let currentPage = 1;
     let activeView = 'grid';
     const perPage = 10;
+
+
+
+    const confirmOverlay = document.getElementById('productConfirmOverlay');
+    if(confirmOverlay && confirmOverlay.parentElement !== document.body){
+    document.body.appendChild(confirmOverlay);
+}
+const confirmBadge = document.getElementById('productConfirmBadge');
+const confirmTitle = document.getElementById('productConfirmTitle');
+const confirmText = document.getElementById('productConfirmText');
+const confirmCancel = document.getElementById('productConfirmCancel');
+const confirmSubmit = document.getElementById('productConfirmSubmit');
+let pendingConfirmForm = null;
+
+function openProductConfirm(form){
+    if(!confirmOverlay || !confirmTitle || !confirmText || !confirmSubmit) return true;
+
+    const type = form.dataset.confirmType || 'action';
+    const title = form.dataset.confirmTitle || 'Confirm Action';
+    const message = form.dataset.confirmMessage || 'Are you sure you want to continue?';
+
+    pendingConfirmForm = form;
+
+    confirmTitle.textContent = title;
+    confirmText.textContent = message;
+
+    if(confirmBadge){
+        confirmBadge.textContent =
+            type === 'delete' ? 'Delete Product' :
+            type === 'disable' ? 'Disable Product' :
+            type === 'enable' ? 'Enable Product' :
+            'Product Action';
+    }
+
+    confirmSubmit.textContent =
+        type === 'delete' ? 'Delete' :
+        type === 'disable' ? 'Disable' :
+        type === 'enable' ? 'Enable' :
+        'Confirm';
+
+    confirmSubmit.classList.toggle('danger', type === 'delete');
+    confirmSubmit.classList.toggle('confirm', type !== 'delete');
+
+    confirmOverlay.classList.add('show');
+    return false;
+}
+
+function closeProductConfirm(){
+    if(confirmOverlay){
+        confirmOverlay.classList.remove('show');
+    }
+    pendingConfirmForm = null;
+}
+
+document.querySelectorAll('.product-confirm-form').forEach(form => {
+    form.addEventListener('submit', function(e){
+        if(form.dataset.confirmed === '1'){
+            return true;
+        }
+
+        e.preventDefault();
+        openProductConfirm(form);
+        return false;
+    });
+});
+
+if(confirmCancel){
+    confirmCancel.addEventListener('click', closeProductConfirm);
+}
+
+if(confirmOverlay){
+    confirmOverlay.addEventListener('click', function(e){
+        if(e.target === confirmOverlay){
+            closeProductConfirm();
+        }
+    });
+}
+
+if(confirmSubmit){
+    confirmSubmit.addEventListener('click', function(){
+        if(!pendingConfirmForm) return;
+
+        pendingConfirmForm.dataset.confirmed = '1';
+        pendingConfirmForm.submit();
+    });
+}
+
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+        closeProductConfirm();
+    }
+});
 
     function normalizeCentreList(value){
         return String(value || '')

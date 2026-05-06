@@ -299,12 +299,12 @@ def register_farmer():
         }) or {}
 
         doc = store_document(
-            profile_photo_file,
-            farmer_user_id,
-            farmer_master.get('_id'),
-            farmer_user_id,
-            'farmer',
-            'Passport Size Photo'
+        profile_photo_file,
+        farmer_user_id,
+        farmer_master.get('_id'),
+        farmer_user_id,
+        'farmer',
+        'Passport Size Photo'
         )
 
         profile_photo_path = (

@@ -417,7 +417,7 @@
         </label>
 
      <form method="get" class="inline-search">
-    <input type="text" name="q" value="{{ request.args.get('q','') }}" placeholder="Search validation items">
+    <input type="text" name="q" value="{{ request.args.get('q','') }}" placeholder="Search by username, type, status">
 
     <button type="submit">Search</button>
 
@@ -433,24 +433,26 @@
         <table id="validationQueueTable">
             <thead>
                 <tr>
-                    <th class="serial-col">Sl. No.</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Created At</th>
-                    <th>View</th>
+                   <th class="serial-col">Sl. No.</th>
+<th>Type</th>
+<th>Username</th>
+<th>Status</th>
+<th>Created At</th>
+<th>View</th>
                 </tr>
             </thead>
             <tbody>
             {% for i in items %}
                 <tr>
                     <td class="serial-cell" data-label="Sl. No."></td>
-                    <td data-label="Type">{{ i.entity_type }}</td>
-                    <td data-label="Status"><span class="badge">{{ i.status }}</span></td>
-                    <td data-label="Created At">{{ i.created_at }}</td>
-                    <td data-label="View"><a href="{{ url_for('validation.detail', validation_id=i._id) }}">Open</a></td>
+<td data-label="Type">{{ i.entity_type }}</td>
+<td data-label="Username">{{ i.display_username or '-' }}</td>
+<td data-label="Status"><span class="badge">{{ i.status }}</span></td>
+<td data-label="Created At">{{ i.created_at }}</td>
+<td data-label="View"><a href="{{ url_for('validation.detail', validation_id=i._id) }}">Open</a></td>
                 </tr>
             {% else %}
-                <tr><td colspan="5">No validation items.</td></tr>
+              <tr><td colspan="6">No validation items.</td></tr>
             {% endfor %}
             </tbody>
         </table>

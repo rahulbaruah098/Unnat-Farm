@@ -633,7 +633,12 @@ def lms_upload():
 @login_required
 @roles_required('avpl_admin', 'accounts')
 def add_product():
-    categories = list(mongo.db.product_categories.find({}).sort('name', 1))
+    categories = list(
+    mongo.db.product_categories.find({
+        'is_deleted': {'$ne': True},
+        'is_active': {'$ne': False}
+    }).sort('name', 1)
+)
     centres = list(mongo.db.ufc_admin_master.find({
         'centre_uid': {'$exists': True, '$ne': ''}
     }).sort('centre_uid', 1))
@@ -661,16 +666,20 @@ def add_product():
             available_quantity = 0
 
         mongo.db.products.insert_one({
-            'name': request.form.get('name', '').strip(),
-            'category': request.form.get('category', '').strip(),
-            'type': request.form.get('type', '').strip(),
-            'available_centres': request.form.getlist('available_centres'),
-            'price': request.form.get('price', '').strip(),
-            'available_quantity': available_quantity,
-            'image_name': image_name,
-            'created_by': session['user_id'],
-            'created_at': now_utc()
-        })
+        'name': request.form.get('name', '').strip(),
+        'category': request.form.get('category', '').strip(),
+        'type': request.form.get('type', '').strip(),
+        'available_centres': request.form.getlist('available_centres'),
+        'price': request.form.get('price', '').strip(),
+        'available_quantity': available_quantity,
+        'image_name': image_name,
+        'is_active': True,
+        'is_deleted': False,
+        'status': 'active',
+        'created_by': session['user_id'],
+        'created_at': now_utc(),
+        'updated_at': now_utc()
+    })
 
         flash('Product added.', 'success')
         return redirect(url_for('admin.product_list'))
@@ -701,26 +710,126 @@ def product_categories():
             return redirect(url_for('admin.product_categories'))
 
         mongo.db.product_categories.insert_one({
-            'name': name,
-            'created_by': session['user_id'],
-            'created_at': now_utc()
-        })
+    'name': name,
+    'is_active': True,
+    'is_deleted': False,
+    'status': 'active',
+    'created_by': session['user_id'],
+    'created_at': now_utc(),
+    'updated_at': now_utc()
+})
 
         flash('Product category added.', 'success')
         return redirect(url_for('admin.product_categories'))
 
     categories = list(
-    mongo.db.product_categories.find({}).sort([
+    mongo.db.product_categories.find({
+        'is_deleted': {'$ne': True}
+    }).sort([
         ('created_at', 1),
         ('_id', 1)
     ])
 )
     return render_template('admin/product_categories.html', categories=categories)
 
+
+@admin_bp.route('/products/categories/<category_id>/toggle-status', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def toggle_product_category_status(category_id):
+    category = mongo.db.product_categories.find_one({
+        '_id': ObjectId(category_id),
+        'is_deleted': {'$ne': True}
+    })
+
+    if not category:
+        flash('Product category not found.', 'danger')
+        return redirect(url_for('admin.product_categories'))
+
+    current_active = category.get('is_active', True)
+    new_active = not current_active
+    new_status = 'active' if new_active else 'disabled'
+
+    mongo.db.product_categories.update_one(
+        {'_id': ObjectId(category_id)},
+        {
+            '$set': {
+                'is_active': new_active,
+                'status': new_status,
+                'updated_at': now_utc(),
+                'status_updated_at': now_utc(),
+                'status_updated_by': session.get('user_id')
+            }
+        }
+    )
+
+    log_action(
+        session['user_id'],
+        'enable_product_category' if new_active else 'disable_product_category',
+        'product_category',
+        category_id,
+        metadata={
+            'category_name': category.get('name'),
+            'new_status': new_status
+        }
+    )
+
+    flash(
+        'Product category enabled successfully.' if new_active else 'Product category disabled successfully.',
+        'success'
+    )
+    return redirect(url_for('admin.product_categories'))
+
+
+@admin_bp.route('/products/categories/<category_id>/delete', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def delete_product_category(category_id):
+    category = mongo.db.product_categories.find_one({
+        '_id': ObjectId(category_id),
+        'is_deleted': {'$ne': True}
+    })
+
+    if not category:
+        flash('Product category not found.', 'danger')
+        return redirect(url_for('admin.product_categories'))
+
+    mongo.db.product_categories.update_one(
+        {'_id': ObjectId(category_id)},
+        {
+            '$set': {
+                'is_deleted': True,
+                'is_active': False,
+                'status': 'deleted',
+                'deleted_at': now_utc(),
+                'deleted_by': session.get('user_id'),
+                'updated_at': now_utc()
+            }
+        }
+    )
+
+    log_action(
+        session['user_id'],
+        'delete_product_category',
+        'product_category',
+        category_id,
+        metadata={
+            'category_name': category.get('name')
+        }
+    )
+
+    flash('Product category deleted successfully.', 'success')
+    return redirect(url_for('admin.product_categories'))
+
+
 @admin_bp.route('/products')
 @login_required
 def product_list():
-    products = list(mongo.db.products.find({}).sort('created_at', -1))
+    products = list(
+    mongo.db.products.find({
+        'is_deleted': {'$ne': True}
+    }).sort('created_at', -1)
+)
 
     farmer_products = list(
         mongo.db.farmer_products
@@ -741,11 +850,103 @@ def product_list():
         centres=centres
     )
 
+@admin_bp.route('/products/<product_id>/toggle-status', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def toggle_product_status(product_id):
+    product = mongo.db.products.find_one({
+        '_id': ObjectId(product_id),
+        'is_deleted': {'$ne': True}
+    })
+
+    if not product:
+        flash('Product not found.', 'danger')
+        return redirect(url_for('admin.product_list'))
+
+    current_active = product.get('is_active', True)
+    new_active = not current_active
+    new_status = 'active' if new_active else 'disabled'
+
+    mongo.db.products.update_one(
+        {'_id': ObjectId(product_id)},
+        {
+            '$set': {
+                'is_active': new_active,
+                'status': new_status,
+                'updated_at': now_utc(),
+                'status_updated_at': now_utc(),
+                'status_updated_by': session.get('user_id')
+            }
+        }
+    )
+
+    log_action(
+        session['user_id'],
+        'enable_product' if new_active else 'disable_product',
+        'product',
+        product_id,
+        metadata={
+            'product_name': product.get('name'),
+            'new_status': new_status
+        }
+    )
+
+    flash(
+        'Product enabled successfully.' if new_active else 'Product disabled successfully.',
+        'success'
+    )
+    return redirect(url_for('admin.product_list'))
+
+
+@admin_bp.route('/products/<product_id>/delete', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def delete_product(product_id):
+    product = mongo.db.products.find_one({
+        '_id': ObjectId(product_id),
+        'is_deleted': {'$ne': True}
+    })
+
+    if not product:
+        flash('Product not found.', 'danger')
+        return redirect(url_for('admin.product_list'))
+
+    mongo.db.products.update_one(
+        {'_id': ObjectId(product_id)},
+        {
+            '$set': {
+                'is_deleted': True,
+                'is_active': False,
+                'status': 'deleted',
+                'deleted_at': now_utc(),
+                'deleted_by': session.get('user_id'),
+                'updated_at': now_utc()
+            }
+        }
+    )
+
+    log_action(
+        session['user_id'],
+        'delete_product',
+        'product',
+        product_id,
+        metadata={
+            'product_name': product.get('name')
+        }
+    )
+
+    flash('Product deleted successfully.', 'success')
+    return redirect(url_for('admin.product_list'))
+
+
 @admin_bp.route('/products/<product_id>/restock', methods=['POST'])
 @login_required
 @roles_required('avpl_admin', 'accounts')
 def restock_product(product_id):
-    product = mongo.db.products.find_one({'_id': ObjectId(product_id)})
+    product = mongo.db.products.find_one({
+    '_id': ObjectId(product_id),
+    'is_deleted': {'$ne': True}
+})
 
     if not product:
         flash('Product not found.', 'danger')

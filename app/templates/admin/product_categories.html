@@ -236,7 +236,7 @@
     width:100%;
     border-collapse:separate;
     border-spacing:0;
-    min-width:620px;
+    min-width:900px;
 }
 
 .category-table th,
@@ -413,6 +413,207 @@
         font-size:1.45rem;
     }
 }
+
+.category-status-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:30px;
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:.85rem;
+    font-weight:900;
+    border:1px solid rgba(95,168,120,.22);
+}
+
+.category-status-pill.active{
+    color:#047857;
+    background:#ECFDF5;
+    border-color:#A7F3D0;
+}
+
+.category-status-pill.disabled{
+    color:#B45309;
+    background:#FFFBEB;
+    border-color:#FDE68A;
+}
+
+.category-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.category-action-form{
+    margin:0;
+}
+
+.category-action-btn{
+    min-height:34px;
+    border:none;
+    border-radius:999px;
+    padding:7px 13px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:.86rem;
+    font-weight:900;
+    cursor:pointer;
+    transition:.2s ease;
+}
+
+.category-action-btn.enable{
+    background:#ECFDF5;
+    color:#047857;
+    border:1px solid #A7F3D0;
+}
+
+.category-action-btn.disable{
+    background:#FFFBEB;
+    color:#B45309;
+    border:1px solid #FDE68A;
+}
+
+.category-action-btn.delete{
+    background:#FEE2E2;
+    color:#B91C1C;
+    border:1px solid #FECACA;
+}
+
+.category-action-btn:hover{
+    transform:translateY(-1px);
+    filter:brightness(.96);
+}
+
+@media(max-width:900px){
+    .category-actions,
+    .category-action-form,
+    .category-action-btn{
+        width:100%;
+    }
+}
+
+.category-confirm-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100vw;
+    height:100vh;
+    height:100dvh;
+    z-index:999999;
+    display:none;
+    background:rgba(15,23,42,.38);
+    backdrop-filter:blur(6px);
+}
+
+.category-confirm-overlay.show{
+    display:block;
+}
+
+.category-confirm-modal{
+    position:fixed;
+    top:50%;
+    left:50%;
+    width:min(440px, calc(100vw - 34px));
+    max-height:calc(100vh - 40px);
+    overflow-y:auto;
+    transform:translate(-50%, -50%);
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:24px;
+    background:#fff;
+    box-shadow:0 30px 80px rgba(15,23,42,.22);
+    padding:24px;
+    font-family:"Times New Roman", Georgia, serif;
+    animation:categoryConfirmPop .18s ease both;
+}
+
+.category-confirm-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:32px;
+    padding:6px 13px;
+    border-radius:999px;
+    background:#E4F7EA;
+    color:#3B7D55;
+    font-weight:900;
+    border:1px solid rgba(95,168,120,.25);
+    margin-bottom:12px;
+}
+
+.category-confirm-title{
+    margin:0 0 8px;
+    color:#17252A;
+    font-size:1.45rem;
+    font-weight:900;
+}
+
+.category-confirm-text{
+    margin:0;
+    color:#64748B;
+    font-size:1rem;
+    line-height:1.5;
+    font-weight:700;
+}
+
+.category-confirm-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:22px;
+    flex-wrap:wrap;
+}
+
+.category-confirm-btn{
+    min-height:42px;
+    border:none;
+    border-radius:999px;
+    padding:9px 18px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:900;
+    cursor:pointer;
+    transition:.2s ease;
+}
+
+.category-confirm-btn.cancel{
+    background:#E4F7EA;
+    color:#3B7D55;
+    border:1px solid rgba(95,168,120,.25);
+}
+
+.category-confirm-btn.confirm{
+    background:#5FA878;
+    color:#fff;
+    box-shadow:0 12px 26px rgba(95,168,120,.20);
+}
+
+.category-confirm-btn.danger{
+    background:#B91C1C;
+    color:#fff;
+    box-shadow:0 12px 26px rgba(185,28,28,.18);
+}
+
+.category-confirm-btn:hover{
+    transform:translateY(-1px);
+}
+
+@keyframes categoryConfirmPop{
+    from{
+        opacity:0;
+        transform:translate(-50%, -46%) scale(.98);
+    }
+    to{
+        opacity:1;
+        transform:translate(-50%, -50%) scale(1);
+    }
+}
+
+@media(max-width:560px){
+    .category-confirm-actions,
+    .category-confirm-btn{
+        width:100%;
+    }
+}
 </style>
 
 <div class="page-card">
@@ -466,20 +667,61 @@
             <thead>
                 <tr>
                     <th class="serial-col">Sl. No.</th>
-                    <th>Category Name</th>
-                    <th>Created At</th>
+<th>Category Name</th>
+<th>Status</th>
+<th>Created At</th>
+<th>Action</th>
                 </tr>
             </thead>
             <tbody>
             {% for c in categories %}
                 <tr>
-                    <td class="serial-col serial-cell" data-label="Sl. No."></td>
-                    <td data-label="Category Name">{{ c.name }}</td>
-                    <td data-label="Created At">{{ c.created_at }}</td>
+                    {% set category_is_active = c.get('is_active', True) %}
+
+<td class="serial-col serial-cell" data-label="Sl. No."></td>
+
+<td data-label="Category Name">{{ c.name }}</td>
+
+<td data-label="Status">
+    {% if category_is_active %}
+        <span class="category-status-pill active">Active</span>
+    {% else %}
+        <span class="category-status-pill disabled">Disabled</span>
+    {% endif %}
+</td>
+
+<td data-label="Created At">{{ c.created_at }}</td>
+
+<td data-label="Action">
+<div class="category-actions">
+    <form method="POST"
+          action="{{ url_for('admin.toggle_product_category_status', category_id=c._id) }}"
+          class="category-action-form category-confirm-form"
+          data-confirm-type="{{ 'enable' if not category_is_active else 'disable' }}"
+          data-confirm-title="{{ 'Enable Category' if not category_is_active else 'Disable Category' }}"
+          data-confirm-message="{{ 'Are you sure you want to enable this category?' if not category_is_active else 'Are you sure you want to disable this category?' }}">
+        <button type="submit"
+                class="category-action-btn {{ 'enable' if not category_is_active else 'disable' }}">
+            {{ 'Enable' if not category_is_active else 'Disable' }}
+        </button>
+    </form>
+
+    <form method="POST"
+          action="{{ url_for('admin.delete_product_category', category_id=c._id) }}"
+          class="category-action-form category-confirm-form"
+          data-confirm-type="delete"
+          data-confirm-title="Delete Category"
+          data-confirm-message="Are you sure you want to delete this category? This will remove it from the category list.">
+        <button type="submit" class="category-action-btn delete">
+            Delete
+        </button>
+    </form>
+</div>
+</td>
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="3">No product categories added yet.</td>
+                    <td colspan="5">No product categories added yet.</td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -487,6 +729,30 @@
     </div>
 
     <div class="pagination-bar" id="categoryPaginationBar"></div>
+</div>
+
+<div class="category-confirm-overlay" id="categoryConfirmOverlay">
+    <div class="category-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="categoryConfirmTitle">
+        <div class="category-confirm-badge" id="categoryConfirmBadge">Category Action</div>
+
+        <h3 class="category-confirm-title" id="categoryConfirmTitle">
+            Confirm Action
+        </h3>
+
+        <p class="category-confirm-text" id="categoryConfirmText">
+            Are you sure?
+        </p>
+
+        <div class="category-confirm-actions">
+            <button type="button" class="category-confirm-btn cancel" id="categoryConfirmCancel">
+                Cancel
+            </button>
+
+            <button type="button" class="category-confirm-btn confirm" id="categoryConfirmSubmit">
+                Confirm
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -498,6 +764,100 @@
     const searchInput = document.getElementById('categorySearchInput');
     const searchBtn = document.getElementById('categorySearchBtn');
     const clearBtn = document.getElementById('categoryClearBtn');
+
+    const categoryConfirmOverlay = document.getElementById('categoryConfirmOverlay');
+const categoryConfirmBadge = document.getElementById('categoryConfirmBadge');
+const categoryConfirmTitle = document.getElementById('categoryConfirmTitle');
+const categoryConfirmText = document.getElementById('categoryConfirmText');
+const categoryConfirmCancel = document.getElementById('categoryConfirmCancel');
+const categoryConfirmSubmit = document.getElementById('categoryConfirmSubmit');
+let pendingCategoryConfirmForm = null;
+
+if(categoryConfirmOverlay && categoryConfirmOverlay.parentElement !== document.body){
+    document.body.appendChild(categoryConfirmOverlay);
+}
+
+function openCategoryConfirm(form){
+    if(!categoryConfirmOverlay || !categoryConfirmTitle || !categoryConfirmText || !categoryConfirmSubmit){
+        return true;
+    }
+
+    const type = form.dataset.confirmType || 'action';
+    const title = form.dataset.confirmTitle || 'Confirm Action';
+    const message = form.dataset.confirmMessage || 'Are you sure you want to continue?';
+
+    pendingCategoryConfirmForm = form;
+
+    categoryConfirmTitle.textContent = title;
+    categoryConfirmText.textContent = message;
+
+    if(categoryConfirmBadge){
+        categoryConfirmBadge.textContent =
+            type === 'delete' ? 'Delete Category' :
+            type === 'disable' ? 'Disable Category' :
+            type === 'enable' ? 'Enable Category' :
+            'Category Action';
+    }
+
+    categoryConfirmSubmit.textContent =
+        type === 'delete' ? 'Delete' :
+        type === 'disable' ? 'Disable' :
+        type === 'enable' ? 'Enable' :
+        'Confirm';
+
+    categoryConfirmSubmit.classList.toggle('danger', type === 'delete');
+    categoryConfirmSubmit.classList.toggle('confirm', type !== 'delete');
+
+    categoryConfirmOverlay.classList.add('show');
+    return false;
+}
+
+function closeCategoryConfirm(){
+    if(categoryConfirmOverlay){
+        categoryConfirmOverlay.classList.remove('show');
+    }
+
+    pendingCategoryConfirmForm = null;
+}
+
+document.querySelectorAll('.category-confirm-form').forEach(form => {
+    form.addEventListener('submit', function(e){
+        if(form.dataset.confirmed === '1'){
+            return true;
+        }
+
+        e.preventDefault();
+        openCategoryConfirm(form);
+        return false;
+    });
+});
+
+if(categoryConfirmCancel){
+    categoryConfirmCancel.addEventListener('click', closeCategoryConfirm);
+}
+
+if(categoryConfirmOverlay){
+    categoryConfirmOverlay.addEventListener('click', function(e){
+        if(e.target === categoryConfirmOverlay){
+            closeCategoryConfirm();
+        }
+    });
+}
+
+if(categoryConfirmSubmit){
+    categoryConfirmSubmit.addEventListener('click', function(){
+        if(!pendingCategoryConfirmForm) return;
+
+        pendingCategoryConfirmForm.dataset.confirmed = '1';
+        pendingCategoryConfirmForm.submit();
+    });
+}
+
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+        closeCategoryConfirm();
+    }
+});
 
     if(!table || !rowsPerPage || !info || !pager) return;
 

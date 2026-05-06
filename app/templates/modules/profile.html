@@ -345,6 +345,40 @@
         grid-template-columns:1fr;
     }
 }
+
+.profile-rejection-box{
+    margin:18px 0 22px;
+    padding:18px 20px;
+    border-radius:18px;
+    border:1px solid #FECACA;
+    background:#FEF2F2;
+    color:#7F1D1D;
+    box-shadow:0 12px 28px rgba(185,28,28,.08);
+}
+
+.profile-rejection-title{
+    font-size:1.15rem;
+    font-weight:900;
+    color:#B91C1C;
+    margin-bottom:8px;
+}
+
+.profile-rejection-text{
+    font-size:1rem;
+    font-weight:700;
+    color:#7F1D1D;
+    margin-bottom:10px;
+}
+
+.profile-rejection-reason{
+    padding:12px 14px;
+    border-radius:14px;
+    background:#FEE2E2;
+    border:1px solid #FECACA;
+    color:#7F1D1D;
+    font-weight:700;
+    line-height:1.45;
+}
 </style>
 
 <div class="page-card">
@@ -402,9 +436,26 @@
     </table>
 
     {% if not readonly_profile and user.role not in ['avpl_admin', 'super_admin'] %}
-        <h3>Request Document / Photo Update</h3>
+    <h3>Request Document / Photo Update</h3>
 
-        {% if pending_profile_update %}
+    {% if rejected_profile_update %}
+        <div class="profile-rejection-box">
+            <div class="profile-rejection-title">
+                Update Request Rejected
+            </div>
+
+            <div class="profile-rejection-text">
+                Your document/photo update request was rejected by admin.
+            </div>
+
+            <div class="profile-rejection-reason">
+                <strong>Reason / Correction Required:</strong>
+                {{ rejected_profile_update.rejection_reason or "No reason provided." }}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if pending_profile_update %}
             <p>
                 Your profile update request has been sent for AVPL Admin approval.
                 Until approval, your old approved profile/documents will remain active.
@@ -452,32 +503,54 @@
 
                 {% if user.role != 'farmer' %}
                     <label>
-                        Government ID / Identity Document
-                        <small class="current-file-text">
-                            Current:
-                            {% if master and master.government_id_file %}
-                                {{ master.government_id_file }}
-                            {% else %}
-                                Not uploaded
-                            {% endif %}
-                        </small>
+    Government ID / Identity Document
 
-                        <input type="file" name="government_id_file" accept=".pdf,.jpg,.jpeg,.png,.webp">
-                    </label>
+    {% set current_government_id = master.government_id_file if master and master.government_id_file else none %}
+
+    <small class="current-file-text">
+        Current:
+        {% if current_government_id %}
+            {{ current_government_id }}
+        {% else %}
+            Not uploaded
+        {% endif %}
+    </small>
+
+    {% if current_government_id %}
+        <div class="current-file-preview">
+            <a href="{{ url_for('documents.serve', filename=current_government_id) }}" target="_blank">
+                View Current
+            </a>
+        </div>
+    {% endif %}
+
+    <input type="file" name="government_id_file" accept=".pdf,.jpg,.jpeg,.png,.webp">
+</label>
 
                     <label>
-                        Supporting Document
-                        <small class="current-file-text">
-                            Current:
-                            {% if master and master.supporting_document %}
-                                {{ master.supporting_document }}
-                            {% else %}
-                                Not uploaded
-                            {% endif %}
-                        </small>
+    Supporting Document
 
-                        <input type="file" name="supporting_document" accept=".pdf,.jpg,.jpeg,.png,.webp">
-                    </label>
+    {% set current_supporting_document = master.supporting_document if master and master.supporting_document else none %}
+
+    <small class="current-file-text">
+        Current:
+        {% if current_supporting_document %}
+            {{ current_supporting_document }}
+        {% else %}
+            Not uploaded
+        {% endif %}
+    </small>
+
+    {% if current_supporting_document %}
+        <div class="current-file-preview">
+            <a href="{{ url_for('documents.serve', filename=current_supporting_document) }}" target="_blank">
+                View Current
+            </a>
+        </div>
+    {% endif %}
+
+    <input type="file" name="supporting_document" accept=".pdf,.jpg,.jpeg,.png,.webp">
+</label>
                 {% endif %}
 
                 <div class="span-2">

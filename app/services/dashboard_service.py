@@ -175,8 +175,11 @@ def get_farmer_dashboard(phone):
 
    # ✅ NEW: RECOMMENDED PRODUCTS
     recommended_products = list(
-    db.products.find({}).sort("created_at", -1).limit(8)
-    )
+    db.products.find({
+        "is_deleted": {"$ne": True},
+        "is_active": {"$ne": False}
+    }).sort("created_at", -1).limit(8)
+)
 
     for p in recommended_products:
         p["available_quantity"] = normalize_quantity(p)
