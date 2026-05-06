@@ -47,7 +47,7 @@ def can_act_on_validation(validation, role, session_ctx):
     if role == "super_admin":
         return True
     if role == "avpl_admin":
-        return validation.get("approver_role") == "avpl_admin"
+        return validation.get("approver_role") in ["avpl_admin", "super_admin"]
     if role == "ufc_mitra":
         return validation.get("approver_role") == "ufc_mitra" and validation.get("metadata", {}).get("mapped_mitra_uid") == session_ctx.get("mitra_uid")
     return False

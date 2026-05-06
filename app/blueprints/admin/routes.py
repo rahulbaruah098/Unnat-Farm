@@ -50,27 +50,286 @@ def users():
     return render_template('admin/user_list.html', users=users)
 
 
+
+@admin_bp.route('/users/<user_id>/edit', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin')
+def edit_user_view(user_id):
+    user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('admin.users'))
+
+    role = user.get('role')
+
+    centres = list(
+        mongo.db.ufc_admin_master.find(
+            {'centre_uid': {'$exists': True, '$ne': ''}},
+            {'centre_uid': 1, 'name': 1, 'name_of_enterprise': 1}
+        ).sort('centre_uid', 1)
+    )
+
+    mitras = list(
+        mongo.db.ufc_mitra_master.find(
+            {
+                '$or': [
+                    {'mitra_uid': {'$exists': True, '$ne': ''}},
+                    {'mapped_mitra_uid': {'$exists': True, '$ne': ''}}
+                ]
+            },
+            {'mitra_uid': 1, 'mapped_mitra_uid': 1, 'name': 1, 'mapped_centre_uid': 1, 'centre_uid': 1}
+        ).sort('mitra_uid', 1)
+    )
+
+    valid_centre_uids = {
+        c.get('centre_uid')
+        for c in centres
+        if c.get('centre_uid')
+    }
+
+    valid_mitra_uids = {
+        m.get('mitra_uid') or m.get('mapped_mitra_uid')
+        for m in mitras
+        if m.get('mitra_uid') or m.get('mapped_mitra_uid')
+    }
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        username = request.form.get('username', '').strip() or None
+        phone = request.form.get('phone', '').strip() or None
+        mapped_centre_uid = request.form.get('mapped_centre_uid', '').strip()
+        mapped_mitra_uid = request.form.get('mapped_mitra_uid', '').strip()
+
+        if not name:
+            flash('Name is required.', 'danger')
+            return render_template(
+                'admin/edit_user.html',
+                user=user,
+                centres=centres,
+                mitras=mitras
+            )
+
+        if username:
+            existing_username = mongo.db.users.find_one({
+                'username': username,
+                '_id': {'$ne': ObjectId(user_id)}
+            })
+
+            if existing_username:
+                flash('Username already exists for another user.', 'danger')
+                return render_template(
+                    'admin/edit_user.html',
+                    user=user,
+                    centres=centres,
+                    mitras=mitras
+                )
+
+        if phone:
+            existing_phone = mongo.db.users.find_one({
+                'phone': phone,
+                '_id': {'$ne': ObjectId(user_id)}
+            })
+
+            if existing_phone:
+                flash('Phone number already exists for another user.', 'danger')
+                return render_template(
+                    'admin/edit_user.html',
+                    user=user,
+                    centres=centres,
+                    mitras=mitras
+                )
+
+        user_set = {
+            'name': name,
+            'username': username,
+            'phone': phone,
+            'updated_at': now_utc()
+        }
+
+        if role == 'ufc_mitra':
+            if not mapped_centre_uid:
+                flash('Please select mapped centre for UFC Mitra.', 'danger')
+                return render_template(
+                    'admin/edit_user.html',
+                    user=user,
+                    centres=centres,
+                    mitras=mitras
+                )
+
+            if mapped_centre_uid not in valid_centre_uids:
+                flash('Selected centre is invalid.', 'danger')
+                return render_template(
+                    'admin/edit_user.html',
+                    user=user,
+                    centres=centres,
+                    mitras=mitras
+                )
+
+            user_set['mapped_centre_uid'] = mapped_centre_uid
+
+        if role == 'farmer':
+            if not mapped_mitra_uid:
+                flash('Please select mapped Mitra UID for farmer.', 'danger')
+                return render_template(
+                    'admin/edit_user.html',
+                    user=user,
+                    centres=centres,
+                    mitras=mitras
+                )
+
+            if mapped_mitra_uid not in valid_mitra_uids:
+                flash('Selected Mitra UID is invalid.', 'danger')
+                return render_template(
+                    'admin/edit_user.html',
+                    user=user,
+                    centres=centres,
+                    mitras=mitras
+                )
+
+            selected_mitra = next(
+                (
+                    m for m in mitras
+                    if (m.get('mitra_uid') or m.get('mapped_mitra_uid')) == mapped_mitra_uid
+                ),
+                {}
+            )
+
+            user_set['mapped_mitra_uid'] = mapped_mitra_uid
+            user_set['mapped_centre_uid'] = (
+                selected_mitra.get('mapped_centre_uid')
+                or selected_mitra.get('centre_uid')
+                or user.get('mapped_centre_uid')
+            )
+
+        mongo.db.users.update_one(
+            {'_id': ObjectId(user_id)},
+            {'$set': user_set}
+        )
+
+        linked_user_id = str(user['_id'])
+
+        common_master_update = {
+            'name': name,
+            'phone': phone,
+            'contact_no': phone,
+            'updated_at': now_utc()
+        }
+
+        if role == 'ufc_admin':
+            mongo.db.ufc_admin_master.update_many(
+                {'linked_user_id': linked_user_id},
+                {'$set': common_master_update}
+            )
+
+        elif role == 'ufc_mitra':
+            mitra_filters = [
+                {'linked_user_id': linked_user_id},
+                {'linked_user_id': str(user['_id'])},
+                {'mitra_uid': user.get('mitra_uid')},
+                {'mapped_mitra_uid': user.get('mapped_mitra_uid')}
+            ]
+
+            try:
+                mitra_filters.append({'linked_user_id': ObjectId(linked_user_id)})
+            except Exception:
+                pass
+
+            mitra_filters = [
+                f for f in mitra_filters
+                if list(f.values())[0]
+            ]
+
+            mongo.db.ufc_mitra_master.update_many(
+                {'$or': mitra_filters},
+                {
+                    '$set': {
+                        **common_master_update,
+                        'mapped_centre_uid': mapped_centre_uid,
+                        'centre_uid': mapped_centre_uid
+                    }
+                }
+            )
+
+        elif role == 'farmer':
+            farmer_filters = [
+                {'linked_user_id': linked_user_id},
+                {'linked_user_id': str(user['_id'])},
+                {'phone': user.get('phone')},
+                {'contact_no': user.get('phone')}
+            ]
+
+            try:
+                farmer_filters.append({'linked_user_id': ObjectId(linked_user_id)})
+            except Exception:
+                pass
+
+            farmer_filters = [
+                f for f in farmer_filters
+                if list(f.values())[0]
+            ]
+
+            mongo.db.farmer_master.update_many(
+                {'$or': farmer_filters},
+                {
+                    '$set': {
+                        **common_master_update,
+                        'mitra_uid': mapped_mitra_uid,
+                        'mapped_mitra_uid': mapped_mitra_uid,
+                        'centre_uid': user_set.get('mapped_centre_uid'),
+                        'mapped_centre_uid': user_set.get('mapped_centre_uid')
+                    }
+                }
+            )
+
+        log_action(session['user_id'], 'edit_user', 'user', user_id)
+        flash('User details updated successfully.', 'success')
+        return redirect(url_for('admin.users'))
+
+    return render_template(
+        'admin/edit_user.html',
+        user=user,
+        centres=centres,
+        mitras=mitras
+    )
+
 @admin_bp.route('/users/create', methods=['GET', 'POST'])
 @login_required
 @roles_required('super_admin', 'avpl_admin', 'ufc_admin')
 def create_user_view():
     role_ctx = session.get('role')
-    allowed_roles = ['avpl_admin', 'accounts', 'sales_nelocals', 'sales_unnatfarm', 'ufc_admin']
+
+    allowed_roles = [
+        'avpl_admin',
+        'accounts',
+        'sales_nelocals',
+        'sales_unnatfarm',
+        'ufc_admin',
+        'ufc_mitra'
+    ]
+
     if role_ctx == 'avpl_admin':
         allowed_roles = ['accounts', 'sales_nelocals', 'sales_unnatfarm', 'ufc_admin']
+
     if role_ctx == 'ufc_admin':
         allowed_roles = ['ufc_mitra']
 
     states = list_states()
+
+    centres = list(
+        mongo.db.ufc_admin_master.find(
+            {'centre_uid': {'$exists': True, '$ne': ''}},
+            {'centre_uid': 1, 'name': 1, 'name_of_enterprise': 1}
+        ).sort('centre_uid', 1)
+    )
+
     if request.method == 'POST':
         role = request.form.get('role')
         name = request.form.get('name', '').strip()
         username = request.form.get('username', '').strip() or None
         phone = request.form.get('phone', '').strip() or None
         password = request.form.get('password', '').strip()
-        # During user/ID creation, AVPL selects only State for UFC Admin.
-        # District, block and village are typed manually later in profile completion.
-        # For UFC Mitra, only the mapped Centre UID is required at creation.
+
         extra = {
             'state': request.form.get('state', '').strip() if role == 'ufc_admin' else '',
             'district': '',
@@ -78,59 +337,199 @@ def create_user_view():
             'village': '',
             'mapped_centre_uid': request.form.get('mapped_centre_uid', '').strip(),
         }
+
         if role_ctx == 'ufc_admin' and role == 'ufc_mitra':
             extra['mapped_centre_uid'] = session.get('centre_uid')
-            centre = mongo.db.ufc_admin_master.find_one({'centre_uid': session.get('centre_uid')}) or mongo.db.users.find_one({'centre_uid': session.get('centre_uid')}) or {}
+
+            centre = (
+                mongo.db.ufc_admin_master.find_one({'centre_uid': session.get('centre_uid')})
+                or mongo.db.users.find_one({'centre_uid': session.get('centre_uid')})
+                or {}
+            )
+
             for k in ['state', 'district', 'block', 'village']:
                 extra[k] = centre.get(k, '')
+
         if role not in allowed_roles:
             flash('You cannot create this role.', 'danger')
-            return render_template('admin/create_user.html', allowed_roles=allowed_roles, states=states)
+            return render_template(
+                'admin/create_user.html',
+                allowed_roles=allowed_roles,
+                states=states,
+                centres=centres
+            )
+
         if role == 'ufc_admin' and not extra.get('state'):
             flash('State is required to generate Centre UID.', 'danger')
-            return render_template('admin/create_user.html', allowed_roles=allowed_roles, states=states)
+            return render_template(
+                'admin/create_user.html',
+                allowed_roles=allowed_roles,
+                states=states,
+                centres=centres
+            )
+
         if role == 'ufc_mitra' and not extra.get('mapped_centre_uid'):
             flash('Mapped UnnatFarm Centre UID is required for UFC Mitra.', 'danger')
-            return render_template('admin/create_user.html', allowed_roles=allowed_roles, states=states)
+            return render_template(
+                'admin/create_user.html',
+                allowed_roles=allowed_roles,
+                states=states,
+                centres=centres
+            )
+
         try:
-            user = create_user(name, role, username=username, phone=phone, password=password, created_by=session['user_id'], extra=extra)
+            user = create_user(
+                name,
+                role,
+                username=username,
+                phone=phone,
+                password=password,
+                created_by=session['user_id'],
+                extra=extra
+            )
         except ValueError as exc:
             flash(str(exc), 'danger')
-            return render_template('admin/create_user.html', allowed_roles=allowed_roles, states=states)
+            return render_template(
+                'admin/create_user.html',
+                allowed_roles=allowed_roles,
+                states=states,
+                centres=centres
+            )
 
         if role == 'ufc_admin':
             mongo.db.ufc_admin_master.update_one(
                 {'linked_user_id': str(user['_id'])},
-                {'$set': {
-                    'linked_user_id': str(user['_id']), 'centre_uid': user['centre_uid'],
-                    'state': user.get('state'), 'district': user.get('district'), 'block': user.get('block'), 'village': user.get('village'),
-                    'approval_status': 'pending_profile', 'created_at': now_utc(), 'updated_at': now_utc(),
-                }}, upsert=True,
+                {
+                    '$set': {
+                        'linked_user_id': str(user['_id']),
+                        'centre_uid': user['centre_uid'],
+                        'state': user.get('state'),
+                        'district': user.get('district'),
+                        'block': user.get('block'),
+                        'village': user.get('village'),
+                        'approval_status': 'pending_profile',
+                        'created_at': now_utc(),
+                        'updated_at': now_utc(),
+                    }
+                },
+                upsert=True,
             )
+
         if role == 'ufc_mitra':
             mongo.db.ufc_mitra_master.update_one(
                 {'linked_user_id': str(user['_id'])},
-                {'$set': {
-                    'linked_user_id': str(user['_id']), 'mitra_uid': user['mitra_uid'], 'mapped_centre_uid': user.get('mapped_centre_uid'),
-                    'state': user.get('state'), 'district': user.get('district'), 'block': user.get('block'), 'village': user.get('village'),
-                    'approval_status': 'pending_profile', 'created_at': now_utc(), 'updated_at': now_utc(),
-                }}, upsert=True,
+                {
+                    '$set': {
+                        'linked_user_id': str(user['_id']),
+                        'mitra_uid': user['mitra_uid'],
+                        'mapped_centre_uid': user.get('mapped_centre_uid'),
+                        'state': user.get('state'),
+                        'district': user.get('district'),
+                        'block': user.get('block'),
+                        'village': user.get('village'),
+                        'approval_status': 'pending_profile',
+                        'created_at': now_utc(),
+                        'updated_at': now_utc(),
+                    }
+                },
+                upsert=True,
             )
-        log_action(session['user_id'], 'create_user', 'user', str(user['_id']), metadata={'role': role})
-        flash(f'User ID created successfully. Generated UID: {user.get("centre_uid") or user.get("mitra_uid") or user.get("user_ref_id")}', 'success')
+
+        log_action(
+            session['user_id'],
+            'create_user',
+            'user',
+            str(user['_id']),
+            metadata={'role': role}
+        )
+
+        flash(
+            f'User ID created successfully. Generated UID: {user.get("centre_uid") or user.get("mitra_uid") or user.get("user_ref_id")}',
+            'success'
+        )
         return redirect(url_for('admin.users'))
-    return render_template('admin/create_user.html', allowed_roles=allowed_roles, states=states)
+
+    return render_template(
+        'admin/create_user.html',
+        allowed_roles=allowed_roles,
+        states=states,
+        centres=centres
+    )
 
 
 @admin_bp.route('/users/<user_id>/delete', methods=['POST'])
 @login_required
-@roles_required('super_admin', 'avpl_admin')
+@roles_required('super_admin')
 def delete_user(user_id):
     mongo.db.users.delete_one({'_id': ObjectId(user_id)})
     log_action(session['user_id'], 'delete_user', 'user', user_id)
     flash('User deleted.', 'success')
     return redirect(url_for('admin.users'))
 
+
+@admin_bp.route('/users/<user_id>/disable', methods=['POST'])
+@login_required
+@roles_required('super_admin')
+def disable_user(user_id):
+    if str(session.get('user_id')) == str(user_id):
+        flash('You cannot disable your own account.', 'danger')
+        return redirect(url_for('admin.edit_user_view', user_id=user_id))
+
+    user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('admin.users'))
+
+    mongo.db.users.update_one(
+        {'_id': ObjectId(user_id)},
+        {
+            '$set': {
+                'active': False,
+                'status': 'disabled',
+                'updated_at': now_utc(),
+                'disabled_at': now_utc(),
+                'disabled_by': session.get('user_id')
+            }
+        }
+    )
+
+    log_action(session['user_id'], 'disable_user', 'user', user_id)
+
+    flash('User account disabled successfully.', 'success')
+    return redirect(url_for('admin.users'))
+
+@admin_bp.route('/users/<user_id>/enable', methods=['POST'])
+@login_required
+@roles_required('super_admin')
+def enable_user(user_id):
+    user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('admin.users'))
+
+    mongo.db.users.update_one(
+        {'_id': ObjectId(user_id)},
+        {
+            '$set': {
+                'active': True,
+                'status': 'active',
+                'updated_at': now_utc(),
+                'enabled_at': now_utc(),
+                'enabled_by': session.get('user_id')
+            },
+            '$unset': {
+                'disabled_at': '',
+                'disabled_by': ''
+            }
+        }
+    )
+
+    log_action(session['user_id'], 'enable_user', 'user', user_id)
+
+    flash('User account enabled successfully.', 'success')
+    return redirect(url_for('admin.edit_user_view', user_id=user_id))
 
 @admin_bp.route('/users/<user_id>/reset-password', methods=['GET', 'POST'])
 @login_required

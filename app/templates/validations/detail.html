@@ -464,12 +464,22 @@
         {% endfor %}
     </div>
 
-    {% if item.status == 'pending' %}
+   {% set validation_status = (item.status|string)|trim|lower %}
+{% set reviewer_role = session.get('role') %}
+
+{% if validation_status == 'pending' and reviewer_role in ['super_admin', 'avpl_admin', 'ufc_mitra'] %}
     <form method="post" action="{{ url_for('validation.take_action', validation_id=item._id) }}" class="grid-form">
-        <label>Remarks <textarea name="remarks" rows="4"></textarea></label>
-        <div class="button-row"><button type="submit" name="action" value="approve">Approve</button><button type="submit" name="action" value="reject" class="danger-btn">Reject</button></div>
+        <label>
+            Remarks
+            <textarea name="remarks" rows="4"></textarea>
+        </label>
+
+        <div class="button-row">
+            <button type="submit" name="action" value="approve">Approve</button>
+            <button type="submit" name="action" value="reject" class="danger-btn">Reject</button>
+        </div>
     </form>
-    {% endif %}
+{% endif %}
 </div>
 
 {% endblock %}

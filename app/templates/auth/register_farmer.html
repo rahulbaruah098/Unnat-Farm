@@ -544,8 +544,19 @@
                     </label>
 
                     <label>Contact No.
-                        <input type="text" name="contact_no" id="farmerContact" value="{{ data.contact_no if data else '' }}" placeholder="Enter contact number" required>
-                    </label>
+    <input
+        type="tel"
+        name="contact_no"
+        id="farmerContact"
+        value="{{ data.contact_no if data else '' }}"
+        placeholder="Enter 10 digit contact number"
+        inputmode="numeric"
+        maxlength="10"
+        pattern="[0-9]{10}"
+        autocomplete="tel"
+        required
+    >
+</label>
 
                     <label>UFC Mitra UID
                         <input type="text" name="mitra_uid" id="farmerMitraUidStep1" data-mitra-lookup value="{{ data.mitra_uid if data else '' }}" placeholder="Enter UFC Mitra UID" required>
@@ -566,9 +577,18 @@
                         <input type="text" id="farmerNameMirror" value="{{ data.name if data else '' }}">
                     </label>
 
-                    <label>Contact No.
-                        <input type="text" id="farmerContactMirror" value="{{ data.contact_no if data else '' }}">
-                    </label>
+                   <label>Contact No.
+    <input
+        type="tel"
+        id="farmerContactMirror"
+        value="{{ data.contact_no if data else '' }}"
+        placeholder="Enter 10 digit contact number"
+        inputmode="numeric"
+        maxlength="10"
+        pattern="[0-9]{10}"
+        autocomplete="tel"
+    >
+</label>
 
                     <label>Gender
                         <select name="gender" required>
@@ -580,8 +600,17 @@
                     </label>
 
                     <label>Age
-                        <input type="number" name="age" value="{{ data.age if data else '' }}" required>
-                    </label>
+    <input
+    type="text"
+    name="age"
+    id="farmerAge"
+    value="{{ data.age if data else '' }}"
+    inputmode="numeric"
+    maxlength="3"
+    placeholder="Enter age"
+    required
+>
+</label>
 
                     <label>Create Password
                         <input type="password" name="password" required>
@@ -685,8 +714,24 @@ document.addEventListener('DOMContentLoaded', function(){
     const contactMirror = document.getElementById('farmerContactMirror');
     const mitraUidMirror = document.getElementById('farmerMitraUidMirror');
 
+    function onlyTenDigitPhone(input){
+    input.value = input.value.replace(/\D/g, '').slice(0, 10);
+}
+
     const nextBtn = document.getElementById('farmerNextBtn');
     const stepBackBtn = document.getElementById('farmerStepBackBtn');
+
+    const farmerAge = document.getElementById('farmerAge');
+
+function onlyValidAge(input){
+    let value = input.value.replace(/\D/g, '').slice(0, 3);
+
+    if(value && Number(value) > 150){
+        value = '150';
+    }
+
+    input.value = value;
+}
 
     function openFarmerValidationModal(){
         document.getElementById('farmerValidationModal').classList.add('active');
@@ -740,11 +785,26 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     name.addEventListener('input', syncFromTop);
-    contact.addEventListener('input', syncFromTop);
-    mitraUid.addEventListener('input', syncFromTop);
 
-    nameMirror.addEventListener('input', syncFromMirror);
-    contactMirror.addEventListener('input', syncFromMirror);
+contact.addEventListener('input', function(){
+    onlyTenDigitPhone(contact);
+    syncFromTop();
+});
+
+mitraUid.addEventListener('input', syncFromTop);
+
+nameMirror.addEventListener('input', syncFromMirror);
+
+contactMirror.addEventListener('input', function(){
+    onlyTenDigitPhone(contactMirror);
+    syncFromMirror();
+});
+
+if(farmerAge){
+    farmerAge.addEventListener('input', function(){
+        onlyValidAge(farmerAge);
+    });
+}
 
     form.addEventListener('submit', function(e){
         syncFromMirror();
@@ -753,6 +813,7 @@ document.addEventListener('DOMContentLoaded', function(){
 const centreUid = form.querySelector('input[name="centre_uid"]');
 const gender = form.querySelector('select[name="gender"]');
 const age = form.querySelector('input[name="age"]');
+
 const village = form.querySelector('input[name="village"]');
 const profilePhoto = form.querySelector('input[name="profile_photo"]');
 
@@ -762,6 +823,30 @@ const profilePhoto = form.querySelector('input[name="profile_photo"]');
             openFarmerValidationModal();
             return;
         }
+
+        if(!/^\d{10}$/.test(contact.value.trim())){
+    e.preventDefault();
+    showStep1();
+    openCustomFarmerModal(
+        'Invalid Phone Number',
+        'Please enter a valid 10 digit phone number.'
+    );
+    return;
+}
+
+if(
+    age.value.trim().length > 3 ||
+    Number(age.value) > 150 ||
+    Number(age.value) < 1
+){
+    e.preventDefault();
+    showStep2();
+    openCustomFarmerModal(
+        'Invalid Age',
+        'Please enter a valid age between 1 and 150.'
+    );
+    return;
+}
 
       if(
     !password.value.trim() ||

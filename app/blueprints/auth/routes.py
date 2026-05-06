@@ -512,6 +512,218 @@ def register_farmer():
     return render_template('auth/register_farmer.html', states=states)
 
 
+@auth_bp.route('/profile/farmer/complete', methods=['GET', 'POST'])
+@login_required
+def complete_farmer():
+    if session.get('role') != 'farmer':
+        return redirect(url_for('dashboard.home'))
+
+    states = list_states()
+    user = mongo.db.users.find_one({'_id': ObjectId(session['user_id'])})
+
+    if not user:
+        flash('User not found. Please login again.', 'danger')
+        return redirect(url_for('auth.logout'))
+
+    farmer_master = (
+        mongo.db.farmer_master.find_one({'linked_user_id': session['user_id']})
+        or mongo.db.farmer_master.find_one({'linked_user_id': ObjectId(session['user_id'])})
+        or mongo.db.farmer_master.find_one({'contact_no': user.get('phone')})
+        or {}
+    )
+
+    latest_validation = _latest_validation_for_user(session['user_id'], 'farmer_registration') or {}
+
+    rejection_reason = (
+        user.get('latest_rejection_reason')
+        or latest_validation.get('rejection_reason')
+        or latest_validation.get('action_remarks')
+        or ''
+    )
+
+    data = {
+        'name': farmer_master.get('name') or user.get('name') or '',
+        'gender': farmer_master.get('gender') or user.get('gender') or '',
+        'age': farmer_master.get('age') or user.get('age') or '',
+        'contact_no': farmer_master.get('contact_no') or user.get('phone') or '',
+        'centre_uid': farmer_master.get('centre_uid') or user.get('mapped_centre_uid') or '',
+        'mitra_uid': farmer_master.get('mitra_uid') or user.get('mapped_mitra_uid') or '',
+        'state': farmer_master.get('state') or user.get('state') or '',
+        'district': farmer_master.get('district') or user.get('district') or '',
+        'block': farmer_master.get('block') or user.get('block') or '',
+        'village': farmer_master.get('village') or user.get('village') or '',
+        'activities': farmer_master.get('activities') or [],
+        'agri_sub_categories': farmer_master.get('agri_sub_categories') or [],
+    }
+
+    if request.method == 'POST':
+        form = {
+            'name': request.form.get('name', '').strip(),
+            'gender': request.form.get('gender', '').strip(),
+            'age': request.form.get('age', '').strip(),
+            'contact_no': user.get('phone') or request.form.get('contact_no', '').strip(),
+            'centre_uid': request.form.get('centre_uid', '').strip(),
+            'mitra_uid': request.form.get('mitra_uid', '').strip(),
+            'state': request.form.get('state', '').strip(),
+            'district': request.form.get('district', '').strip(),
+            'block': request.form.get('block', '').strip(),
+            'village': request.form.get('village', '').strip(),
+            'activities': request.form.getlist('activities'),
+            'agri_sub_categories': request.form.getlist('agri_sub_categories'),
+        }
+
+        if not form['centre_uid'] or not form['mitra_uid']:
+            flash('Centre UID and UFC Mitra UID are mandatory.', 'danger')
+            return render_template(
+                'auth/register_farmer.html',
+                data=form,
+                states=states,
+                rejection_reason=rejection_reason,
+                correction_mode=True
+            )
+
+        valid, message = validate_farmer_mapping(form['centre_uid'], form['mitra_uid'])
+
+        if not valid:
+            flash(message, 'danger')
+            return render_template(
+                'auth/register_farmer.html',
+                data=form,
+                states=states,
+                rejection_reason=rejection_reason,
+                correction_mode=True
+            )
+
+        update_payload = {
+            'name': form['name'],
+            'gender': form['gender'],
+            'age': form['age'],
+            'contact_no': form['contact_no'],
+            'centre_uid': form['centre_uid'],
+            'mitra_uid': form['mitra_uid'],
+            'state': form['state'],
+            'district': form['district'],
+            'block': form['block'],
+            'village': form['village'],
+            'activities': form['activities'],
+            'agri_sub_categories': form['agri_sub_categories'],
+            'approval_status': 'pending',
+            'latest_rejection_reason': '',
+            'updated_at': datetime.utcnow()
+        }
+
+        mongo.db.farmer_master.update_one(
+            {
+                '$or': [
+                    {'linked_user_id': session['user_id']},
+                    {'linked_user_id': ObjectId(session['user_id'])},
+                    {'contact_no': user.get('phone')}
+                ]
+            },
+            {'$set': update_payload},
+            upsert=False
+        )
+
+        mongo.db.users.update_one(
+            {'_id': ObjectId(session['user_id'])},
+            {
+                '$set': {
+                    'name': form['name'],
+                    'phone': form['contact_no'],
+                    'mapped_centre_uid': form['centre_uid'],
+                    'mapped_mitra_uid': form['mitra_uid'],
+                    'state': form['state'],
+                    'district': form['district'],
+                    'block': form['block'],
+                    'village': form['village'],
+                    'approval_status': 'pending',
+                    'latest_rejection_reason': '',
+                    'updated_at': datetime.utcnow()
+                }
+            }
+        )
+
+        profile_photo_file = request.files.get('profile_photo')
+
+        if profile_photo_file and profile_photo_file.filename:
+            doc = store_document(
+                profile_photo_file,
+                session['user_id'],
+                farmer_master.get('_id'),
+                session['user_id'],
+                'farmer',
+                'Passport Size Photo'
+            )
+
+            profile_photo_path = (
+                doc.get('file_path')
+                or doc.get('filename')
+                or doc.get('file_name')
+            ) if doc else None
+
+            if profile_photo_path:
+                mongo.db.farmer_master.update_one(
+                    {'linked_user_id': session['user_id']},
+                    {
+                        '$set': {
+                            'profile_photo': profile_photo_path,
+                            'updated_at': datetime.utcnow()
+                        }
+                    }
+                )
+
+                mongo.db.users.update_one(
+                    {'_id': ObjectId(session['user_id'])},
+                    {
+                        '$set': {
+                            'profile_photo': profile_photo_path,
+                            'updated_at': datetime.utcnow()
+                        }
+                    }
+                )
+
+        mongo.db.validations.update_one(
+            {
+                'entity_id': session['user_id'],
+                'entity_type': 'farmer_registration'
+            },
+            {
+                '$set': {
+                    'status': 'pending',
+                    'approver_role': 'ufc_mitra',
+                    'target_role': 'farmer',
+                    'rejection_reason': '',
+                    'action_remarks': '',
+                    'remarks': '',
+                    'metadata': {
+                        'mapped_mitra_uid': form['mitra_uid'],
+                        'centre_uid': form['centre_uid']
+                    },
+                    'updated_at': datetime.utcnow()
+                },
+                '$setOnInsert': {
+                    'created_by_user_id': session['user_id'],
+                    'created_at': datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+
+        session['approval_status'] = 'pending'
+        session.pop('rejection_reason', None)
+
+        flash('Farmer profile resubmitted for validation.', 'success')
+        return redirect(url_for('dashboard.pending_access'))
+
+    return render_template(
+        'auth/register_farmer.html',
+        data=data,
+        states=states,
+        rejection_reason=rejection_reason,
+        correction_mode=True
+    )
+
+
 #changes by atlanta
 @auth_bp.route('/profile/ufc-admin/complete', methods=['GET', 'POST'])
 def complete_ufc_admin():

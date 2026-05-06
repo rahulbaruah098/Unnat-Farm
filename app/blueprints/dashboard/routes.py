@@ -517,6 +517,9 @@ def pending_access():
     elif role == "ufc_mitra":
         correction_url = url_for("auth.complete_ufc_mitra")
 
+    elif role == "farmer":
+        correction_url = url_for("auth.complete_farmer")
+
     return render_template(
         "dashboard/pending_access.html",
         user=user,

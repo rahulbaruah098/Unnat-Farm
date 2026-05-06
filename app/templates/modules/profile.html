@@ -401,7 +401,7 @@
       </tbody>
     </table>
 
-        {% if not readonly_profile %}
+    {% if not readonly_profile and user.role not in ['avpl_admin', 'super_admin'] %}
         <h3>Request Document / Photo Update</h3>
 
         {% if pending_profile_update %}

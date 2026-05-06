@@ -107,7 +107,20 @@ def create_app():
                 return redirect(url_for("dashboard.pending_access"))
 
         if role == "farmer":
-            if approval != "approved" and endpoint != "dashboard.pending_access":
+            allowed_farmer_endpoints = {
+                "dashboard.pending_access",
+                "auth.complete_farmer",
+                "auth.logout",
+                "auth.api_states",
+                "auth.api_districts",
+                "auth.api_blocks",
+                "auth.api_villages",
+                "auth.api_centre",
+                "auth.api_mitra",
+                "documents.serve",
+            }
+
+            if approval != "approved" and endpoint not in allowed_farmer_endpoints:
                 return redirect(url_for("dashboard.pending_access"))
 
         return None

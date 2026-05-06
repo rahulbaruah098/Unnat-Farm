@@ -89,6 +89,31 @@
     transform:translateY(-1px);
 }
 
+.account-state-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:32px;
+    padding:7px 13px;
+    border-radius:999px;
+    font-size:.92rem;
+    font-weight:800;
+    line-height:1;
+    white-space:nowrap;
+}
+
+.account-state-badge.active{
+    background:rgba(228,247,234,.82);
+    color:#2F6F49;
+    border:1px solid rgba(95,168,120,.25);
+}
+
+.account-state-badge.disabled{
+    background:#FEE2E2;
+    color:#B91C1C;
+    border:1px solid #FECACA;
+}
+
     .btn-link{
         color:#3B7D55;
         background:rgba(228,247,234,.78);
@@ -234,33 +259,61 @@
     color:#fff;
 }
 
-    .table-wrap{
-        width:100%;
-        overflow-x:auto;
-        border:1px solid rgba(220,238,226,.95);
-        border-radius:20px;
-        background:#fff;
-        box-shadow:0 12px 28px rgba(23,37,42,.05);
-    }
+ .table-wrap{
+    width:100%;
+    max-width:100%;
+    overflow-x:scroll;
+    overflow-y:hidden;
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:20px;
+    background:#fff;
+    box-shadow:0 12px 28px rgba(23,37,42,.05);
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+    scrollbar-color:#5FA878 rgba(228,247,234,.75);
+    cursor:grab;
+}
 
-    table{
-        width:100%;
-        min-width:1120px;
-        border-collapse:separate;
-        border-spacing:0;
-    }
+.table-wrap:active{
+    cursor:grabbing;
+}
 
-    th,
-    td{
-        padding:14px 16px;
-        border-bottom:1px solid rgba(220,238,226,.85);
-        color:#425466;
-        font-size:1rem;
-        line-height:1.45;
-        text-align:left;
-        vertical-align:middle;
-        word-break:break-word;
-    }
+.table-wrap::-webkit-scrollbar{
+    height:10px;
+}
+
+.table-wrap::-webkit-scrollbar-track{
+    background:rgba(228,247,234,.75);
+    border-radius:999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb{
+    background:#5FA878;
+    border-radius:999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover{
+    background:#3B7D55;
+}
+
+table{
+    width:max-content;
+    min-width:1850px;
+    border-collapse:separate;
+    border-spacing:0;
+}
+
+   th,
+td{
+    padding:16px 20px;
+    border-bottom:1px solid rgba(220,238,226,.85);
+    color:#425466;
+    font-size:1rem;
+    line-height:1.45;
+    text-align:left;
+    vertical-align:middle;
+    word-break:normal;
+}
 
     th{
         color:#17252A;
@@ -268,6 +321,30 @@
         background:rgba(228,247,234,.72);
         white-space:nowrap;
     }
+
+td[data-label="Role"],
+td[data-label="Phone"],
+td[data-label="Centre UID"],
+td[data-label="Mitra UID"],
+td[data-label="Status"],
+td[data-label="Account State"]{
+    white-space:nowrap;
+    word-break:normal;
+}
+
+th:nth-child(1), td:nth-child(1){ min-width:90px; width:90px; }
+th:nth-child(2), td:nth-child(2){ min-width:190px; width:190px; }
+th:nth-child(3), td:nth-child(3){ min-width:140px; width:140px; }
+th:nth-child(4), td:nth-child(4){ min-width:190px; width:190px; }
+th:nth-child(5), td:nth-child(5){ min-width:150px; width:150px; }
+th:nth-child(6), td:nth-child(6){ min-width:150px; width:150px; }
+th:nth-child(7), td:nth-child(7){ min-width:150px; width:150px; }
+th:nth-child(8), td:nth-child(8){ min-width:130px; width:130px; }
+th:nth-child(9), td:nth-child(9){ min-width:160px; width:160px; }
+th:nth-child(10), td.action-cell{
+    min-width:360px;
+    width:360px;
+}
 
     .serial-col,
     .serial-cell{
@@ -290,15 +367,18 @@
     }
 
     .action-cell{
-        display:flex;
-        align-items:center;
-        gap:8px;
-        flex-wrap:wrap;
-    }
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:nowrap;
+    white-space:nowrap;
+}
 
     .action-cell form{
-        margin:0;
-    }
+    margin:0;
+    display:inline-flex;
+    flex:0 0 auto;
+}
 
     .pagination-bar{
         display:flex;
@@ -375,6 +455,7 @@
 
       .action-cell{
     align-items:stretch;
+
 }
 
 .action-cell form{
@@ -468,8 +549,10 @@
     }
 
     .action-cell{
-        margin-top:8px;
-    }
+    margin-top:8px;
+    flex-wrap:wrap;
+    white-space:normal;
+}
 
     .action-cell form{
     width:100%;
@@ -610,7 +693,17 @@
             <thead>
                 <tr>
                     <th class="serial-col">Sl. No.</th>
-                    <th>Name</th><th>Role</th><th>Username</th><th>Phone</th><th>Centre UID</th><th>Mitra UID</th><th>Status</th><th>Action</th>
+<th>Name</th>
+<th>Role</th>
+<th>Username</th>
+<th>Phone</th>
+<th>Centre UID</th>
+<th>Mitra UID</th>
+<th>Status</th>
+{% if session.get('role') == 'super_admin' %}
+    <th>Account State</th>
+    <th>Action</th>
+{% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -624,21 +717,35 @@
 <td data-label="Centre UID">{{ u.centre_uid or u.mapped_centre_uid or '-' }}</td>
 <td data-label="Mitra UID">{{ u.mitra_uid or u.mapped_mitra_uid or '-' }}</td>
 <td data-label="Status">{{ u.approval_status }}</td>
+
+{% if session.get('role') == 'super_admin' %}
+<td data-label="Account State">
+    {% if u.active is not defined or u.active %}
+        <span class="account-state-badge active">Active</span>
+    {% else %}
+        <span class="account-state-badge disabled">Disabled</span>
+    {% endif %}
+</td>
+
 <td class="action-cell" data-label="Action">
-                        {% if session.get('role') == 'super_admin' %}
-                            <a class="btn-link small" href="{{ url_for('admin.reset_user_password', user_id=u._id) }}">Reset Password</a>
-                        {% endif %}
-                        {% if session.get('role') in ['super_admin','avpl_admin'] %}
-                     <form method="post"
-      action="{{ url_for('admin.delete_user', user_id=u._id) }}"
-      onsubmit="return handleDelete(event, this);">
-    <button type="submit" class="danger-btn">Delete</button>
-</form>
-                        {% else %}-{% endif %}
-                    </td>
+    <a class="btn-link small" href="{{ url_for('admin.edit_user_view', user_id=u._id) }}">Edit</a>
+
+    <a class="btn-link small" href="{{ url_for('admin.reset_user_password', user_id=u._id) }}">Reset Password</a>
+
+    <form method="post"
+          action="{{ url_for('admin.delete_user', user_id=u._id) }}"
+          onsubmit="return handleDelete(event, this);">
+        <button type="submit" class="danger-btn">Delete</button>
+    </form>
+</td>
+{% endif %}
                 </tr>
             {% else %}
-                <tr><td colspan="9">No users found.</td></tr>
+<tr>
+<td colspan="{% if session.get('role') == 'super_admin' %}10{% else %}8{% endif %}">
+        No users found.
+    </td>
+</tr>
             {% endfor %}
             </tbody>
         </table>
@@ -767,6 +874,44 @@ function confirmDelete(){
         deleteFormRef.submit();
     }
 }
+</script>
+
+
+<script>
+(function(){
+    const tableWrap = document.querySelector('.table-wrap');
+    if(!tableWrap) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+
+    tableWrap.addEventListener('mousedown', function(e){
+        isDown = true;
+        tableWrap.classList.add('dragging');
+        startX = e.pageX - tableWrap.offsetLeft;
+        scrollLeft = tableWrap.scrollLeft;
+    });
+
+    tableWrap.addEventListener('mouseleave', function(){
+        isDown = false;
+        tableWrap.classList.remove('dragging');
+    });
+
+    tableWrap.addEventListener('mouseup', function(){
+        isDown = false;
+        tableWrap.classList.remove('dragging');
+    });
+
+    tableWrap.addEventListener('mousemove', function(e){
+        if(!isDown) return;
+        e.preventDefault();
+
+        const x = e.pageX - tableWrap.offsetLeft;
+        const walk = (x - startX) * 1.3;
+        tableWrap.scrollLeft = scrollLeft - walk;
+    });
+})();
 </script>
 
 {% endblock %}

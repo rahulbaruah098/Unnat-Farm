@@ -15,21 +15,21 @@ validation_bp = Blueprint('validation', __name__, url_prefix='/validations')
 def queue():
     q = request.args.get("q", "").strip()
 
-    items = list_validations_for_role(session['role'], session)
+    items = list_validations_for_role(session.get('role'), session)
 
     if session.get("role") in ["super_admin", "avpl_admin"]:
         existing_ids = {str(item.get("_id")) for item in items}
 
-    profile_update_items = list(
-        mongo.db.validations.find({
-            "entity_type": "profile_update_request",
-            "status": "pending"
-        }).sort("created_at", -1)
-    )
+        profile_update_items = list(
+            mongo.db.validations.find({
+                "entity_type": "profile_update_request",
+                "status": "pending"
+            }).sort("created_at", -1)
+        )
 
-    for update_item in profile_update_items:
-        if str(update_item.get("_id")) not in existing_ids:
-            items.append(update_item)
+        for update_item in profile_update_items:
+            if str(update_item.get("_id")) not in existing_ids:
+                items.append(update_item)
 
     if q:
         q_lower = q.lower()
