@@ -56,6 +56,7 @@ def login():
             return jsonify({'ok': False, 'message': 'Role not allowed in mobile app'}), 403
 
         update_last_login(str(user['_id']))
+        set_user_session(user)
 
         # Get latest validation depending on role
         entity_map = {
@@ -908,13 +909,27 @@ def complete_ufc_admin():
 @auth_bp.route('/profile/ufc-mitra/complete', methods=['GET', 'POST'])
 @login_required
 def complete_ufc_mitra():
+    is_app = request.form.get('app') == '1' or request.headers.get('Accept') == 'application/json'
+
+    def _fail(message, status_code=400):
+        if is_app:
+            return jsonify({'ok': False, 'message': message}), status_code
+
+        flash(message, 'danger')
+        return _render_form()
+
     if session.get('role') != 'ufc_mitra':
+        if is_app:
+            return jsonify({'ok': False, 'message': 'Only UFC Mitra can complete this profile.'}), 403
         return redirect(url_for('dashboard.home'))
 
     states = list_states()
     user = mongo.db.users.find_one({'_id': ObjectId(session['user_id'])})
 
     if not user:
+        if is_app:
+            return jsonify({'ok': False, 'message': 'User not found. Please login again.'}), 404
+
         flash('User not found. Please login again.', 'danger')
         return redirect(url_for('auth.logout'))
 
@@ -927,6 +942,16 @@ def complete_ufc_mitra():
         or latest_validation.get('action_remarks')
         or ''
     )
+
+    def _render_form():
+        return render_template(
+            'auth/complete_ufc_mitra_profile.html',
+            user=user,
+            states=states,
+            master=master,
+            rejection_reason=rejection_reason,
+            latest_validation=latest_validation
+        )
 
     if request.method == 'POST':
         form = {
@@ -951,15 +976,7 @@ def complete_ufc_mitra():
         )
 
         if not centre:
-            flash('Invalid UFC Admin Unique ID.', 'danger')
-            return render_template(
-                'auth/complete_ufc_mitra_profile.html',
-                user=user,
-                states=states,
-                master=master,
-                rejection_reason=rejection_reason,
-                latest_validation=latest_validation
-            )
+            return _fail('Invalid UFC Admin Unique ID.', 400)
 
         master_id = complete_ufc_mitra_profile(session['user_id'], form)
 
@@ -969,72 +986,110 @@ def complete_ufc_mitra():
             'passport_photo_file': 'Passport Size Photo',
         }
 
+        if is_app:
+            for field, label in doc_map.items():
+                uploaded_file = request.files.get(field)
+                if not uploaded_file or not uploaded_file.filename:
+                    return _fail(f'{label} is required.', 400)
+
+        profile_photo_path = ''
+
         for field, label in doc_map.items():
             file = request.files.get(field)
 
-            if file and file.filename:
+            if not file or not file.filename:
+                continue
 
-                # Profile photo validation: image only, max 2 MB
-                if field == 'passport_photo_file':
-                    allowed_image_types = {
-                        'image/jpeg',
-                        'image/png',
-                        'image/jpg',
-                        'image/webp'
-                    }
+            if field == 'passport_photo_file':
+                allowed_image_types = {
+                    'image/jpeg',
+                    'image/png',
+                    'image/jpg',
+                    'image/webp'
+                }
 
-                    file.seek(0, 2)
-                    file_size = file.tell()
-                    file.seek(0)
-                    
-                    file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
-                    allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+                file.seek(0, 2)
+                file_size = file.tell()
+                file.seek(0)
 
-                    if file.content_type not in allowed_image_types and file_ext not in allowed_extensions:
-                        flash('Only JPG, PNG or WEBP image files are allowed for farmer profile photo.')
+                file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+                allowed_extensions = {"jpg", "jpeg", "png", "webp"}
 
-                        return render_template(
-                            'auth/complete_ufc_mitra_profile.html',
-                            user=user,
-                            states=states,
-                            master=master,
-                            rejection_reason=rejection_reason,
-                            latest_validation=latest_validation
-                        )
+                if file.content_type not in allowed_image_types and file_ext not in allowed_extensions:
+                    return _fail(
+                        'Only JPG, PNG or WEBP image files are allowed for profile photo.',
+                        400
+                    )
 
-                    if file_size > 2 * 1024 * 1024:
-                        flash('Profile photo must be less than or equal to 2 MB.', 'danger')
-                        return render_template(
-                            'auth/complete_ufc_mitra_profile.html',
-                            user=user,
-                            states=states,
-                            master=master,
-                            rejection_reason=rejection_reason,
-                            latest_validation=latest_validation
-                        )
+                if file_size > 2 * 1024 * 1024:
+                    return _fail(
+                        'Profile photo must be less than or equal to 2 MB.',
+                        400
+                    )
 
-                store_document(
-                    file,
-                    session['user_id'],
-                    master_id,
-                    session['user_id'],
-                    'ufc_mitra',
-                    label
+            saved_doc = store_document(
+                file,
+                session['user_id'],
+                master_id,
+                session['user_id'],
+                'ufc_mitra',
+                label
+            )
+
+            if field == 'passport_photo_file' and saved_doc:
+                profile_photo_path = (
+                    saved_doc.get('file_path')
+                    or saved_doc.get('filename')
+                    or saved_doc.get('file_name')
+                    or saved_doc.get('stored_name')
+                    or ''
                 )
+
+        update_user_doc = {
+            'approval_status': 'pending',
+            'latest_rejection_reason': '',
+            'mapped_centre_uid': form['mapped_centre_uid'],
+            'state': form['state'],
+            'district': form['district'],
+            'block': form['block'],
+            'village': form['village'],
+            'updated_at': datetime.utcnow()
+        }
+
+        update_master_doc = {
+            'updated_at': datetime.utcnow()
+        }
+
+        if profile_photo_path:
+            update_user_doc.update({
+                'profile_photo': profile_photo_path,
+            })
+
+            update_master_doc.update({
+                'profile_photo': profile_photo_path,
+            })
 
         mongo.db.users.update_one(
             {'_id': ObjectId(session['user_id'])},
-            {
-                '$set': {
-                    'approval_status': 'pending',
-                    'latest_rejection_reason': '',
-                    'mapped_centre_uid': form['mapped_centre_uid'],
-                    'state': form['state'],
-                    'district': form['district'],
-                    'block': form['block'],
-                    'village': form['village'],
-                }
-            }
+            {'$set': update_user_doc}
+        )
+
+        master_or = [
+            {'linked_user_id': session['user_id']},
+            {'linked_user_id': ObjectId(session['user_id'])},
+        ]
+
+        if master_id:
+            master_or.append({'_id': master_id})
+            if not isinstance(master_id, ObjectId):
+                try:
+                    master_or.append({'_id': ObjectId(master_id)})
+                except Exception:
+                    pass
+
+        mongo.db.ufc_mitra_master.update_one(
+            {'$or': master_or},
+            {'$set': update_master_doc}
         )
 
         mongo.db.validations.update_one(
@@ -1056,17 +1111,19 @@ def complete_ufc_mitra():
         session['mapped_centre_uid'] = form['mapped_centre_uid']
         session.pop('rejection_reason', None)
 
+        if is_app:
+            return jsonify({
+                'ok': True,
+                'message': 'Profile submitted for AVPL validation.',
+                'approval_status': 'pending',
+                'master_id': str(master_id),
+                'profile_photo': profile_photo_path
+            }), 200
+
         flash('Profile resubmitted for AVPL validation.', 'success')
         return redirect(url_for('dashboard.pending_access'))
 
-    return render_template(
-        'auth/complete_ufc_mitra_profile.html',
-        user=user,
-        states=states,
-        master=master,
-        rejection_reason=rejection_reason,
-        latest_validation=latest_validation
-    )
+    return _render_form()
 
 @auth_bp.route('/api/locations/states')
 def api_states():
