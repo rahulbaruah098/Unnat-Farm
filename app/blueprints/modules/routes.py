@@ -27,6 +27,20 @@ def json_safe(value):
 
     return value
 
+def wants_json_response():
+    return (
+        request.headers.get("Accept") == "application/json"
+        or request.is_json
+        or request.args.get("format") == "json"
+    )
+
+
+def json_error(message, status=400):
+    return jsonify({
+        "ok": False,
+        "message": message
+    }), status
+
 @modules_bp.route("/buy", methods=["GET", "POST"])
 @login_required
 def buy():
@@ -169,6 +183,13 @@ def buy():
     farmer_products = list(
     mongo.db.farmer_products.find(farmer_query).sort("created_at", -1)
 )
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "products": products,
+            "farmer_products": farmer_products
+        }))
 
     return render_template(
         "modules/buy.html",
@@ -750,6 +771,13 @@ def lms():
         mongo.db.lms_materials.find(query).sort("created_at", -1)
     )
 
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items,
+            "q": q
+        }))
+
     return render_template("modules/lms.html", items=items, q=q)
 
 
@@ -777,6 +805,9 @@ def support():
         message = request.form.get("message", "").strip()
 
         if not subject or not problem_type or not priority or not message:
+            if wants_json_response():
+                return json_error("Please fill all required support ticket fields.", 400)
+
             flash("Please fill all required support ticket fields.", "danger")
             return redirect(url_for("modules.support"))
 
@@ -804,6 +835,13 @@ def support():
             "resolved_at": None,
             "updated_by": None
         })
+
+        if wants_json_response():
+            return jsonify({
+                "ok": True,
+                "message": "Support ticket raised successfully. Super Admin will review it.",
+                "ticket_ref": ticket_ref
+            })
 
         flash("Support ticket raised successfully. Super Admin will review it.", "success")
         return redirect(url_for("modules.support"))
@@ -839,6 +877,15 @@ def support():
     tickets = list(
         mongo.db.support_tickets.find(ticket_query).sort("created_at", -1)
     )
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "tickets": tickets,
+            "q": q,
+            "support_email": "ites@sayanant.com",
+            "support_number": "9957367398"
+        }))
 
     return render_template(
         "modules/support.html",
@@ -911,6 +958,14 @@ def orders():
             pass
 
     items = list(mongo.db.orders.find(query).sort("created_at", -1))
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items,
+            "q": q
+        }))
+
     return render_template("modules/orders.html", items=items, q=q)
 
 
@@ -923,6 +978,12 @@ def products():
             "is_active": {"$ne": False}
         }).sort("created_at", -1)
     )
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items
+        }))
+
     return render_template("modules/products.html", items=items)
 
 
@@ -1416,7 +1477,7 @@ def get_mitra_bonus_percentage(mitra_uid, bonus_type, category):
 
     return 2
 
-
+#changes by atlanta
 @modules_bp.route('/pos', methods=['GET', 'POST'])
 @login_required
 @roles_required('ufc_admin')
@@ -1539,6 +1600,16 @@ def pos():
 
         result = mongo.db.pos_sales.insert_one(sale_doc)
 
+        sale_doc["_id"] = str(result.inserted_id)
+
+        if wants_json_response():
+            return jsonify(json_safe({
+                "ok": True,
+                "message": "Sale recorded successfully.",
+                "sale": sale_doc,
+                "sale_id": str(result.inserted_id)
+            }))
+
         flash('Sale recorded successfully. Invoice generated.', 'success')
         return redirect(url_for('modules.pos_invoice', sale_id=str(result.inserted_id)))
 
@@ -1576,6 +1647,17 @@ def pos():
     sales = list(
         mongo.db.pos_sales.find(sales_query).sort('created_at', -1).limit(20)
     )
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "centre_uid": centre_uid,
+            "farmers": mapped_farmers,
+            "mitras": mitras,
+            "products": products,
+            "sales": sales,
+            "q": q
+        }))
 
     return render_template(
         'modules/pos.html',
@@ -1626,6 +1708,12 @@ def pos_invoice(sale_id):
         if session.get('role') in ['avpl_admin', 'sales_unnatfarm', 'accounts']:
             return redirect(url_for('modules.sales_details'))
         return redirect(url_for('modules.pos'))
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "sale": sale
+        }))
 
     return render_template('modules/pos_invoice.html', sale=sale)
 
@@ -1889,6 +1977,9 @@ def centre_orders():
         })
 
         if not order:
+            if wants_json_response():
+                return json_error("Order not found for this centre.", 404)
+
             flash("Order not found for this centre.", "danger")
             return redirect(url_for("modules.centre_orders"))
 
@@ -1910,6 +2001,12 @@ def centre_orders():
             "status": "unread",
             "created_at": now_utc()
         })
+
+        if wants_json_response():
+            return jsonify({
+                "ok": True,
+                "message": "Order status updated and farmer notified."
+            })
 
         flash("Order status updated and farmer notified.", "success")
         return redirect(url_for("modules.centre_orders"))
@@ -1933,6 +2030,13 @@ def centre_orders():
     orders = list(
         mongo.db.orders.find(query).sort("created_at", -1)
     )
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "orders": orders,
+            "q": q
+        }))
 
     return render_template(
         "modules/centre_orders.html",

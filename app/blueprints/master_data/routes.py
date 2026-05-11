@@ -1,12 +1,12 @@
-from flask import Blueprint, render_template, request, session, Response
+from flask import Blueprint, render_template, request, session, Response, jsonify
 import csv
 import io
+from bson import ObjectId
 from datetime import datetime
 from app.extensions import mongo
 from app.utils.decorators import login_required, roles_required
 
 master_bp = Blueprint("master", __name__, url_prefix="/master")
-
 
 def build_search_or(search, fields):
     if not search:
@@ -16,6 +16,29 @@ def build_search_or(search, fields):
         {field: {"$regex": search, "$options": "i"}}
         for field in fields
     ]
+
+def wants_json_response():
+    return (
+        request.headers.get("Accept") == "application/json"
+        or request.is_json
+        or request.args.get("format") == "json"
+    )
+
+
+def json_safe(value):
+    if isinstance(value, ObjectId):
+        return str(value)
+
+    if isinstance(value, datetime):
+        return value.isoformat()
+
+    if isinstance(value, list):
+        return [json_safe(item) for item in value]
+
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+
+    return value
 
 def build_farmer_master_query():
     query = {}
@@ -176,7 +199,7 @@ def ufc_admins():
         q=search
     )
 
-
+#changes by atlanta
 @master_bp.route("/ufc-mitras")
 @login_required
 @roles_required("super_admin", "avpl_admin", "ufc_admin")
@@ -208,6 +231,50 @@ def ufc_mitras():
         query["$or"] = search_or
 
     items = list(mongo.db.ufc_mitra_master.find(query).sort("created_at", -1))
+
+    for item in items:
+        linked_user_id = item.get("linked_user_id")
+        user = None
+
+        if linked_user_id:
+            try:
+                user = mongo.db.users.find_one({"_id": ObjectId(linked_user_id)})
+            except Exception:
+                user = None
+
+            if not user:
+                user = mongo.db.users.find_one({"_id": linked_user_id})
+
+        if not user:
+            user = mongo.db.users.find_one({
+                "$or": [
+                    {"mitra_uid": item.get("mitra_uid")},
+                    {"mapped_mitra_uid": item.get("mitra_uid")},
+                    {"username": item.get("username")},
+                    {"phone": item.get("phone")},
+                ]
+            }) or {}
+
+        item["name"] = item.get("name") or user.get("name") or "-"
+        item["phone"] = (
+            item.get("phone")
+            or item.get("contact_no")
+            or item.get("mobile")
+            or user.get("phone")
+            or user.get("contact_no")
+            or user.get("mobile")
+            or "-"
+        )
+        item["username"] = item.get("username") or user.get("username") or "-"
+        item["email"] = item.get("email") or user.get("email") or "-"
+        item["approval_status"] = item.get("approval_status") or user.get("approval_status") or "pending_profile"
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items,
+            "q": search
+        }))
 
     return render_template(
         "master/ufc_mitras.html",

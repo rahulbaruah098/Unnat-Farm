@@ -1,5 +1,5 @@
 from bson import ObjectId
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.extensions import mongo
 from app.utils.decorators import login_required, roles_required
@@ -11,6 +11,24 @@ from app.services.location_service import list_states
 from datetime import datetime
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+def wants_json_response():
+    return (
+        request.headers.get("Accept") == "application/json"
+        or request.is_json
+        or request.args.get("format") == "json"
+    )
+
+
+def app_error(message, status=400):
+    if wants_json_response():
+        return jsonify({
+            "ok": False,
+            "message": message
+        }), status
+
+    flash(message, "danger")
+    return None
 
 
 @admin_bp.route('/users')
@@ -351,6 +369,10 @@ def create_user_view():
                 extra[k] = centre.get(k, '')
 
         if role not in allowed_roles:
+
+            if wants_json_response():
+                return jsonify({"ok": False, "message": "You cannot create this role."}), 403
+    
             flash('You cannot create this role.', 'danger')
             return render_template(
                 'admin/create_user.html',
@@ -360,6 +382,10 @@ def create_user_view():
             )
 
         if role == 'ufc_admin' and not extra.get('state'):
+
+            if wants_json_response():
+                return jsonify({"ok": False, "message": "State is required to generate Centre UID."}), 403
+    
             flash('State is required to generate Centre UID.', 'danger')
             return render_template(
                 'admin/create_user.html',
@@ -369,6 +395,10 @@ def create_user_view():
             )
 
         if role == 'ufc_mitra' and not extra.get('mapped_centre_uid'):
+
+            if wants_json_response():
+                return jsonify({"ok": False, "message": "Mapped UnnatFarm Centre UID is required for UFC Mitra."}), 403
+    
             flash('Mapped UnnatFarm Centre UID is required for UFC Mitra.', 'danger')
             return render_template(
                 'admin/create_user.html',
@@ -388,6 +418,10 @@ def create_user_view():
                 extra=extra
             )
         except ValueError as exc:
+            if wants_json_response():
+                return jsonify({"ok": False, "message": str(exc)}), 403
+    
+
             flash(str(exc), 'danger')
             return render_template(
                 'admin/create_user.html',
@@ -443,8 +477,22 @@ def create_user_view():
             metadata={'role': role}
         )
 
+        generated_uid = user.get("centre_uid") or user.get("mitra_uid") or user.get("user_ref_id")
+
+        if wants_json_response():
+            safe_user = dict(user)
+            if "_id" in safe_user:
+                safe_user["_id"] = str(safe_user["_id"])
+
+            return jsonify({
+                "ok": True,
+                "message": "User ID created successfully.",
+                "generated_uid": generated_uid,
+                "user": safe_user
+            })
+
         flash(
-            f'User ID created successfully. Generated UID: {user.get("centre_uid") or user.get("mitra_uid") or user.get("user_ref_id")}',
+            f'User ID created successfully. Generated UID: {generated_uid}',
             'success'
         )
         return redirect(url_for('admin.users'))
