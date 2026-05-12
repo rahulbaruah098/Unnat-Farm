@@ -41,6 +41,63 @@ def json_error(message, status=400):
         "message": message
     }), status
 
+def normalize_product_for_app(item):
+    item = dict(item or {})
+
+    image_value = (
+        item.get("image")
+        or item.get("picture")
+        or item.get("product_image")
+        or item.get("image_url")
+        or item.get("image_path")
+        or item.get("file_path")
+        or item.get("filename")
+        or item.get("file_name")
+        or item.get("stored_name")
+        or item.get("photo")
+        or ""
+    )
+
+    if not image_value:
+        image_name = (
+            item.get("image_name")
+            or item.get("filename")
+            or item.get("file_name")
+            or item.get("stored_name")
+            or ""
+        )
+
+        if image_name:
+            doc = mongo.db.documents.find_one({
+                "$or": [
+                    {"filename": image_name},
+                    {"file_name": image_name},
+                    {"stored_name": image_name},
+                    {"original_name": image_name},
+                    {"file_path": {"$regex": image_name, "$options": "i"}},
+                    {"path": {"$regex": image_name, "$options": "i"}},
+                ]
+            })
+
+            if doc:
+                image_value = (
+                    doc.get("file_path")
+                    or doc.get("path")
+                    or doc.get("url")
+                    or doc.get("filename")
+                    or doc.get("file_name")
+                    or doc.get("stored_name")
+                    or image_name
+                )
+
+    if image_value:
+        image_value = str(image_value).replace("\\", "/")
+        item["image"] = image_value
+        item["image_url"] = image_value
+        item["picture"] = image_value
+
+    return item
+
 @modules_bp.route("/buy", methods=["GET", "POST"])
 @login_required
 def buy():
@@ -53,16 +110,25 @@ def buy():
         })
 
         if not product:
+            if wants_json_response():
+                return json_error("Product not found.", 404)
+
             flash("Product not found.", "danger")
             return redirect(url_for("modules.buy"))
 
         available_qty = float(product.get("available_quantity") or 0)
 
         if quantity <= 0:
+            if wants_json_response():
+                return json_error("Quantity must be greater than zero.", 400)
+
             flash("Quantity must be greater than zero.", "danger")
             return redirect(url_for("modules.buy"))
 
         if quantity > available_qty:
+            if wants_json_response():
+                return json_error("Not enough quantity available.", 400)
+
             flash("Not enough quantity available.", "danger")
             return redirect(url_for("modules.buy"))
 
@@ -158,10 +224,16 @@ def buy():
             "created_at": now_utc()
         })
 
+        if wants_json_response():
+            return jsonify(json_safe({
+                "ok": True,
+                "message": f"{quantity} {product.get('product_name')} purchased and added to your stock.",
+                "purchase": purchase_doc
+            }))
+
         flash(f"{quantity} {product.get('product_name')} purchased and added to your stock.", "success")
         return redirect(url_for("modules.buy"))
 
-   # ===== GET LOGIC =====
    # ===== GET LOGIC =====
     products = list(
     mongo.db.products.find({
@@ -185,6 +257,9 @@ def buy():
 )
 
     if wants_json_response():
+        products = [normalize_product_for_app(item) for item in products]
+        farmer_products = [normalize_product_for_app(item) for item in farmer_products]
+
         return jsonify(json_safe({
             "ok": True,
             "products": products,
@@ -300,16 +375,25 @@ def sell():
             })
 
             if not stock_item:
+                if wants_json_response():
+                    return json_error("Selected stock product not found.", 400)
+
                 flash("Selected stock product not found.", "danger")
                 return redirect(url_for("modules.sell"))
 
             available_quantity = float(stock_item.get("available_quantity") or 0)
 
             if quantity <= 0:
+                if wants_json_response():
+                    return json_error("Quantity must be greater than zero.", 400)
+
                 flash("Quantity must be greater than zero.", "danger")
                 return redirect(url_for("modules.sell"))
 
             if quantity > available_quantity:
+                if wants_json_response():
+                    return json_error("Sale quantity cannot be greater than available stock.", 400)
+
                 flash("Sale quantity cannot be greater than available stock.", "danger")
                 return redirect(url_for("modules.sell"))
 
@@ -317,6 +401,9 @@ def sell():
 
             if buyer_type == "farmer":
                 if not buyer_farmer_id:
+                    if wants_json_response():
+                        return json_error("Please select buyer farmer.", 400)
+
                     flash("Please select buyer farmer.", "danger")
                     return redirect(url_for("modules.sell"))
 
@@ -326,6 +413,9 @@ def sell():
                 })
 
                 if not buyer_farmer:
+                    if wants_json_response():
+                        return json_error("Selected farmer not found under this UFC Center.", 400)
+
                     flash("Selected farmer not found under this UFC Center.", "danger")
                     return redirect(url_for("modules.sell"))
 
@@ -355,6 +445,12 @@ def sell():
                     }
                 }
             )
+
+            if wants_json_response():
+                return jsonify(json_safe({
+                    "ok": True,
+                    "message": "Product sold successfully."
+                }))
 
             flash("Product sold successfully.", "success")
             return redirect(url_for("modules.sell"))
@@ -387,6 +483,17 @@ def sell():
             mongo.db.mitra_product_sales.find(sales_query).sort("created_at", -1)
         )
 
+        if wants_json_response():
+            return jsonify(json_safe({
+                "ok": True,
+                "mitra_sell_mode": True,
+                "stock_items": stock_items,
+                "farmers": farmers,
+                "sales": sales,
+                "q": q
+            }))
+        
+
         return render_template(
             "modules/sell.html",
             mitra_sell_mode=True,
@@ -413,6 +520,8 @@ def sell():
             try:
                 picture = save_file(file, "farmer_product")
             except ValueError as exc:
+                if wants_json_response():
+                    return json_error(str(exc), 400)
                 flash(str(exc), "danger")
                 return redirect(url_for("modules.sell"))
 
@@ -457,6 +566,14 @@ def sell():
     posts = list(
         mongo.db.farmer_products.find(posts_query).sort("created_at", -1)
     )
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "mitra_sell_mode": False,
+            "posts": posts,
+            "q": q
+        }))
 
     return render_template(
         "modules/sell.html",
@@ -565,6 +682,15 @@ def finance():
         mongo.db.financial_assistance_leads.find(finance_query).sort("created_at", -1)
     )
 
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items,
+            "total_transaction": total_transaction,
+            "is_eligible": is_eligible,
+            "q": q
+        }))
+
     return render_template(
         "modules/finance.html",
         items=items,
@@ -659,6 +785,16 @@ def insurance():
         mongo.db.insurance_requests.find(insurance_query).sort("created_at", -1)
     )
 
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items,
+            "total_transaction": total_transaction,
+            "is_livestock_farmer": is_livestock_farmer,
+            "is_eligible": is_eligible,
+            "q": q
+        }))
+
     return render_template(
         "modules/insurance.html",
         items=items,
@@ -693,6 +829,13 @@ def insurance_leads():
         .find(query)
         .sort("created_at", -1)
     )
+
+    if wants_json_response():
+        return jsonify(json_safe({
+        "ok": True,
+        "items": items,
+        "q": q
+    }))
 
     return render_template(
         "modules/insurance_leads.html",
@@ -986,17 +1129,20 @@ def products():
 
     return render_template("modules/products.html", items=items)
 
-
+#changes by atlanta
 @modules_bp.route("/transactions")
 @login_required
 def transactions():
     query = {}
+
     if session.get("role") == "ufc_admin":
         query["centre_uid"] = session.get("centre_uid")
+
     elif session.get("role") == "ufc_mitra":
         query["mitra_uid"] = session.get("mitra_uid")
+
     elif session.get("role") == "farmer":
-        user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])})
+        user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
         query["farmer_contact"] = user.get("phone")
 
     q = request.args.get("q", "").strip()
@@ -1007,17 +1153,38 @@ def transactions():
             {"product_name": {"$regex": q, "$options": "i"}},
             {"centre_uid": {"$regex": q, "$options": "i"}},
             {"mitra_uid": {"$regex": q, "$options": "i"}},
-            {"farmer_contact": {"$regex": q, "$options": "i"}}
+            {"farmer_contact": {"$regex": q, "$options": "i"}},
+            {"farmer_name": {"$regex": q, "$options": "i"}},
+            {"status": {"$regex": q, "$options": "i"}},
         ]
 
         try:
             numeric_q = float(q)
-            query["$or"].append({"amount": numeric_q})
+            query["$or"].extend([
+                {"amount": numeric_q},
+                {"quantity": numeric_q},
+                {"total_amount": numeric_q},
+                {"unit_price": numeric_q},
+            ])
         except ValueError:
             pass
 
-    items = list(mongo.db.transactions.find(query).sort("created_at", -1))
-    return render_template("modules/transactions.html", items=items, q=q)
+    items = list(
+        mongo.db.transactions.find(query).sort("created_at", -1)
+    )
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items,
+            "q": q
+        }))
+
+    return render_template(
+        "modules/transactions.html",
+        items=items,
+        q=q
+    )
 
 #changes by atlanta
 @modules_bp.route("/profile")
@@ -1802,6 +1969,20 @@ def mitra_earnings():
         reverse=True
     )[:20]
 
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "mitra_uid": mitra_uid,
+            "current_month_earning": current_month_earning,
+            "total_earning": total_earning,
+            "monthly_avpl_earning": monthly_avpl_earning,
+            "total_avpl_earning": total_avpl_earning,
+            "monthly_farmer_earning": monthly_farmer_earning,
+            "total_farmer_earning": total_farmer_earning,
+            "recent_sales": recent_sales,
+            "q": q
+        }))
+
     return render_template(
         "modules/mitra_earnings.html",
         mitra_profile=mitra_profile,
@@ -1850,6 +2031,14 @@ def finance_leads():
             or q_lower in str(lead.get("status", "")).lower()
             or q_lower in str(lead.get("mitra_uid", "")).lower()
         ]
+
+    if wants_json_response():
+        return jsonify(json_safe({
+        "ok": True,
+        "items": leads,
+        "leads": leads,
+        "q": q
+    }))
 
     return render_template(
         "modules/finance_leads.html",
@@ -1954,6 +2143,13 @@ def mitra_stock():
 
     if q and q.lower() in ["available", "in stock", "stock"]:
         items = [item for item in items if not item.get("low_stock")]
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items,
+            "q": q
+        }))
 
     return render_template(
         "modules/mitra_stock.html",
