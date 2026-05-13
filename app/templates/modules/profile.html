@@ -409,19 +409,6 @@
         {% if user.last_login %}<tr><th>Last Login</th><td>{{ user.last_login }}</td></tr>{% endif %}
     </tbody></table>
 
-    {% if master %}
-    <h3>Master/Profile Details</h3>
-<table>
-    <tbody>
-        {% for key, value in master.items() if key not in ['_id', 'created_at', 'updated_at'] and value is not none and value != '-' and value != '' %}
-            <tr>
-                <th>{{ key|replace('_',' ')|title }}</th>
-                <td>{{ value }}</td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
-    {% endif %}
 
     <h3>Uploaded Documents</h3>
     <table>

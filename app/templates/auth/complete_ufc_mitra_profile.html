@@ -47,19 +47,29 @@
                    required>
         </label>
 
-        <label>
-            DOB
-            <input type="date" name="dob"
-                   value="{{ master.dob or user.dob or '' }}"
-                   required>
-        </label>
+       <label>
+    DOB
+    <input
+        type="date"
+        name="dob"
+        id="mitraDob"
+        value="{{ master.dob or user.dob or '' }}"
+        required
+    >
+</label>
 
-        <label>
-            Age
-            <input type="number" name="age"
-                   value="{{ master.age or user.age or '' }}"
-                   required>
-        </label>
+<label>
+    Age
+    <input
+        type="number"
+        name="age"
+        id="mitraAge"
+        value="{{ master.age or user.age or '' }}"
+        placeholder="Auto-calculated from DOB"
+        readonly
+        required
+    >
+</label>
 
         <label>
             Highest Education
@@ -174,29 +184,67 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+    const dobInput = document.getElementById('mitraDob');
+    const ageInput = document.getElementById('mitraAge');
     const photoInput = document.querySelector('input[name="passport_photo_file"]');
 
-    if(!photoInput) return;
+    function calculateAgeFromDob(){
+        if(!dobInput || !ageInput) return;
 
-    photoInput.addEventListener('change', function(){
-        const file = this.files && this.files[0];
+        const dobValue = dobInput.value;
 
-        if(!file) return;
-
-        const maxSize = 2 * 1024 * 1024;
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-
-        if(!allowedTypes.includes(file.type)){
-            alert('Only JPG, PNG or WEBP image files are allowed for profile photo.');
-            this.value = '';
+        if(!dobValue){
+            ageInput.value = '';
             return;
         }
 
-        if(file.size > maxSize){
-            alert('Profile photo size must be less than or equal to 2 MB.');
-            this.value = '';
+        const dob = new Date(dobValue);
+        const today = new Date();
+
+        if(Number.isNaN(dob.getTime()) || dob > today){
+            ageInput.value = '';
+            return;
         }
-    });
+
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        const dayDiff = today.getDate() - dob.getDate();
+
+        if(monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)){
+            age--;
+        }
+
+        ageInput.value = age >= 0 ? age : '';
+    }
+
+    if(dobInput){
+        dobInput.max = new Date().toISOString().split('T')[0];
+        dobInput.addEventListener('change', calculateAgeFromDob);
+        dobInput.addEventListener('input', calculateAgeFromDob);
+        calculateAgeFromDob();
+    }
+
+    if(photoInput){
+        photoInput.addEventListener('change', function(){
+            const file = this.files && this.files[0];
+
+            if(!file) return;
+
+            const maxSize = 2 * 1024 * 1024;
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+
+            if(!allowedTypes.includes(file.type)){
+                alert('Only JPG, PNG or WEBP image files are allowed for profile photo.');
+                this.value = '';
+                return;
+            }
+
+            if(file.size > maxSize){
+                alert('Profile photo size must be less than or equal to 2 MB.');
+                this.value = '';
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

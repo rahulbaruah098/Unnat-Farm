@@ -599,17 +599,28 @@
                         </select>
                     </label>
 
-                    <label>Age
+        <label>Date of Birth
     <input
-    type="text"
-    name="age"
-    id="farmerAge"
-    value="{{ data.age if data else '' }}"
-    inputmode="numeric"
-    maxlength="3"
-    placeholder="Enter age"
-    required
->
+        type="date"
+        name="date_of_birth"
+        id="farmerDob"
+        value="{{ data.date_of_birth if data and data.date_of_birth else '' }}"
+        required
+    >
+</label>
+
+<label>Age
+    <input
+        type="text"
+        name="age"
+        id="farmerAge"
+        value="{{ data.age if data else '' }}"
+        inputmode="numeric"
+        maxlength="3"
+        placeholder="Auto calculated from DOB"
+        readonly
+        required
+    >
 </label>
 
                     <label>Create Password
@@ -721,16 +732,41 @@ document.addEventListener('DOMContentLoaded', function(){
     const nextBtn = document.getElementById('farmerNextBtn');
     const stepBackBtn = document.getElementById('farmerStepBackBtn');
 
-    const farmerAge = document.getElementById('farmerAge');
+ const farmerDob = document.getElementById('farmerDob');
+const farmerAge = document.getElementById('farmerAge');
 
-function onlyValidAge(input){
-    let value = input.value.replace(/\D/g, '').slice(0, 3);
-
-    if(value && Number(value) > 150){
-        value = '150';
+function calculateAgeFromDob(dobValue){
+    if(!dobValue){
+        return '';
     }
 
-    input.value = value;
+    const dob = new Date(dobValue);
+    const today = new Date();
+
+    if(isNaN(dob.getTime()) || dob > today){
+        return '';
+    }
+
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+
+    if(
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < dob.getDate())
+    ){
+        age--;
+    }
+
+    if(age < 0 || age > 150){
+        return '';
+    }
+
+    return age;
+}
+
+function updateAgeFromDob(){
+    const calculatedAge = calculateAgeFromDob(farmerDob.value);
+    farmerAge.value = calculatedAge;
 }
 
     function openFarmerValidationModal(){
@@ -800,10 +836,13 @@ contactMirror.addEventListener('input', function(){
     syncFromMirror();
 });
 
-if(farmerAge){
-    farmerAge.addEventListener('input', function(){
-        onlyValidAge(farmerAge);
-    });
+if(farmerDob){
+    farmerDob.addEventListener('change', updateAgeFromDob);
+    farmerDob.addEventListener('input', updateAgeFromDob);
+
+    if(farmerDob.value){
+        updateAgeFromDob();
+    }
 }
 
     form.addEventListener('submit', function(e){
@@ -812,6 +851,7 @@ if(farmerAge){
       const password = form.querySelector('input[name="password"]');
 const centreUid = form.querySelector('input[name="centre_uid"]');
 const gender = form.querySelector('select[name="gender"]');
+const dob = form.querySelector('input[name="date_of_birth"]');
 const age = form.querySelector('input[name="age"]');
 
 const village = form.querySelector('input[name="village"]');
@@ -834,24 +874,37 @@ const profilePhoto = form.querySelector('input[name="profile_photo"]');
     return;
 }
 
+updateAgeFromDob();
+
+if(!dob.value.trim()){
+    e.preventDefault();
+    showStep2();
+    openCustomFarmerModal(
+        'Date of Birth Required',
+        'Please select the farmer date of birth. Age will be calculated automatically.'
+    );
+    return;
+}
+
 if(
-    age.value.trim().length > 3 ||
+    !age.value.trim() ||
     Number(age.value) > 150 ||
     Number(age.value) < 1
 ){
     e.preventDefault();
     showStep2();
     openCustomFarmerModal(
-        'Invalid Age',
-        'Please enter a valid age between 1 and 150.'
+        'Invalid Date of Birth',
+        'Please select a valid date of birth. Age must be between 1 and 150.'
     );
     return;
 }
 
-      if(
+  if(
     !password.value.trim() ||
     !centreUid.value.trim() ||
     !gender.value.trim() ||
+    !dob.value.trim() ||
     !age.value.trim() ||
     !village.value.trim() ||
     !profilePhoto.files.length
@@ -860,7 +913,7 @@ if(
     showStep2();
     openCustomFarmerModal(
         'Required Details Missing',
-        'Please fill all mandatory fields including Gender, Age, Password, Centre UID, Village and Farmer Profile Photo before submitting.'
+     'Please fill all mandatory fields including Gender, Date of Birth, Password, Centre UID, Village and Farmer Profile Photo before submitting.'
     );
 }
     });

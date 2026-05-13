@@ -41,6 +41,30 @@
         </label>
 
         <label>
+    Owner DOB
+    <input
+        type="date"
+        name="owner_dob"
+        id="ownerDob"
+        value="{{ master.owner_dob or user.owner_dob or '' }}"
+        required
+    >
+</label>
+
+<label>
+    Owner Age
+    <input
+        type="number"
+        name="owner_age"
+        id="ownerAge"
+        value="{{ master.owner_age or user.owner_age or '' }}"
+        placeholder="Auto-calculated from DOB"
+        readonly
+        required
+    >
+</label>
+
+        <label>
             State
             <input type="text"
                    value="{{ user.state or master.state or '' }}"
@@ -158,4 +182,48 @@
 
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const dobInput = document.getElementById('ownerDob');
+    const ageInput = document.getElementById('ownerAge');
+
+    function calculateOwnerAgeFromDob(){
+        if(!dobInput || !ageInput) return;
+
+        const dobValue = dobInput.value;
+
+        if(!dobValue){
+            ageInput.value = '';
+            return;
+        }
+
+        const dob = new Date(dobValue);
+        const today = new Date();
+
+        if(Number.isNaN(dob.getTime()) || dob > today){
+            ageInput.value = '';
+            return;
+        }
+
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        const dayDiff = today.getDate() - dob.getDate();
+
+        if(monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)){
+            age--;
+        }
+
+        ageInput.value = age >= 0 ? age : '';
+    }
+
+    if(dobInput){
+        dobInput.max = new Date().toISOString().split('T')[0];
+        dobInput.addEventListener('change', calculateOwnerAgeFromDob);
+        dobInput.addEventListener('input', calculateOwnerAgeFromDob);
+        calculateOwnerAgeFromDob();
+    }
+});
+</script>
+
 {% endblock %}

@@ -351,52 +351,58 @@ def register_farmer():
             data = request.get_json(silent=True) or {}
 
             form = {
-                'name': (data.get('name') or '').strip(),
-                'gender': (data.get('gender') or '').strip(),
-                'age': str(data.get('age') or '').strip(),
-                'contact_no': (data.get('contact_no') or '').strip(),
-                'password': (data.get('password') or '').strip(),
-                'centre_uid': (data.get('centre_uid') or '').strip(),
-                'mitra_uid': (data.get('mitra_uid') or '').strip(),
-                'state': (data.get('state') or '').strip(),
-                'district': (data.get('district') or '').strip(),
-                'block': (data.get('block') or '').strip(),
-                'village': (data.get('village') or '').strip(),
-                'activities': data.get('activities') or [],
-                'agri_sub_categories': data.get('agri_sub_categories') or [],
-            }
+        'name': (data.get('name') or '').strip(),
+        'gender': (data.get('gender') or '').strip(),
+        'date_of_birth': (data.get('date_of_birth') or data.get('dob') or '').strip(),
+        'age': str(data.get('age') or '').strip(),
+        'contact_no': (data.get('contact_no') or '').strip(),
+        'password': (data.get('password') or '').strip(),
+        'centre_uid': (data.get('centre_uid') or '').strip(),
+        'mitra_uid': (data.get('mitra_uid') or '').strip(),
+        'state': (data.get('state') or '').strip(),
+        'district': (data.get('district') or '').strip(),
+        'block': (data.get('block') or '').strip(),
+        'village': (data.get('village') or '').strip(),
+        'activities': data.get('activities') or [],
+        'agri_sub_categories': data.get('agri_sub_categories') or [],
+    }
 
             profile_photo_file = None
 
         else:
             form = {
-                'name': request.form.get('name', '').strip(),
-                'gender': request.form.get('gender', '').strip(),
-                'age': request.form.get('age', '').strip(),
-                'contact_no': request.form.get('contact_no', '').strip(),
-                'password': request.form.get('password', '').strip(),
-                'centre_uid': request.form.get('centre_uid', '').strip(),
-                'mitra_uid': request.form.get('mitra_uid', '').strip(),
-                'state': request.form.get('state', '').strip(),
-                'district': request.form.get('district', '').strip(),
-                'block': request.form.get('block', '').strip(),
-                'village': request.form.get('village', '').strip(),
-                'activities': _as_list(request.form.get('activities')),
-                'agri_sub_categories': _as_list(request.form.get('agri_sub_categories')),
-            }
+    'name': request.form.get('name', '').strip(),
+    'gender': request.form.get('gender', '').strip(),
+    'date_of_birth': (
+        request.form.get('date_of_birth', '').strip()
+        or request.form.get('dob', '').strip()
+    ),
+    'age': request.form.get('age', '').strip(),
+    'contact_no': request.form.get('contact_no', '').strip(),
+    'password': request.form.get('password', '').strip(),
+    'centre_uid': request.form.get('centre_uid', '').strip(),
+    'mitra_uid': request.form.get('mitra_uid', '').strip(),
+    'state': request.form.get('state', '').strip(),
+    'district': request.form.get('district', '').strip(),
+    'block': request.form.get('block', '').strip(),
+    'village': request.form.get('village', '').strip(),
+    'activities': _as_list(request.form.get('activities')),
+    'agri_sub_categories': _as_list(request.form.get('agri_sub_categories')),
+}
 
             profile_photo_file = request.files.get('profile_photo')
 
         required_fields = [
-            'name',
-            'gender',
-            'age',
-            'contact_no',
-            'password',
-            'centre_uid',
-            'mitra_uid',
-            'village',
-        ]
+    'name',
+    'gender',
+    'date_of_birth',
+    'age',
+    'contact_no',
+    'password',
+    'centre_uid',
+    'mitra_uid',
+    'village',
+]
 
         missing = [field for field in required_fields if not form.get(field)]
 
@@ -462,20 +468,21 @@ def register_farmer():
     # ---------- WEB FARMER REGISTRATION ----------
     if request.method == 'POST':
         form = {
-            'name': request.form.get('name', '').strip(),
-            'gender': request.form.get('gender', '').strip(),
-            'age': request.form.get('age', '').strip(),
-            'contact_no': request.form.get('contact_no', '').strip(),
-            'password': request.form.get('password', '').strip(),
-            'centre_uid': request.form.get('centre_uid', '').strip(),
-            'mitra_uid': request.form.get('mitra_uid', '').strip(),
-            'state': request.form.get('state', '').strip(),
-            'district': request.form.get('district', '').strip(),
-            'block': request.form.get('block', '').strip(),
-            'village': request.form.get('village', '').strip(),
-            'activities': request.form.getlist('activities'),
-            'agri_sub_categories': request.form.getlist('agri_sub_categories'),
-        }
+    'name': request.form.get('name', '').strip(),
+    'gender': request.form.get('gender', '').strip(),
+    'date_of_birth': request.form.get('date_of_birth', '').strip(),
+    'age': request.form.get('age', '').strip(),
+    'contact_no': request.form.get('contact_no', '').strip(),
+    'password': request.form.get('password', '').strip(),
+    'centre_uid': request.form.get('centre_uid', '').strip(),
+    'mitra_uid': request.form.get('mitra_uid', '').strip(),
+    'state': request.form.get('state', '').strip(),
+    'district': request.form.get('district', '').strip(),
+    'block': request.form.get('block', '').strip(),
+    'village': request.form.get('village', '').strip(),
+    'activities': request.form.getlist('activities'),
+    'agri_sub_categories': request.form.getlist('agri_sub_categories'),
+}
 
         if not form['centre_uid'] or not form['mitra_uid']:
             flash('Centre UID and UFC Mitra UID are mandatory for farmer registration.', 'danger')
@@ -725,6 +732,28 @@ def complete_farmer():
     )
 
 
+
+from datetime import date, datetime
+
+def calculate_age_from_dob(dob_value):
+    if not dob_value:
+        return ""
+
+    try:
+        dob = datetime.strptime(str(dob_value), "%Y-%m-%d").date()
+        today = date.today()
+
+        if dob > today:
+            return ""
+
+        age = today.year - dob.year - (
+            (today.month, today.day) < (dob.month, dob.day)
+        )
+
+        return str(age) if age >= 0 else ""
+    except Exception:
+        return ""
+
 #changes by atlanta
 @auth_bp.route('/profile/ufc-admin/complete', methods=['GET', 'POST'])
 def complete_ufc_admin():
@@ -745,10 +774,15 @@ def complete_ufc_admin():
         if (user.get('role') or '').strip().lower() != 'ufc_admin':
             return jsonify({'ok': False, 'message': 'Invalid user role.'}), 403
 
+        owner_dob = (data.get('owner_dob') or '').strip()
+        owner_age = calculate_age_from_dob(owner_dob)
+
         form = {
             'centre_uid': user.get('centre_uid'),
             'name_of_enterprise': (data.get('name_of_enterprise') or '').strip(),
             'name_of_owner': (data.get('name_of_owner') or '').strip(),
+            'owner_dob': owner_dob,
+            'owner_age': owner_age,
             'state': (data.get('state') or user.get('state') or '').strip(),
             'district': (data.get('district') or user.get('district') or '').strip(),
             'block': (data.get('block') or user.get('block') or '').strip(),
@@ -757,7 +791,7 @@ def complete_ufc_admin():
             'gst_number': (data.get('gst_number') or '').strip(),
             'trader_license_number': (data.get('trader_license_number') or '').strip(),
             'other_licenses': (data.get('other_licenses') or '').strip(),
-        }
+    }
 
         if not form['name_of_enterprise'] or not form['name_of_owner']:
             return jsonify({'ok': False, 'message': 'Enterprise name and owner name are required.'}), 400
@@ -825,19 +859,35 @@ def complete_ufc_admin():
     )
 
     if request.method == 'POST':
+        owner_dob = request.form.get('owner_dob', '').strip()
+        owner_age = calculate_age_from_dob(owner_dob)
+
         form = {
-            'centre_uid': user.get('centre_uid'),
-            'name_of_enterprise': request.form.get('name_of_enterprise', '').strip(),
-            'name_of_owner': request.form.get('name_of_owner', '').strip(),
-            'state': request.form.get('state', '').strip() or user.get('state', ''),
-            'district': request.form.get('district', '').strip() or user.get('district', ''),
-            'block': request.form.get('block', '').strip() or user.get('block', ''),
-            'village': request.form.get('village', '').strip() or user.get('village', ''),
-            'pan_number': request.form.get('pan_number', '').strip(),
-            'gst_number': request.form.get('gst_number', '').strip(),
-            'trader_license_number': request.form.get('trader_license_number', '').strip(),
-            'other_licenses': request.form.get('other_licenses', '').strip(),
-        }
+    'centre_uid': user.get('centre_uid'),
+    'name_of_enterprise': request.form.get('name_of_enterprise', '').strip(),
+    'name_of_owner': request.form.get('name_of_owner', '').strip(),
+    'owner_dob': owner_dob,
+    'owner_age': owner_age,
+    'state': request.form.get('state', '').strip() or user.get('state', ''),
+    'district': request.form.get('district', '').strip() or user.get('district', ''),
+    'block': request.form.get('block', '').strip() or user.get('block', ''),
+    'village': request.form.get('village', '').strip() or user.get('village', ''),
+    'pan_number': request.form.get('pan_number', '').strip(),
+    'gst_number': request.form.get('gst_number', '').strip(),
+    'trader_license_number': request.form.get('trader_license_number', '').strip(),
+    'other_licenses': request.form.get('other_licenses', '').strip(),
+}
+        
+        if not form['owner_dob'] or not form['owner_age']:
+            flash('Please enter a valid Owner Date of Birth.', 'danger')
+            return render_template(
+        'auth/complete_ufc_admin_profile.html',
+        user=user,
+        states=states,
+        master=master,
+        rejection_reason=rejection_reason,
+        latest_validation=latest_validation
+    )
 
         master_id = complete_ufc_admin_profile(session['user_id'], form)
 
@@ -904,6 +954,8 @@ def complete_ufc_admin():
         rejection_reason=rejection_reason,
         latest_validation=latest_validation
     )
+
+
 
 
 @auth_bp.route('/profile/ufc-mitra/complete', methods=['GET', 'POST'])
@@ -1103,13 +1155,16 @@ def complete_ufc_mitra():
         }), 200
 
     if request.method == 'POST':
+        dob = request.form.get('dob', '').strip()
+        calculated_age = calculate_age_from_dob(dob)
+
         form = {
             'mitra_uid': user.get('mitra_uid'),
             'mapped_centre_uid': request.form.get('mapped_centre_uid', '').strip(),
             'name': request.form.get('name', '').strip(),
             'care_of': request.form.get('care_of', '').strip(),
-            'dob': request.form.get('dob', '').strip(),
-            'age': request.form.get('age', '').strip(),
+            'dob': dob,
+            'age': calculated_age,
             'education': request.form.get('education', '').strip(),
             'gender': request.form.get('gender', '').strip(),
             'government_id_number': request.form.get('government_id_number', '').strip(),
@@ -1118,6 +1173,33 @@ def complete_ufc_mitra():
             'block': request.form.get('block', '').strip() or user.get('block', ''),
             'village': request.form.get('village', '').strip() or user.get('village', ''),
         }
+
+        if not form['dob'] or not form['age']:
+            flash('Please enter a valid Date of Birth.', 'danger')
+            return render_template(
+                'auth/complete_ufc_mitra_profile.html',
+                user=user,
+                states=states,
+                master=master,
+                rejection_reason=rejection_reason,
+                latest_validation=latest_validation
+            )
+
+        centre = (
+            mongo.db.ufc_admin_master.find_one({'centre_uid': form['mapped_centre_uid']})
+            or mongo.db.users.find_one({'centre_uid': form['mapped_centre_uid']})
+        )
+
+        if not centre:
+            flash('Invalid UFC Admin Unique ID.', 'danger')
+            return render_template(
+                'auth/complete_ufc_mitra_profile.html',
+                user=user,
+                states=states,
+                master=master,
+                rejection_reason=rejection_reason,
+                latest_validation=latest_validation
+            )
 
         centre = (
             mongo.db.ufc_admin_master.find_one({'centre_uid': form['mapped_centre_uid']})
@@ -1164,12 +1246,12 @@ def complete_ufc_mitra():
                     'image/webp'
                 }
 
-                file.seek(0, 2)
-                file_size = file.tell()
-                file.seek(0)
+                    file.seek(0, 2)
+                    file_size = file.tell()
+                    file.seek(0)
 
-                file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
-                allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+                    file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+                    allowed_extensions = {"jpg", "jpeg", "png", "webp"}
 
                 if file.content_type not in allowed_image_types and file_ext not in allowed_extensions:
                     return _fail(
