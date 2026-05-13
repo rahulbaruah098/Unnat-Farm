@@ -447,7 +447,19 @@
 ] %}
                 {% for key, value in master.items() %}
                     {% if key not in hidden_keys %}
-                        <tr><th>{{ key|replace('_', ' ')|title }}</th><td>{{ value }}</td></tr>
+                        <tr><th>
+    {% if key == 'government_id_file_name' %}
+        Government ID Files
+    {% elif key == 'education_certificate_file_name' %}
+        Education Certificate Files
+    {% elif key == 'passport_photo_file_name' %}
+        Passport Photo Files
+    {% elif key == 'dob' or key == 'date_of_birth' %}
+        Date of Birth
+    {% else %}
+        {{ key|replace('_', ' ')|title }}
+    {% endif %}
+</th><td>{{ value }}</td></tr>
                     {% endif %}
                 {% endfor %}
             {% else %}
