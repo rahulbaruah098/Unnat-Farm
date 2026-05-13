@@ -366,20 +366,50 @@
 
     <h3>Account Information</h3>
 
-    <div class="table-wrap">
-        <table>
-            <tr><th>Name</th><td>{{ entity.name if entity else '-' }}</td></tr>
-            <tr><th>Role</th><td>{{ entity.role if entity else '-' }}</td></tr>
-            <tr><th>Phone</th><td>{{ entity.phone if entity else '-' }}</td></tr>
-            <tr><th>Username</th><td>{{ entity.username if entity else '-' }}</td></tr>
-            <tr><th>Centre UID</th><td>{{ entity.centre_uid or entity.mapped_centre_uid if entity else '-' }}</td></tr>
-            <tr><th>Mitra UID</th><td>{{ entity.mitra_uid or entity.mapped_mitra_uid if entity else '-' }}</td></tr>
-            <tr><th>State</th><td>{{ entity.state if entity else '-' }}</td></tr>
-            <tr><th>District</th><td>{{ entity.district if entity else '-' }}</td></tr>
-            <tr><th>Block</th><td>{{ entity.block if entity else '-' }}</td></tr>
-            <tr><th>Village</th><td>{{ entity.village if entity else '-' }}</td></tr>
-        </table>
-    </div>
+<div class="table-wrap">
+    <table>
+        {% if master %}
+            {% set hidden_keys = [
+                '_id',
+                'linked_user_id',
+                'created_at',
+                'updated_at',
+                'profile_photo',
+                'profile_photo_file',
+                'passport_photo',
+                'passport_photo_file',
+                'passport_photo_file_name',
+                'farmer_profile_photo',
+                'farmer_profile_photo_file',
+                'government_id_file',
+                'government_id_file_name',
+                'education_certificate_file',
+                'education_certificate_file_name',
+                'supporting_document',
+                'supporting_document_name',
+                'document_file',
+                'document_file_name'
+            ] %}
+
+            {% for key, value in master.items() %}
+                {% if key not in hidden_keys and value is not none and value != '' and value != '-' %}
+                    <tr>
+                        <th>
+                            {% if key == 'dob' or key == 'date_of_birth' %}
+                                Date of Birth
+                            {% else %}
+                                {{ key|replace('_', ' ')|title }}
+                            {% endif %}
+                        </th>
+                        <td>{{ value }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <tr><td>No submitted profile details found.</td></tr>
+        {% endif %}
+    </table>
+</div>
 
     <div class="mobile-card-list">
         <div class="detail-card"><span class="detail-card-label">Name</span><span class="detail-card-value">{{ entity.name if entity else '-' }}</span></div>
@@ -399,7 +429,22 @@
     <div class="table-wrap">
         <table>
             {% if master %}
-                {% set hidden_keys = ['_id', 'linked_user_id', 'created_at', 'updated_at'] %}
+{% set hidden_keys = [
+    '_id',
+    'linked_user_id',
+    'created_at',
+    'updated_at',
+    'profile_photo',
+    'profile_photo_file',
+    'passport_photo',
+    'passport_photo_file',
+    'farmer_profile_photo',
+    'farmer_profile_photo_file',
+    'government_id_file',
+    'education_certificate_file',
+    'supporting_document',
+    'document_file'
+] %}
                 {% for key, value in master.items() %}
                     {% if key not in hidden_keys %}
                         <tr><th>{{ key|replace('_', ' ')|title }}</th><td>{{ value }}</td></tr>
@@ -411,23 +456,50 @@
         </table>
     </div>
 
-    <div class="mobile-card-list">
-        {% if master %}
-            {% set hidden_keys = ['_id', 'linked_user_id', 'created_at', 'updated_at'] %}
-            {% for key, value in master.items() %}
-                {% if key not in hidden_keys %}
-                    <div class="detail-card">
-                        <span class="detail-card-label">{{ key|replace('_', ' ')|title }}</span>
-                        <span class="detail-card-value">{{ value }}</span>
-                    </div>
-                {% endif %}
-            {% endfor %}
-        {% else %}
-            <div class="detail-card">
-                <span class="detail-card-value">No submitted profile details found.</span>
-            </div>
-        {% endif %}
-    </div>
+   <div class="mobile-card-list">
+    {% if master %}
+        {% set hidden_keys = [
+            '_id',
+            'linked_user_id',
+            'created_at',
+            'updated_at',
+            'profile_photo',
+            'profile_photo_file',
+            'passport_photo',
+            'passport_photo_file',
+            'passport_photo_file_name',
+            'farmer_profile_photo',
+            'farmer_profile_photo_file',
+            'government_id_file',
+            'government_id_file_name',
+            'education_certificate_file',
+            'education_certificate_file_name',
+            'supporting_document',
+            'supporting_document_name',
+            'document_file',
+            'document_file_name'
+        ] %}
+
+        {% for key, value in master.items() %}
+            {% if key not in hidden_keys and value is not none and value != '' and value != '-' %}
+                <div class="detail-card">
+                    <span class="detail-card-label">
+                        {% if key == 'dob' or key == 'date_of_birth' %}
+                            Date of Birth
+                        {% else %}
+                            {{ key|replace('_', ' ')|title }}
+                        {% endif %}
+                    </span>
+                    <span class="detail-card-value">{{ value }}</span>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <div class="detail-card">
+            <span class="detail-card-value">No submitted profile details found.</span>
+        </div>
+    {% endif %}
+</div>
 
     <h3>Uploaded Documents</h3>
 
