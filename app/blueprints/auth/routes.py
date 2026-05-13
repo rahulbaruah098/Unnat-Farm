@@ -1246,12 +1246,12 @@ def complete_ufc_mitra():
                     'image/webp'
                 }
 
-                    file.seek(0, 2)
-                    file_size = file.tell()
-                    file.seek(0)
+                file.seek(0, 2)
+                file_size = file.tell()
+                file.seek(0)
 
-                    file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
-                    allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+                file_ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+                allowed_extensions = {"jpg", "jpeg", "png", "webp"}
 
                 if file.content_type not in allowed_image_types and file_ext not in allowed_extensions:
                     return _fail(
