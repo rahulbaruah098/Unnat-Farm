@@ -936,6 +936,141 @@ def complete_ufc_mitra():
     master = mongo.db.ufc_mitra_master.find_one({'linked_user_id': session['user_id']}) or {}
     latest_validation = _latest_validation_for_user(session['user_id'], 'ufc_mitra_profile') or {}
 
+    def _doc_value(doc):
+        if not doc:
+            return ''
+
+        return (
+            doc.get('file_path')
+            or doc.get('filename')
+            or doc.get('file_name')
+            or doc.get('stored_name')
+            or doc.get('path')
+            or ''
+        )
+
+    def _doc_name(doc):
+        if not doc:
+            return ''
+
+        return (
+            doc.get('original_filename')
+            or doc.get('original_name')
+            or doc.get('display_name')
+            or doc.get('filename')
+            or doc.get('file_name')
+            or doc.get('stored_name')
+            or ''
+        )
+
+    def _latest_mitra_doc(label):
+        master_id = master.get('_id')
+
+        owner_terms = [
+            {'user_id': session['user_id']},
+            {'owner_user_id': session['user_id']},
+            {'linked_user_id': session['user_id']},
+            {'created_by_user_id': session['user_id']},
+            {'uploaded_by': session['user_id']},
+            {'entity_id': session['user_id']},
+            {'entity_user_id': session['user_id']},
+        ]
+
+        try:
+            user_obj_id = ObjectId(session['user_id'])
+            owner_terms.extend([
+                {'user_id': user_obj_id},
+                {'owner_user_id': user_obj_id},
+                {'linked_user_id': user_obj_id},
+                {'created_by_user_id': user_obj_id},
+                {'uploaded_by': user_obj_id},
+                {'entity_id': user_obj_id},
+                {'entity_user_id': user_obj_id},
+            ])
+        except Exception:
+            pass
+
+        if master_id:
+            owner_terms.extend([
+                {'master_id': master_id},
+                {'record_id': master_id},
+                {'entity_master_id': master_id},
+                {'parent_id': master_id},
+                {'entity_id': master_id},
+            ])
+
+            owner_terms.extend([
+                {'master_id': str(master_id)},
+                {'record_id': str(master_id)},
+                {'entity_master_id': str(master_id)},
+                {'parent_id': str(master_id)},
+                {'entity_id': str(master_id)},
+            ])
+
+        label_terms = [
+            {'label': label},
+            {'document_label': label},
+            {'document_type': label},
+            {'doc_type': label},
+            {'type': label},
+            {'title': label},
+            {'category': label},
+        ]
+
+        return mongo.db.documents.find_one(
+            {
+                '$and': [
+                    {'$or': owner_terms},
+                    {'$or': label_terms},
+                ]
+            },
+            sort=[('updated_at', -1), ('created_at', -1), ('_id', -1)]
+        )
+
+    def _existing_mitra_documents():
+        doc_map = {
+            'government_id_file': 'Government-issued Identity Card',
+            'education_certificate_file': 'Education Qualification Certificate',
+            'passport_photo_file': 'Passport Size Photo',
+        }
+
+        result = {}
+
+        for field, label in doc_map.items():
+            doc = _latest_mitra_doc(label)
+
+            result[field] = {
+                'label': label,
+                'name': _doc_name(doc),
+                'path': _doc_value(doc),
+                'url': _doc_value(doc),
+                'exists': bool(_doc_value(doc)),
+            }
+
+        return result
+
+    def _profile_payload():
+        existing_docs = _existing_mitra_documents()
+
+        return {
+            'mitra_uid': user.get('mitra_uid') or master.get('mitra_uid') or '',
+            'mapped_centre_uid': master.get('mapped_centre_uid') or user.get('mapped_centre_uid') or '',
+            'name': master.get('name') or user.get('name') or '',
+            'care_of': master.get('care_of') or user.get('care_of') or '',
+            'dob': master.get('dob') or user.get('dob') or '',
+            'age': master.get('age') or user.get('age') or '',
+            'education': master.get('education') or user.get('education') or '',
+            'gender': master.get('gender') or user.get('gender') or '',
+            'government_id_number': master.get('government_id_number') or user.get('government_id_number') or '',
+            'state': master.get('state') or user.get('state') or '',
+            'district': master.get('district') or user.get('district') or '',
+            'block': master.get('block') or user.get('block') or '',
+            'village': master.get('village') or user.get('village') or '',
+            'approval_status': user.get('approval_status') or 'pending_profile',
+            'rejection_reason': rejection_reason,
+            'existing_documents': existing_docs,
+        }
+    
     rejection_reason = (
         user.get('latest_rejection_reason')
         or latest_validation.get('rejection_reason')
@@ -952,6 +1087,20 @@ def complete_ufc_mitra():
             rejection_reason=rejection_reason,
             latest_validation=latest_validation
         )
+    
+    if request.method == 'GET' and is_app:
+        return jsonify({
+            'ok': True,
+            'message': 'UFC Mitra correction profile loaded.',
+            'profile': _profile_payload(),
+            'master': _profile_payload(),
+            'existing_documents': _existing_mitra_documents(),
+            'latest_validation': {
+                'status': latest_validation.get('status', ''),
+                'rejection_reason': rejection_reason,
+                'action_remarks': latest_validation.get('action_remarks', ''),
+            }
+        }), 200
 
     if request.method == 'POST':
         form = {
@@ -986,10 +1135,17 @@ def complete_ufc_mitra():
             'passport_photo_file': 'Passport Size Photo',
         }
 
+        existing_docs = _existing_mitra_documents()
+
         if is_app:
             for field, label in doc_map.items():
                 uploaded_file = request.files.get(field)
-                if not uploaded_file or not uploaded_file.filename:
+                existing_doc = existing_docs.get(field) or {}
+
+                has_uploaded_file = bool(uploaded_file and uploaded_file.filename)
+                has_existing_file = bool(existing_doc.get('exists') or existing_doc.get('path'))
+
+                if not has_uploaded_file and not has_existing_file:
                     return _fail(f'{label} is required.', 400)
 
         profile_photo_path = ''
@@ -1036,14 +1192,43 @@ def complete_ufc_mitra():
                 label
             )
 
-            if field == 'passport_photo_file' and saved_doc:
-                profile_photo_path = (
-                    saved_doc.get('file_path')
-                    or saved_doc.get('filename')
-                    or saved_doc.get('file_name')
-                    or saved_doc.get('stored_name')
-                    or ''
-                )
+            saved_path = (
+                saved_doc.get('file_path')
+                or saved_doc.get('filename')
+                or saved_doc.get('file_name')
+                or saved_doc.get('stored_name')
+                or ''
+            ) if saved_doc else ''
+
+            if saved_path:
+                master_file_field_map = {
+                    'government_id_file': 'government_id_file',
+                    'education_certificate_file': 'education_certificate_file',
+                    'passport_photo_file': 'passport_photo_file',
+                }
+
+                update_master_doc_field = master_file_field_map.get(field)
+
+                if update_master_doc_field:
+                    mongo.db.ufc_mitra_master.update_one(
+                        {
+                            '$or': [
+                                {'linked_user_id': session['user_id']},
+                                {'linked_user_id': ObjectId(session['user_id'])},
+                                {'_id': master_id},
+                            ]
+                        },
+                        {
+                            '$set': {
+                                update_master_doc_field: saved_path,
+                                f'{update_master_doc_field}_name': file.filename,
+                                'updated_at': datetime.utcnow()
+                            }
+                        }
+                    )
+
+            if field == 'passport_photo_file' and saved_path:
+                profile_photo_path = saved_path
 
         update_user_doc = {
             'approval_status': 'pending',
@@ -1112,12 +1297,19 @@ def complete_ufc_mitra():
         session.pop('rejection_reason', None)
 
         if is_app:
+            refreshed_master = mongo.db.ufc_mitra_master.find_one({'linked_user_id': session['user_id']}) or master
+
             return jsonify({
                 'ok': True,
                 'message': 'Profile submitted for AVPL validation.',
                 'approval_status': 'pending',
                 'master_id': str(master_id),
-                'profile_photo': profile_photo_path
+                'profile_photo': profile_photo_path,
+                'profile': {
+                    **_profile_payload(),
+                    'approval_status': 'pending',
+                },
+                'existing_documents': _existing_mitra_documents(),
             }), 200
 
         flash('Profile resubmitted for AVPL validation.', 'success')
