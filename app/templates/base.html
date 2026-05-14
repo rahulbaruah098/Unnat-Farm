@@ -1236,19 +1236,21 @@ body.sidebar-collapsed .sidebar-logout{
             Farmer Master
         </a>
 
-        <a href="{{ url_for('master.ufc_admins') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 21V8l8-4 8 4v13" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 21v-7h6v7M8 10h.01M12 10h.01M16 10h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </span>
-            UFC Admin Master
-        </a>
+        {% if session.get('role') == 'super_admin' %}
+    <a href="{{ url_for('master.ufc_admins') }}">
+        <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 21V8l8-4 8 4v13" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 21v-7h6v7M8 10h.01M12 10h.01M16 10h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+        UFC Admin Master
+    </a>
 
-        <a href="{{ url_for('master.ufc_mitras') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13l4-4 4 4M20 11l-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            UFC Mitra Master
-        </a>
+    <a href="{{ url_for('master.ufc_mitras') }}">
+        <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13l4-4 4 4M20 11l-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        UFC Mitra Master
+    </a>
+{% endif %}
     {% endif %}
 
     {% if session.get('role') == 'avpl_admin' %}
@@ -1417,13 +1419,6 @@ body.sidebar-collapsed .sidebar-logout{
             Create UFC Mitra
         </a>
 
-
-<a href="{{ url_for('master.ufc_mitras') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13l4-4 4 4M20 11l-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </span>
-    UFC Mitras
-</a>
 
 <a href="{{ url_for('modules.buy') }}">
     <span class="nav-icon">

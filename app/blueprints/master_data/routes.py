@@ -168,7 +168,7 @@ def download_farmers_csv():
 
 @master_bp.route("/ufc-admins")
 @login_required
-@roles_required("super_admin", "avpl_admin")
+@roles_required("super_admin")
 def ufc_admins():
     query = {}
     search = request.args.get("q", "").strip()
@@ -202,7 +202,7 @@ def ufc_admins():
 #changes by atlanta
 @master_bp.route("/ufc-mitras")
 @login_required
-@roles_required("super_admin", "avpl_admin", "ufc_admin")
+@roles_required("super_admin")
 def ufc_mitras():
     query = {}
 
