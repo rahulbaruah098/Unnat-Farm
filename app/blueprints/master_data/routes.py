@@ -25,7 +25,10 @@ def wants_json_response():
     )
 
 
-def json_safe(value):
+def csv_value(value):
+    if value is None:
+        return ""
+
     if isinstance(value, ObjectId):
         return str(value)
 
@@ -33,12 +36,66 @@ def json_safe(value):
         return value.isoformat()
 
     if isinstance(value, list):
-        return [json_safe(item) for item in value]
+        return ", ".join(str(x) for x in value)
 
     if isinstance(value, dict):
-        return {key: json_safe(item) for key, item in value.items()}
+        return str(json_safe(value))
 
-    return value
+    value = str(value).strip()
+
+    if not value or value == "-":
+        return ""
+
+    return f'="{value}"'
+
+
+def csv_label(key):
+    return key.replace("_", " ").title()
+
+
+def get_table_matching_columns(items):
+    hidden_keys = [
+    "_id",
+    "linked_user_id",
+
+    # hide technical/system file names
+    "profile_photo",
+    "profile_photo_file",
+    "passport_photo",
+    "passport_photo_file",
+    "farmer_profile_photo",
+    "farmer_profile_photo_file",
+    "government_id_file",
+    "education_certificate_file",
+    "supporting_document",
+    "document_file",
+
+    # security/internal fields
+    "password",
+    "password_hash",
+    "latest_rejection_reason",
+]
+
+    if not items:
+        return []
+
+    has_email = any(
+        str(item.get("email", "")).strip() not in ["", "-"]
+        for item in items
+    )
+
+    columns = []
+
+    for key in items[0].keys():
+        if key in hidden_keys:
+            continue
+
+        if key == "email" and not has_email:
+            continue
+
+        columns.append(key)
+
+    return columns
 
 def build_farmer_master_query():
     query = {}
@@ -199,6 +256,63 @@ def ufc_admins():
         q=search
     )
 
+@master_bp.route("/ufc-admins/download-csv")
+@login_required
+@roles_required("super_admin")
+def download_ufc_admins_csv():
+    query = {}
+    search = request.args.get("q", "").strip()
+
+    search_or = build_search_or(search, [
+        "name",
+        "phone",
+        "contact_no",
+        "mobile",
+        "username",
+        "email",
+        "centre_uid",
+        "state",
+        "district",
+        "block",
+        "village"
+    ])
+
+    if search_or:
+        query["$or"] = search_or
+
+    admins_data = list(
+        mongo.db.ufc_admin_master.find(query).sort("created_at", -1)
+    )
+
+    columns = get_table_matching_columns(admins_data)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(["Sl. No."] + [csv_label(key) for key in columns])
+
+    for index, admin in enumerate(admins_data, start=1):
+        row = [index]
+
+        for key in columns:
+            row.append(csv_value(admin.get(key, "")))
+
+        writer.writerow(row)
+
+    csv_data = output.getvalue()
+    output.close()
+
+    filename_date = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"ufc_admin_master_data_{filename_date}.csv"
+
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
 #changes by atlanta
 @master_bp.route("/ufc-mitras")
 @login_required
@@ -281,4 +395,105 @@ def ufc_mitras():
         items=items,
         title="UFC Mitra Master Data",
         q=search
+    )
+
+
+@master_bp.route("/ufc-mitras/download-csv")
+@login_required
+@roles_required("super_admin")
+def download_ufc_mitras_csv():
+    query = {}
+    search = request.args.get("q", "").strip()
+
+    search_or = build_search_or(search, [
+        "name",
+        "phone",
+        "contact_no",
+        "mobile",
+        "username",
+        "email",
+        "mitra_uid",
+        "mapped_centre_uid",
+        "centre_uid",
+        "state",
+        "district",
+        "block",
+        "village"
+    ])
+
+    if search_or:
+        query["$or"] = search_or
+
+    mitras_data = list(
+        mongo.db.ufc_mitra_master.find(query).sort("created_at", -1)
+    )
+
+    for item in mitras_data:
+        linked_user_id = item.get("linked_user_id")
+        user = None
+
+        if linked_user_id:
+            try:
+                user = mongo.db.users.find_one({"_id": ObjectId(linked_user_id)})
+            except Exception:
+                user = None
+
+            if not user:
+                user = mongo.db.users.find_one({"_id": linked_user_id})
+
+        if not user:
+            user = mongo.db.users.find_one({
+                "$or": [
+                    {"mitra_uid": item.get("mitra_uid")},
+                    {"mapped_mitra_uid": item.get("mitra_uid")},
+                    {"username": item.get("username")},
+                    {"phone": item.get("phone")},
+                ]
+            }) or {}
+
+        item["name"] = item.get("name") or user.get("name") or "-"
+        item["phone"] = (
+            item.get("phone")
+            or item.get("contact_no")
+            or item.get("mobile")
+            or user.get("phone")
+            or user.get("contact_no")
+            or user.get("mobile")
+            or "-"
+        )
+        item["username"] = item.get("username") or user.get("username") or "-"
+        item["email"] = item.get("email") or user.get("email") or "-"
+        item["approval_status"] = (
+            item.get("approval_status")
+            or user.get("approval_status")
+            or "pending_profile"
+        )
+
+    columns = get_table_matching_columns(mitras_data)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(["Sl. No."] + [csv_label(key) for key in columns])
+
+    for index, mitra in enumerate(mitras_data, start=1):
+        row = [index]
+
+        for key in columns:
+            row.append(csv_value(mitra.get(key, "")))
+
+        writer.writerow(row)
+
+    csv_data = output.getvalue()
+    output.close()
+
+    filename_date = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"ufc_mitra_master_data_{filename_date}.csv"
+
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
     )

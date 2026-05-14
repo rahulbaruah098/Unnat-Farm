@@ -19,12 +19,34 @@
 {% set hidden_keys = [
     '_id',
     'linked_user_id',
+
     'profile_photo',
     'profile_photo_file',
+    'passport_photo',
+    'passport_photo_file',
+    'farmer_profile_photo',
+    'farmer_profile_photo_file',
+    'government_id_file',
+    'education_certificate_file',
+    'supporting_document',
+    'document_file',
+
     'password',
     'password_hash',
     'latest_rejection_reason'
 ] %}
+
+{% set has_email = namespace(value=false) %}
+
+{% if items and items|length > 0 %}
+    {% for item in items %}
+        {% set email_value = item.get('email', '') %}
+        {% if email_value and email_value|string|trim not in ['', '-'] %}
+            {% set has_email.value = true %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
 
 <table class="data-table">
     <thead>
@@ -37,10 +59,12 @@
                         <th>{{ label }}</th>
                     {% endfor %}
                 {% else %}
-                    {% for key in items[0].keys() if key not in hidden_keys %}
-                        <th>{{ key|replace('_',' ')|title }}</th>
-                    {% endfor %}
-                {% endif %}
+   {% set dynamic_columns = [] %}
+{% for key in items[0].keys() if key not in hidden_keys and (key != 'email' or has_email.value) %}
+    {% set _ = dynamic_columns.append(key) %}
+    <th>{{ key|replace('_',' ')|title }}</th>
+{% endfor %}
+{% endif %}
             {% else %}
                 <th>No Data</th>
             {% endif %}
@@ -65,16 +89,17 @@
                         </td>
                     {% endfor %}
                 {% else %}
-                    {% for key, value in item.items() if key not in hidden_keys %}
-                        <td data-label="{{ key|replace('_',' ')|title }}">
-                            {% if value is sequence and value is not string %}
-                                {{ value|join(', ') if value else '-' }}
-                            {% else %}
-                                {{ value if value else '-' }}
-                            {% endif %}
-                        </td>
-                    {% endfor %}
-                {% endif %}
+    {% for key in dynamic_columns %}
+        {% set value = item.get(key, '-') %}
+        <td data-label="{{ key|replace('_',' ')|title }}">
+            {% if value is sequence and value is not string %}
+                {{ value|join(', ') if value else '-' }}
+            {% else %}
+                {{ value if value else '-' }}
+            {% endif %}
+        </td>
+    {% endfor %}
+{% endif %}
             </tr>
             {% endfor %}
         {% else %}

@@ -133,6 +133,30 @@
     font-weight:700;
 }
 
+.table-actions .csv-download-btn{
+    min-height:44px;
+    padding:10px 20px;
+    border-radius:999px;
+    background:#17252A;
+    color:#fff;
+    text-decoration:none;
+    font-family:"Times New Roman", Georgia, serif;
+    font-size:1rem;
+    font-weight:800;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    white-space:nowrap;
+    box-shadow:0 12px 26px rgba(23,37,42,.16);
+    transition:all .2s ease;
+}
+
+.table-actions .csv-download-btn:hover{
+    background:#3B7D55;
+    color:#fff;
+    transform:translateY(-1px);
+}
+
 @media (max-width:860px){
     .table-actions .clear-link{
         width:100%;
@@ -341,8 +365,10 @@
        .table-actions,
 .table-actions input,
 .table-actions button,
-.table-actions .clear-link{
+.table-actions .clear-link,
+.table-actions .csv-download-btn{
     width:100%;
+    min-width:0;
 }
 
         .table-controls{
@@ -468,6 +494,16 @@
       Clear
   </a>
   {% endif %}
+
+  {% if title and 'UFC Admin' in title %}
+    <a href="{{ url_for('master.download_ufc_admins_csv', q=q) }}" class="csv-download-btn">
+        Download CSV
+    </a>
+{% elif title and 'UFC Mitra' in title %}
+    <a href="{{ url_for('master.download_ufc_mitras_csv', q=q) }}" class="csv-download-btn">
+        Download CSV
+    </a>
+{% endif %}
 </form>
   </div>
 
