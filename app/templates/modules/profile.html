@@ -393,12 +393,26 @@
         <strong class="role-assigned-value">{{ user.role|replace('_',' ')|title }}</strong>
     </div>
 
-    <h3>Account Details</h3>
-    <table><tbody>
-        {% if user.name %}<tr><th>Name</th><td>{{ user.name }}</td></tr>{% endif %}
-        {% if user.username %}<tr><th>Username</th><td>{{ user.username }}</td></tr>{% endif %}
-        {% if user.phone %}<tr><th>Phone</th><td>{{ user.phone }}</td></tr>{% endif %}
-        {% if user.role %}<tr><th>Role</th><td>{{ user.role }}</td></tr>{% endif %}
+<h3>Account Details</h3>
+<table><tbody>
+    {% if user.name %}<tr><th>Name</th><td>{{ user.name }}</td></tr>{% endif %}
+    {% if user.username %}<tr><th>Username</th><td>{{ user.username }}</td></tr>{% endif %}
+    {% if user.phone %}<tr><th>Phone</th><td>{{ user.phone }}</td></tr>{% endif %}
+
+    {% set display_dob = profile_dob %}
+    {% set display_age = profile_age %}
+
+    <tr>
+        <th>Date of Birth</th>
+        <td>{{ display_dob or '-' }}</td>
+    </tr>
+
+    <tr>
+        <th>Age</th>
+        <td>{{ display_age or '-' }}</td>
+    </tr>
+
+    {% if user.role %}<tr><th>Role</th><td>{{ user.role }}</td></tr>{% endif %}
         {% if user.centre_uid or user.mapped_centre_uid %}<tr><th>Centre UID</th><td>{{ user.centre_uid or user.mapped_centre_uid }}</td></tr>{% endif %}
         {% if user.mitra_uid or user.mapped_mitra_uid %}<tr><th>Mitra UID</th><td>{{ user.mitra_uid or user.mapped_mitra_uid }}</td></tr>{% endif %}
         {% if user.state %}<tr><th>State</th><td>{{ user.state }}</td></tr>{% endif %}

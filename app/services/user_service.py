@@ -95,6 +95,8 @@ def create_farmer_registration(form):
             'user_ref_id': generate_user_ref_id('farmer'),
             'name': form['name'],
             'phone': form['contact_no'],
+            'date_of_birth': form.get('date_of_birth'),
+            'age': form.get('age'),
             'password_hash': hash_password(form['password']),
             'role': 'farmer',
             'status': 'active',
@@ -129,7 +131,8 @@ def create_farmer_registration(form):
         'linked_user_id': str(user['_id']),
         'name': form['name'],
         'gender': form['gender'],
-        'age': form['age'],
+        'date_of_birth': form.get('date_of_birth'),
+        'age': form.get('age'),
         'contact_no': form['contact_no'],
         'centre_uid': form['centre_uid'],
         'mitra_uid': form['mitra_uid'],
@@ -155,6 +158,8 @@ def complete_ufc_admin_profile(user_id, form):
         'centre_uid': form['centre_uid'],
         'name_of_enterprise': form['name_of_enterprise'],
         'name_of_owner': form['name_of_owner'],
+        'owner_dob': form.get('owner_dob'),
+        'owner_age': form.get('owner_age'),
         'state': form.get('state'),
         'district': form.get('district'),
         'block': form.get('block'),
@@ -174,7 +179,27 @@ def complete_ufc_admin_profile(user_id, form):
         master_id = existing['_id']
     else:
         master_id = mongo.db.ufc_admin_master.insert_one(master).inserted_id
-    mongo.db.users.update_one({'_id': ObjectId(user_id)}, {'$set': {'approval_status': 'pending', **{k: master[k] for k in ['centre_uid','state','district','block','village'] if k in master}}})
+    mongo.db.users.update_one(
+    {'_id': ObjectId(user_id)},
+    {
+        '$set': {
+            'approval_status': 'pending',
+            **{
+                k: master[k]
+                for k in [
+                    'centre_uid',
+                    'state',
+                    'district',
+                    'block',
+                    'village',
+                    'owner_dob',
+                    'owner_age'
+                ]
+                if k in master
+            }
+        }
+    }
+)
     create_validation('ufc_admin_profile', user_id, 'ufc_admin', str(user_id), 'avpl_admin', 'UFC Admin profile submitted.', metadata={'master_id': str(master_id)})
     return str(master_id)
 
@@ -207,6 +232,27 @@ def complete_ufc_mitra_profile(user_id, form):
         master_id = existing['_id']
     else:
         master_id = mongo.db.ufc_mitra_master.insert_one(master).inserted_id
-    mongo.db.users.update_one({'_id': ObjectId(user_id)}, {'$set': {'approval_status': 'pending', **{k: master[k] for k in ['mitra_uid','mapped_centre_uid','state','district','block','village'] if k in master}}})
+    mongo.db.users.update_one(
+    {'_id': ObjectId(user_id)},
+    {
+        '$set': {
+            'approval_status': 'pending',
+            **{
+                k: master[k]
+                for k in [
+                    'mitra_uid',
+                    'mapped_centre_uid',
+                    'state',
+                    'district',
+                    'block',
+                    'village',
+                    'dob',
+                    'age'
+                ]
+                if k in master
+            }
+        }
+    }
+)
     create_validation('ufc_mitra_profile', user_id, 'ufc_mitra', str(user_id), 'avpl_admin', 'UFC Mitra profile submitted.', metadata={'master_id': str(master_id)})
     return str(master_id)

@@ -1191,6 +1191,43 @@ def transactions():
 def profile():
     is_app = request.args.get("user_id")
 
+    def clean_profile_value(value):
+        if value in [None, "", "-", "None", "null"]:
+            return None
+        return value
+
+    def pick_profile_value(source, possible_keys):
+        if not source:
+            return None
+
+        for key in possible_keys:
+            value = clean_profile_value(source.get(key))
+            if value is not None:
+                return value
+
+        return None
+
+    dob_keys = [
+        "dob",
+        "owner_dob",
+        "date_of_birth",
+        "birth_date",
+        "dateOfBirth",
+        "dateofbirth",
+        "birthdate",
+        "dob_date",
+        "Date of Birth",
+        "DATE OF BIRTH",
+        "date of birth",
+    ]
+
+    age_keys = [
+        "age",
+        "owner_age",
+        "Age",
+        "AGE",
+    ]
+
     if is_app:
         user_id = request.args.get("user_id", "").strip()
 
@@ -1286,9 +1323,19 @@ def profile():
             user["profile_photo"] = profile_photo_value
             user["profile_photo_file"] = profile_photo_value
 
-            if master:
-                master["profile_photo"] = profile_photo_value
-                master["profile_photo_file"] = profile_photo_value
+        if master:
+            master["profile_photo"] = profile_photo_value
+            master["profile_photo_file"] = profile_photo_value
+
+        profile_dob = (
+            pick_profile_value(user, dob_keys)
+            or pick_profile_value(master, dob_keys)
+        )
+
+        profile_age = (
+            pick_profile_value(user, age_keys)
+            or pick_profile_value(master, age_keys)
+        )
 
         user["_id"] = str(user["_id"])
 
@@ -1304,6 +1351,8 @@ def profile():
             "user": user,
             "master": master or {},
             "docs": docs,
+            "profile_dob": profile_dob,
+            "profile_age": profile_age,
         }))
 
     if not session.get("user_id"):
@@ -1366,11 +1415,23 @@ def profile():
         else None
     )
 
+    profile_dob = (
+        pick_profile_value(user, dob_keys)
+        or pick_profile_value(master, dob_keys)
+    )
+
+    profile_age = (
+        pick_profile_value(user, age_keys)
+        or pick_profile_value(master, age_keys)
+    )
+
     return render_template(
         "modules/profile.html",
         user=user,
         master=master,
         docs=docs,
+        profile_dob=profile_dob,
+        profile_age=profile_age,
         latest_profile_update=latest_profile_update,
         pending_profile_update=pending_profile_update,
         rejected_profile_update=rejected_profile_update
