@@ -399,6 +399,7 @@
     {% if user.username %}<tr><th>Username</th><td>{{ user.username }}</td></tr>{% endif %}
     {% if user.phone %}<tr><th>Phone</th><td>{{ user.phone }}</td></tr>{% endif %}
 
+   {% if user.role not in ['super_admin', 'avpl_admin'] %}
     {% set display_dob = profile_dob %}
     {% set display_age = profile_age %}
 
@@ -411,6 +412,7 @@
         <th>Age</th>
         <td>{{ display_age or '-' }}</td>
     </tr>
+{% endif %}
 
     {% if user.role %}<tr><th>Role</th><td>{{ user.role }}</td></tr>{% endif %}
         {% if user.centre_uid or user.mapped_centre_uid %}<tr><th>Centre UID</th><td>{{ user.centre_uid or user.mapped_centre_uid }}</td></tr>{% endif %}
