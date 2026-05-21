@@ -260,6 +260,95 @@ def get_ufc_admin_sales_trends():
 
     return rows
 
+def get_ufc_admin_app_sales_summary(centre_uid):
+    centre_uid = (centre_uid or "").strip()
+
+    if not centre_uid:
+        return {
+            "mitra_sales": [],
+            "farmer_sales": [],
+        }
+
+    sales = list(
+        mongo.db.pos_sales
+        .find({"centre_uid": centre_uid})
+        .sort("created_at", -1)
+    )
+
+    mitra_map = {}
+    farmer_map = {}
+
+    for sale in sales:
+        amount = _to_number(
+            sale.get("total_amount")
+            or sale.get("payable_amount")
+            or sale.get("grand_total")
+            or sale.get("amount")
+        )
+
+        # -----------------------------
+        # Mitra-wise sales
+        # -----------------------------
+        mitra_uid = (
+            sale.get("mitra_uid")
+            or sale.get("mitra_id")
+            or sale.get("mapped_mitra_uid")
+            or "Unknown"
+        )
+
+        if mitra_uid not in mitra_map:
+            mitra_map[mitra_uid] = {
+                "mitra_uid": mitra_uid,
+                "total_orders": 0,
+                "total_sales": 0,
+            }
+
+        mitra_map[mitra_uid]["total_orders"] += 1
+        mitra_map[mitra_uid]["total_sales"] += amount
+
+        # -----------------------------
+        # Farmer-wise sales
+        # -----------------------------
+        farmer_name = (
+            sale.get("farmer_name")
+            or sale.get("unregistered_farmer_name")
+            or sale.get("customer_name")
+            or sale.get("source")
+            or "Unknown"
+        )
+
+        farmer_phone = (
+            sale.get("farmer_phone")
+            or sale.get("farmer_contact")
+            or sale.get("unregistered_farmer_phone")
+            or sale.get("phone")
+            or "-"
+        )
+
+        farmer_key = f"{farmer_name}|{farmer_phone}"
+
+        if farmer_key not in farmer_map:
+            farmer_map[farmer_key] = {
+                "farmer_name": farmer_name,
+                "phone": farmer_phone,
+                "total_orders": 0,
+                "total_sales": 0,
+            }
+
+        farmer_map[farmer_key]["total_orders"] += 1
+        farmer_map[farmer_key]["total_sales"] += amount
+
+    mitra_sales = list(mitra_map.values())
+    farmer_sales = list(farmer_map.values())
+
+    mitra_sales.sort(key=lambda x: x.get("total_sales", 0), reverse=True)
+    farmer_sales.sort(key=lambda x: x.get("total_sales", 0), reverse=True)
+
+    return {
+        "mitra_sales": mitra_sales,
+        "farmer_sales": farmer_sales,
+    }
+
 @dashboard_bp.route("/")
 def home():
     is_json = request.is_json or request.args.get("user_id")
@@ -306,17 +395,59 @@ def home():
 
         # 🔹 UFC ADMIN DASHBOARD
         if role == "ufc_admin":
-            data = get_centre_dashboard(user.get("centre_uid"))
+            centre_uid = user.get("centre_uid") or ""
+            data = get_centre_dashboard(centre_uid)
 
+            app_sales = get_ufc_admin_app_sales_summary(centre_uid)
+
+            centre_master = (
+                mongo.db.ufc_admin_master.find_one({"linked_user_id": str(user.get("_id"))})
+                or mongo.db.ufc_admin_master.find_one({"linked_user_id": user.get("_id")})
+                or mongo.db.ufc_admin_master.find_one({"centre_uid": centre_uid})
+                or mongo.db.ufc_centre_master.find_one({"centre_uid": centre_uid})
+                or {}
+            )
+
+            centre_name = (
+                centre_master.get("name_of_enterprise")
+                or centre_master.get("centre_name")
+                or centre_master.get("name")
+                or user.get("name_of_enterprise")
+                or user.get("centre_name")
+                or user.get("name")
+                or "UFC Admin"
+            )
             return jsonify(json_safe({
                 "ok": True,
                 "approval_status": "approved",
                 "role": role,
                 "data": {
-                    "centre_uid": user.get("centre_uid") or "",
+                    "centre_uid": centre_uid,
+                    "centre_name": centre_name,
                     "mitra_count": data.get("mitra_count", 0),
                     "farmer_count": data.get("farmer_count", 0),
-                    "orders": data.get("orders", [])
+
+                    # Existing order data
+                    "orders": data.get("orders", []),
+
+                    # Same dashboard sections as web
+                    "mitra_sales": (
+                        data.get("mitra_sales")
+                        or data.get("mitra_wise_sales")
+                        or data.get("mitra_sales_rows")
+                        or app_sales.get("mitra_sales", [])
+                    ),
+                    "farmer_sales": (
+                        data.get("farmer_sales")
+                        or data.get("farmer_wise_sales")
+                        or data.get("farmer_sales_rows")
+                        or app_sales.get("farmer_sales", [])
+                    ),
+                    "recent_orders": (
+                        data.get("recent_orders")
+                        or data.get("orders")
+                        or []
+                    ),
                 }
             })), 200
 

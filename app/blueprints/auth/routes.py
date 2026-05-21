@@ -758,15 +758,142 @@ def calculate_age_from_dob(dob_value):
 @auth_bp.route('/profile/ufc-admin/complete', methods=['GET', 'POST'])
 def complete_ufc_admin():
     is_json = request.is_json or request.headers.get('Content-Type') == 'application/json'
+    is_app = (
+        is_json
+        or request.form.get('app') == '1'
+        or request.args.get('app') == '1'
+        or request.headers.get('Accept') == 'application/json'
+    )
 
-    if is_json:
-        data = request.get_json(silent=True) or {}
-        user_id = (data.get('user_id') or '').strip()
+    def _doc_value(doc):
+        if not doc:
+            return ''
+
+        return (
+            doc.get('file_path')
+            or doc.get('filename')
+            or doc.get('file_name')
+            or doc.get('stored_name')
+            or doc.get('path')
+            or ''
+        )
+
+    def _doc_name(doc):
+        if not doc:
+            return ''
+
+        return (
+            doc.get('original_filename')
+            or doc.get('original_name')
+            or doc.get('display_name')
+            or doc.get('filename')
+            or doc.get('file_name')
+            or doc.get('stored_name')
+            or ''
+        )
+
+    def _latest_ufc_admin_doc(user_id, master_id, label):
+        owner_terms = [
+            {'user_id': user_id},
+            {'owner_user_id': user_id},
+            {'linked_user_id': user_id},
+            {'created_by_user_id': user_id},
+            {'uploaded_by': user_id},
+            {'entity_id': user_id},
+            {'entity_user_id': user_id},
+        ]
+
+        try:
+            user_obj_id = ObjectId(user_id)
+            owner_terms.extend([
+                {'user_id': user_obj_id},
+                {'owner_user_id': user_obj_id},
+                {'linked_user_id': user_obj_id},
+                {'created_by_user_id': user_obj_id},
+                {'uploaded_by': user_obj_id},
+                {'entity_id': user_obj_id},
+                {'entity_user_id': user_obj_id},
+            ])
+        except Exception:
+            pass
+
+        if master_id:
+            owner_terms.extend([
+                {'master_id': master_id},
+                {'record_id': master_id},
+                {'entity_master_id': master_id},
+                {'parent_id': master_id},
+                {'entity_id': master_id},
+                {'master_id': str(master_id)},
+                {'record_id': str(master_id)},
+                {'entity_master_id': str(master_id)},
+                {'parent_id': str(master_id)},
+                {'entity_id': str(master_id)},
+            ])
+
+        label_terms = [
+            {'label': label},
+            {'document_label': label},
+            {'document_type': label},
+            {'doc_type': label},
+            {'type': label},
+            {'title': label},
+            {'category': label},
+        ]
+
+        return mongo.db.documents.find_one(
+            {
+                '$and': [
+                    {'$or': owner_terms},
+                    {'$or': label_terms},
+                ]
+            },
+            sort=[('updated_at', -1), ('created_at', -1), ('_id', -1)]
+        )
+
+    def _existing_ufc_admin_documents(user_id, master):
+        master_id = master.get('_id') if master else None
+
+        doc_map = {
+            'registration_certificate': 'Registration Certificate',
+            'pan_file': 'PAN',
+            'gst_file': 'GST',
+            'trader_license_file': 'Trader License',
+            'other_license_file': 'Other Licenses',
+        }
+
+        result = {}
+
+        for field, label in doc_map.items():
+            doc = _latest_ufc_admin_doc(user_id, master_id, label)
+
+            result[field] = {
+                'label': label,
+                'name': _doc_name(doc),
+                'path': _doc_value(doc),
+                'url': _doc_value(doc),
+                'exists': bool(_doc_value(doc)),
+            }
+
+        return result
+
+    if is_app:
+        user_id = (
+            request.args.get('user_id')
+            or request.form.get('user_id')
+            or ((request.get_json(silent=True) or {}).get('user_id') if is_json else '')
+            or ''
+        ).strip()
 
         if not user_id:
             return jsonify({'ok': False, 'message': 'User ID is required.'}), 400
 
-        user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+        try:
+            user_obj_id = ObjectId(user_id)
+        except Exception:
+            return jsonify({'ok': False, 'message': 'Invalid user ID.'}), 400
+
+        user = mongo.db.users.find_one({'_id': user_obj_id})
 
         if not user:
             return jsonify({'ok': False, 'message': 'User not found.'}), 404
@@ -774,32 +901,131 @@ def complete_ufc_admin():
         if (user.get('role') or '').strip().lower() != 'ufc_admin':
             return jsonify({'ok': False, 'message': 'Invalid user role.'}), 403
 
-        owner_dob = (data.get('owner_dob') or '').strip()
-        owner_age = calculate_age_from_dob(owner_dob)
+        master = (
+            mongo.db.ufc_admin_master.find_one({'linked_user_id': user_id})
+                or mongo.db.ufc_admin_master.find_one({'linked_user_id': user_obj_id})
+                or mongo.db.ufc_admin_master.find_one({'centre_uid': user.get('centre_uid')})
+            or {}
+        )
 
-        form = {
-            'centre_uid': user.get('centre_uid'),
-            'name_of_enterprise': (data.get('name_of_enterprise') or '').strip(),
-            'name_of_owner': (data.get('name_of_owner') or '').strip(),
-            'owner_dob': owner_dob,
-            'owner_age': owner_age,
-            'state': (data.get('state') or user.get('state') or '').strip(),
-            'district': (data.get('district') or user.get('district') or '').strip(),
-            'block': (data.get('block') or user.get('block') or '').strip(),
-            'village': (data.get('village') or user.get('village') or '').strip(),
-            'pan_number': (data.get('pan_number') or '').strip(),
-            'gst_number': (data.get('gst_number') or '').strip(),
-            'trader_license_number': (data.get('trader_license_number') or '').strip(),
-            'other_licenses': (data.get('other_licenses') or '').strip(),
-    }
+        latest_validation = _latest_validation_for_user(user_id, 'ufc_admin_profile') or {}
+
+        rejection_reason = (
+            user.get('latest_rejection_reason')
+            or latest_validation.get('rejection_reason')
+            or latest_validation.get('action_remarks')
+            or ''
+        )
+
+        if request.method == 'GET':
+            profile_payload = {
+                'centre_uid': user.get('centre_uid') or master.get('centre_uid') or '',
+                'name_of_enterprise': master.get('name_of_enterprise') or '',
+                'name_of_owner': master.get('name_of_owner') or '',
+                'owner_dob': master.get('owner_dob') or '',
+                'owner_age': master.get('owner_age') or '',
+                'state': master.get('state') or user.get('state') or '',
+                'district': master.get('district') or user.get('district') or '',
+                'block': master.get('block') or user.get('block') or '',
+                'village': master.get('village') or user.get('village') or '',
+                'pan_number': master.get('pan_number') or '',
+                'gst_number': master.get('gst_number') or '',
+                'trader_license_number': master.get('trader_license_number') or '',
+                'other_licenses': master.get('other_licenses') or '',
+                'approval_status': user.get('approval_status') or 'pending_profile',
+                'rejection_reason': rejection_reason,
+            }
+
+            return jsonify({
+                'ok': True,
+                'message': 'UFC Admin profile loaded.',
+                'profile': profile_payload,
+                'master': profile_payload,
+                'existing_documents': _existing_ufc_admin_documents(user_id, master),
+                'latest_validation': {
+                    'status': latest_validation.get('status', ''),
+                    'rejection_reason': rejection_reason,
+                    'action_remarks': latest_validation.get('action_remarks', ''),
+                }
+            }), 200
+
+        if is_json:
+            data = request.get_json(silent=True) or {}
+
+            owner_dob = (data.get('owner_dob') or '').strip()
+
+            form = {
+                'centre_uid': user.get('centre_uid'),
+                'name_of_enterprise': (data.get('name_of_enterprise') or '').strip(),
+                'name_of_owner': (data.get('name_of_owner') or '').strip(),
+                'owner_dob': owner_dob,
+                'owner_age': calculate_age_from_dob(owner_dob),
+                'state': (data.get('state') or user.get('state') or '').strip(),
+                'district': (data.get('district') or user.get('district') or '').strip(),
+                'block': (data.get('block') or user.get('block') or '').strip(),
+                'village': (data.get('village') or user.get('village') or '').strip(),
+                'pan_number': (data.get('pan_number') or '').strip(),
+                'gst_number': (data.get('gst_number') or '').strip(),
+                'trader_license_number': (data.get('trader_license_number') or '').strip(),
+                'other_licenses': (data.get('other_licenses') or '').strip(),
+            }
+        else:
+            owner_dob = request.form.get('owner_dob', '').strip()
+
+            form = {
+                'centre_uid': user.get('centre_uid'),
+                'name_of_enterprise': request.form.get('name_of_enterprise', '').strip(),
+                'name_of_owner': request.form.get('name_of_owner', '').strip(),
+                'owner_dob': owner_dob,
+                'owner_age': calculate_age_from_dob(owner_dob),
+                'state': request.form.get('state', '').strip() or user.get('state', ''),
+                'district': request.form.get('district', '').strip() or user.get('district', ''),
+                'block': request.form.get('block', '').strip() or user.get('block', ''),
+                'village': request.form.get('village', '').strip() or user.get('village', ''),
+                'pan_number': request.form.get('pan_number', '').strip(),
+                'gst_number': request.form.get('gst_number', '').strip(),
+                'trader_license_number': request.form.get('trader_license_number', '').strip(),
+                'other_licenses': request.form.get('other_licenses', '').strip(),
+            }
 
         if not form['name_of_enterprise'] or not form['name_of_owner']:
-            return jsonify({'ok': False, 'message': 'Enterprise name and owner name are required.'}), 400
+            return jsonify({
+                'ok': False,
+                'message': 'Enterprise name and owner name are required.'
+            }), 400
+
+        if not form['owner_dob'] or not form['owner_age']:
+            return jsonify({
+                'ok': False,
+                'message': 'Please enter a valid Owner Date of Birth.'
+            }), 400
 
         master_id = complete_ufc_admin_profile(user_id, form)
 
+        if not is_json:
+            doc_map = {
+                'registration_certificate': 'Registration Certificate',
+                'pan_file': 'PAN',
+                'gst_file': 'GST',
+                'trader_license_file': 'Trader License',
+                'other_license_file': 'Other Licenses',
+            }
+
+            for field, label in doc_map.items():
+                file = request.files.get(field)
+
+                if file and file.filename:
+                    store_document(
+                        file,
+                        user_id,
+                        master_id,
+                        user_id,
+                        'ufc_admin',
+                        label
+                    )
+
         mongo.db.users.update_one(
-            {'_id': ObjectId(user_id)},
+            {'_id': user_obj_id},
             {
                 '$set': {
                     'approval_status': 'pending',
@@ -808,6 +1034,7 @@ def complete_ufc_admin():
                     'district': form['district'],
                     'block': form['block'],
                     'village': form['village'],
+                    'updated_at': datetime.utcnow(),
                 }
             }
         )
@@ -821,10 +1048,15 @@ def complete_ufc_admin():
                 '$set': {
                     'status': 'pending',
                     'rejection_reason': '',
-                    'action_remarks': ''
+                    'action_remarks': '',
+                    'updated_at': datetime.utcnow(),
+                },
+                '$setOnInsert': {
+                    'created_by_user_id': user_id,
+                    'created_at': datetime.utcnow(),
                 }
             },
-            upsert=False
+            upsert=True
         )
 
         return jsonify({
@@ -954,8 +1186,6 @@ def complete_ufc_admin():
         rejection_reason=rejection_reason,
         latest_validation=latest_validation
     )
-
-
 
 
 @auth_bp.route('/profile/ufc-mitra/complete', methods=['GET', 'POST'])
