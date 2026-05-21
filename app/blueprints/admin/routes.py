@@ -63,10 +63,35 @@ def users():
             or q_lower in str(u.get("mitra_uid", "")).lower()
             or q_lower in str(u.get("mapped_mitra_uid", "")).lower()
             or q_lower in str(u.get("approval_status", "")).lower()
+            or q_lower in str(u.get("status", "")).lower()
         ]
 
-    return render_template('admin/user_list.html', users=users)
+    if wants_json_response():
+        items = []
 
+        for user in users:
+            items.append({
+                "_id": str(user.get("_id", "")),
+                "name": user.get("name") or "-",
+                "role": user.get("role") or "-",
+                "username": user.get("username") or "-",
+                "phone": user.get("phone") or user.get("contact_no") or user.get("mobile") or "-",
+                "centre_uid": user.get("centre_uid") or user.get("mapped_centre_uid") or "-",
+                "mapped_centre_uid": user.get("mapped_centre_uid") or user.get("centre_uid") or "-",
+                "mitra_uid": user.get("mitra_uid") or user.get("mapped_mitra_uid") or "-",
+                "mapped_mitra_uid": user.get("mapped_mitra_uid") or user.get("mitra_uid") or "-",
+                "approval_status": user.get("approval_status") or user.get("status") or "pending_profile",
+                "status": user.get("status") or user.get("approval_status") or "pending_profile",
+            })
+
+        return jsonify({
+            "ok": True,
+            "items": items,
+            "q": q,
+            "count": len(items)
+        })
+
+    return render_template('admin/user_list.html', users=users)
 
 
 @admin_bp.route('/users/<user_id>/edit', methods=['GET', 'POST'])
