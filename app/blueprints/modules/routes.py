@@ -98,15 +98,491 @@ def normalize_product_for_app(item):
 
     return item
 
+def _get_farmer_orders_for_web(user, q="", page=1, per_page=10):
+    user = dict(user or {})
+
+    try:
+        page = int(page or 1)
+    except Exception:
+        page = 1
+
+    try:
+        per_page = int(per_page or 10)
+    except Exception:
+        per_page = 10
+
+    page = max(page, 1)
+    per_page = max(min(per_page, 50), 5)
+
+    user_id = str(user.get("_id") or user.get("id") or user.get("user_id") or "").strip()
+    phone = str(user.get("phone") or user.get("contact_no") or "").strip()
+
+    farmer = {}
+
+    if user_id:
+        try:
+            farmer = (
+                mongo.db.farmer_master.find_one({"linked_user_id": user_id})
+                or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(user_id)})
+                or {}
+            )
+        except Exception:
+            farmer = (
+                mongo.db.farmer_master.find_one({"linked_user_id": user_id})
+                or {}
+            )
+
+    if not farmer and phone:
+        farmer = mongo.db.farmer_master.find_one({"contact_no": phone}) or {}
+
+    farmer_id = str(farmer.get("_id") or "").strip()
+    farmer_phone = str(
+        farmer.get("contact_no")
+        or farmer.get("phone")
+        or phone
+        or ""
+    ).strip()
+
+    owner_filters = []
+
+    if user_id:
+        owner_filters.extend([
+            {"user_id": user_id},
+            {"farmer_user_id": user_id},
+            {"buyer_user_id": user_id},
+        ])
+
+    if farmer_id:
+        owner_filters.append({"farmer_id": farmer_id})
+
+    if farmer_phone:
+        owner_filters.extend([
+            {"farmer_phone": farmer_phone},
+            {"farmer_contact": farmer_phone},
+            {"phone": farmer_phone},
+        ])
+
+    if not owner_filters:
+        return {
+            "orders": [],
+            "total_orders": 0,
+            "total_amount": 0,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": 1,
+            "has_prev": False,
+            "has_next": False,
+            "prev_page": 1,
+            "next_page": 1,
+        }
+
+    query = {"$or": owner_filters}
+
+    q = (q or "").strip()
+
+    if q:
+        search_filter = {
+            "$or": [
+                {"product_name": {"$regex": q, "$options": "i"}},
+                {"name": {"$regex": q, "$options": "i"}},
+                {"seller_name": {"$regex": q, "$options": "i"}},
+                {"seller_farmer_name": {"$regex": q, "$options": "i"}},
+                {"farmer_name": {"$regex": q, "$options": "i"}},
+                {"source": {"$regex": q, "$options": "i"}},
+                {"product_source": {"$regex": q, "$options": "i"}},
+                {"status": {"$regex": q, "$options": "i"}},
+                {"created_at": {"$regex": q, "$options": "i"}},
+            ]
+        }
+
+        try:
+            numeric_q = float(q)
+            search_filter["$or"].extend([
+                {"quantity": numeric_q},
+                {"unit_price": numeric_q},
+                {"total_amount": numeric_q},
+                {"amount": numeric_q},
+            ])
+        except Exception:
+            pass
+
+        query = {
+            "$and": [
+                query,
+                search_filter
+            ]
+        }
+
+    total_orders = mongo.db.orders.count_documents(query)
+
+    amount_rows = list(
+        mongo.db.orders.aggregate([
+            {"$match": query},
+            {
+                "$group": {
+                    "_id": None,
+                    "total_amount": {
+                        "$sum": {
+                            "$toDouble": {
+                                "$ifNull": ["$total_amount", 0]
+                            }
+                        }
+                    }
+                }
+            }
+        ])
+    )
+
+    total_amount = amount_rows[0]["total_amount"] if amount_rows else 0
+
+    total_pages = max((total_orders + per_page - 1) // per_page, 1)
+
+    if page > total_pages:
+        page = total_pages
+
+    skip_count = (page - 1) * per_page
+
+    orders = list(
+        mongo.db.orders
+        .find(query)
+        .sort("created_at", -1)
+        .skip(skip_count)
+        .limit(per_page)
+    )
+
+    normalized_orders = []
+
+    for order in orders:
+        order = dict(order or {})
+
+        if "_id" in order:
+            order["_id"] = str(order["_id"])
+
+        source_value = str(
+            order.get("source")
+            or order.get("product_source")
+            or ""
+        ).strip().lower()
+
+        product_source_value = str(
+            order.get("product_source")
+            or order.get("source")
+            or ""
+        ).strip().lower()
+
+        product_id_value = str(
+            order.get("product_id")
+            or order.get("farmer_product_id")
+            or order.get("source_product_id")
+            or ""
+        ).strip()
+
+        seller_name = (
+            order.get("seller_name")
+            or order.get("seller_farmer_name")
+            or order.get("seller_farmer")
+            or order.get("sold_by")
+            or order.get("vendor_name")
+            or order.get("farmer_seller_name")
+            or ""
+        )
+
+        resolved_avpl_product = {}
+        resolved_farmer_product = {}
+
+        if product_id_value:
+            try:
+                product_oid = ObjectId(product_id_value)
+
+                resolved_avpl_product = mongo.db.products.find_one({
+                    "_id": product_oid
+                }) or {}
+
+                resolved_farmer_product = mongo.db.farmer_products.find_one({
+                    "_id": product_oid
+                }) or {}
+            except Exception:
+                resolved_avpl_product = {}
+                resolved_farmer_product = {}
+
+        if resolved_farmer_product:
+            seller_name = (
+                resolved_farmer_product.get("farmer_name")
+                or resolved_farmer_product.get("seller_farmer_name")
+                or resolved_farmer_product.get("seller_name")
+                or resolved_farmer_product.get("farmer_contact")
+                or seller_name
+                or "Farmer"
+            )
+
+        is_avpl = (
+            source_value == "avpl"
+            or product_source_value == "avpl"
+            or bool(resolved_avpl_product)
+        )
+
+        if is_avpl and not resolved_farmer_product:
+            source_display = "AVPL"
+        else:
+            source_display = seller_name or "Farmer"
+
+        order["product_name"] = (
+            order.get("product_name")
+            or order.get("name")
+            or "Product"
+        )
+
+        order["quantity"] = order.get("quantity") or 0
+
+        order["unit_price"] = (
+            order.get("unit_price")
+            or order.get("price")
+            or order.get("selling_price")
+            or 0
+        )
+
+        order["total_amount"] = (
+            order.get("total_amount")
+            or order.get("amount")
+            or 0
+        )
+
+        order["source"] = (
+            order.get("source")
+            or order.get("product_source")
+            or ""
+        )
+
+        order["source_display"] = source_display
+
+        order["status"] = (
+            order.get("status")
+            or "placed"
+        )
+
+        normalized_orders.append(order)
+
+    return {
+        "orders": normalized_orders,
+        "total_orders": total_orders,
+        "total_amount": total_amount,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages,
+        "has_prev": page > 1,
+        "has_next": page < total_pages,
+        "prev_page": max(page - 1, 1),
+        "next_page": min(page + 1, total_pages),
+    }
+
 @modules_bp.route("/buy", methods=["GET", "POST"])
 @login_required
 def buy():
     if request.method == "POST":
-        product_id = request.form.get("product_id")
-        quantity = float(request.form.get("quantity") or 0)
+        payload = request.get_json(silent=True) if request.is_json else {}
 
+        product_id = (
+            payload.get("product_id")
+            or request.form.get("product_id")
+            or ""
+        ).strip()
+
+        source = (
+            payload.get("source")
+            or request.form.get("source")
+            or "farmer"
+        ).strip().lower()
+
+        try:
+            quantity = float(
+                payload.get("quantity")
+                or request.form.get("quantity")
+                or 0
+            )
+        except Exception:
+            quantity = 0
+
+        if not product_id:
+            if wants_json_response():
+                return json_error("Product ID is required.", 400)
+
+            flash("Product ID is required.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        try:
+            product_oid = ObjectId(product_id)
+        except Exception:
+            if wants_json_response():
+                return json_error("Invalid product ID.", 400)
+
+            flash("Invalid product ID.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        if quantity <= 0:
+            if wants_json_response():
+                return json_error("Quantity must be greater than zero.", 400)
+
+            flash("Quantity must be greater than zero.", "danger")
+            return redirect(url_for("modules.buy"))
+
+        # ----------------------------------------------------
+        # AVPL PRODUCT BUY / ORDER
+        # Source collection: products
+        # ----------------------------------------------------
+        if source == "avpl":
+            product = mongo.db.products.find_one({
+                "_id": product_oid,
+                "is_deleted": {"$ne": True},
+                "is_active": {"$ne": False}
+            })
+
+            if not product:
+                if wants_json_response():
+                    return json_error("AVPL product not found.", 404)
+
+                flash("AVPL product not found.", "danger")
+                return redirect(url_for("modules.buy"))
+
+            stock = float(
+                product.get("available_quantity")
+                or product.get("quantity")
+                or product.get("stock_quantity")
+                or product.get("stock")
+                or 0
+            )
+
+            has_stock_field = any(
+                key in product
+                for key in ["available_quantity", "quantity", "stock_quantity", "stock"]
+            )
+
+            if has_stock_field and quantity > stock:
+                if wants_json_response():
+                    return json_error("Not enough stock available.", 400)
+
+                flash("Not enough stock available.", "danger")
+                return redirect(url_for("modules.buy"))
+
+            user_id = (
+                payload.get("user_id")
+                or request.form.get("user_id")
+                or session.get("user_id")
+            )
+
+            user = {}
+            farmer = {}
+
+            if user_id:
+                try:
+                    user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
+                except Exception:
+                    user = {}
+
+            if user:
+                farmer = (
+                    mongo.db.farmer_master.find_one({"linked_user_id": str(user.get("_id"))})
+                    or mongo.db.farmer_master.find_one({"linked_user_id": user.get("_id")})
+                    or mongo.db.farmer_master.find_one({"contact_no": user.get("phone")})
+                    or {}
+                )
+
+            unit_price = float(
+                product.get("price")
+                or product.get("unit_price")
+                or product.get("mrp")
+                or 0
+            )
+
+            total_amount = quantity * unit_price
+
+            farmer_phone = farmer.get("contact_no") or user.get("phone")
+
+            order_doc = {
+                "user_id": str(user_id or ""),
+                "farmer_user_id": str(user_id or ""),
+
+                # Farmer identity fields - keep both app and web-compatible names
+                "farmer_id": str(farmer.get("_id") or ""),
+                "farmer_name": farmer.get("name") or user.get("name"),
+                "farmer_phone": farmer_phone,
+                "farmer_contact": farmer_phone,
+
+                "centre_uid": farmer.get("centre_uid") or user.get("mapped_centre_uid") or user.get("centre_uid"),
+                "mitra_uid": farmer.get("mitra_uid") or user.get("mapped_mitra_uid") or user.get("mitra_uid"),
+
+                "product_id": product_id,
+                "product_name": product.get("name") or product.get("product_name"),
+                "product_category": product.get("category"),
+                "product_type": product.get("type"),
+
+                "quantity": quantity,
+                "unit_price": unit_price,
+                "total_amount": total_amount,
+
+                # Keep both names because web and app are using mixed naming
+                "source": "avpl",
+                "product_source": "avpl",
+                "order_type": "farmer_purchase",
+                "seller_name": "AVPL",
+                "sold_by": "AVPL",
+                "source_display": "AVPL",
+
+                # Use placed for web compatibility
+                "status": "placed",
+
+                "created_at": now_utc(),
+                "updated_at": now_utc(),
+            }
+
+            mongo.db.orders.insert_one(order_doc)
+
+            # Reduce AVPL stock only if product has stock field
+            if has_stock_field:
+                stock_field = None
+
+                for key in ["available_quantity", "quantity", "stock_quantity", "stock"]:
+                    if key in product:
+                        stock_field = key
+                        break
+
+                if stock_field:
+                    mongo.db.products.update_one(
+                        {"_id": product_oid},
+                        {
+                            "$inc": {
+                                stock_field: -quantity
+                            },
+                            "$set": {
+                                "updated_at": now_utc()
+                            }
+                        }
+                    )
+
+            mongo.db.notifications.insert_one({
+                "to_user_id": str(user_id or ""),
+                "role": "farmer",
+                "title": "Order Placed",
+                "message": f"Your order for {quantity} {order_doc['product_name']} has been placed.",
+                "status": "unread",
+                "created_at": now_utc()
+            })
+
+            if wants_json_response():
+                return jsonify(json_safe({
+                    "ok": True,
+                    "message": "AVPL product order placed successfully.",
+                    "order": order_doc
+                })), 201
+
+            flash("AVPL product order placed successfully.", "success")
+            return redirect(url_for("modules.buy"))
+
+        # ----------------------------------------------------
+        # FARMER PRODUCT BUY
+        # Source collection: farmer_products
+        # ----------------------------------------------------
         product = mongo.db.farmer_products.find_one({
-            "_id": ObjectId(product_id)
+            "_id": product_oid
         })
 
         if not product:
@@ -117,13 +593,6 @@ def buy():
             return redirect(url_for("modules.buy"))
 
         available_qty = float(product.get("available_quantity") or 0)
-
-        if quantity <= 0:
-            if wants_json_response():
-                return json_error("Quantity must be greater than zero.", 400)
-
-            flash("Quantity must be greater than zero.", "danger")
-            return redirect(url_for("modules.buy"))
 
         if quantity > available_qty:
             if wants_json_response():
@@ -138,7 +607,6 @@ def buy():
         unit_price = float(product.get("unit_price") or 0)
         total_amount = quantity * unit_price
 
-        # ✅ Purchase record
         purchase_doc = {
             "mitra_uid": mitra_uid,
             "centre_uid": centre_uid,
@@ -153,9 +621,66 @@ def buy():
             "created_at": now_utc()
         }
 
+        buyer_user_id = (
+            payload.get("user_id")
+            or request.form.get("user_id")
+            or session.get("user_id")
+        )
+
+        buyer_user = {}
+
+        if buyer_user_id:
+            try:
+                buyer_user = mongo.db.users.find_one({"_id": ObjectId(buyer_user_id)}) or {}
+            except Exception:
+                buyer_user = {}
+
+        if (buyer_user.get("role") or session.get("role")) == "farmer":
+            buyer_farmer = (
+                mongo.db.farmer_master.find_one({"linked_user_id": str(buyer_user.get("_id"))})
+                or mongo.db.farmer_master.find_one({"linked_user_id": buyer_user.get("_id")})
+                or mongo.db.farmer_master.find_one({"contact_no": buyer_user.get("phone")})
+                or {}
+            )
+
+            farmer_order_doc = {
+                "user_id": str(buyer_user_id or ""),
+                "farmer_user_id": str(buyer_user_id or ""),
+                "farmer_id": str(buyer_farmer.get("_id") or ""),
+                "farmer_name": buyer_farmer.get("name") or buyer_user.get("name"),
+                "farmer_phone": buyer_farmer.get("contact_no") or buyer_user.get("phone"),
+                "farmer_contact": buyer_farmer.get("contact_no") or buyer_user.get("phone"),
+
+                "centre_uid": buyer_farmer.get("centre_uid") or buyer_user.get("mapped_centre_uid") or buyer_user.get("centre_uid"),
+                "mitra_uid": buyer_farmer.get("mitra_uid") or buyer_user.get("mapped_mitra_uid") or buyer_user.get("mitra_uid"),
+
+                "product_id": product_id,
+                "farmer_product_id": product_id,
+                "product_name": product.get("product_name"),
+                "product_category": product.get("category") or product.get("product_category"),
+                "product_type": product.get("type") or product.get("variety"),
+
+                "seller_name": product.get("farmer_name"),
+                "seller_farmer_name": product.get("farmer_name"),
+                "seller_farmer_contact": product.get("farmer_contact"),
+
+                "quantity": quantity,
+                "unit_price": unit_price,
+                "total_amount": total_amount,
+
+                "source": "farmer",
+                "product_source": "farmer",
+                "order_type": "farmer_product_purchase",
+
+                "status": "placed",
+                "created_at": now_utc(),
+                "updated_at": now_utc(),
+            }
+
+        mongo.db.orders.insert_one(farmer_order_doc)
+
         mongo.db.mitra_product_purchases.insert_one(purchase_doc)
 
-        # ✅ Notifications
         mongo.db.notifications.insert_one({
             "to_user_id": session.get("user_id"),
             "role": "ufc_mitra",
@@ -174,7 +699,6 @@ def buy():
             "created_at": now_utc()
         })
 
-        # ✅ Add to Mitra stock
         mongo.db.mitra_product_stock.update_one(
             {
                 "mitra_uid": mitra_uid,
@@ -198,12 +722,10 @@ def buy():
             upsert=True
         )
 
-        # ✅ Reduce farmer quantity
-        current_qty = float(product.get("available_quantity") or 0)
-        new_qty = current_qty - quantity
+        new_qty = available_qty - quantity
 
         mongo.db.farmer_products.update_one(
-            {"_id": ObjectId(product_id)},
+            {"_id": product_oid},
             {
                 "$set": {
                     "available_quantity": new_qty,
@@ -212,7 +734,6 @@ def buy():
             }
         )
 
-        # ✅ Transaction log
         mongo.db.farmer_product_sales.insert_one({
             "mitra_uid": mitra_uid,
             "centre_uid": centre_uid,
@@ -492,7 +1013,7 @@ def sell():
                 "sales": sales,
                 "q": q
             }))
-        
+       
 
         return render_template(
             "modules/sell.html",
@@ -525,7 +1046,40 @@ def sell():
                 flash(str(exc), "danger")
                 return redirect(url_for("modules.sell"))
 
-        mongo.db.farmer_products.insert_one({
+        product_name = request.form.get("product_name", "").strip()
+
+        try:
+            quantity = float(request.form.get("quantity") or 0)
+        except Exception:
+            quantity = 0
+
+        try:
+            price = float(request.form.get("price") or 0)
+        except Exception:
+            price = 0
+
+        if not product_name:
+            if wants_json_response():
+                return json_error("Please select a product.", 400)
+
+            flash("Please select a product.", "danger")
+            return redirect(url_for("modules.sell"))
+
+        if quantity <= 0:
+            if wants_json_response():
+                return json_error("Quantity must be greater than zero.", 400)
+
+            flash("Quantity must be greater than zero.", "danger")
+            return redirect(url_for("modules.sell"))
+
+        if price <= 0:
+            if wants_json_response():
+                return json_error("Price must be greater than zero.", 400)
+
+            flash("Price must be greater than zero.", "danger")
+            return redirect(url_for("modules.sell"))
+
+        product_doc = {
             "farmer_user_id": session["user_id"],
             "farmer_name": farmer.get("name") or user.get("name"),
             "farmer_contact": farmer.get("contact_no") or user.get("phone"),
@@ -535,16 +1089,28 @@ def sell():
             "district": farmer.get("district") or user.get("district"),
             "block": farmer.get("block") or user.get("block"),
             "village": farmer.get("village") or user.get("village"),
-            "product_name": request.form.get("product_name", "").strip(),
+            "product_name": product_name,
             "variety": request.form.get("variety", "").strip(),
             "average_size": request.form.get("average_size", "").strip(),
-            "available_quantity": float(request.form.get("quantity") or 0),
-            "unit_price": float(request.form.get("price") or 0),
+            "available_quantity": quantity,
+            "unit_price": price,
             "picture": picture,
             "status": "active",
             "created_at": now_utc(),
             "updated_at": now_utc(),
-        })
+        }
+
+        result = mongo.db.farmer_products.insert_one(product_doc)
+        product_doc["_id"] = str(result.inserted_id)
+
+        if wants_json_response():
+            product_doc = normalize_product_for_app(product_doc)
+
+            return jsonify(json_safe({
+                "ok": True,
+                "message": "Product posted for selling.",
+                "product": product_doc
+            })), 201
 
         flash("Product posted for selling.", "success")
         return redirect(url_for("modules.sell"))
@@ -582,26 +1148,85 @@ def sell():
         q=q
     )
 
+#changes by atlanta
+@modules_bp.route("/my-orders")
+@login_required
+@roles_required("farmer")
+def farmer_my_orders():
+    user_id = session.get("user_id")
 
+    try:
+        user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
+    except Exception:
+        user = {}
+
+    if not user:
+        flash("User not found. Please login again.", "danger")
+        return redirect(url_for("dashboard.home"))
+
+    q = request.args.get("q", "").strip()
+    page = request.args.get("page", 1)
+    per_page = request.args.get("per_page", 10)
+
+    result = _get_farmer_orders_for_web(
+        user,
+        q=q,
+        page=page,
+        per_page=per_page
+    )
+
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "orders": result["orders"],
+            "total_orders": result["total_orders"],
+            "total_amount": result["total_amount"],
+            "page": result["page"],
+            "per_page": result["per_page"],
+            "total_pages": result["total_pages"],
+            "has_prev": result["has_prev"],
+            "has_next": result["has_next"],
+            "prev_page": result["prev_page"],
+            "next_page": result["next_page"],
+            "q": q
+        }))
+
+    return render_template(
+        "modules/farmer_orders.html",
+        orders=result["orders"],
+        total_orders=result["total_orders"],
+        total_amount=result["total_amount"],
+        page=result["page"],
+        per_page=result["per_page"],
+        total_pages=result["total_pages"],
+        has_prev=result["has_prev"],
+        has_next=result["has_next"],
+        prev_page=result["prev_page"],
+        next_page=result["next_page"],
+        q=q
+    )
+
+
+#changes by atlanta
 @modules_bp.route("/finance", methods=["GET", "POST"])
 @login_required
 @roles_required("farmer")
 def finance():
     user_id = session.get("user_id")
 
-    user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
-
-    farmer = mongo.db.farmer_master.find_one({
-        "linked_user_id": user_id
-    }) or mongo.db.farmer_master.find_one({
-        "linked_user_id": ObjectId(user_id)
-    }) or mongo.db.farmer_master.find_one({
-        "contact_no": user.get("phone")
+    user = mongo.db.users.find_one({
+        "_id": ObjectId(user_id)
     }) or {}
+
+    farmer = (
+        mongo.db.farmer_master.find_one({"linked_user_id": user_id})
+        or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(user_id)})
+        or mongo.db.farmer_master.find_one({"contact_no": user.get("phone")})
+        or {}
+    )
 
     farmer_phone = farmer.get("contact_no") or user.get("phone")
 
-    # 🔹 Calculate total POS transaction
     sales = list(mongo.db.pos_sales.find({
         "$or": [
             {"farmer_id": str(farmer.get("_id"))},
@@ -610,17 +1235,50 @@ def finance():
     }))
 
     total_transaction = sum(float(s.get("total_amount") or 0) for s in sales)
-
     is_eligible = total_transaction >= 30000
 
     if request.method == "POST":
+        payload = request.get_json(silent=True) if request.is_json else {}
 
         if not is_eligible:
-            flash("You can apply only after completing ₹30,000 transaction value.", "danger")
+            message = "You can apply only after completing ₹30,000 transaction value."
+
+            if wants_json_response():
+                return json_error(message, 403)
+
+            flash(message, "danger")
             return redirect(url_for("modules.finance"))
 
-        amount = request.form.get("amount")
-        purpose = request.form.get("purpose")
+        amount = (
+            payload.get("amount")
+            or request.form.get("amount")
+            or ""
+        )
+
+        purpose = (
+            payload.get("purpose")
+            or request.form.get("purpose")
+            or ""
+        ).strip()
+
+        try:
+            amount_value = float(amount or 0)
+        except Exception:
+            amount_value = 0
+
+        if amount_value <= 0:
+            if wants_json_response():
+                return json_error("Please enter a valid finance amount.", 400)
+
+            flash("Please enter a valid finance amount.", "danger")
+            return redirect(url_for("modules.finance"))
+
+        if not purpose:
+            if wants_json_response():
+                return json_error("Please enter finance purpose.", 400)
+
+            flash("Please enter finance purpose.", "danger")
+            return redirect(url_for("modules.finance"))
 
         address_parts = [
             farmer.get("village"),
@@ -630,15 +1288,14 @@ def finance():
         ]
         farmer_address = ", ".join([x for x in address_parts if x])
 
-        # 🔹 Save as LEAD
-        mongo.db.financial_assistance_leads.insert_one({
+        finance_doc = {
             "farmer_user_id": user_id,
             "farmer_name": farmer.get("name") or user.get("name"),
             "farmer_mobile": farmer_phone,
             "farmer_address": farmer_address,
             "centre_uid": farmer.get("centre_uid"),
             "mitra_uid": farmer.get("mitra_uid"),
-            "amount": amount,
+            "amount": amount_value,
             "purpose": purpose,
             "total_transaction": total_transaction,
             "status": "new",
@@ -650,7 +1307,17 @@ def finance():
                 "ufc_mitra"
             ],
             "created_at": now_utc()
-        })
+        }
+
+        result = mongo.db.financial_assistance_leads.insert_one(finance_doc)
+        finance_doc["_id"] = str(result.inserted_id)
+
+        if wants_json_response():
+            return jsonify(json_safe({
+                "ok": True,
+                "message": "Finance request submitted successfully.",
+                "item": finance_doc
+            })), 201
 
         flash("Finance request submitted successfully.", "success")
         return redirect(url_for("modules.finance"))
@@ -699,21 +1366,22 @@ def finance():
         q=q
     )
 
-
+#changes by atlanta
 @modules_bp.route("/insurance", methods=["GET", "POST"])
 @login_required
 def insurance():
+    user_id = session.get("user_id")
+
     user = mongo.db.users.find_one({
-        "_id": ObjectId(session["user_id"])
+        "_id": ObjectId(user_id)
     }) or {}
 
-    farmer = mongo.db.farmer_master.find_one({
-        "linked_user_id": session["user_id"]
-    }) or mongo.db.farmer_master.find_one({
-        "linked_user_id": ObjectId(session["user_id"])
-    }) or mongo.db.farmer_master.find_one({
-        "contact_no": user.get("phone")
-    }) or {}
+    farmer = (
+        mongo.db.farmer_master.find_one({"linked_user_id": user_id})
+        or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(user_id)})
+        or mongo.db.farmer_master.find_one({"contact_no": user.get("phone")})
+        or {}
+    )
 
     farmer_phone = farmer.get("contact_no") or user.get("phone")
 
@@ -734,32 +1402,69 @@ def insurance():
     farmer_activities = farmer.get("activities", [])
 
     is_livestock_farmer = any(
-        activity in livestock_activities for activity in farmer_activities
+        activity in livestock_activities
+        for activity in farmer_activities
     )
 
     is_eligible = is_livestock_farmer and total_transaction >= 30000
 
+    not_eligible_message = (
+        "Insurance is available only for livestock farmers after completing "
+        "more than ₹30,000 AVPL sales transaction."
+    )
+
     if request.method == "POST":
+        payload = request.get_json(silent=True) if request.is_json else {}
+
         if not is_eligible:
-            flash(
-                "Insurance can be applied only by livestock farmers after completing more than ₹30,000 AVPL sales transaction.",
-                "danger"
-            )
+            if wants_json_response():
+                return json_error(not_eligible_message, 403)
+
+            flash(not_eligible_message, "danger")
             return redirect(url_for("modules.insurance"))
 
-        mongo.db.insurance_requests.insert_one({
-            "requested_by": session["user_id"],
+        livestock_type = (
+            payload.get("livestock_type")
+            or request.form.get("livestock_type")
+            or ""
+        ).strip()
+
+        remarks = (
+            payload.get("remarks")
+            or request.form.get("remarks")
+            or ""
+        ).strip()
+
+        if not livestock_type:
+            if wants_json_response():
+                return json_error("Please select livestock type.", 400)
+
+            flash("Please select livestock type.", "danger")
+            return redirect(url_for("modules.insurance"))
+
+        insurance_doc = {
+            "requested_by": user_id,
             "farmer_name": farmer.get("name") or user.get("name"),
             "farmer_mobile": farmer_phone,
             "centre_uid": farmer.get("centre_uid"),
             "mitra_uid": farmer.get("mitra_uid"),
-            "livestock_type": request.form.get("livestock_type"),
-            "remarks": request.form.get("remarks"),
+            "livestock_type": livestock_type,
+            "remarks": remarks,
             "total_transaction": total_transaction,
             "is_livestock_farmer": is_livestock_farmer,
             "status": "pending",
             "created_at": now_utc(),
-        })
+        }
+
+        result = mongo.db.insurance_requests.insert_one(insurance_doc)
+        insurance_doc["_id"] = str(result.inserted_id)
+
+        if wants_json_response():
+            return jsonify(json_safe({
+                "ok": True,
+                "message": "Insurance request submitted.",
+                "item": insurance_doc
+            })), 201
 
         flash("Insurance request submitted.", "success")
         return redirect(url_for("modules.insurance"))
@@ -767,7 +1472,7 @@ def insurance():
     q = request.args.get("q", "").strip()
 
     insurance_query = {
-        "requested_by": session["user_id"]
+        "requested_by": user_id
     }
 
     if q:
@@ -792,6 +1497,7 @@ def insurance():
             "total_transaction": total_transaction,
             "is_livestock_farmer": is_livestock_farmer,
             "is_eligible": is_eligible,
+            "not_eligible_message": not_eligible_message,
             "q": q
         }))
 
@@ -803,7 +1509,6 @@ def insurance():
         is_eligible=is_eligible,
         q=q
     )
-
 
 @modules_bp.route("/insurance/leads")
 @login_required
@@ -1727,7 +2432,7 @@ def pos():
         'centre_uid': centre_uid,
         'approval_status': 'approved'
     }).sort('name', 1))
-    
+   
     mitras = list(mongo.db.ufc_mitra_master.find({
         '$and': [
             {'mitra_uid': {'$exists': True, '$ne': ''}},
@@ -2105,7 +2810,7 @@ def finance_leads():
         "modules/finance_leads.html",
         leads=leads
     )
-    
+   
 @modules_bp.route("/sales-details")
 @login_required
 @roles_required("avpl_admin", "sales_unnatfarm", "accounts")
@@ -2136,7 +2841,7 @@ def sales_details():
         "modules/sales_details.html",
         sales=sales
     )
-    
+   
 @modules_bp.route("/notifications")
 @login_required
 def notifications():
@@ -2170,7 +2875,7 @@ def notifications():
         }
     )
 
-    return render_template("modules/notifications.html", items=items, q=q)   
+    return render_template("modules/notifications.html", items=items, q=q)  
 
 @modules_bp.route("/mitra-stock")
 @login_required
@@ -2440,7 +3145,3 @@ def place_farmer_order():
 
     flash("Order placed successfully.", "success")
     return redirect(url_for("modules.buy"))
-
-
-
-

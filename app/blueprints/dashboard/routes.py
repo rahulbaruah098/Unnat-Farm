@@ -157,6 +157,110 @@ def _get_app_farmer_products(user, limit=30):
 
     return [_normalize_product_for_app(item) for item in items]
 
+def _get_app_farmer_orders(user, limit=20):
+    user = dict(user or {})
+
+    user_id = str(user.get("_id") or user.get("id") or user.get("user_id") or "").strip()
+    phone = str(user.get("phone") or user.get("contact_no") or "").strip()
+
+    farmer = {}
+
+    if user_id:
+        try:
+            farmer = (
+                mongo.db.farmer_master.find_one({"linked_user_id": user_id})
+                or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(user_id)})
+                or {}
+            )
+        except Exception:
+            farmer = (
+                mongo.db.farmer_master.find_one({"linked_user_id": user_id})
+                or {}
+            )
+
+    if not farmer and phone:
+        farmer = mongo.db.farmer_master.find_one({"contact_no": phone}) or {}
+
+    farmer_id = str(farmer.get("_id") or "").strip()
+    farmer_phone = str(
+        farmer.get("contact_no")
+        or farmer.get("phone")
+        or phone
+        or ""
+    ).strip()
+
+    filters = []
+
+    if user_id:
+        filters.extend([
+            {"user_id": user_id},
+            {"farmer_user_id": user_id},
+            {"buyer_user_id": user_id},
+        ])
+
+    if farmer_id:
+        filters.append({"farmer_id": farmer_id})
+
+    if farmer_phone:
+        filters.extend([
+            {"farmer_phone": farmer_phone},
+            {"farmer_contact": farmer_phone},
+            {"phone": farmer_phone},
+        ])
+
+    if not filters:
+        return []
+
+    orders = list(
+        mongo.db.orders
+        .find({"$or": filters})
+        .sort("created_at", -1)
+        .limit(limit)
+    )
+
+    normalized_orders = []
+
+    for order in orders:
+        order = dict(order or {})
+
+        if "_id" in order:
+            order["_id"] = str(order["_id"])
+
+        # Keep app/web field compatibility
+        order["product_name"] = (
+            order.get("product_name")
+            or order.get("name")
+            or "Product"
+        )
+
+        order["quantity"] = order.get("quantity") or 0
+        order["unit_price"] = (
+            order.get("unit_price")
+            or order.get("price")
+            or order.get("selling_price")
+            or 0
+        )
+        order["total_amount"] = (
+            order.get("total_amount")
+            or order.get("amount")
+            or 0
+        )
+
+        order["source"] = (
+            order.get("source")
+            or order.get("product_source")
+            or "avpl"
+        )
+
+        order["status"] = (
+            order.get("status")
+            or "placed"
+        )
+
+        normalized_orders.append(order)
+
+    return normalized_orders
+
 
 def _normalize_dashboard_products(data):
     if not isinstance(data, dict):
@@ -481,6 +585,20 @@ def home():
             # Add farmer marketplace products directly for app dashboard.
             data["farmer_products"] = _get_app_farmer_products(user)
 
+            # IMPORTANT:
+            # App AVPL orders are inserted into mongo.db.orders with user_id/farmer_user_id.
+            # So fetch them directly here instead of depending only on get_farmer_dashboard(phone).
+            app_orders = _get_app_farmer_orders(user)
+
+            data["orders"] = app_orders
+            data["recent_orders"] = app_orders
+            data["my_orders"] = app_orders
+            data["total_orders"] = len(app_orders)
+            data["total_purchase"] = sum(
+                float(order.get("total_amount") or 0)
+                for order in app_orders
+            )
+
             return jsonify(json_safe({
                 "ok": True,
                 "approval_status": "approved",
@@ -586,6 +704,9 @@ def home():
     if role == "farmer":
         data = get_farmer_dashboard(user.get("phone"))
 
+        if not isinstance(data, dict):
+            data = {}
+
         farmer_master = (
             mongo.db.farmer_master.find_one({"linked_user_id": session.get("user_id")})
             or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(session.get("user_id"))})
@@ -604,6 +725,18 @@ def home():
             or user.get("name")
             or session.get("name")
             or "Farmer"
+        )
+
+        # Same order fetch logic used by app dashboard
+        web_orders = _get_app_farmer_orders(user)
+
+        data["orders"] = web_orders
+        data["recent_orders"] = web_orders
+        data["my_orders"] = web_orders
+        data["total_orders"] = len(web_orders)
+        data["total_purchase"] = sum(
+            float(order.get("total_amount") or 0)
+            for order in web_orders
         )
 
         return render_template("dashboard/farmer.html", data=data)

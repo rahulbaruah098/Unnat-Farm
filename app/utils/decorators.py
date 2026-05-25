@@ -1,15 +1,69 @@
 from functools import wraps
-from flask import session, redirect, url_for, flash, abort
+from bson import ObjectId
+from flask import session, redirect, url_for, flash, abort, request, jsonify
 from app.extensions import mongo
 
 
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if "user_id" not in session:
-            flash("Please login first.", "warning")
-            return redirect(url_for("auth.login"))
-        return view(*args, **kwargs)
+        if "user_id" in session:
+            return view(*args, **kwargs)
+
+        wants_json = (
+            request.headers.get("Accept") == "application/json"
+            or request.is_json
+            or request.args.get("format") == "json"
+        )
+
+        if wants_json:
+            data = request.get_json(silent=True) or {}
+
+            user_id = (
+                request.args.get("user_id")
+                or request.form.get("user_id")
+                or data.get("user_id")
+                or ""
+            ).strip()
+
+            if not user_id:
+                return jsonify({
+                    "ok": False,
+                    "message": "Login required."
+                }), 401
+
+            try:
+                user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+            except Exception:
+                user = None
+
+            if not user:
+                return jsonify({
+                    "ok": False,
+                    "message": "Invalid user."
+                }), 401
+
+            session["user_id"] = str(user["_id"])
+            session["role"] = user.get("role")
+            session["name"] = user.get("name") or user.get("full_name") or user.get("username")
+            session["username"] = user.get("username")
+            session["centre_uid"] = (
+                user.get("centre_uid")
+                or user.get("mapped_centre_uid")
+                or user.get("center_uid")
+                or user.get("mapped_center_uid")
+            )
+            session["mitra_uid"] = (
+                user.get("mitra_uid")
+                or user.get("mapped_mitra_uid")
+            )
+            session["approval_status"] = user.get("approval_status")
+
+            return view(*args, **kwargs)
+
+        flash("Please login first.", "warning")
+        return redirect(url_for("auth.login"))
+
     return wrapped
 
 
