@@ -234,6 +234,11 @@ def logout():
     flash('Logged out successfully.', 'success')
     return redirect(url_for(last_login_page))
 
+
+@auth_bp.route("/privacy-policy")
+def privacy_policy():
+    return render_template("auth/privacy_policy.html")
+
 #Changes by atlanta
 @auth_bp.route('/register/farmer', methods=['GET', 'POST'])
 def register_farmer():

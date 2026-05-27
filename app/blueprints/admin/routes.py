@@ -530,13 +530,181 @@ def create_user_view():
     )
 
 
+def _delete_dummy_user_related_data(user):
+    """
+    Delete only dummy/test-series data.
+    Normal real users are not affected by this helper.
+    """
+    if not user:
+        return False
+
+    if not user.get("is_dummy") and not user.get("dummy_group_id"):
+        return False
+
+    user_id = str(user["_id"])
+    role = user.get("role")
+    dummy_group_id = user.get("dummy_group_id")
+
+    user_ids = {user_id}
+    centre_uids = set()
+    mitra_uids = set()
+    farmer_ids = set()
+
+    if role == "avpl_admin" and dummy_group_id:
+        dummy_users = list(mongo.db.users.find({"dummy_group_id": dummy_group_id}))
+        for dummy_user in dummy_users:
+            user_ids.add(str(dummy_user["_id"]))
+
+            if dummy_user.get("centre_uid"):
+                centre_uids.add(dummy_user.get("centre_uid"))
+
+            if dummy_user.get("mapped_centre_uid"):
+                centre_uids.add(dummy_user.get("mapped_centre_uid"))
+
+            if dummy_user.get("mitra_uid"):
+                mitra_uids.add(dummy_user.get("mitra_uid"))
+
+            if dummy_user.get("mapped_mitra_uid"):
+                mitra_uids.add(dummy_user.get("mapped_mitra_uid"))
+
+    elif role == "ufc_admin":
+        centre_uid = user.get("centre_uid")
+        if centre_uid:
+            centre_uids.add(centre_uid)
+
+        mitra_users = list(
+            mongo.db.users.find(
+                {
+                    "$or": [
+                        {"mapped_centre_uid": {"$in": list(centre_uids)}},
+                        {"centre_uid": {"$in": list(centre_uids)}},
+                    ],
+                    "is_dummy": True,
+                }
+            )
+        )
+
+        for mitra_user in mitra_users:
+            user_ids.add(str(mitra_user["_id"]))
+            if mitra_user.get("mitra_uid"):
+                mitra_uids.add(mitra_user.get("mitra_uid"))
+
+    elif role == "ufc_mitra":
+        mitra_uid = user.get("mitra_uid")
+        if mitra_uid:
+            mitra_uids.add(mitra_uid)
+
+        if user.get("mapped_centre_uid"):
+            centre_uids.add(user.get("mapped_centre_uid"))
+
+    elif role == "farmer":
+        if user.get("mapped_centre_uid"):
+            centre_uids.add(user.get("mapped_centre_uid"))
+        if user.get("mapped_mitra_uid"):
+            mitra_uids.add(user.get("mapped_mitra_uid"))
+
+    farmer_query = {
+        "$or": [
+            {"linked_user_id": {"$in": list(user_ids)}},
+            {"centre_uid": {"$in": list(centre_uids)}},
+            {"mitra_uid": {"$in": list(mitra_uids)}},
+            {"dummy_group_id": dummy_group_id} if dummy_group_id and role == "avpl_admin" else {"_id": None},
+        ],
+        "is_dummy": True,
+    }
+
+    farmers = list(mongo.db.farmer_master.find(farmer_query))
+
+    for farmer in farmers:
+        farmer_ids.add(str(farmer["_id"]))
+        if farmer.get("linked_user_id"):
+            user_ids.add(str(farmer.get("linked_user_id")))
+
+    common_user_filters = [
+        {"user_id": {"$in": list(user_ids)}},
+        {"farmer_user_id": {"$in": list(user_ids)}},
+        {"buyer_user_id": {"$in": list(user_ids)}},
+        {"seller_user_id": {"$in": list(user_ids)}},
+        {"created_by": {"$in": list(user_ids)}},
+        {"requested_by": {"$in": list(user_ids)}},
+        {"submitted_by": {"$in": list(user_ids)}},
+        {"uploaded_by_user_id": {"$in": list(user_ids)}},
+        {"linked_user_id": {"$in": list(user_ids)}},
+    ]
+
+    common_scope_filters = []
+
+    if centre_uids:
+        common_scope_filters.append({"centre_uid": {"$in": list(centre_uids)}})
+        common_scope_filters.append({"mapped_centre_uid": {"$in": list(centre_uids)}})
+
+    if mitra_uids:
+        common_scope_filters.append({"mitra_uid": {"$in": list(mitra_uids)}})
+        common_scope_filters.append({"mapped_mitra_uid": {"$in": list(mitra_uids)}})
+
+    if farmer_ids:
+        common_scope_filters.append({"farmer_id": {"$in": list(farmer_ids)}})
+        common_scope_filters.append({"buyer_farmer_id": {"$in": list(farmer_ids)}})
+
+    if dummy_group_id and role == "avpl_admin":
+        common_scope_filters.append({"dummy_group_id": dummy_group_id})
+
+    delete_query = {
+        "$or": common_user_filters + common_scope_filters
+    }
+
+    mongo.db.farmer_master.delete_many(delete_query)
+    mongo.db.ufc_mitra_master.delete_many(delete_query)
+    mongo.db.ufc_admin_master.delete_many(delete_query)
+    mongo.db.validations.delete_many(delete_query)
+    mongo.db.documents.delete_many(delete_query)
+    mongo.db.orders.delete_many(delete_query)
+    mongo.db.transactions.delete_many(delete_query)
+    mongo.db.farmer_products.delete_many(delete_query)
+    mongo.db.support_tickets.delete_many(delete_query)
+    mongo.db.insurance_requests.delete_many(delete_query)
+    mongo.db.financial_assistance_leads.delete_many(delete_query)
+    mongo.db.mitra_product_purchases.delete_many(delete_query)
+    mongo.db.mitra_product_sales.delete_many(delete_query)
+    mongo.db.mitra_product_stock.delete_many(delete_query)
+    mongo.db.profile_update_requests.delete_many(delete_query)
+    mongo.db.audit_logs.delete_many(delete_query)
+
+    mongo.db.users.delete_many(
+        {
+            "$or": [
+                {"_id": {"$in": [ObjectId(uid) for uid in user_ids if ObjectId.is_valid(uid)]}},
+                {"dummy_group_id": dummy_group_id} if dummy_group_id and role == "avpl_admin" else {"_id": None},
+            ],
+            "is_dummy": True,
+        }
+    )
+
+    return True
+
+
 @admin_bp.route('/users/<user_id>/delete', methods=['POST'])
 @login_required
 @roles_required('super_admin')
 def delete_user(user_id):
-    mongo.db.users.delete_one({'_id': ObjectId(user_id)})
+    user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('admin.users'))
+
+    deleted_dummy_series = _delete_dummy_user_related_data(user)
+
+    if not deleted_dummy_series:
+        mongo.db.users.delete_one({'_id': ObjectId(user_id)})
+
     log_action(session['user_id'], 'delete_user', 'user', user_id)
-    flash('User deleted.', 'success')
+
+    if deleted_dummy_series:
+        flash('Dummy test account and related dummy records deleted.', 'success')
+    else:
+        flash('User deleted.', 'success')
+
     return redirect(url_for('admin.users'))
 
 
