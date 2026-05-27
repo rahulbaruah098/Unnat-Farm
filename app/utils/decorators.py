@@ -10,10 +10,13 @@ def login_required(view):
         if "user_id" in session:
             return view(*args, **kwargs)
 
+        accept_header = request.headers.get("Accept", "")
+
         wants_json = (
-            request.headers.get("Accept") == "application/json"
+            "application/json" in accept_header
             or request.is_json
             or request.args.get("format") == "json"
+            or request.args.get("user_id")
         )
 
         if wants_json:
@@ -72,8 +75,25 @@ def roles_required(*allowed_roles):
         @wraps(view)
         def wrapped(*args, **kwargs):
             role = session.get("role")
+
             if role not in allowed_roles:
+                accept_header = request.headers.get("Accept", "")
+
+                wants_json = (
+                    "application/json" in accept_header
+                    or request.is_json
+                    or request.args.get("format") == "json"
+                    or request.args.get("user_id")
+                )
+
+                if wants_json:
+                    return jsonify({
+                        "ok": False,
+                        "message": "You do not have permission to access this module."
+                    }), 403
+
                 abort(403)
+
             return view(*args, **kwargs)
         return wrapped
     return decorator

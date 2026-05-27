@@ -591,6 +591,31 @@ def buy():
 
             flash("Product not found.", "danger")
             return redirect(url_for("modules.buy"))
+        
+        buyer_user_id = (
+            payload.get("user_id")
+            or request.form.get("user_id")
+            or session.get("user_id")
+            or ""
+        )
+
+        buyer_user_id = str(buyer_user_id).strip()
+
+        seller_user_id = str(
+            product.get("farmer_user_id")
+            or product.get("user_id")
+            or product.get("owner_user_id")
+            or product.get("created_by")
+            or product.get("listed_by")
+            or ""
+        ).strip()
+
+        if buyer_user_id and seller_user_id and buyer_user_id == seller_user_id:
+            if wants_json_response():
+                return json_error("You cannot buy your own listed product.", 400)
+
+            flash("You cannot buy your own listed product.", "danger")
+            return redirect(url_for("modules.buy"))
 
         available_qty = float(product.get("available_quantity") or 0)
 
@@ -635,7 +660,9 @@ def buy():
             except Exception:
                 buyer_user = {}
 
-        if (buyer_user.get("role") or session.get("role")) == "farmer":
+                buyer_role = buyer_user.get("role") or session.get("role") or ""
+
+        if buyer_role == "farmer":
             buyer_farmer = (
                 mongo.db.farmer_master.find_one({"linked_user_id": str(buyer_user.get("_id"))})
                 or mongo.db.farmer_master.find_one({"linked_user_id": buyer_user.get("_id")})
@@ -1151,9 +1178,14 @@ def sell():
 #changes by atlanta
 @modules_bp.route("/my-orders")
 @login_required
-@roles_required("farmer")
 def farmer_my_orders():
-    user_id = session.get("user_id")
+    is_app = wants_json_response() or request.args.get("user_id")
+
+    user_id = (
+        request.args.get("user_id")
+        or session.get("user_id")
+        or ""
+    ).strip()
 
     try:
         user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
@@ -1161,7 +1193,17 @@ def farmer_my_orders():
         user = {}
 
     if not user:
+        if wants_json_response():
+            return json_error("User not found. Please login again.", 404)
+
         flash("User not found. Please login again.", "danger")
+        return redirect(url_for("dashboard.home"))
+
+    if (user.get("role") or session.get("role")) != "farmer":
+        if wants_json_response():
+            return json_error("Only farmer can view My Orders.", 403)
+
+        flash("Only farmer can view My Orders.", "danger")
         return redirect(url_for("dashboard.home"))
 
     q = request.args.get("q", "").strip()
@@ -1205,7 +1247,6 @@ def farmer_my_orders():
         next_page=result["next_page"],
         q=q
     )
-
 
 #changes by atlanta
 @modules_bp.route("/finance", methods=["GET", "POST"])
@@ -1628,12 +1669,21 @@ def lms():
 
     return render_template("modules/lms.html", items=items, q=q)
 
-
+#changes by atlanta
 @modules_bp.route("/support", methods=["GET", "POST"])
 @login_required
 def support():
+    payload = request.get_json(silent=True) if request.is_json else {}
+    payload = payload or {}
+
+    user_id = (
+        payload.get("user_id")
+        or request.args.get("user_id")
+        or session.get("user_id")
+        or ""
+    )
+
     role = session.get("role")
-    user_id = session.get("user_id")
 
     user = {}
     if user_id:
@@ -1642,17 +1692,42 @@ def support():
         except Exception:
             user = {}
 
+    if not role and user:
+        role = user.get("role")
+
     if request.method == "POST":
         if role == "super_admin":
+            if wants_json_response():
+                return json_error("Super Admin can update tickets from the ticket table.", 403)
+
             flash("Super Admin can update tickets from the ticket table.", "warning")
             return redirect(url_for("modules.support"))
 
-        subject = request.form.get("subject", "").strip()
-        problem_type = request.form.get("problem_type", "").strip()
-        priority = request.form.get("priority", "").strip()
-        message = request.form.get("message", "").strip()
+        subject = (
+            payload.get("subject")
+            or request.form.get("subject")
+            or ""
+        ).strip()
 
-        if not subject or not problem_type or not priority or not message:
+        problem_type = (
+            payload.get("problem_type")
+            or request.form.get("problem_type")
+            or ""
+        ).strip()
+
+        priority = (
+            payload.get("priority")
+            or request.form.get("priority")
+            or ""
+        ).strip()
+
+        message = (
+            payload.get("message")
+            or request.form.get("message")
+            or ""
+        ).strip()
+
+        if not user_id or not subject or not problem_type or not priority or not message:
             if wants_json_response():
                 return json_error("Please fill all required support ticket fields.", 400)
 
@@ -1663,7 +1738,7 @@ def support():
 
         mongo.db.support_tickets.insert_one({
             "ticket_ref": ticket_ref,
-            "user_id": user_id,
+            "user_id": str(user_id),
             "user_name": user.get("name") or session.get("name") or session.get("username") or "Unknown User",
             "username": user.get("username") or session.get("username"),
             "role": role,
@@ -1689,7 +1764,7 @@ def support():
                 "ok": True,
                 "message": "Support ticket raised successfully. Super Admin will review it.",
                 "ticket_ref": ticket_ref
-            })
+            }), 201
 
         flash("Support ticket raised successfully. Super Admin will review it.", "success")
         return redirect(url_for("modules.support"))
@@ -1699,7 +1774,7 @@ def support():
     if role == "super_admin":
         ticket_query = {}
     else:
-        ticket_query = {"user_id": user_id}
+        ticket_query = {"user_id": str(user_id)}
 
     if q:
         search_filter = {
@@ -1742,7 +1817,6 @@ def support():
         support_email="ites@sayanant.com",
         support_number="9957367398"
     )
-
 
 @modules_bp.route("/support/<ticket_id>/update", methods=["POST"])
 @login_required
@@ -2347,29 +2421,86 @@ def request_profile_update():
 @modules_bp.route("/purchases")
 @login_required
 def purchases():
-    user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])})
     q = request.args.get("q", "").strip()
 
+    user_id = (
+        request.args.get("user_id")
+        or session.get("user_id")
+        or ""
+    ).strip()
+
+    if not user_id:
+        if wants_json_response():
+            return json_error("User ID missing. Please login again.", 401)
+
+        flash("User ID missing. Please login again.", "danger")
+        return redirect(url_for("auth.login_select"))
+
+    try:
+        user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
+    except Exception:
+        user = {}
+
+    if not user:
+        if wants_json_response():
+            return json_error("User not found. Please login again.", 404)
+
+        flash("User not found. Please login again.", "danger")
+        return redirect(url_for("dashboard.home"))
+
+    farmer = (
+        mongo.db.farmer_master.find_one({"linked_user_id": str(user_id)})
+        or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(user_id)})
+        or mongo.db.farmer_master.find_one({"contact_no": user.get("phone")})
+        or {}
+    )
+
+    farmer_phone = (
+        farmer.get("contact_no")
+        or farmer.get("phone")
+        or user.get("phone")
+        or ""
+    )
+
     purchase_query = {
-        "farmer_contact": user.get("phone"),
+        "farmer_contact": farmer_phone,
         "transaction_type": "input_purchase"
     }
 
     if q:
         purchase_query["$or"] = [
             {"product_name": {"$regex": q, "$options": "i"}},
-            {"farmer_contact": {"$regex": q, "$options": "i"}}
+            {"farmer_contact": {"$regex": q, "$options": "i"}},
+            {"transaction_type": {"$regex": q, "$options": "i"}},
+            {"status": {"$regex": q, "$options": "i"}},
         ]
 
         try:
             numeric_q = float(q)
-            purchase_query["$or"].append({"amount": numeric_q})
+            purchase_query["$or"].extend([
+                {"amount": numeric_q},
+                {"quantity": numeric_q},
+                {"total_amount": numeric_q},
+                {"unit_price": numeric_q},
+            ])
         except ValueError:
             pass
 
-    items = list(mongo.db.transactions.find(purchase_query).sort("created_at", -1).limit(20))
-    return render_template("modules/purchases.html", items=items, q=q)
+    items = list(
+        mongo.db.transactions
+        .find(purchase_query)
+        .sort("created_at", -1)
+        .limit(20)
+    )
 
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items,
+            "q": q
+        }))
+
+    return render_template("modules/purchases.html", items=items, q=q)
 
 def get_mitra_bonus_percentage(mitra_uid, bonus_type, category):
     setting = mongo.db.mitra_bonus_settings.find_one({
@@ -2847,8 +2978,21 @@ def sales_details():
 def notifications():
     q = request.args.get("q", "").strip()
 
+    user_id = (
+        request.args.get("user_id")
+        or session.get("user_id")
+        or ""
+    ).strip()
+
+    if not user_id:
+        if wants_json_response():
+            return json_error("User ID missing. Please login again.", 401)
+
+        flash("User ID missing. Please login again.", "danger")
+        return redirect(url_for("auth.login_select"))
+
     notification_query = {
-        "to_user_id": session.get("user_id")
+        "to_user_id": str(user_id)
     }
 
     if q:
@@ -2864,7 +3008,7 @@ def notifications():
 
     mongo.db.notifications.update_many(
         {
-            "to_user_id": session.get("user_id"),
+            "to_user_id": str(user_id),
             "status": "unread"
         },
         {
@@ -2875,7 +3019,14 @@ def notifications():
         }
     )
 
-    return render_template("modules/notifications.html", items=items, q=q)  
+    if wants_json_response():
+        return jsonify(json_safe({
+            "ok": True,
+            "items": items,
+            "q": q
+        }))
+
+    return render_template("modules/notifications.html", items=items, q=q)
 
 @modules_bp.route("/mitra-stock")
 @login_required
@@ -2992,6 +3143,51 @@ def centre_orders():
     orders = list(
         mongo.db.orders.find(query).sort("created_at", -1)
     )
+
+    # Attach product image for app/web JSON users
+    for order in orders:
+        product_id = str(
+            order.get("product_id")
+            or order.get("farmer_product_id")
+            or order.get("source_product_id")
+            or ""
+        ).strip()
+
+        product_doc = {}
+
+        if product_id:
+            try:
+                product_oid = ObjectId(product_id)
+
+                product_doc = (
+                    mongo.db.products.find_one({"_id": product_oid})
+                    or mongo.db.farmer_products.find_one({"_id": product_oid})
+                    or {}
+                )
+            except Exception:
+                product_doc = {}
+
+        image_value = (
+            order.get("image")
+            or order.get("image_url")
+            or order.get("picture")
+            or order.get("product_image")
+            or order.get("photo")
+            or product_doc.get("image")
+            or product_doc.get("image_url")
+            or product_doc.get("picture")
+            or product_doc.get("product_image")
+            or product_doc.get("photo")
+            or product_doc.get("file_path")
+            or product_doc.get("filename")
+            or ""
+        )
+
+        if image_value:
+            image_value = str(image_value).replace("\\", "/")
+            order["image"] = image_value
+            order["image_url"] = image_value
+            order["picture"] = image_value
 
     if wants_json_response():
         return jsonify(json_safe({
