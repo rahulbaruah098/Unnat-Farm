@@ -1,0 +1,760 @@
+{% extends 'base.html' %}
+{% block title %}Login Support & Help - UnnatFarm MIS{% endblock %}
+
+{% block content %}
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        background: #eef8f1;
+    }
+
+    body > .container,
+    body > main,
+    .content,
+    .main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: none !important;
+        width: 100% !important;
+    }
+
+    .login-support-page {
+        min-height: 100vh;
+        padding: clamp(18px, 3vw, 42px);
+        background:
+            radial-gradient(circle at 12% 14%, rgba(0, 168, 89, .14), transparent 30%),
+            radial-gradient(circle at 90% 82%, rgba(255, 184, 77, .16), transparent 28%),
+            linear-gradient(135deg, #f8fffb 0%, #eef8f1 52%, #ffffff 100%);
+        color: #23332A;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .support-shell {
+        width: min(1180px, 100%);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 0.85fr 1.15fr;
+        gap: clamp(18px, 3vw, 34px);
+        align-items: stretch;
+    }
+
+    .support-info,
+    .support-form-card {
+        border-radius: 28px;
+        background: rgba(255, 255, 255, .94);
+        border: 1px solid rgba(0, 168, 89, .14);
+        box-shadow: 0 22px 58px rgba(17, 64, 38, .10);
+        overflow: hidden;
+    }
+
+    .support-info {
+        padding: clamp(24px, 3vw, 42px);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 28px;
+        background:
+            radial-gradient(circle at 25% 20%, rgba(0, 168, 89, .10), transparent 32%),
+            linear-gradient(145deg, #ffffff, #f3fff8);
+    }
+
+    .back-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .back-btn,
+    .know-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 168, 89, .20);
+        background: #ffffff;
+        color: #008A48;
+        text-decoration: none;
+        font-weight: 800;
+        font-size: 13px;
+        transition: .2s ease;
+    }
+
+    .back-btn:hover,
+    .know-btn:hover {
+        background: #00A859;
+        color: #ffffff;
+        transform: translateY(-2px);
+    }
+
+    .brand-logo {
+        width: clamp(150px, 16vw, 230px);
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 14px 26px rgba(17, 64, 38, .12));
+    }
+
+    .support-info h1 {
+        margin: 24px 0 12px;
+        font-size: clamp(32px, 4vw, 58px);
+        line-height: .98;
+        letter-spacing: -.04em;
+        color: #23332A;
+        font-weight: 900;
+    }
+
+    .support-info p {
+        margin: 0;
+        color: #66756D;
+        font-size: 16px;
+        line-height: 1.55;
+        font-weight: 500;
+    }
+
+    .help-points {
+        display: grid;
+        gap: 12px;
+        margin-top: 28px;
+    }
+
+    .help-point {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 14px;
+        border-radius: 18px;
+        background: #F3FFF8;
+        border: 1px solid #E3F1E9;
+    }
+
+    .help-point span {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        flex: 0 0 28px;
+        background: #00A859;
+        color: #ffffff;
+        font-weight: 900;
+    }
+
+    .help-point strong {
+        display: block;
+        color: #23332A;
+        font-size: 14px;
+        margin-bottom: 3px;
+    }
+
+    .help-point small {
+        color: #66756D;
+        line-height: 1.4;
+    }
+
+    .contact-strip {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .contact-box {
+        padding: 15px;
+        border-radius: 18px;
+        background: #ffffff;
+        border: 1px solid #E3F1E9;
+    }
+
+    .contact-box span {
+        display: block;
+        color: #8A9890;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-bottom: 5px;
+    }
+
+    .contact-box strong {
+        color: #23332A;
+        font-size: 14px;
+        word-break: break-word;
+    }
+
+    .support-form-card {
+        padding: clamp(22px, 3vw, 38px);
+    }
+
+    .form-head {
+        margin-bottom: 22px;
+    }
+
+    .form-head span {
+        display: inline-flex;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: #E9FFF3;
+        color: #008A48;
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+
+    .form-head h2 {
+        margin: 12px 0 8px;
+        font-size: clamp(24px, 2.4vw, 34px);
+        line-height: 1.1;
+        color: #23332A;
+    }
+
+    .form-head p {
+        margin: 0;
+        color: #66756D;
+        line-height: 1.45;
+    }
+
+    .support-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .support-form label {
+        display: grid;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 900;
+        color: #23332A;
+    }
+
+    .support-form label.full {
+        grid-column: 1 / -1;
+    }
+
+    .support-form input,
+    .support-form select,
+    .support-form textarea {
+        width: 100%;
+        border: 1px solid #DCEDE3;
+        border-radius: 15px;
+        background: #F8FFFB;
+        padding: 13px 14px;
+        color: #23332A;
+        font-size: 14px;
+        font-weight: 600;
+        outline: none;
+        transition: .2s ease;
+    }
+
+    .support-form textarea {
+        min-height: 130px;
+        resize: vertical;
+    }
+
+    .support-form input:focus,
+    .support-form select:focus,
+    .support-form textarea:focus {
+        border-color: #00A859;
+        background: #ffffff;
+        box-shadow: 0 0 0 4px rgba(0, 168, 89, .10);
+    }
+
+    .required {
+        color: #EF4444;
+    }
+
+    .form-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 4px;
+    }
+
+    .submit-btn,
+    .reset-btn {
+        border: 0;
+        min-height: 48px;
+        padding: 13px 22px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 900;
+        cursor: pointer;
+        transition: .2s ease;
+    }
+
+    .submit-btn {
+        background: #00A859;
+        color: #ffffff;
+        box-shadow: 0 16px 30px rgba(0, 168, 89, .22);
+    }
+
+    .submit-btn:hover {
+        background: #008A48;
+        transform: translateY(-2px);
+    }
+
+    .reset-btn {
+        background: #F3FFF8;
+        color: #008A48;
+        border: 1px solid #DCEDE3;
+    }
+
+    .reset-btn:hover {
+        background: #E9FFF3;
+    }
+
+    @media (max-width: 980px) {
+        .support-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .contact-strip {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .login-support-page {
+            padding: 12px;
+        }
+
+        .support-info,
+        .support-form-card {
+            border-radius: 22px;
+        }
+
+        .support-form {
+            grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .submit-btn,
+        .reset-btn {
+            width: 100%;
+        }
+    }
+
+    .ticket-track-card {
+    margin: 0 0 22px;
+    padding: 18px;
+    border-radius: 22px;
+    background: #F3FFF8;
+    border: 1px solid #DCEDE3;
+}
+
+.ticket-track-head span {
+    display: inline-flex;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #008A48;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.ticket-track-head h3 {
+    margin: 10px 0 6px;
+    color: #23332A;
+    font-size: 20px;
+    line-height: 1.15;
+}
+
+.ticket-track-head p {
+    margin: 0;
+    color: #66756D;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.ticket-track-form {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.ticket-track-form input {
+    width: 100%;
+    border: 1px solid #DCEDE3;
+    border-radius: 15px;
+    background: #ffffff;
+    padding: 13px 14px;
+    color: #23332A;
+    font-size: 14px;
+    font-weight: 700;
+    outline: none;
+    text-transform: uppercase;
+}
+
+.ticket-track-form input:focus {
+    border-color: #00A859;
+    box-shadow: 0 0 0 4px rgba(0, 168, 89, .10);
+}
+
+.ticket-track-form button {
+    border: 0;
+    min-height: 46px;
+    padding: 12px 18px;
+    border-radius: 999px;
+    background: #008A48;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: .2s ease;
+}
+
+.ticket-track-form button:hover {
+    background: #00A859;
+    transform: translateY(-2px);
+}
+
+.ticket-result {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 18px;
+    background: #ffffff;
+    border: 1px solid #E3F1E9;
+    box-shadow: 0 12px 24px rgba(17, 64, 38, .06);
+}
+
+.ticket-result-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.ticket-result-top strong {
+    color: #23332A;
+    font-size: 17px;
+}
+
+.ticket-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.ticket-status-open {
+    background: rgba(255, 184, 77, .18);
+    color: #9A6700;
+}
+
+.ticket-status-in_progress {
+    background: rgba(0, 168, 89, .12);
+    color: #008A48;
+}
+
+.ticket-status-resolved,
+.ticket-status-closed {
+    background: rgba(25, 135, 84, .13);
+    color: #198754;
+}
+
+.ticket-status-rejected {
+    background: rgba(239, 68, 68, .12);
+    color: #EF4444;
+}
+
+.ticket-result-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.ticket-result-grid div,
+.ticket-note {
+    padding: 12px;
+    border-radius: 14px;
+    background: #F8FFFB;
+    border: 1px solid #E3F1E9;
+}
+
+.ticket-result-grid small,
+.ticket-note small {
+    display: block;
+    color: #8A9890;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 5px;
+}
+
+.ticket-result-grid p,
+.ticket-note p {
+    margin: 0;
+    color: #23332A;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.ticket-note {
+    margin-top: 12px;
+}
+
+.ticket-resolution {
+    background: #E9FFF3;
+    border-color: rgba(0, 168, 89, .18);
+}
+
+.ticket-updated {
+    margin-top: 10px;
+    color: #66756D;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: right;
+}
+
+@media (max-width: 640px) {
+    .ticket-track-form {
+        grid-template-columns: 1fr;
+    }
+
+    .ticket-track-form button {
+        width: 100%;
+    }
+
+    .ticket-result-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ticket-updated {
+        text-align: left;
+    }
+}
+</style>
+
+<section class="login-support-page">
+    <div class="support-shell">
+
+        <aside class="support-info">
+            <div>
+                <div class="back-row">
+                    <a href="{{ url_for('auth.login_select') }}" class="back-btn">← Back to Login</a>
+                    <a href="https://ayanant.com/unnatfarm" target="_blank" rel="noopener" class="know-btn">
+                        Know More About Us
+                    </a>
+                </div>
+
+                <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm" class="brand-logo">
+
+                <h1>Login Support & Help</h1>
+                <p>
+                    Submit your login-related issue here. The Super Admin team will review your request
+                    from the support panel and update the status.
+                </p>
+
+                <div class="help-points">
+                    <div class="help-point">
+                        <span>1</span>
+                        <div>
+                            <strong>Forgot password or username</strong>
+                            <small>Submit your mobile number, account type and last known username if available.</small>
+                        </div>
+                    </div>
+
+                    <div class="help-point">
+                        <span>2</span>
+                        <div>
+                            <strong>Unable to login</strong>
+                            <small>Use this if your password is correct but the portal is not allowing access.</small>
+                        </div>
+                    </div>
+
+                    <div class="help-point">
+                        <span>3</span>
+                        <div>
+                            <strong>Account inactive or approval pending</strong>
+                            <small>Submit a request so the admin team can verify your account status.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-strip">
+                <div class="contact-box">
+                    <span>Support Email</span>
+                    <strong>{{ support_email }}</strong>
+                </div>
+                <div class="contact-box">
+                    <span>Support Number</span>
+                    <strong>{{ support_number }}</strong>
+                </div>
+            </div>
+        </aside>
+
+        <main class="support-form-card">
+            <div class="form-head">
+                <span>Public Login Helpdesk</span>
+                <h2>Raise Login Support Request</h2>
+                <p>
+                    Fill the details correctly. This request will be visible only to Super Admin in the Support page.
+                </p>
+            </div>
+
+                <div class="ticket-track-card">
+    <div class="ticket-track-head">
+        <div>
+            <span>Track Request</span>
+            <h3>Check Your Support Ticket Status</h3>
+            <p>Enter your ticket reference number to view the latest status of your login support request.</p>
+        </div>
+    </div>
+
+    <form method="post" class="ticket-track-form">
+        <input type="hidden" name="form_action" value="track_ticket">
+
+        <input
+            type="text"
+            name="ticket_ref"
+            value="{{ track_ref or '' }}"
+            placeholder="Example: LOGIN-20260529123045"
+            autocomplete="off"
+            required
+        >
+
+        <button type="submit">Track Request</button>
+    </form>
+
+    {% if tracked_ticket %}
+        <div class="ticket-result">
+            <div class="ticket-result-top">
+                <strong>{{ tracked_ticket.ticket_ref }}</strong>
+
+                <span class="ticket-status ticket-status-{{ tracked_ticket.status or 'open' }}">
+                    {{ (tracked_ticket.status or 'open')|replace('_', ' ')|title }}
+                </span>
+            </div>
+
+            <div class="ticket-result-grid">
+                <div>
+                    <small>Submitted From</small>
+                    <p>{{ tracked_ticket.source_label or tracked_ticket.submitted_from or 'Login Page' }}</p>
+                </div>
+
+                <div>
+                    <small>Problem Type</small>
+                    <p>{{ tracked_ticket.problem_type or '-' }}</p>
+                </div>
+
+                <div>
+                    <small>Account Type</small>
+                    <p>{{ tracked_ticket.account_type or '-' }}</p>
+                </div>
+
+                <div>
+                    <small>Subject</small>
+                    <p>{{ tracked_ticket.subject or '-' }}</p>
+                </div>
+            </div>
+
+            <div class="ticket-note">
+                <small>Current Progress</small>
+                <p>{{ tracked_ticket.progress or 'Your request has been received and is waiting for review.' }}</p>
+            </div>
+
+            {% if tracked_ticket.resolution_note %}
+                <div class="ticket-note ticket-resolution">
+                    <small>Resolution Note</small>
+                    <p>{{ tracked_ticket.resolution_note }}</p>
+                </div>
+            {% endif %}
+
+            {% if tracked_ticket.updated_at %}
+                <div class="ticket-updated">
+                    Last Updated: {{ tracked_ticket.updated_at.strftime('%d-%m-%Y %I:%M %p') if tracked_ticket.updated_at.strftime else tracked_ticket.updated_at }}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+            <form method="post" class="support-form">
+                    <input type="hidden" name="form_action" value="submit_ticket">
+                <label>
+                    Full Name <span class="required">*</span>
+                    <input type="text" name="requester_name" placeholder="Enter your full name" required>
+                </label>
+
+                <label>
+                    Mobile Number <span class="required">*</span>
+                    <input type="text" name="mobile" placeholder="Enter active mobile number" required>
+                </label>
+
+                <label>
+                    Email ID
+                    <input type="email" name="email" placeholder="Enter email ID if available">
+                </label>
+
+                <label>
+                    Account Type <span class="required">*</span>
+                    <select name="account_type" required>
+                        <option value="">Select account type</option>
+                        {% for item in account_types %}
+                            <option value="{{ item }}">{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label>
+                    Username / Phone / User ID
+                    <input type="text" name="identifier" placeholder="Enter known username, phone or user ID">
+                </label>
+
+                <label>
+                    Problem Type <span class="required">*</span>
+                    <select name="problem_type" required>
+                        <option value="">Select problem type</option>
+                        {% for item in problem_types %}
+                            <option value="{{ item }}">{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="full">
+                    Subject <span class="required">*</span>
+                    <input type="text" name="subject" placeholder="Example: Unable to login to Farmer account" required>
+                </label>
+
+                <label class="full">
+                    Problem Details <span class="required">*</span>
+                    <textarea name="message" placeholder="Explain the issue clearly. Mention if you changed mobile number, forgot password, forgot username, account inactive, or approval is pending." required></textarea>
+                </label>
+
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn">Submit Support Request</button>
+                    <button type="reset" class="reset-btn">Clear Form</button>
+                </div>
+
+            </form>
+        </main>
+
+    </div>
+</section>
+{% endblock %}

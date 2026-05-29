@@ -770,6 +770,9 @@
             max-width:266px;
         }
     }
+    .source-col {
+    min-width: 150px;
+}
 </style>
 
 <div class="support-page">
@@ -921,6 +924,7 @@
                         {% if session.get('role') == 'super_admin' %}
                             <th class="user-col">User</th>
                             <th class="role-col">Role</th>
+                            <th class="source-col">Submitted From</th>
                         {% endif %}
 
                         <th class="subject-col">Subject</th>
@@ -945,17 +949,32 @@
                             <span class="ticket-ref">{{ t.ticket_ref or ('TCK-' ~ t._id|string) }}</span>
                         </td>
 
-                        {% if session.get('role') == 'super_admin' %}
-                            <td data-label="User">
-                                <strong>{{ t.user_name or 'Unknown User' }}</strong><br>
-                                <small>{{ t.username or '' }}</small><br>
-                                <small>{{ t.phone or '' }} {{ t.email or '' }}</small>
-                            </td>
+                            {% if session.get('role') == 'super_admin' %}
+                                <td data-label="User">
+                                    <strong>{{ t.user_name or t.requester_name or 'Unknown User' }}</strong><br>
+                                    <small>{{ t.username or t.login_identifier or '' }}</small><br>
+                                    <small>{{ t.phone or '' }} {{ t.email or '' }}</small>
+                                </td>
 
-                            <td data-label="Role">
-                                <span class="role-pill">{{ t.role or '-' }}</span>
-                            </td>
-                        {% endif %}
+                                <td data-label="Role">
+                                    <span class="role-pill">
+                                        {% if t.role == 'public_login_user' %}
+                                            Public Login User
+                                        {% else %}
+                                            {{ t.role or '-' }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+
+                                <td data-label="Submitted From">
+                                    <span class="role-pill">
+                                        {{ t.source_label or t.submitted_from or 'Logged-in Portal' }}
+                                    </span>
+                                    {% if t.account_type %}
+                                        <br><small>{{ t.account_type }}</small>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
 
                         <td data-label="Subject">
                             <strong>{{ t.subject }}</strong><br>

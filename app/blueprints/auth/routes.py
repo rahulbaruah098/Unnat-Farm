@@ -6,6 +6,7 @@ from app.extensions import mongo
 from app.utils.security import verify_password
 from app.utils.session import set_user_session, clear_user_session
 from app.utils.decorators import login_required
+from app.utils.helpers import now_utc
 from app.services.user_service import get_user_for_login, update_last_login, create_farmer_registration, complete_ufc_admin_profile, complete_ufc_mitra_profile
 from app.services.mapping_service import validate_farmer_mapping
 from app.services.document_service import store_document
@@ -238,6 +239,141 @@ def logout():
 @auth_bp.route("/privacy-policy")
 def privacy_policy():
     return render_template("auth/privacy_policy.html")
+
+@auth_bp.route("/login-support", methods=["GET", "POST"])
+def login_support():
+    support_email = "ites@sayanant.com"
+    support_number = "9957367398"
+
+    problem_types = [
+        "Unable to Login",
+        "Forgot Password",
+        "Forgot Username",
+        "Account Inactive",
+        "Wrong Login Type Selected",
+        "Mobile Number Changed",
+        "Email ID Changed",
+        "Approval Pending",
+        "Account Not Found",
+        "Password Reset Required",
+        "Other Login Issue",
+    ]
+
+    account_types = [
+        "Authority",
+        "UnnatFarm Centre",
+        "UnnatFarm Mitra",
+        "Farmer",
+        "Not Sure",
+    ]
+
+    tracked_ticket = None
+    track_ref = ""
+
+    if request.method == "POST":
+        form_action = request.form.get("form_action", "").strip()
+
+        # Track existing request by ticket reference
+        if form_action == "track_ticket":
+            track_ref = request.form.get("ticket_ref", "").strip().upper()
+
+            if not track_ref:
+                flash("Please enter your ticket reference number.", "danger")
+                return redirect(url_for("auth.login_support"))
+
+            tracked_ticket = mongo.db.support_tickets.find_one({
+                "ticket_ref": track_ref,
+                "ticket_source": "login_page"
+            })
+
+            if not tracked_ticket:
+                flash("No login support request found for this ticket reference number.", "danger")
+
+            return render_template(
+                "auth/login_support.html",
+                support_email=support_email,
+                support_number=support_number,
+                problem_types=problem_types,
+                account_types=account_types,
+                tracked_ticket=tracked_ticket,
+                track_ref=track_ref
+            )
+
+        # Submit new login support request
+        requester_name = request.form.get("requester_name", "").strip()
+        mobile = request.form.get("mobile", "").strip()
+        email = request.form.get("email", "").strip()
+        account_type = request.form.get("account_type", "").strip()
+        identifier = request.form.get("identifier", "").strip()
+        problem_type = request.form.get("problem_type", "").strip()
+        subject = request.form.get("subject", "").strip()
+        message = request.form.get("message", "").strip()
+
+        if not requester_name or not mobile or not account_type or not problem_type or not subject or not message:
+            flash("Please fill all required fields.", "danger")
+            return redirect(url_for("auth.login_support"))
+
+        ticket_ref = "LOGIN-" + now_utc().strftime("%Y%m%d%H%M%S")
+
+        mongo.db.support_tickets.insert_one({
+            "ticket_ref": ticket_ref,
+
+            # Source tracking
+            "ticket_source": "login_page",
+            "source_label": "Login Page",
+            "submitted_from": "Login Page Support & Help",
+
+            # No logged-in user available
+            "user_id": "",
+            "user_name": requester_name,
+            "username": identifier or "",
+            "role": "public_login_user",
+
+            # Public form details
+            "requester_name": requester_name,
+            "phone": mobile,
+            "email": email,
+            "account_type": account_type,
+            "login_identifier": identifier,
+
+            # Support ticket fields
+            "subject": subject,
+            "problem_type": problem_type,
+            "priority": "high" if problem_type in ["Unable to Login", "Forgot Password", "Account Inactive"] else "medium",
+            "message": message,
+            "support_email": support_email,
+            "support_number": support_number,
+            "status": "open",
+            "progress": "Ticket received from login page",
+            "resolution_note": "",
+
+            "created_at": now_utc(),
+            "updated_at": now_utc(),
+            "resolved_at": None,
+            "updated_by": None
+        })
+
+        flash(f"Support request submitted successfully. Your ticket reference is {ticket_ref}. Please save this number to track your request.", "success")
+        return redirect(url_for("auth.login_support", ticket_ref=ticket_ref))
+
+    # Optional auto-track after submit redirect
+    query_ticket_ref = request.args.get("ticket_ref", "").strip().upper()
+    if query_ticket_ref:
+        tracked_ticket = mongo.db.support_tickets.find_one({
+            "ticket_ref": query_ticket_ref,
+            "ticket_source": "login_page"
+        })
+        track_ref = query_ticket_ref
+
+    return render_template(
+        "auth/login_support.html",
+        support_email=support_email,
+        support_number=support_number,
+        problem_types=problem_types,
+        account_types=account_types,
+        tracked_ticket=tracked_ticket,
+        track_ref=track_ref
+    )
 
 #Changes by atlanta
 @auth_bp.route('/register/farmer', methods=['GET', 'POST'])

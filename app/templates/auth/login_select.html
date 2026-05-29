@@ -747,6 +747,83 @@ padding-bottom:calc(clamp(12px,1.5vw,22px) + var(--taskbar-safe));
     border-radius:50%;
 }
 
+.uf-know-more-wrap{
+    display:flex;
+    justify-content:flex-start;
+    margin-top:14px;
+}
+
+.uf-know-more-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:36px;
+    padding:9px 15px;
+    border-radius:999px;
+    background:rgba(255,255,255,.82);
+    border:1px solid rgba(63,140,90,.24);
+    color:#3f8c5a;
+    font-size:clamp(12px,.82vw,14px);
+    line-height:1;
+    font-weight:900;
+    text-decoration:none;
+    box-shadow:0 10px 22px rgba(31,41,51,.07);
+    transition:transform .25s ease,background .25s ease,color .25s ease,box-shadow .25s ease;
+}
+
+.uf-know-more-link:hover{
+    background:#3f8c5a;
+    color:#fff;
+    transform:translateY(-2px);
+    box-shadow:0 14px 28px rgba(63,140,90,.20);
+}
+
+.uf-footer-links{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+    flex-wrap:wrap;
+    margin-top:8px;
+}
+
+.uf-footer-links a{
+    color:#0f5132;
+    font-size:14px;
+    font-weight:900;
+    text-decoration:none;
+}
+
+.uf-footer-links a:hover{
+    text-decoration:underline;
+}
+
+.uf-footer-separator{
+    color:rgba(31,41,51,.45);
+    font-weight:900;
+}
+
+@media(max-width:860px){
+    .uf-know-more-wrap{
+        justify-content:flex-start;
+        margin-top:14px;
+    }
+}
+
+@media(max-width:520px){
+    .uf-know-more-link{
+        width:100%;
+    }
+
+    .uf-footer-links{
+        gap:7px;
+    }
+
+    .uf-footer-links a{
+        font-size:13px;
+    }
+}
+
 </style>
 
 <div class="uf-splash" id="ufSplash">
@@ -790,13 +867,19 @@ padding-bottom:calc(clamp(12px,1.5vw,22px) + var(--taskbar-safe));
                 </div>
             </div>
 
-            <div class="uf-info-box">
-                <strong>One Platform. Multiple Access Points.</strong>
-                <p>
-                    Choose your login type and continue to the dedicated dashboard designed
-                    for your role.
-                </p>
-            </div>
+                <div class="uf-info-box">
+                    <strong>One Platform. Multiple Access Points.</strong>
+                    <p>
+                        Choose your login type and continue to the dedicated dashboard designed
+                        for your role.
+                    </p>
+
+                    <div class="uf-know-more-wrap">
+                        <a href="https://ayanant.com/unnatfarm" target="_blank" rel="noopener" class="uf-know-more-link">
+                            Know More About Us
+                        </a>
+                    </div>
+                </div>
 
         </div>
     </aside>
@@ -888,26 +971,30 @@ padding-bottom:calc(clamp(12px,1.5vw,22px) + var(--taskbar-safe));
 
             </div>
 
-            <div class="uf-register-wrap">
-                <a href="{{ url_for('auth.register_farmer') }}" class="uf-register-btn">
-                    Signup For Farmer
-                </a>
-            </div>
+                    <div class="uf-register-wrap">
+                        <a href="{{ url_for('auth.register_farmer') }}" class="uf-register-btn">
+                            Signup For Farmer
+                        </a>
+                    </div>
 
         </div>
+                    <footer class="uf-footer">
+                        © 2026
+                        <a href="https://sayanant.com/" target="_blank" rel="noopener">Sayanant Group</a>.
+                        All rights reserved.
 
-        <footer class="uf-footer">
-            © 2026
-            <a href="https://sayanant.com/" target="_blank" rel="noopener">Sayanant Group</a>.
-            All rights reserved.
+                        <div class="uf-footer-links">
+                            <a href="{{ url_for('auth.privacy_policy') }}">
+                                Privacy Policy
+                            </a>
 
-        <div style="text-align:center; margin-top:8px;">
-        <a href="{{ url_for('auth.privacy_policy') }}"
-           style="color:#0f5132; font-size:14px; font-weight:700; text-decoration:none;">
-            Privacy Policy
-        </a>
-    </div>
-        </footer>
+                            <span class="uf-footer-separator">|</span>
+
+                            <a href="{{ url_for('auth.login_support') }}">
+                                Support & Help
+                            </a>
+                        </div>
+                    </footer>
 
     </main>
 

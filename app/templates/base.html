@@ -1113,6 +1113,7 @@ body.sidebar-collapsed .sidebar-logout{
     'auth.login_centre',
     'auth.login_mitra',
     'auth.login_farmer',
+    'auth.login_support',
     'auth.register_farmer',
     'auth.farmer_register',
     'auth.register'
@@ -1647,11 +1648,11 @@ body.sidebar-collapsed .sidebar-logout{
     </aside>
     {% endif %}
 
-    <main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %} full{% endif %}">
+    <main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer', 'auth.login_support'] %} full{% endif %}">
         {% block content %}{% endblock %}
     </main>
 
-    {% if session.get('user_id') and request.endpoint not in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer'] %}
+    {% if session.get('user_id') and request.endpoint not in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer', 'auth.login_support'] %}
     <footer class="footer">
         <div class="footer-content footer-2line">
             <div class="footer-row">
