@@ -13,8 +13,10 @@ from app.blueprints.validations.routes import validation_bp
 from app.blueprints.master_data.routes import master_bp
 from app.blueprints.modules.routes import modules_bp
 from app.blueprints.documents.routes import documents_bp
+from app.blueprints.accounting.routes import accounting_bp
 
 from flask_cors import CORS
+
 
 def create_app():
     app = Flask(
@@ -53,6 +55,7 @@ def create_app():
     app.register_blueprint(master_bp)
     app.register_blueprint(modules_bp)
     app.register_blueprint(documents_bp)
+    app.register_blueprint(accounting_bp)
 
     @app.before_request
     def enforce_profile_and_validation_gate():

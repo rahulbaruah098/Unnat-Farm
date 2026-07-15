@@ -4,22 +4,24 @@ from flask import session, redirect, url_for, flash, abort, request, jsonify
 from app.extensions import mongo
 
 
+def _wants_json_response():
+    accept_header = request.headers.get("Accept", "")
+
+    return (
+        "application/json" in accept_header
+        or request.is_json
+        or request.args.get("format") == "json"
+        or request.args.get("user_id")
+    )
+
+
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if "user_id" in session:
             return view(*args, **kwargs)
 
-        accept_header = request.headers.get("Accept", "")
-
-        wants_json = (
-            "application/json" in accept_header
-            or request.is_json
-            or request.args.get("format") == "json"
-            or request.args.get("user_id")
-        )
-
-        if wants_json:
+        if _wants_json_response():
             data = request.get_json(silent=True) or {}
 
             user_id = (
@@ -77,16 +79,7 @@ def roles_required(*allowed_roles):
             role = session.get("role")
 
             if role not in allowed_roles:
-                accept_header = request.headers.get("Accept", "")
-
-                wants_json = (
-                    "application/json" in accept_header
-                    or request.is_json
-                    or request.args.get("format") == "json"
-                    or request.args.get("user_id")
-                )
-
-                if wants_json:
+                if _wants_json_response():
                     return jsonify({
                         "ok": False,
                         "message": "You do not have permission to access this module."
@@ -95,6 +88,61 @@ def roles_required(*allowed_roles):
                 abort(403)
 
             return view(*args, **kwargs)
+        return wrapped
+    return decorator
+
+
+def accounting_permission_required(permission):
+    """Require a verified session user and a granular Accounting permission.
+
+    This decorator deliberately uses only the authenticated Flask session user.
+    It never accepts a client-supplied user_id as the Accounting actor.
+    """
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            user_id = session.get("user_id")
+
+            if not user_id:
+                if _wants_json_response():
+                    return jsonify({
+                        "ok": False,
+                        "message": "Login required."
+                    }), 401
+
+                flash("Please login first.", "warning")
+                return redirect(url_for("auth.login"))
+
+            from app.services.accounting_permission_service import (
+                get_accounting_access,
+                has_accounting_permission,
+            )
+
+            access = get_accounting_access(
+                user_id=user_id,
+                session_role=session.get("role"),
+            )
+
+            if not access.get("enabled"):
+                if _wants_json_response():
+                    return jsonify({
+                        "ok": False,
+                        "message": access.get("message") or "Accounting access is not enabled."
+                    }), 403
+
+                abort(403)
+
+            if permission and not has_accounting_permission(access, permission):
+                if _wants_json_response():
+                    return jsonify({
+                        "ok": False,
+                        "message": "You do not have permission to perform this Accounting action."
+                    }), 403
+
+                abort(403)
+
+            return view(*args, **kwargs)
+
         return wrapped
     return decorator
 

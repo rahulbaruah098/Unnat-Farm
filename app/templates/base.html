@@ -1103,6 +1103,7 @@ body.sidebar-collapsed .sidebar-logout{
 }
 
     </style>
+{% block extra_head %}{% endblock %}
 </head>
 
 
@@ -1202,6 +1203,20 @@ body.sidebar-collapsed .sidebar-logout{
             </span>
             My Profile
         </a>
+
+
+        {% if session.get('role') in ['super_admin', 'avpl_admin', 'accounts'] %}
+        <a href="{{ url_for('accounting.dashboard') }}"
+           class="{% if request.blueprint == 'accounting' %}active{% endif %}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 5.5h16v13H4v-13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    <path d="M7 9h10M7 13h4M15 13h2M7 16h4M15 16h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </span>
+            Accounting
+        </a>
+        {% endif %}
 
 
 
