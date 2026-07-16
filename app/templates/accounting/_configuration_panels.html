@@ -1,0 +1,488 @@
+{% set profile = configuration_overview.entity_profile %}
+{% set policy = configuration_overview.accounting_policy %}
+{% set profile_caps = configuration_capabilities.entity_profile %}
+{% set policy_caps = configuration_capabilities.accounting_policy %}
+
+{% if profile_caps.can_view or policy_caps.can_view %}
+    {% if configuration_setup_error %}
+        <div class="accounting-configuration-card">
+            <div class="accounting-notice danger">{{ configuration_setup_error }}</div>
+        </div>
+    {% elif not accounting_entity %}
+        <div class="accounting-configuration-card">
+            <div class="accounting-notice info">
+                Initialize the AVPL Accounting entity before configuring its profile and policies.
+            </div>
+        </div>
+    {% else %}
+        {% if profile_caps.can_view %}
+            <div class="accounting-configuration-card" id="entity-configuration">
+                <div class="accounting-section-heading">
+                    <div>
+                        <p class="accounting-eyebrow">Stage 2 · Batch 5</p>
+                        <h2>AVPL entity configuration</h2>
+                        <p class="accounting-section-description">
+                            Legal identity, business location, GST profile, books beginning date and
+                            default Financial Year are versioned and approved before becoming active.
+                        </p>
+                    </div>
+
+                    {% if profile.working %}
+                        <span class="accounting-status-badge status-{{ profile.working.status }}">
+                            {{ profile.working.status_display }}
+                        </span>
+                    {% elif profile.active %}
+                        <span class="accounting-state-pill active">Approved revision {{ profile.active.revision_number }}</span>
+                    {% else %}
+                        <span class="accounting-state-pill pending">Configuration required</span>
+                    {% endif %}
+                </div>
+
+                {% if profile.active %}
+                    <div class="accounting-config-active-block">
+                        <div class="accounting-config-block-heading">
+                            <div>
+                                <strong>Active approved profile</strong>
+                                <p>Revision {{ profile.active.revision_number }} · Approved by {{ profile.active.approved_by_name or 'Super Admin' }}</p>
+                            </div>
+                            <span class="accounting-state-pill active">Active</span>
+                        </div>
+
+                        <div class="accounting-config-summary-grid">
+                            <div><span>Legal name</span><strong>{{ profile.active.payload.legal_name }}</strong></div>
+                            <div><span>Trade name</span><strong>{{ profile.active.payload.trade_name or '—' }}</strong></div>
+                            <div><span>Business state</span><strong>{{ profile.active.payload.state_name }} ({{ profile.active.payload.state_code }})</strong></div>
+                            <div><span>GST status</span><strong>{{ configuration_options.gst_registration_statuses.get(profile.active.payload.gst_registration_status, profile.active.payload.gst_registration_status) }}</strong></div>
+                            <div><span>GSTIN</span><strong>{{ profile.active.payload.gstin or 'Not applicable' }}</strong></div>
+                            <div><span>PAN</span><strong>{{ profile.active.payload.pan }}</strong></div>
+                            <div><span>Books begin</span><strong>{{ profile.active.payload.books_beginning_date_display or '—' }}</strong></div>
+                            <div><span>Default Financial Year</span><strong>{{ profile.active.payload.default_financial_year_name or '—' }}</strong></div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if profile.working and profile.working.return_reason %}
+                    <div class="accounting-notice warning">
+                        <strong>Correction requested:</strong> {{ profile.working.return_reason }}
+                    </div>
+                {% endif %}
+
+                {% if profile.working and profile.working.withdraw_reason and profile.working.status == 'draft' %}
+                    <div class="accounting-notice info">
+                        <strong>Withdrawn for correction:</strong> {{ profile.working.withdraw_reason }}
+                    </div>
+                {% endif %}
+
+                {% set profile_is_creator = profile.working and profile.working.created_by == current_user_id %}
+                {% set profile_editable = profile.working and profile.working.status in ['draft', 'returned_for_correction'] %}
+                {% set profile_can_save = (profile_caps.can_create or profile_caps.can_edit) and (not profile.working or (profile_editable and profile_is_creator)) %}
+
+                {% if profile_can_save %}
+                    {% if not open_financial_years %}
+                        <div class="accounting-notice warning">
+                            Approve and open a Financial Year before completing the AVPL entity profile.
+                        </div>
+                    {% else %}
+                        <form class="accounting-config-form"
+                              method="post"
+                              action="{{ url_for('accounting.entity_settings_save') }}">
+                            <input type="hidden" name="version" value="{{ profile.working.version if profile.working else 0 }}">
+
+                            <div class="accounting-config-form-heading">
+                                <div>
+                                    <strong>{% if profile.working %}Edit profile revision {{ profile.working.revision_number }}{% else %}Create entity-profile draft{% endif %}</strong>
+                                    <p>Approved versions remain immutable. A later change creates a new revision.</p>
+                                </div>
+                                <span>Maker: AVPL Admin</span>
+                            </div>
+
+                            <div class="accounting-config-form-grid two-columns">
+                                <label>
+                                    <span>Legal business name</span>
+                                    <input type="text" name="legal_name" value="{{ profile.form.legal_name or '' }}" maxlength="160" required>
+                                </label>
+                                <label>
+                                    <span>Trade name</span>
+                                    <input type="text" name="trade_name" value="{{ profile.form.trade_name or '' }}" maxlength="160">
+                                </label>
+                                <label class="span-two">
+                                    <span>Address line 1</span>
+                                    <textarea name="address_line_1" rows="2" maxlength="180" required>{{ profile.form.address_line_1 or '' }}</textarea>
+                                </label>
+                                <label class="span-two">
+                                    <span>Address line 2</span>
+                                    <textarea name="address_line_2" rows="2" maxlength="180">{{ profile.form.address_line_2 or '' }}</textarea>
+                                </label>
+                                <label>
+                                    <span>City / town</span>
+                                    <input type="text" name="city" value="{{ profile.form.city or '' }}" maxlength="100" required>
+                                </label>
+                                <label>
+                                    <span>District</span>
+                                    <input type="text" name="district" value="{{ profile.form.district or '' }}" maxlength="100" required>
+                                </label>
+                                <label>
+                                    <span>State</span>
+                                    <select name="state_name" required>
+                                        {% for item in configuration_options.india_states %}
+                                            <option value="{{ item.name }}" {% if profile.form.state_name == item.name %}selected{% endif %}>
+                                                {{ item.code }} · {{ item.name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Postal code</span>
+                                    <input type="text" inputmode="numeric" name="postal_code" value="{{ profile.form.postal_code or '' }}" pattern="[1-9][0-9]{5}" maxlength="6" required>
+                                </label>
+                                <label>
+                                    <span>PAN</span>
+                                    <input type="text" name="pan" value="{{ profile.form.pan or '' }}" maxlength="10" pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]" class="accounting-uppercase" required>
+                                </label>
+                                <label>
+                                    <span>GST registration status</span>
+                                    <select name="gst_registration_status" required>
+                                        {% for code, label in configuration_options.gst_registration_statuses.items() %}
+                                            <option value="{{ code }}" {% if profile.form.gst_registration_status == code %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>GSTIN</span>
+                                    <input type="text" name="gstin" value="{{ profile.form.gstin or '' }}" maxlength="15" class="accounting-uppercase" placeholder="Required for registered entities">
+                                </label>
+                                <label>
+                                    <span>Base currency</span>
+                                    <input type="text" value="INR" readonly>
+                                    <input type="hidden" name="base_currency" value="INR">
+                                </label>
+                                <label>
+                                    <span>Books beginning date</span>
+                                    <input type="date" name="books_beginning_date" value="{{ profile.form.books_beginning_date_input or '' }}" required>
+                                </label>
+                                <label>
+                                    <span>Default Financial Year</span>
+                                    <select name="default_financial_year_id" required>
+                                        <option value="">Choose open Financial Year</option>
+                                        {% for fy in open_financial_years %}
+                                            <option value="{{ fy.id }}" {% if profile.form.default_financial_year_id == fy.id %}selected{% endif %}>{{ fy.display_name }} · {{ fy.start_date_display }} to {{ fy.end_date_display }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                                <label>
+                                    <span>Accounting activation</span>
+                                    <input type="text" value="Enabled for AVPL foundation" readonly>
+                                </label>
+                                <label class="span-two">
+                                    <span>Change note</span>
+                                    <textarea name="change_note" rows="2" maxlength="500" placeholder="Describe this setup or correction"></textarea>
+                                </label>
+                            </div>
+
+                            <div class="accounting-config-form-footer">
+                                <p>State code is derived by the backend. PAN and GSTIN are validated before saving.</p>
+                                <button type="submit" class="accounting-primary-button">Save profile draft</button>
+                            </div>
+                        </form>
+                    {% endif %}
+                {% elif profile.working and profile.working.status == 'pending_approval' %}
+                    <div class="accounting-config-pending-block">
+                        <strong>Profile revision {{ profile.working.revision_number }} is awaiting Super Admin review.</strong>
+                        <p>Submitted by {{ profile.working.submitted_by_name or profile.working.created_by_name }}.</p>
+                    </div>
+                {% elif profile.working and not profile_is_creator and session.get('role') == 'avpl_admin' %}
+                    <div class="accounting-notice info">
+                        This revision belongs to another AVPL Admin maker and is read-only for the current user.
+                    </div>
+                {% endif %}
+
+                {% if profile.working %}
+                    <div class="accounting-config-workflow-actions">
+                        {% if profile_caps.can_submit and profile_is_creator and profile.working.status in ['draft', 'returned_for_correction'] %}
+                            <form method="post" action="{{ url_for('accounting.entity_settings_submit', configuration_id=profile.working.id) }}" class="accounting-action-form">
+                                <input type="hidden" name="version" value="{{ profile.working.version }}">
+                                <strong>Submit profile for approval</strong>
+                                <label>
+                                    <span>Submission note</span>
+                                    <textarea name="submission_note" rows="2" maxlength="500" placeholder="Summary for Super Admin"></textarea>
+                                </label>
+                                <button type="submit" class="accounting-primary-button">Submit to Super Admin</button>
+                            </form>
+                        {% endif %}
+
+                        {% if profile_caps.can_withdraw and profile_is_creator and profile.working.status == 'pending_approval' %}
+                            <form method="post" action="{{ url_for('accounting.entity_settings_withdraw', configuration_id=profile.working.id) }}" class="accounting-action-form">
+                                <input type="hidden" name="version" value="{{ profile.working.version }}">
+                                <strong>Withdraw to draft</strong>
+                                <label>
+                                    <span>Mandatory reason</span>
+                                    <textarea name="reason" rows="2" maxlength="500" required></textarea>
+                                </label>
+                                <button type="submit" class="accounting-secondary-button">Withdraw</button>
+                            </form>
+                        {% endif %}
+
+                        {% if profile_caps.can_approve and profile.working.status == 'pending_approval' %}
+                            <form method="post" action="{{ url_for('accounting.entity_settings_approve', configuration_id=profile.working.id) }}" class="accounting-action-form">
+                                <input type="hidden" name="version" value="{{ profile.working.version }}">
+                                <strong>Approve and activate</strong>
+                                <p>This replaces the previous active profile but preserves its revision history.</p>
+                                <button type="submit" class="accounting-primary-button">Approve profile</button>
+                            </form>
+                        {% endif %}
+
+                        {% if profile_caps.can_return and profile.working.status == 'pending_approval' %}
+                            <form method="post" action="{{ url_for('accounting.entity_settings_return', configuration_id=profile.working.id) }}" class="accounting-action-form danger-zone">
+                                <input type="hidden" name="version" value="{{ profile.working.version }}">
+                                <strong>Send back for correction</strong>
+                                <label>
+                                    <span>Mandatory correction reason</span>
+                                    <textarea name="reason" rows="3" maxlength="500" required></textarea>
+                                </label>
+                                <button type="submit" class="accounting-danger-button">Send back</button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                    <details class="accounting-history">
+                        <summary>Entity-profile history ({{ profile.working.workflow_history|length }})</summary>
+                        <div class="accounting-history-list">
+                            {% for event in profile.working.workflow_history|reverse %}
+                                <div>
+                                    <strong>{{ event.action.replace('_', ' ').title() }}</strong>
+                                    <span>{{ event.actor_name or event.actor_role.replace('_', ' ').title() }}</span>
+                                    {% if event.at %}<small>{{ event.at.strftime('%d %b %Y, %I:%M %p') }}</small>{% endif %}
+                                    {% if event.reason %}<p>Reason: {{ event.reason }}</p>{% endif %}
+                                    {% if event.note %}<p>Note: {{ event.note }}</p>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if policy_caps.can_view %}
+            <div class="accounting-configuration-card" id="accounting-settings">
+                <div class="accounting-section-heading">
+                    <div>
+                        <p class="accounting-eyebrow">Stage 2 · Batch 5</p>
+                        <h2>Accounting policy settings</h2>
+                        <p class="accounting-section-description">
+                            These rules will be consumed by future purchase, sales, voucher,
+                            stock, payment and approval services instead of being hard-coded.
+                        </p>
+                    </div>
+
+                    {% if policy.working %}
+                        <span class="accounting-status-badge status-{{ policy.working.status }}">{{ policy.working.status_display }}</span>
+                    {% elif policy.active %}
+                        <span class="accounting-state-pill active">Approved revision {{ policy.active.revision_number }}</span>
+                    {% else %}
+                        <span class="accounting-state-pill pending">Settings required</span>
+                    {% endif %}
+                </div>
+
+                {% if policy.active %}
+                    <div class="accounting-config-active-block">
+                        <div class="accounting-config-block-heading">
+                            <div>
+                                <strong>Active approved settings</strong>
+                                <p>Revision {{ policy.active.revision_number }} · Approved by {{ policy.active.approved_by_name or 'Super Admin' }}</p>
+                            </div>
+                            <span class="accounting-state-pill active">Active</span>
+                        </div>
+
+                        <div class="accounting-config-summary-grid">
+                            <div><span>Inventory valuation</span><strong>{{ configuration_options.valuation_methods.get(policy.active.payload.inventory_valuation_method, policy.active.payload.inventory_valuation_method) }}</strong></div>
+                            <div><span>Negative stock</span><strong>{{ configuration_options.negative_stock_policies.get(policy.active.payload.negative_stock_policy, policy.active.payload.negative_stock_policy) }}</strong></div>
+                            <div><span>Backdated entries</span><strong>{{ configuration_options.backdated_entry_policies.get(policy.active.payload.backdated_entry_policy, policy.active.payload.backdated_entry_policy) }}</strong></div>
+                            <div><span>Default credit period</span><strong>{{ policy.active.payload.default_credit_days }} days</strong></div>
+                            <div><span>High-value approval</span><strong>₹{{ policy.active.payload.high_value_approval_threshold }}</strong></div>
+                            <div><span>Default payment mode</span><strong>{{ configuration_options.default_payment_modes.get(policy.active.payload.default_payment_mode, policy.active.payload.default_payment_mode) }}</strong></div>
+                            <div><span>Maker-checker</span><strong>Enabled</strong></div>
+                            <div><span>Hard deletion</span><strong>Blocked</strong></div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if policy.working and policy.working.return_reason %}
+                    <div class="accounting-notice warning"><strong>Correction requested:</strong> {{ policy.working.return_reason }}</div>
+                {% endif %}
+
+                {% if policy.working and policy.working.withdraw_reason and policy.working.status == 'draft' %}
+                    <div class="accounting-notice info"><strong>Withdrawn for correction:</strong> {{ policy.working.withdraw_reason }}</div>
+                {% endif %}
+
+                {% set policy_is_creator = policy.working and policy.working.created_by == current_user_id %}
+                {% set policy_editable = policy.working and policy.working.status in ['draft', 'returned_for_correction'] %}
+                {% set policy_can_save = (policy_caps.can_create or policy_caps.can_edit) and (not policy.working or (policy_editable and policy_is_creator)) %}
+
+                {% if policy_can_save %}
+                    <form class="accounting-config-form" method="post" action="{{ url_for('accounting.accounting_settings_save') }}">
+                        <input type="hidden" name="version" value="{{ policy.working.version if policy.working else 0 }}">
+                        <input type="hidden" name="maker_checker_enabled" value="1">
+
+                        <div class="accounting-config-form-heading">
+                            <div>
+                                <strong>{% if policy.working %}Edit settings revision {{ policy.working.revision_number }}{% else %}Create Accounting-settings draft{% endif %}</strong>
+                                <p>Weighted Average, maker-checker and no-hard-delete controls are protected foundation rules.</p>
+                            </div>
+                            <span>Maker: AVPL Admin</span>
+                        </div>
+
+                        <div class="accounting-config-form-grid two-columns">
+                            <label>
+                                <span>Inventory valuation method</span>
+                                <select name="valuation_method" required>
+                                    {% for code, label in configuration_options.valuation_methods.items() %}
+                                        <option value="{{ code }}" {% if policy.form.inventory_valuation_method == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="accounting-config-checkbox">
+                                <input type="checkbox" name="standard_cost_reference_enabled" value="1" {% if policy.form.standard_cost_reference_enabled %}checked{% endif %}>
+                                <span><strong>Maintain Standard Cost reference</strong><small>Reference only; Weighted Average remains the financial valuation source.</small></span>
+                            </label>
+                            <label>
+                                <span>Negative-stock policy</span>
+                                <select name="negative_stock_policy" required>
+                                    {% for code, label in configuration_options.negative_stock_policies.items() %}
+                                        <option value="{{ code }}" {% if policy.form.negative_stock_policy == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Backdated-entry policy</span>
+                                <select name="backdated_entry_policy" required>
+                                    {% for code, label in configuration_options.backdated_entry_policies.items() %}
+                                        <option value="{{ code }}" {% if policy.form.backdated_entry_policy == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Maximum backdated days</span>
+                                <input type="number" name="maximum_backdated_days" value="{{ policy.form.maximum_backdated_days }}" min="0" max="366" required>
+                            </label>
+                            <label>
+                                <span>Default credit period (days)</span>
+                                <input type="number" name="default_credit_days" value="{{ policy.form.default_credit_days }}" min="0" max="365" required>
+                            </label>
+                            <label>
+                                <span>Rounding method</span>
+                                <select name="rounding_method" required>
+                                    {% for code, label in configuration_options.rounding_methods.items() %}
+                                        <option value="{{ code }}" {% if policy.form.rounding_method == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>High-value approval threshold (₹)</span>
+                                <input type="number" name="high_value_approval_threshold" value="{{ policy.form.high_value_approval_threshold }}" min="0" step="0.01" required>
+                            </label>
+                            <label>
+                                <span>Supporting-document policy</span>
+                                <select name="supporting_document_policy" required>
+                                    {% for code, label in configuration_options.supporting_document_policies.items() %}
+                                        <option value="{{ code }}" {% if policy.form.supporting_document_policy == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Default place-of-supply state</span>
+                                <select name="default_place_of_supply_state" required>
+                                    {% for item in configuration_options.india_states %}
+                                        <option value="{{ item.name }}" {% if policy.form.default_place_of_supply_state == item.name %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Default payment mode</span>
+                                <select name="default_payment_mode" required>
+                                    {% for code, label in configuration_options.default_payment_modes.items() %}
+                                        <option value="{{ code }}" {% if policy.form.default_payment_mode == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Maker-checker control</span>
+                                <input type="text" value="Enabled and protected" readonly>
+                            </label>
+                            <label class="span-two">
+                                <span>Change note</span>
+                                <textarea name="change_note" rows="2" maxlength="500" placeholder="Describe this setup or correction"></textarea>
+                            </label>
+                        </div>
+
+                        <div class="accounting-config-form-footer">
+                            <p>Direct ledger mutation and application-level hard deletion remain disabled.</p>
+                            <button type="submit" class="accounting-primary-button">Save settings draft</button>
+                        </div>
+                    </form>
+                {% elif policy.working and policy.working.status == 'pending_approval' %}
+                    <div class="accounting-config-pending-block">
+                        <strong>Settings revision {{ policy.working.revision_number }} is awaiting Super Admin review.</strong>
+                        <p>Submitted by {{ policy.working.submitted_by_name or policy.working.created_by_name }}.</p>
+                    </div>
+                {% elif policy.working and not policy_is_creator and session.get('role') == 'avpl_admin' %}
+                    <div class="accounting-notice info">This revision belongs to another AVPL Admin maker and is read-only for the current user.</div>
+                {% endif %}
+
+                {% if policy.working %}
+                    <div class="accounting-config-workflow-actions">
+                        {% if policy_caps.can_submit and policy_is_creator and policy.working.status in ['draft', 'returned_for_correction'] %}
+                            <form method="post" action="{{ url_for('accounting.accounting_settings_submit', configuration_id=policy.working.id) }}" class="accounting-action-form">
+                                <input type="hidden" name="version" value="{{ policy.working.version }}">
+                                <strong>Submit settings for approval</strong>
+                                <label><span>Submission note</span><textarea name="submission_note" rows="2" maxlength="500"></textarea></label>
+                                <button type="submit" class="accounting-primary-button">Submit to Super Admin</button>
+                            </form>
+                        {% endif %}
+
+                        {% if policy_caps.can_withdraw and policy_is_creator and policy.working.status == 'pending_approval' %}
+                            <form method="post" action="{{ url_for('accounting.accounting_settings_withdraw', configuration_id=policy.working.id) }}" class="accounting-action-form">
+                                <input type="hidden" name="version" value="{{ policy.working.version }}">
+                                <strong>Withdraw to draft</strong>
+                                <label><span>Mandatory reason</span><textarea name="reason" rows="2" maxlength="500" required></textarea></label>
+                                <button type="submit" class="accounting-secondary-button">Withdraw</button>
+                            </form>
+                        {% endif %}
+
+                        {% if policy_caps.can_approve and policy.working.status == 'pending_approval' %}
+                            <form method="post" action="{{ url_for('accounting.accounting_settings_approve', configuration_id=policy.working.id) }}" class="accounting-action-form">
+                                <input type="hidden" name="version" value="{{ policy.working.version }}">
+                                <strong>Approve and activate</strong>
+                                <p>This approved revision becomes the policy source for future Accounting services.</p>
+                                <button type="submit" class="accounting-primary-button">Approve settings</button>
+                            </form>
+                        {% endif %}
+
+                        {% if policy_caps.can_return and policy.working.status == 'pending_approval' %}
+                            <form method="post" action="{{ url_for('accounting.accounting_settings_return', configuration_id=policy.working.id) }}" class="accounting-action-form danger-zone">
+                                <input type="hidden" name="version" value="{{ policy.working.version }}">
+                                <strong>Send back for correction</strong>
+                                <label><span>Mandatory correction reason</span><textarea name="reason" rows="3" maxlength="500" required></textarea></label>
+                                <button type="submit" class="accounting-danger-button">Send back</button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                    <details class="accounting-history">
+                        <summary>Accounting-settings history ({{ policy.working.workflow_history|length }})</summary>
+                        <div class="accounting-history-list">
+                            {% for event in policy.working.workflow_history|reverse %}
+                                <div>
+                                    <strong>{{ event.action.replace('_', ' ').title() }}</strong>
+                                    <span>{{ event.actor_name or event.actor_role.replace('_', ' ').title() }}</span>
+                                    {% if event.at %}<small>{{ event.at.strftime('%d %b %Y, %I:%M %p') }}</small>{% endif %}
+                                    {% if event.reason %}<p>Reason: {{ event.reason }}</p>{% endif %}
+                                    {% if event.note %}<p>Note: {{ event.note }}</p>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endif %}
+{% endif %}
