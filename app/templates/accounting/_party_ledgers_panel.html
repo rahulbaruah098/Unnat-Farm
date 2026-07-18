@@ -1,0 +1,485 @@
+{% if party_ledger_capabilities.can_view %}
+<style>
+.accounting-party-card{
+    padding:clamp(22px,2vw,32px);
+    border:1px solid rgba(79,154,106,.22);
+    border-radius:26px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 18px 42px rgba(23,37,42,.08);
+}
+.accounting-party-summary{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:12px;
+    margin-top:18px;
+}
+.accounting-party-summary>div{
+    min-height:92px;
+    padding:15px;
+    border:1px solid rgba(79,154,106,.18);
+    border-radius:16px;
+    background:#F8FCF9;
+}
+.accounting-party-summary span{
+    display:block;
+    margin-bottom:7px;
+    color:#60716F;
+    font-size:.72rem;
+    font-weight:850;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+}
+.accounting-party-summary strong{color:#17252A;font-size:1.22rem;}
+.accounting-party-summary small{display:block;margin-top:5px;color:#60716F;line-height:1.35;}
+.accounting-party-form-wrap{
+    margin-top:20px;
+    padding:18px;
+    border:1px solid rgba(79,154,106,.18);
+    border-radius:18px;
+    background:#F7FCF8;
+}
+.accounting-party-form-heading{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:flex-start;
+    margin-bottom:16px;
+}
+.accounting-party-form-heading h3{margin:0;color:#17252A;font-size:1.06rem;}
+.accounting-party-form-heading p{margin:5px 0 0;color:#60716F;line-height:1.5;}
+.accounting-party-form-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:13px;
+}
+.accounting-party-field{display:grid;gap:6px;}
+.accounting-party-field.span-2{grid-column:span 2;}
+.accounting-party-field.span-4{grid-column:1/-1;}
+.accounting-party-field label{
+    color:#40515A;
+    font-size:.76rem;
+    font-weight:850;
+}
+.accounting-party-field input,
+.accounting-party-field select,
+.accounting-party-field textarea{
+    width:100%;
+    min-height:42px;
+    padding:10px 11px;
+    border:1px solid rgba(79,154,106,.28);
+    border-radius:11px;
+    background:#fff;
+    color:#17252A;
+    font:inherit;
+}
+.accounting-party-field textarea{min-height:82px;resize:vertical;}
+.accounting-party-field small{color:#71817E;line-height:1.35;}
+.accounting-party-form-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:9px;
+    flex-wrap:wrap;
+    margin-top:15px;
+}
+.accounting-party-list{display:grid;gap:14px;margin-top:20px;}
+.accounting-party-row{
+    border:1px solid rgba(79,154,106,.18);
+    border-radius:18px;
+    background:#FBFEFC;
+    overflow:hidden;
+}
+.accounting-party-row-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:14px;
+    padding:16px;
+}
+.accounting-party-name-block{display:flex;gap:12px;align-items:flex-start;}
+.accounting-party-mark{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:42px;
+    height:42px;
+    flex:0 0 42px;
+    border-radius:13px;
+    background:#E7F6EC;
+    color:#2F7548;
+    font-size:.76rem;
+    font-weight:900;
+}
+.accounting-party-name-block strong{display:block;color:#17252A;font-size:1.02rem;}
+.accounting-party-name-block p{margin:4px 0 0;color:#60716F;line-height:1.4;}
+.accounting-party-meta{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:10px;
+    padding:0 16px 16px;
+}
+.accounting-party-meta>div{
+    padding:11px;
+    border-radius:12px;
+    background:#F1F8F3;
+}
+.accounting-party-meta span{display:block;color:#60716F;font-size:.67rem;font-weight:850;text-transform:uppercase;letter-spacing:.05em;}
+.accounting-party-meta strong{display:block;margin-top:5px;color:#263B35;font-size:.84rem;overflow-wrap:anywhere;}
+.accounting-party-row details{border-top:1px solid rgba(79,154,106,.15);}
+.accounting-party-row summary{
+    cursor:pointer;
+    list-style:none;
+    padding:12px 16px;
+    color:#2F7548;
+    font-size:.82rem;
+    font-weight:850;
+}
+.accounting-party-row summary::-webkit-details-marker{display:none;}
+.accounting-party-detail-body{padding:0 16px 16px;}
+.accounting-party-action-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+    margin-top:14px;
+}
+.accounting-party-action-box{
+    padding:13px;
+    border:1px solid rgba(79,154,106,.16);
+    border-radius:14px;
+    background:#F8FCF9;
+}
+.accounting-party-action-box h4{margin:0 0 8px;color:#17252A;}
+.accounting-party-action-box input,
+.accounting-party-action-box textarea{
+    width:100%;
+    min-height:40px;
+    padding:9px 10px;
+    border:1px solid rgba(79,154,106,.28);
+    border-radius:10px;
+    font:inherit;
+}
+.accounting-party-action-box textarea{min-height:68px;resize:vertical;}
+.accounting-party-action-box button{margin-top:9px;}
+.accounting-party-empty{
+    margin-top:18px;
+    padding:20px;
+    border:1px dashed rgba(79,154,106,.35);
+    border-radius:16px;
+    text-align:center;
+    color:#60716F;
+    background:#FAFDFA;
+}
+.accounting-party-protection{
+    margin-top:18px;
+    padding:14px 16px;
+    border-radius:14px;
+    background:#EFF8F1;
+    border:1px solid rgba(79,154,106,.2);
+    color:#365448;
+    line-height:1.55;
+}
+@media(max-width:1120px){
+    .accounting-party-summary{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .accounting-party-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .accounting-party-field.span-4{grid-column:1/-1;}
+    .accounting-party-meta{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media(max-width:700px){
+    .accounting-party-summary,
+    .accounting-party-form-grid,
+    .accounting-party-meta,
+    .accounting-party-action-grid{grid-template-columns:1fr;}
+    .accounting-party-field.span-2,
+    .accounting-party-field.span-4{grid-column:auto;}
+    .accounting-party-row-header,
+    .accounting-party-form-heading{flex-direction:column;}
+}
+</style>
+
+{% macro party_fields(values, prefix='', lock_code=false) %}
+    {% set options = party_ledger_overview.options %}
+    <div class="accounting-party-form-grid">
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}party_role">Party type *</label>
+            <select id="{{ prefix }}party_role" name="party_role" required>
+                {% for code, label in options.party_roles.items() %}
+                    <option value="{{ code }}" {% if values.party_role == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}ledger_code">Ledger code</label>
+            <input id="{{ prefix }}ledger_code" name="ledger_code" value="{{ values.ledger_code or '' }}" maxlength="40" placeholder="Generated automatically when blank" {% if lock_code %}readonly{% endif %}>
+            <small>Permanent and never reused after creation.</small>
+        </div>
+        <div class="accounting-party-field span-2">
+            <label for="{{ prefix }}legal_name">Legal name *</label>
+            <input id="{{ prefix }}legal_name" name="legal_name" value="{{ values.legal_name or '' }}" maxlength="180" required>
+        </div>
+        <div class="accounting-party-field span-2">
+            <label for="{{ prefix }}display_name">Ledger display name *</label>
+            <input id="{{ prefix }}display_name" name="display_name" value="{{ values.name or values.display_name or '' }}" maxlength="180" required>
+        </div>
+        <div class="accounting-party-field span-2">
+            <label for="{{ prefix }}trade_name">Trade name</label>
+            <input id="{{ prefix }}trade_name" name="trade_name" value="{{ values.trade_name or '' }}" maxlength="180">
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}gst_registration_status">GST registration *</label>
+            <select id="{{ prefix }}gst_registration_status" name="gst_registration_status" required>
+                {% for code, label in options.gst_registration_statuses.items() %}
+                    <option value="{{ code }}" {% if values.gst_registration_status == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}gstin">GSTIN</label>
+            <input id="{{ prefix }}gstin" name="gstin" value="{{ values.gstin or '' }}" maxlength="15" style="text-transform:uppercase">
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}pan">PAN</label>
+            <input id="{{ prefix }}pan" name="pan" value="{{ values.pan or '' }}" maxlength="10" style="text-transform:uppercase">
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}state_name">State / Territory *</label>
+            <select id="{{ prefix }}state_name" name="state_name" required>
+                {% for state_name, state_code in options.states.items() %}
+                    <option value="{{ state_name }}" {% if values.state_name == state_name %}selected{% endif %}>{{ state_name }} ({{ state_code }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}postal_code">PIN code *</label>
+            <input id="{{ prefix }}postal_code" name="postal_code" value="{{ values.postal_code or '' }}" maxlength="6" inputmode="numeric" required>
+        </div>
+        <div class="accounting-party-field span-2">
+            <label for="{{ prefix }}address_line_1">Address line 1 *</label>
+            <input id="{{ prefix }}address_line_1" name="address_line_1" value="{{ values.address_line_1 or '' }}" maxlength="220" required>
+        </div>
+        <div class="accounting-party-field span-2">
+            <label for="{{ prefix }}address_line_2">Address line 2</label>
+            <input id="{{ prefix }}address_line_2" name="address_line_2" value="{{ values.address_line_2 or '' }}" maxlength="220">
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}city">City *</label>
+            <input id="{{ prefix }}city" name="city" value="{{ values.city or '' }}" maxlength="100" required>
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}district">District *</label>
+            <input id="{{ prefix }}district" name="district" value="{{ values.district or '' }}" maxlength="100" required>
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}contact_person">Contact person</label>
+            <input id="{{ prefix }}contact_person" name="contact_person" value="{{ values.contact_person or '' }}" maxlength="120">
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}phone">Phone</label>
+            <input id="{{ prefix }}phone" name="phone" value="{{ values.phone or '' }}" maxlength="16" inputmode="tel">
+        </div>
+        <div class="accounting-party-field span-2">
+            <label for="{{ prefix }}email">Email</label>
+            <input id="{{ prefix }}email" name="email" value="{{ values.email or '' }}" maxlength="180" type="email">
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}credit_period_days">Credit period (days)</label>
+            <input id="{{ prefix }}credit_period_days" name="credit_period_days" value="{{ values.credit_period_days if values.credit_period_days is not none else party_ledger_overview.form_defaults.credit_period_days }}" min="0" max="3650" type="number">
+        </div>
+        <div class="accounting-party-field">
+            <label for="{{ prefix }}credit_limit">Credit limit (INR)</label>
+            <input id="{{ prefix }}credit_limit" name="credit_limit" value="{{ values.credit_limit or '0.00' }}" min="0" step="0.01" type="number">
+        </div>
+        <div class="accounting-party-field span-4">
+            <label for="{{ prefix }}remarks">Internal remarks</label>
+            <textarea id="{{ prefix }}remarks" name="remarks" maxlength="1000">{{ values.remarks or '' }}</textarea>
+        </div>
+    </div>
+{% endmacro %}
+
+<section class="accounting-party-card" id="party-ledgers">
+    <div class="accounting-section-heading">
+        <div>
+            <p class="accounting-eyebrow">Stage 3 · Batch 3</p>
+            <h2>Supplier and party ledger masters</h2>
+            <p class="accounting-section-description">
+                Accounts prepares supplier and customer ledgers. AVPL Admin reviews and activates them through a maker-checker workflow before future vouchers can use them.
+            </p>
+        </div>
+        {% if party_ledger_overview.counts.pending_approval %}
+            <span class="accounting-state-pill pending">{{ party_ledger_overview.counts.pending_approval }} awaiting review</span>
+        {% elif party_ledger_overview.counts.active %}
+            <span class="accounting-state-pill active">{{ party_ledger_overview.counts.active }} active</span>
+        {% else %}
+            <span class="accounting-state-pill pending">No party ledgers</span>
+        {% endif %}
+    </div>
+
+    {% if party_ledger_setup_error %}
+        <div class="accounting-notice danger">{{ party_ledger_setup_error }}</div>
+    {% elif not accounting_entity %}
+        <div class="accounting-notice info">Initialize the AVPL Accounting entity first.</div>
+    {% else %}
+        <div class="accounting-party-summary">
+            <div><span>Suppliers</span><strong>{{ party_ledger_overview.role_counts.supplier }}</strong><small>Sundry Creditors</small></div>
+            <div><span>Customers / parties</span><strong>{{ party_ledger_overview.role_counts.customer }}</strong><small>Sundry Debtors</small></div>
+            <div><span>Pending approval</span><strong>{{ party_ledger_overview.counts.pending_approval }}</strong><small>AVPL Admin review queue</small></div>
+            <div><span>Active ledgers</span><strong>{{ party_ledger_overview.counts.active }}</strong><small>Available to future posting services</small></div>
+            <div><span>Inactive</span><strong>{{ party_ledger_overview.counts.inactive }}</strong><small>Historical identity preserved</small></div>
+        </div>
+
+        {% if party_ledger_overview.audit_recovery_count %}
+            <div class="accounting-notice warning">
+                {{ party_ledger_overview.audit_recovery_count }} party-ledger record(s) require audit-log recovery.
+            </div>
+        {% endif %}
+
+        {% if party_ledger_capabilities.can_create %}
+            <details class="accounting-party-form-wrap" {% if not party_ledger_overview.rows %}open{% endif %}>
+                <summary class="accounting-party-form-heading">
+                    <div>
+                        <h3>Create supplier or customer ledger</h3>
+                        <p>The ledger remains a draft until submitted and approved. No opening balance is stored in this master.</p>
+                    </div>
+                    <span class="accounting-state-pill pending">Accounts maker</span>
+                </summary>
+                <form method="post" action="{{ url_for('accounting.party_ledger_create') }}">
+                    {{ party_fields(party_ledger_overview.form_defaults, 'new_party_') }}
+                    <div class="accounting-party-form-actions">
+                        <button class="accounting-primary-button" type="submit">Create draft</button>
+                    </div>
+                </form>
+            </details>
+        {% endif %}
+
+        {% if party_ledger_overview.rows %}
+            <div class="accounting-party-list">
+                {% for ledger in party_ledger_overview.rows %}
+                    {% set is_maker = ledger.created_by == current_user_id %}
+                    <article class="accounting-party-row status-{{ ledger.status }}">
+                        <div class="accounting-party-row-header">
+                            <div class="accounting-party-name-block">
+                                <span class="accounting-party-mark">{{ 'SUP' if ledger.party_role == 'supplier' else 'CUS' }}</span>
+                                <div>
+                                    <strong>{{ ledger.name }}</strong>
+                                    <p>{{ ledger.ledger_code }} · {{ ledger.party_role_label }} · {{ ledger.account_group_name }}</p>
+                                </div>
+                            </div>
+                            <span class="accounting-status-badge status-{{ ledger.status }}">{{ ledger.status_display }}</span>
+                        </div>
+
+                        <div class="accounting-party-meta">
+                            <div><span>Legal name</span><strong>{{ ledger.legal_name }}</strong></div>
+                            <div><span>GST profile</span><strong>{{ ledger.gst_registration_status_label }}</strong></div>
+                            <div><span>GSTIN</span><strong>{{ ledger.gstin or 'Not applicable' }}</strong></div>
+                            <div><span>Credit terms</span><strong>{{ ledger.credit_period_days }} days · ₹{{ ledger.credit_limit }}</strong></div>
+                            <div><span>Maker</span><strong>{{ ledger.created_by_name or 'Accounts' }}</strong></div>
+                        </div>
+
+                        {% if ledger.return_reason %}
+                            <div class="accounting-notice warning compact" style="margin:0 16px 14px;"><strong>Correction requested:</strong> {{ ledger.return_reason }}</div>
+                        {% endif %}
+                        {% if ledger.deactivation_reason and ledger.status == 'inactive' %}
+                            <div class="accounting-notice info compact" style="margin:0 16px 14px;"><strong>Deactivated:</strong> {{ ledger.deactivation_reason }}</div>
+                        {% endif %}
+
+                        <details>
+                            <summary>View details and available actions</summary>
+                            <div class="accounting-party-detail-body">
+                                <div class="accounting-party-meta" style="padding:0;">
+                                    <div><span>Address</span><strong>{{ ledger.address_line_1 }}{% if ledger.address_line_2 %}, {{ ledger.address_line_2 }}{% endif %}</strong></div>
+                                    <div><span>Location</span><strong>{{ ledger.city }}, {{ ledger.district }}, {{ ledger.state_name }} - {{ ledger.postal_code }}</strong></div>
+                                    <div><span>Contact</span><strong>{{ ledger.contact_person or '—' }}{% if ledger.phone %} · {{ ledger.phone }}{% endif %}</strong></div>
+                                    <div><span>Email</span><strong>{{ ledger.email or '—' }}</strong></div>
+                                    <div><span>PAN</span><strong>{{ ledger.pan or '—' }}</strong></div>
+                                </div>
+
+                                {% if party_ledger_capabilities.can_edit and is_maker and ledger.status in ['draft', 'returned_for_correction'] %}
+                                    <div class="accounting-party-form-wrap">
+                                        <div class="accounting-party-form-heading"><div><h3>Edit working draft</h3><p>Only the original maker can edit this version.</p></div></div>
+                                        <form method="post" action="{{ url_for('accounting.party_ledger_edit', ledger_id=ledger.id) }}">
+                                            <input type="hidden" name="version" value="{{ ledger.version }}">
+                                            {{ party_fields(ledger, 'edit_' ~ ledger.id ~ '_', true) }}
+                                            <div class="accounting-party-form-actions"><button class="accounting-primary-button" type="submit">Save draft</button></div>
+                                        </form>
+                                    </div>
+                                {% endif %}
+
+                                <div class="accounting-party-action-grid">
+                                    {% if party_ledger_capabilities.can_submit and is_maker and ledger.status in ['draft', 'returned_for_correction'] %}
+                                        <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_submit', ledger_id=ledger.id) }}">
+                                            <h4>Submit for approval</h4>
+                                            <input type="hidden" name="version" value="{{ ledger.version }}">
+                                            <textarea name="submission_note" maxlength="1000" placeholder="Optional note for AVPL Admin"></textarea>
+                                            <button class="accounting-primary-button" type="submit">Submit ledger</button>
+                                        </form>
+                                    {% endif %}
+
+                                    {% if party_ledger_capabilities.can_cancel and is_maker and ledger.status in ['draft', 'returned_for_correction'] %}
+                                        <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_cancel', ledger_id=ledger.id) }}">
+                                            <h4>Cancel draft</h4>
+                                            <input type="hidden" name="version" value="{{ ledger.version }}">
+                                            <textarea name="reason" maxlength="1000" required placeholder="Mandatory cancellation reason"></textarea>
+                                            <button class="accounting-secondary-button" type="submit">Cancel without deleting history</button>
+                                        </form>
+                                    {% endif %}
+
+                                    {% if party_ledger_capabilities.can_withdraw and is_maker and ledger.status == 'pending_approval' %}
+                                        <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_withdraw', ledger_id=ledger.id) }}">
+                                            <h4>Withdraw for correction</h4>
+                                            <input type="hidden" name="version" value="{{ ledger.version }}">
+                                            <textarea name="reason" maxlength="1000" required placeholder="Mandatory withdrawal reason"></textarea>
+                                            <button class="accounting-secondary-button" type="submit">Withdraw to draft</button>
+                                        </form>
+                                    {% endif %}
+
+                                    {% if party_ledger_capabilities.can_approve and ledger.status == 'pending_approval' and not is_maker %}
+                                        <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_approve', ledger_id=ledger.id) }}">
+                                            <h4>Approve and activate</h4>
+                                            <input type="hidden" name="version" value="{{ ledger.version }}">
+                                            <textarea name="approval_note" maxlength="1000" placeholder="Optional approval note"></textarea>
+                                            <button class="accounting-primary-button" type="submit">Approve ledger</button>
+                                        </form>
+                                    {% endif %}
+
+                                    {% if party_ledger_capabilities.can_return and ledger.status == 'pending_approval' and not is_maker %}
+                                        <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_return', ledger_id=ledger.id) }}">
+                                            <h4>Return for correction</h4>
+                                            <input type="hidden" name="version" value="{{ ledger.version }}">
+                                            <textarea name="return_reason" maxlength="1000" required placeholder="Mandatory correction reason"></textarea>
+                                            <button class="accounting-secondary-button" type="submit">Return to Accounts</button>
+                                        </form>
+                                    {% endif %}
+
+                                    {% if party_ledger_capabilities.can_deactivate and ledger.status == 'active' %}
+                                        <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_deactivate', ledger_id=ledger.id) }}">
+                                            <h4>Deactivate ledger</h4>
+                                            <input type="hidden" name="version" value="{{ ledger.version }}">
+                                            <textarea name="reason" maxlength="1000" required placeholder="Mandatory deactivation reason"></textarea>
+                                            <button class="accounting-secondary-button" type="submit">Deactivate</button>
+                                        </form>
+                                    {% endif %}
+
+                                    {% if party_ledger_capabilities.can_reactivate and ledger.status == 'inactive' %}
+                                        <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_reactivate', ledger_id=ledger.id) }}">
+                                            <h4>Reactivate ledger</h4>
+                                            <input type="hidden" name="version" value="{{ ledger.version }}">
+                                            <textarea name="reason" maxlength="1000" required placeholder="Mandatory reactivation reason"></textarea>
+                                            <button class="accounting-primary-button" type="submit">Reactivate</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </details>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="accounting-party-empty">
+                No supplier or customer party ledger has been created yet.
+            </div>
+        {% endif %}
+
+        <div class="accounting-party-protection">
+            <strong>Permanent accounting rule:</strong> party-ledger records are never hard deleted, live balances are never stored in the master, and approved ledgers can only be deactivated or reactivated with an audited reason. Future balances will come from voucher lines.
+        </div>
+    {% endif %}
+</section>
+{% endif %}

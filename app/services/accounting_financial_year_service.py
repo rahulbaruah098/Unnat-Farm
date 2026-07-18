@@ -15,6 +15,8 @@ STATUS_DRAFT = "draft"
 STATUS_PENDING_APPROVAL = "pending_approval"
 STATUS_RETURNED = "returned_for_correction"
 STATUS_OPEN = "open"
+STATUS_CLOSED = "closed"
+STATUS_LOCKED = "locked"
 
 EDITABLE_STATUSES = {STATUS_DRAFT, STATUS_RETURNED}
 ACTIVE_STATUSES = {
@@ -22,6 +24,8 @@ ACTIVE_STATUSES = {
     STATUS_PENDING_APPROVAL,
     STATUS_RETURNED,
     STATUS_OPEN,
+    STATUS_CLOSED,
+    STATUS_LOCKED,
 }
 
 
@@ -442,6 +446,11 @@ def _user_name_map(financial_years):
             "returned_by",
             "withdrawn_by",
             "updated_by",
+            "closed_by",
+            "locked_by",
+            "unlocked_by",
+            "reopened_by",
+            "last_control_by",
         ):
             value = _to_object_id(row.get(key))
             if value:
@@ -495,8 +504,22 @@ def serialize_financial_year(financial_year, user_names=None):
         "end_date_display": end_date.strftime("%d %b %Y") if end_date else "",
         "status": status,
         "status_display": status.replace("_", " ").title(),
+        "lifecycle_status": (
+            STATUS_LOCKED
+            if status == STATUS_LOCKED or financial_year.get("is_locked") is True
+            else status
+        ),
+        "lifecycle_status_display": (
+            "Locked"
+            if status == STATUS_LOCKED or financial_year.get("is_locked") is True
+            else status.replace("_", " ").title()
+        ),
         "is_open": status == STATUS_OPEN and financial_year.get("is_open") is True,
-        "is_locked": financial_year.get("is_locked", False) is True,
+        "is_closed": status in {STATUS_CLOSED, STATUS_LOCKED},
+        "is_locked": (
+            status == STATUS_LOCKED
+            or financial_year.get("is_locked", False) is True
+        ),
         "usable_for_posting": (
             status == STATUS_OPEN
             and financial_year.get("is_open") is True
@@ -510,14 +533,32 @@ def serialize_financial_year(financial_year, user_names=None):
         "approved_by_name": user_name("approved_by"),
         "returned_by_name": user_name("returned_by"),
         "withdrawn_by_name": user_name("withdrawn_by"),
+        "closed_by_name": user_name("closed_by"),
+        "locked_by_name": user_name("locked_by"),
+        "unlocked_by_name": user_name("unlocked_by"),
+        "reopened_by_name": user_name("reopened_by"),
+        "last_control_by_name": user_name("last_control_by"),
         "return_reason": financial_year.get("return_reason") or "",
         "withdraw_reason": financial_year.get("withdraw_reason") or "",
+        "close_reason": financial_year.get("close_reason") or "",
+        "lock_reason": financial_year.get("lock_reason") or "",
+        "unlock_reason": financial_year.get("unlock_reason") or "",
+        "reopen_reason": financial_year.get("reopen_reason") or "",
+        "last_control_action": financial_year.get("last_control_action") or "",
+        "last_control_reason": financial_year.get("last_control_reason") or "",
+        "last_control_approval_note": financial_year.get("last_control_approval_note") or "",
+        "last_control_request_id": str(financial_year.get("last_control_request_id") or ""),
         "last_submission_note": financial_year.get("last_submission_note") or "",
         "created_at": financial_year.get("created_at"),
         "updated_at": financial_year.get("updated_at"),
         "submitted_at": financial_year.get("submitted_at"),
         "approved_at": financial_year.get("approved_at"),
         "returned_at": financial_year.get("returned_at"),
+        "closed_at": financial_year.get("closed_at"),
+        "locked_at": financial_year.get("locked_at"),
+        "unlocked_at": financial_year.get("unlocked_at"),
+        "reopened_at": financial_year.get("reopened_at"),
+        "last_control_at": financial_year.get("last_control_at"),
         "workflow_history": financial_year.get("workflow_history") or [],
     }
 
@@ -1080,6 +1121,53 @@ def return_financial_year(
         updated,
         {str(actor["_id"]): actor["resolved_name"]},
     )
+
+
+def assert_financial_year_usable_for_posting(
+    financial_year_id,
+    entity_id=None,
+    transaction_date=None,
+):
+    """Return the Financial Year or raise a clear posting-control error.
+
+    Future purchase, sales, voucher, payment and POS services should call this
+    helper before reserving official numbers or writing voucher lines.
+    """
+    financial_year_object_id = _to_object_id(financial_year_id)
+    if not financial_year_object_id:
+        raise ValueError("Invalid Financial Year.")
+
+    query = {
+        "_id": financial_year_object_id,
+        "is_deleted": {"$ne": True},
+    }
+    if entity_id is not None:
+        entity_object_id = _to_object_id(entity_id)
+        if not entity_object_id:
+            raise ValueError("Invalid Accounting entity.")
+        query["accounting_entity_id"] = entity_object_id
+
+    financial_year = mongo.db.financial_years.find_one(query)
+    if not financial_year:
+        raise ValueError("Financial Year was not found for this Accounting entity.")
+
+    status = str(financial_year.get("status") or "").strip().lower()
+    if status == STATUS_LOCKED or financial_year.get("is_locked") is True:
+        raise ValueError("This Financial Year is locked. Accounting posting is blocked.")
+    if status == STATUS_CLOSED or financial_year.get("is_open") is not True:
+        raise ValueError("This Financial Year is closed. Accounting posting is blocked.")
+    if status != STATUS_OPEN:
+        raise ValueError("This Financial Year is not approved and open for Accounting posting.")
+
+    if transaction_date is not None:
+        target_date = _parse_date(transaction_date, "Transaction date")
+        if not (
+            financial_year.get("start_date") <= target_date
+            <= financial_year.get("end_date")
+        ):
+            raise ValueError("The transaction date is outside the selected Financial Year.")
+
+    return financial_year
 
 
 def get_open_financial_year_for_date(entity_id, transaction_date=None):

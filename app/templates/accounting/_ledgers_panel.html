@@ -1,0 +1,343 @@
+{% if ledger_capabilities.can_view %}
+<style>
+.accounting-ledger-card{
+    padding:clamp(22px, 2vw, 32px);
+    border:1px solid rgba(79,154,106,.22);
+    border-radius:26px;
+    background:rgba(255,255,255,.93);
+    box-shadow:0 18px 42px rgba(23,37,42,.08);
+    scroll-margin-top:calc(var(--header-h) + 18px);
+}
+.accounting-ledger-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    margin-top:20px;
+}
+.accounting-ledger-summary-grid>div{
+    min-height:94px;
+    padding:15px;
+    border:1px solid rgba(79,154,106,.17);
+    border-radius:16px;
+    background:#F8FCF9;
+}
+.accounting-ledger-summary-grid span,
+.accounting-ledger-meta span{
+    display:block;
+    margin-bottom:7px;
+    color:#60716F;
+    font-size:.72rem;
+    font-weight:850;
+    letter-spacing:.055em;
+    text-transform:uppercase;
+}
+.accounting-ledger-summary-grid strong{
+    display:block;
+    color:#17252A;
+    font-size:1.25rem;
+}
+.accounting-ledger-summary-grid small{
+    display:block;
+    margin-top:6px;
+    color:#60716F;
+    line-height:1.4;
+}
+.accounting-ledger-setup{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    margin-top:16px;
+    padding:16px;
+    border:1px solid rgba(79,154,106,.22);
+    border-radius:17px;
+    background:#F0FDF4;
+}
+.accounting-ledger-setup strong{
+    color:#17252A;
+}
+.accounting-ledger-setup p{
+    margin:6px 0 0;
+    color:#52636C;
+    font-size:.84rem;
+    line-height:1.5;
+}
+.accounting-ledger-section{
+    margin-top:20px;
+}
+.accounting-ledger-section-heading{
+    display:flex;
+    align-items:end;
+    justify-content:space-between;
+    gap:14px;
+    margin-bottom:10px;
+}
+.accounting-ledger-section-heading h3{
+    margin:0;
+    color:#17252A;
+    font-size:1rem;
+}
+.accounting-ledger-section-heading p{
+    margin:5px 0 0;
+    color:#60716F;
+    font-size:.78rem;
+}
+.accounting-ledger-section-heading span{
+    color:#2F7548;
+    font-size:.76rem;
+    font-weight:850;
+}
+.accounting-ledger-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+}
+.accounting-ledger-item{
+    min-height:170px;
+    padding:15px;
+    border:1px solid rgba(79,154,106,.19);
+    border-radius:16px;
+    background:#FCFEFC;
+}
+.accounting-ledger-item-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+    padding-bottom:10px;
+    border-bottom:1px solid rgba(79,154,106,.14);
+}
+.accounting-ledger-item-header strong{
+    color:#17252A;
+    line-height:1.3;
+}
+.accounting-ledger-code{
+    flex:0 0 auto;
+    max-width:52%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    padding:4px 7px;
+    border-radius:7px;
+    background:#EAF7EE;
+    color:#2F7548;
+    font-size:.58rem;
+    font-weight:900;
+    letter-spacing:.05em;
+    white-space:nowrap;
+}
+.accounting-ledger-meta{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px 12px;
+    margin-top:11px;
+}
+.accounting-ledger-meta strong{
+    display:block;
+    color:#23342F;
+    font-size:.75rem;
+    line-height:1.35;
+}
+.accounting-ledger-protection{
+    margin:11px 0 0;
+    padding-top:9px;
+    border-top:1px solid rgba(79,154,106,.14);
+    color:#60716F;
+    font-size:.69rem;
+    line-height:1.4;
+}
+.accounting-ledger-protection b{
+    color:#2F7548;
+}
+.accounting-ledger-drift-list{
+    margin:10px 0 0;
+    padding-left:20px;
+    color:#854D0E;
+    line-height:1.5;
+}
+@media(max-width:1040px){
+    .accounting-ledger-summary-grid,
+    .accounting-ledger-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:680px){
+    .accounting-ledger-summary-grid,
+    .accounting-ledger-grid{grid-template-columns:1fr;}
+    .accounting-ledger-setup,
+    .accounting-ledger-section-heading{align-items:stretch;flex-direction:column;}
+    .accounting-ledger-setup form,
+    .accounting-ledger-setup button{width:100%;}
+}
+</style>
+<section class="accounting-ledger-card" id="ledger-masters">
+    <div class="accounting-section-heading">
+        <div>
+            <p class="accounting-eyebrow">Stage 3 · Batch 2</p>
+            <h2>Default AVPL ledger masters</h2>
+            <p class="accounting-section-description">
+                Permanent cash, trade, GST, inventory and settlement-control ledgers mapped to the protected AVPL account-group hierarchy. Live balances are not stored in these master records.
+            </p>
+        </div>
+
+        {% if ledger_overview.health.is_complete %}
+            <span class="accounting-state-pill active">Ledger catalog verified</span>
+        {% elif ledger_overview.health.drifted_count > 0 %}
+            <span class="accounting-state-pill review">Repair required</span>
+        {% else %}
+            <span class="accounting-state-pill pending">Initialization required</span>
+        {% endif %}
+    </div>
+
+    {% if ledger_setup_error %}
+        <div class="accounting-notice danger">{{ ledger_setup_error }}</div>
+    {% elif not accounting_entity %}
+        <div class="accounting-notice info">
+            Initialize the active AVPL Accounting entity before creating default ledger masters.
+        </div>
+    {% else %}
+        <div class="accounting-ledger-summary-grid">
+            <div>
+                <span>Required ledgers</span>
+                <strong>{{ ledger_overview.health.required_count }}</strong>
+                <small>Protected AVPL default catalog</small>
+            </div>
+            <div>
+                <span>Present and active</span>
+                <strong>{{ ledger_overview.active_count }}</strong>
+                <small>{{ ledger_overview.system_count }} protected system record(s)</small>
+            </div>
+            <div>
+                <span>GST controls</span>
+                <strong>{{ ledger_overview.tax_ledger_count }}</strong>
+                <small>Input and output CGST, SGST and IGST</small>
+            </div>
+            <div>
+                <span>Catalog health</span>
+                <strong>{% if ledger_overview.health.is_complete %}Verified{% else %}Attention{% endif %}</strong>
+                <small>{{ ledger_overview.health.missing_count }} missing · {{ ledger_overview.health.drifted_count }} drifted</small>
+            </div>
+        </div>
+
+        {% if ledger_overview.audit_recovery_count > 0 %}
+            <div class="accounting-notice warning compact">
+                <strong>Audit recovery:</strong> {{ ledger_overview.audit_recovery_count }} ledger record(s) require audit-log synchronization.
+            </div>
+        {% endif %}
+
+        {% if ledger_overview.health.missing_count > 0 %}
+            <div class="accounting-notice warning compact">
+                <strong>Missing ledgers:</strong> {{ ledger_overview.health.missing|join(', ') }}
+            </div>
+        {% endif %}
+
+        {% if ledger_overview.health.drifted_count > 0 %}
+            <div class="accounting-notice warning compact">
+                <strong>Protected definition drift detected.</strong>
+                <ul class="accounting-ledger-drift-list">
+                    {% for item in ledger_overview.health.drifted %}
+                        <li>{{ item.name }} — {{ item.changed_fields|join(', ') }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {% if ledger_capabilities.can_bootstrap %}
+            <div class="accounting-ledger-setup">
+                <div>
+                    <strong>Initialize or repair the default ledger catalog</strong>
+                    <p>
+                        The operation is idempotent. It creates only missing AVPL system ledgers and restores recognized protected ledgers to their approved names, group mappings and control metadata. Conflicting custom data is never overwritten automatically.
+                    </p>
+                </div>
+                <form method="post" action="{{ url_for('accounting.ledgers_synchronize') }}">
+                    <button type="submit" class="accounting-primary-button">
+                        {% if ledger_overview.health.is_complete %}Verify and repair ledgers{% else %}Initialize default ledgers{% endif %}
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+
+        {% if ledger_overview.ledgers %}
+            {% for section in ledger_overview.sections %}
+                <div class="accounting-ledger-section">
+                    <div class="accounting-ledger-section-heading">
+                        <div>
+                            <h3>{{ section.label }}</h3>
+                            <p>
+                                {% if section.key == 'cash_and_settlement' %}
+                                    Cash custody and funds-in-transit controls.
+                                {% elif section.key == 'trade_operations' %}
+                                    Purchase, sales and return control ledgers.
+                                {% elif section.key == 'gst_controls' %}
+                                    Input-credit and output-liability tax controls; tax calculation begins in a later stage.
+                                {% elif section.key == 'inventory_control' %}
+                                    Accounting inventory valuation control; stock posting begins later.
+                                {% else %}
+                                    Protected AVPL system ledgers.
+                                {% endif %}
+                            </p>
+                        </div>
+                        <span>{{ section.ledgers|length }} ledger{% if section.ledgers|length != 1 %}s{% endif %}</span>
+                    </div>
+
+                    <div class="accounting-ledger-grid">
+                        {% for ledger in section.ledgers %}
+                            <article class="accounting-ledger-item">
+                                <div class="accounting-ledger-item-header">
+                                    <strong>{{ ledger.name }}</strong>
+                                    <span class="accounting-ledger-code">{{ ledger.ledger_code }}</span>
+                                </div>
+
+                                <div class="accounting-ledger-meta">
+                                    <div>
+                                        <span>Account group</span>
+                                        <strong>{{ ledger.account_group_name or ledger.account_group_system_key }}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Normal balance</span>
+                                        <strong>{{ ledger.normal_balance.title() }}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Ledger type</span>
+                                        <strong>{{ ledger.ledger_type.replace('_', ' ').title() }}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Status</span>
+                                        <strong>{{ ledger.status.title() }}</strong>
+                                    </div>
+                                    {% if ledger.tax_component %}
+                                        <div>
+                                            <span>Tax component</span>
+                                            <strong>{{ ledger.tax_component|upper }}</strong>
+                                        </div>
+                                        <div>
+                                            <span>Tax direction</span>
+                                            <strong>{{ ledger.tax_direction.replace('_', ' ').title() }}</strong>
+                                        </div>
+                                    {% elif ledger.payment_mode %}
+                                        <div>
+                                            <span>Payment mode</span>
+                                            <strong>{{ ledger.payment_mode|upper }}</strong>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <span>Posting policy</span>
+                                        <strong>{{ ledger.posting_policy.replace('_', ' ').title() }}</strong>
+                                    </div>
+                                </div>
+
+                                <p class="accounting-ledger-protection">
+                                    <b>Protected:</b> identity, account-group mapping and deletion controls are locked. Balances will come from future voucher lines, not this master.
+                                </p>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="accounting-empty-financial-years">
+                <strong>No default AVPL ledgers have been initialized.</strong>
+                <p>Super Admin must initialize the protected ledger catalog after confirming the Stage 3 Batch 1 account groups.</p>
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+{% endif %}

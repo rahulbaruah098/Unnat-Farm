@@ -11,7 +11,7 @@ ACCOUNTING_ROLES = frozenset({
 
 # Incremented only when a newly developed Accounting stage introduces new
 # permissions that existing permanent mappings could not previously contain.
-CURRENT_PERMISSION_SCHEMA_VERSION = 2
+CURRENT_PERMISSION_SCHEMA_VERSION = 8
 
 # Only permissions introduced by a later schema are appended to older exact
 # mappings. Previously removed permissions are never silently re-granted.
@@ -34,6 +34,74 @@ PERMISSION_SCHEMA_ADDITIONS = {
             "accounting.settings.view",
         },
     },
+    3: {
+        "avpl_admin": {
+            "accounting.number_series.view",
+            "accounting.number_series.approve",
+            "accounting.number_series.return",
+        },
+        "accounts": {
+            "accounting.number_series.view",
+            "accounting.number_series.create",
+            "accounting.number_series.edit",
+            "accounting.number_series.submit",
+            "accounting.number_series.withdraw",
+        },
+    },
+    4: {
+        "avpl_admin": {
+            "accounting.financial_year.control.view",
+            "accounting.financial_year.control.create",
+            "accounting.financial_year.control.edit",
+            "accounting.financial_year.control.submit",
+            "accounting.financial_year.control.withdraw",
+            "accounting.financial_year.control.cancel",
+        },
+        "accounts": {
+            "accounting.financial_year.control.view",
+        },
+    },
+    5: {
+        "avpl_admin": {
+            "accounting.entity_mapping.view",
+        },
+        "accounts": {
+            "accounting.entity_mapping.view",
+        },
+    },
+    6: {
+        "avpl_admin": {
+            "accounting.account_group.view",
+        },
+        "accounts": {
+            "accounting.account_group.view",
+        },
+    },
+    7: {
+        "avpl_admin": {
+            "accounting.ledger.view",
+        },
+        "accounts": {
+            "accounting.ledger.view",
+        },
+    },
+    8: {
+        "avpl_admin": {
+            "accounting.party_ledger.view",
+            "accounting.party_ledger.approve",
+            "accounting.party_ledger.return",
+            "accounting.party_ledger.deactivate",
+            "accounting.party_ledger.reactivate",
+        },
+        "accounts": {
+            "accounting.party_ledger.view",
+            "accounting.party_ledger.create",
+            "accounting.party_ledger.edit",
+            "accounting.party_ledger.submit",
+            "accounting.party_ledger.withdraw",
+            "accounting.party_ledger.cancel",
+        },
+    },
 }
 
 ROLE_DEFAULT_PERMISSIONS = {
@@ -42,11 +110,25 @@ ROLE_DEFAULT_PERMISSIONS = {
         "accounting.access",
         "accounting.dashboard.view",
         "accounting.entity.view",
+        "accounting.entity_mapping.view",
+        "accounting.account_group.view",
+        "accounting.ledger.view",
+        "accounting.party_ledger.view",
+        "accounting.party_ledger.approve",
+        "accounting.party_ledger.return",
+        "accounting.party_ledger.deactivate",
+        "accounting.party_ledger.reactivate",
         "accounting.financial_year.view",
         "accounting.financial_year.create",
         "accounting.financial_year.edit",
         "accounting.financial_year.submit",
         "accounting.financial_year.withdraw",
+        "accounting.financial_year.control.view",
+        "accounting.financial_year.control.create",
+        "accounting.financial_year.control.edit",
+        "accounting.financial_year.control.submit",
+        "accounting.financial_year.control.withdraw",
+        "accounting.financial_year.control.cancel",
         "accounting.user_access.view",
         "accounting.user_access.manage_accounts",
         "accounting.entity_settings.view",
@@ -59,15 +141,33 @@ ROLE_DEFAULT_PERMISSIONS = {
         "accounting.settings.edit",
         "accounting.settings.submit",
         "accounting.settings.withdraw",
+        "accounting.number_series.view",
+        "accounting.number_series.approve",
+        "accounting.number_series.return",
     },
     "accounts": {
         "accounting.access",
         "accounting.dashboard.view",
         "accounting.entity.view",
+        "accounting.entity_mapping.view",
+        "accounting.account_group.view",
+        "accounting.ledger.view",
+        "accounting.party_ledger.view",
+        "accounting.party_ledger.create",
+        "accounting.party_ledger.edit",
+        "accounting.party_ledger.submit",
+        "accounting.party_ledger.withdraw",
+        "accounting.party_ledger.cancel",
         "accounting.financial_year.view",
         "accounting.financial_year.use",
+        "accounting.financial_year.control.view",
         "accounting.entity_settings.view",
         "accounting.settings.view",
+        "accounting.number_series.view",
+        "accounting.number_series.create",
+        "accounting.number_series.edit",
+        "accounting.number_series.submit",
+        "accounting.number_series.withdraw",
     },
 }
 
@@ -91,6 +191,86 @@ PERMISSION_LABELS = {
         "label": "View assigned entity",
         "description": "Allows the user to view Accounting entities assigned to them.",
         "group": "Core access",
+    },
+    "accounting.entity_mapping.view": {
+        "label": "View future entity hierarchy",
+        "description": "Allows visibility of pre-mapped Centre, Mitra and Farmer Accounting hierarchy records.",
+        "group": "Entity mapping",
+    },
+    "accounting.entity_mapping.sync": {
+        "label": "Synchronize future entity hierarchy",
+        "description": "Allows Super Admin to create or refresh disabled Centre, Mitra and Farmer Accounting mappings.",
+        "group": "Entity mapping",
+    },
+    "accounting.account_group.view": {
+        "label": "View account groups",
+        "description": "Allows visibility of AVPL protected account-group masters and hierarchy health.",
+        "group": "Account groups",
+    },
+    "accounting.account_group.bootstrap": {
+        "label": "Initialize protected account groups",
+        "description": "Allows Super Admin to seed or repair the permanent AVPL system account groups.",
+        "group": "Account groups",
+    },
+    "accounting.ledger.view": {
+        "label": "View ledger masters",
+        "description": "Allows visibility of protected AVPL default ledgers, group assignments and master health.",
+        "group": "Ledger masters",
+    },
+    "accounting.ledger.bootstrap": {
+        "label": "Initialize default AVPL ledgers",
+        "description": "Allows Super Admin to seed or repair the protected AVPL default ledger catalog.",
+        "group": "Ledger masters",
+    },
+    "accounting.party_ledger.view": {
+        "label": "View supplier and party ledgers",
+        "description": "Allows visibility of AVPL supplier and customer party-ledger masters and their workflow status.",
+        "group": "Party ledgers",
+    },
+    "accounting.party_ledger.create": {
+        "label": "Create party-ledger draft",
+        "description": "Allows Accounts to create supplier and customer party-ledger drafts.",
+        "group": "Party ledgers",
+    },
+    "accounting.party_ledger.edit": {
+        "label": "Edit party-ledger draft",
+        "description": "Allows the original Accounts maker to edit draft or returned party ledgers.",
+        "group": "Party ledgers",
+    },
+    "accounting.party_ledger.submit": {
+        "label": "Submit party ledger",
+        "description": "Allows Accounts to submit or resubmit a party ledger for maker-checker approval.",
+        "group": "Party ledgers",
+    },
+    "accounting.party_ledger.withdraw": {
+        "label": "Withdraw pending party ledger",
+        "description": "Allows the original maker to withdraw a pending party ledger for correction.",
+        "group": "Party ledgers",
+    },
+    "accounting.party_ledger.cancel": {
+        "label": "Cancel party-ledger draft",
+        "description": "Allows the original maker to cancel a draft or returned party ledger without hard deletion.",
+        "group": "Party ledgers",
+    },
+    "accounting.party_ledger.approve": {
+        "label": "Approve party ledger",
+        "description": "Allows AVPL Admin to approve and activate a submitted supplier or customer ledger.",
+        "group": "Party ledgers",
+    },
+    "accounting.party_ledger.return": {
+        "label": "Return party ledger",
+        "description": "Allows AVPL Admin to return a submitted party ledger with a correction reason.",
+        "group": "Party ledgers",
+    },
+    "accounting.party_ledger.deactivate": {
+        "label": "Deactivate party ledger",
+        "description": "Allows AVPL Admin to deactivate an active party ledger while preserving all history.",
+        "group": "Party ledgers",
+    },
+    "accounting.party_ledger.reactivate": {
+        "label": "Reactivate party ledger",
+        "description": "Allows AVPL Admin to reactivate a previously deactivated party ledger with a reason.",
+        "group": "Party ledgers",
     },
     "accounting.financial_year.view": {
         "label": "View Financial Years",
@@ -121,6 +301,46 @@ PERMISSION_LABELS = {
         "label": "Use open Financial Year",
         "description": "Allows future Accounting postings in approved, open years.",
         "group": "Financial Year",
+    },
+    "accounting.financial_year.control.view": {
+        "label": "View Financial Year lifecycle controls",
+        "description": "Allows visibility of close, lock, unlock and reopen requests and history.",
+        "group": "Financial Year lifecycle",
+    },
+    "accounting.financial_year.control.create": {
+        "label": "Create lifecycle request",
+        "description": "Allows AVPL Admin to create close, lock, unlock or reopen request drafts.",
+        "group": "Financial Year lifecycle",
+    },
+    "accounting.financial_year.control.edit": {
+        "label": "Edit lifecycle request",
+        "description": "Allows the maker to edit draft or returned lifecycle requests.",
+        "group": "Financial Year lifecycle",
+    },
+    "accounting.financial_year.control.submit": {
+        "label": "Submit lifecycle request",
+        "description": "Allows the maker to submit or resubmit lifecycle requests to Super Admin.",
+        "group": "Financial Year lifecycle",
+    },
+    "accounting.financial_year.control.withdraw": {
+        "label": "Withdraw pending lifecycle request",
+        "description": "Allows the maker to withdraw a pending lifecycle request for correction.",
+        "group": "Financial Year lifecycle",
+    },
+    "accounting.financial_year.control.cancel": {
+        "label": "Cancel lifecycle request",
+        "description": "Allows the maker to cancel a draft or returned request without deleting history.",
+        "group": "Financial Year lifecycle",
+    },
+    "accounting.financial_year.control.approve": {
+        "label": "Approve Financial Year lifecycle request",
+        "description": "Allows Super Admin to apply an approved close, lock, unlock or reopen transition.",
+        "group": "Financial Year lifecycle",
+    },
+    "accounting.financial_year.control.return": {
+        "label": "Send lifecycle request back",
+        "description": "Allows Super Admin to return a pending lifecycle request with a correction reason.",
+        "group": "Financial Year lifecycle",
     },
     "accounting.user_access.view": {
         "label": "View Accounting user access",
@@ -181,6 +401,41 @@ PERMISSION_LABELS = {
         "label": "Withdraw Accounting settings",
         "description": "Allows the maker to withdraw pending Accounting settings.",
         "group": "Accounting settings",
+    },
+    "accounting.number_series.view": {
+        "label": "View invoice and voucher series",
+        "description": "Allows visibility of entity- and Financial-Year-wise document numbering.",
+        "group": "Number series",
+    },
+    "accounting.number_series.create": {
+        "label": "Create number-series drafts",
+        "description": "Allows Accounts to create missing invoice and voucher series drafts.",
+        "group": "Number series",
+    },
+    "accounting.number_series.edit": {
+        "label": "Edit number-series drafts",
+        "description": "Allows Accounts to edit draft or returned numbering revisions.",
+        "group": "Number series",
+    },
+    "accounting.number_series.submit": {
+        "label": "Submit number series",
+        "description": "Allows Accounts to submit or resubmit numbering revisions to AVPL Admin.",
+        "group": "Number series",
+    },
+    "accounting.number_series.withdraw": {
+        "label": "Withdraw pending number series",
+        "description": "Allows the Accounts maker to withdraw a pending series for correction.",
+        "group": "Number series",
+    },
+    "accounting.number_series.approve": {
+        "label": "Approve and activate number series",
+        "description": "Allows AVPL Admin to approve a submitted series and make it available to posting services.",
+        "group": "Number series",
+    },
+    "accounting.number_series.return": {
+        "label": "Send number series back",
+        "description": "Allows AVPL Admin to return a submitted series with a correction reason.",
+        "group": "Number series",
     },
 }
 

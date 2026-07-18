@@ -1,0 +1,268 @@
+{% if financial_year_control_capabilities.can_view %}
+    {% set lifecycle = fy.control or {} %}
+    {% set active_request = lifecycle.active_request %}
+
+    <section class="accounting-fy-lifecycle" aria-label="Financial Year lifecycle controls">
+        <div class="accounting-fy-lifecycle-heading">
+            <div>
+                <p class="accounting-eyebrow">Stage 2 · Batch 7</p>
+                <h4>Close, lock, unlock and reopen</h4>
+                <p>
+                    AVPL Admin raises a controlled request. Super Admin either
+                    approves the transition or sends it back for correction.
+                </p>
+            </div>
+            <span class="accounting-status-badge status-{{ fy.lifecycle_status }}">
+                {{ fy.lifecycle_status_display }}
+            </span>
+        </div>
+
+        <div class="accounting-fy-lifecycle-summary">
+            <div>
+                <span>Current state</span>
+                <strong>{{ fy.lifecycle_status_display }}</strong>
+            </div>
+            <div>
+                <span>Posting</span>
+                <strong>{% if fy.usable_for_posting %}Allowed{% else %}Blocked{% endif %}</strong>
+            </div>
+            <div>
+                <span>Last control</span>
+                <strong>
+                    {% if fy.last_control_action %}
+                        {{ fy.last_control_action.replace('_', ' ').title() }}
+                    {% else %}
+                        Not performed
+                    {% endif %}
+                </strong>
+            </div>
+            <div>
+                <span>Controlled by</span>
+                <strong>{{ fy.last_control_by_name or '—' }}</strong>
+            </div>
+        </div>
+
+        {% if fy.last_control_reason %}
+            <div class="accounting-notice info compact">
+                <strong>Last approved reason:</strong> {{ fy.last_control_reason }}
+                {% if fy.last_control_approval_note %}
+                    <br><strong>Approval note:</strong> {{ fy.last_control_approval_note }}
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if active_request %}
+            {% set is_request_creator = active_request.created_by == current_user_id %}
+            <article class="accounting-fy-control-request status-{{ active_request.status }}">
+                <div class="accounting-fy-control-request-header">
+                    <div>
+                        <span class="accounting-number-type-mark">
+                            {{ active_request.request_short_label[:3]|upper }}
+                        </span>
+                        <div>
+                            <strong>{{ active_request.request_label }}</strong>
+                            <p>{{ active_request.request_description }}</p>
+                        </div>
+                    </div>
+                    <span class="accounting-status-badge status-{{ active_request.status }}">
+                        {{ active_request.status_display }}
+                    </span>
+                </div>
+
+                <div class="accounting-fy-control-meta">
+                    <div>
+                        <span>Maker</span>
+                        <strong>{{ active_request.created_by_name or 'AVPL Admin' }}</strong>
+                    </div>
+                    <div>
+                        <span>Revision</span>
+                        <strong>{{ active_request.revision_number }}</strong>
+                    </div>
+                    <div>
+                        <span>Transition</span>
+                        <strong>{{ active_request.source_status.title() }} → {{ active_request.target_status.title() }}</strong>
+                    </div>
+                    <div>
+                        <span>Business reason</span>
+                        <strong>{{ active_request.reason }}</strong>
+                    </div>
+                </div>
+
+                {% if active_request.return_reason %}
+                    <div class="accounting-notice warning compact">
+                        <strong>Correction requested:</strong> {{ active_request.return_reason }}
+                    </div>
+                {% endif %}
+
+                {% if active_request.apply_recovery_required %}
+                    <div class="accounting-notice danger compact">
+                        The Financial Year transition needs request-finalization recovery.
+                        Super Admin should approve this same request again after refreshing.
+                    </div>
+                {% endif %}
+
+                {% if session.get('role') == 'avpl_admin' and is_request_creator and active_request.status in ['draft', 'returned_for_correction'] %}
+                    <div class="accounting-action-grid">
+                        {% if financial_year_control_capabilities.can_edit %}
+                            <form method="post"
+                                  action="{{ url_for('accounting.financial_year_control_edit', control_request_id=active_request.id) }}"
+                                  class="accounting-action-form">
+                                <input type="hidden" name="version" value="{{ active_request.version }}">
+                                <strong>Edit request</strong>
+                                <label>
+                                    <span>Business reason</span>
+                                    <textarea name="reason" rows="3" required>{{ active_request.reason }}</textarea>
+                                </label>
+                                {% if active_request.status == 'returned_for_correction' %}
+                                    <label>
+                                        <span>Correction response</span>
+                                        <textarea name="correction_response" rows="3" required placeholder="Explain how the correction was completed">{{ active_request.correction_response }}</textarea>
+                                    </label>
+                                {% endif %}
+                                <button type="submit" class="accounting-secondary-button">Save request</button>
+                            </form>
+                        {% endif %}
+
+                        {% if financial_year_control_capabilities.can_submit %}
+                            <form method="post"
+                                  action="{{ url_for('accounting.financial_year_control_submit', control_request_id=active_request.id) }}"
+                                  class="accounting-action-form highlighted">
+                                <input type="hidden" name="version" value="{{ active_request.version }}">
+                                <strong>
+                                    {% if active_request.status == 'returned_for_correction' %}
+                                        Resubmit corrected request
+                                    {% else %}
+                                        Submit to Super Admin
+                                    {% endif %}
+                                </strong>
+                                <label>
+                                    <span>Submission note</span>
+                                    <textarea name="submission_note" rows="3" placeholder="Optional review note"></textarea>
+                                </label>
+                                <button type="submit" class="accounting-primary-button">
+                                    {% if active_request.status == 'returned_for_correction' %}Resubmit{% else %}Submit request{% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                    {% if financial_year_control_capabilities.can_cancel %}
+                        <form method="post"
+                              action="{{ url_for('accounting.financial_year_control_cancel', control_request_id=active_request.id) }}"
+                              class="accounting-action-form single danger-zone">
+                            <input type="hidden" name="version" value="{{ active_request.version }}">
+                            <strong>Cancel this request without deleting history</strong>
+                            <label>
+                                <span>Mandatory cancellation reason</span>
+                                <textarea name="reason" rows="2" required placeholder="Why is this lifecycle request no longer required?"></textarea>
+                            </label>
+                            <button type="submit" class="accounting-danger-button">Cancel request</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+
+                {% if session.get('role') == 'avpl_admin' and is_request_creator and active_request.status == 'pending_approval' and financial_year_control_capabilities.can_withdraw %}
+                    <form method="post"
+                          action="{{ url_for('accounting.financial_year_control_withdraw', control_request_id=active_request.id) }}"
+                          class="accounting-action-form single">
+                        <input type="hidden" name="version" value="{{ active_request.version }}">
+                        <strong>Withdraw for maker correction</strong>
+                        <label>
+                            <span>Mandatory withdrawal reason</span>
+                            <textarea name="reason" rows="2" required placeholder="Why must this request be corrected before review?"></textarea>
+                        </label>
+                        <button type="submit" class="accounting-secondary-button">Withdraw to draft</button>
+                    </form>
+                {% endif %}
+
+                {% if session.get('role') == 'super_admin' and active_request.status == 'pending_approval' %}
+                    <div class="accounting-action-grid reviewer">
+                        {% if financial_year_control_capabilities.can_approve %}
+                            <form method="post"
+                                  action="{{ url_for('accounting.financial_year_control_approve', control_request_id=active_request.id) }}"
+                                  class="accounting-action-form highlighted">
+                                <input type="hidden" name="version" value="{{ active_request.version }}">
+                                <strong>Approve {{ active_request.request_short_label|lower }}</strong>
+                                <p>
+                                    This will change {{ fy.display_name }} from
+                                    {{ active_request.source_status }} to {{ active_request.target_status }}.
+                                </p>
+                                <label>
+                                    <span>Approval note</span>
+                                    <textarea name="approval_note" rows="2" placeholder="Optional checker note"></textarea>
+                                </label>
+                                <button type="submit" class="accounting-primary-button">
+                                    Approve and apply
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        {% if financial_year_control_capabilities.can_return %}
+                            <form method="post"
+                                  action="{{ url_for('accounting.financial_year_control_return', control_request_id=active_request.id) }}"
+                                  class="accounting-action-form danger-zone">
+                                <input type="hidden" name="version" value="{{ active_request.version }}">
+                                <strong>Send back for correction</strong>
+                                <label>
+                                    <span>Mandatory correction reason</span>
+                                    <textarea name="reason" rows="3" required placeholder="Clearly explain what AVPL Admin must correct"></textarea>
+                                </label>
+                                <button type="submit" class="accounting-danger-button">Send back</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </article>
+        {% elif session.get('role') == 'avpl_admin' and financial_year_control_capabilities.can_create and lifecycle.allowed_types %}
+            <div class="accounting-fy-control-options">
+                {% for option in lifecycle.allowed_types %}
+                    <form method="post"
+                          action="{{ url_for('accounting.financial_year_control_create', financial_year_id=fy.id) }}"
+                          class="accounting-fy-control-option">
+                        <input type="hidden" name="request_type" value="{{ option.code }}">
+                        <div>
+                            <strong>{{ option.label }}</strong>
+                            <p>{{ option.description }}</p>
+                        </div>
+
+                        {% for warning in option.warnings %}
+                            <div class="accounting-notice warning compact">{{ warning }}</div>
+                        {% endfor %}
+                        {% for blocker in option.blockers %}
+                            <div class="accounting-notice danger compact">{{ blocker }}</div>
+                        {% endfor %}
+
+                        <label>
+                            <span>Mandatory business reason</span>
+                            <textarea name="reason" rows="3" required minlength="8" placeholder="Explain why this Financial Year action is required"></textarea>
+                        </label>
+                        <button type="submit" class="accounting-secondary-button">
+                            Create {{ option.short_label|lower }} request draft
+                        </button>
+                    </form>
+                {% endfor %}
+            </div>
+        {% elif not active_request %}
+            <div class="accounting-notice info compact">
+                No lifecycle request is currently active for this Financial Year.
+            </div>
+        {% endif %}
+
+        {% if lifecycle.history %}
+            <details class="accounting-history accounting-fy-control-history">
+                <summary>Lifecycle request history ({{ lifecycle.history|length }})</summary>
+                <div class="accounting-history-list">
+                    {% for item in lifecycle.history %}
+                        <div>
+                            <strong>{{ item.request_label }} — {{ item.status_display }}</strong>
+                            <span>{{ item.created_by_name or 'AVPL Admin' }}</span>
+                            {% if item.approved_at %}<small>Approved {{ item.approved_at.strftime('%d %b %Y, %I:%M %p') }}</small>{% endif %}
+                            {% if item.reason %}<p>Reason: {{ item.reason }}</p>{% endif %}
+                            {% if item.cancel_reason %}<p>Cancellation: {{ item.cancel_reason }}</p>{% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </details>
+        {% endif %}
+    </section>
+{% endif %}

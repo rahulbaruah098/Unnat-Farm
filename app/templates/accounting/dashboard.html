@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <style>
+
     .accounting-shell{
     width:100%;
     max-width:1600px;
@@ -1361,6 +1362,904 @@
     }
 }
 
+/* --------------------------------------------------------------------------
+   Stage 2 Batch 6: invoice and voucher number-series foundation
+   -------------------------------------------------------------------------- */
+.accounting-number-series-card{
+    width:100%;
+    padding:clamp(18px, 1.7vw, 28px);
+    border:1px solid rgba(116,171,134,.30);
+    border-radius:26px;
+    background:rgba(255,255,255,.90);
+    box-shadow:0 20px 48px rgba(31,82,48,.08);
+}
+
+.accounting-number-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+    margin:18px 0;
+}
+
+.accounting-number-summary-grid > div{
+    min-width:0;
+    padding:15px;
+    border:1px solid rgba(116,171,134,.25);
+    border-radius:16px;
+    background:#F7FCF8;
+}
+
+.accounting-number-summary-grid span,
+.accounting-number-active-panel span,
+.accounting-number-working-summary span,
+.accounting-number-fy-heading span,
+.accounting-number-initialize label > span,
+.accounting-number-form-grid label > span,
+.accounting-number-preview-row span{
+    display:block;
+    margin-bottom:5px;
+    color:#61706D;
+    font-size:.72rem;
+    font-weight:800;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+}
+
+.accounting-number-summary-grid strong{
+    display:block;
+    color:#17252A;
+    font-size:1.35rem;
+}
+
+.accounting-number-summary-grid small{
+    display:block;
+    margin-top:4px;
+    color:#687875;
+    line-height:1.4;
+}
+
+.accounting-number-flow{
+    display:grid;
+    grid-template-columns:repeat(5, minmax(0,1fr));
+    gap:10px;
+    margin:16px 0;
+}
+
+.accounting-number-flow > div{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+    padding:12px;
+    border:1px solid rgba(116,171,134,.26);
+    border-radius:15px;
+    background:#FBFEFC;
+}
+
+.accounting-number-flow span{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:28px;
+    height:28px;
+    flex:0 0 auto;
+    border-radius:10px;
+    background:#DDF3E4;
+    color:#24643A;
+    font-weight:900;
+}
+
+.accounting-number-flow strong{
+    color:#263733;
+    font-size:.84rem;
+    line-height:1.35;
+}
+
+.accounting-number-initialize{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:18px;
+    margin:18px 0 22px;
+    padding:16px;
+    border:1px dashed rgba(56,132,82,.42);
+    border-radius:18px;
+    background:#F0FBF3;
+}
+
+.accounting-number-initialize > div{
+    min-width:0;
+}
+
+.accounting-number-initialize strong{
+    color:#1D3626;
+}
+
+.accounting-number-initialize p{
+    margin:5px 0 0;
+    color:#52645E;
+    line-height:1.45;
+}
+
+.accounting-number-initialize code{
+    padding:2px 6px;
+    border-radius:7px;
+    background:rgba(255,255,255,.82);
+    color:#1D6A3B;
+}
+
+.accounting-number-initialize form{
+    display:flex;
+    align-items:flex-end;
+    gap:10px;
+    flex:0 0 auto;
+}
+
+.accounting-number-initialize select,
+.accounting-number-edit-form input,
+.accounting-number-edit-form select,
+.accounting-number-edit-form textarea,
+.accounting-number-actions input{
+    width:100%;
+    min-height:42px;
+    padding:10px 12px;
+    border:1px solid rgba(116,171,134,.38);
+    border-radius:11px;
+    background:#fff;
+    color:#23342F;
+    font:inherit;
+}
+
+.accounting-number-fy-block{
+    margin-top:20px;
+    padding:16px;
+    border:1px solid rgba(116,171,134,.26);
+    border-radius:20px;
+    background:#F9FDFA;
+}
+
+.accounting-number-fy-heading,
+.accounting-number-category-heading,
+.accounting-number-item-heading,
+.accounting-number-preview-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+}
+
+.accounting-number-fy-heading{
+    padding-bottom:12px;
+    border-bottom:1px solid rgba(116,171,134,.22);
+}
+
+.accounting-number-fy-heading h3,
+.accounting-number-category-heading h4{
+    margin:0;
+    color:#17252A;
+}
+
+.accounting-number-fy-heading small,
+.accounting-number-category-heading span{
+    color:#62726E;
+    font-weight:700;
+}
+
+.accounting-number-category{
+    margin-top:18px;
+}
+
+.accounting-number-category-heading{
+    margin-bottom:10px;
+}
+
+.accounting-number-series-list{
+    display:grid;
+    gap:12px;
+}
+
+.accounting-number-series-item{
+    padding:15px;
+    border:1px solid rgba(116,171,134,.28);
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 8px 20px rgba(31,82,48,.04);
+}
+
+.accounting-number-item-heading{
+    align-items:flex-start;
+}
+
+.accounting-number-item-heading > div:nth-child(2){
+    flex:1 1 auto;
+    min-width:0;
+}
+
+.accounting-number-item-heading strong{
+    color:#17252A;
+}
+
+.accounting-number-item-heading p{
+    margin:4px 0 0;
+    color:#60706C;
+    font-size:.88rem;
+    line-height:1.4;
+}
+
+.accounting-number-type-mark{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:46px;
+    height:42px;
+    flex:0 0 auto;
+    border-radius:13px;
+    background:#E2F5E8;
+    color:#277043;
+    font-size:.78rem;
+    font-weight:900;
+    letter-spacing:.03em;
+}
+
+.accounting-number-item-statuses{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:7px;
+    flex-wrap:wrap;
+}
+
+.accounting-number-active-panel,
+.accounting-number-working-summary{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:10px;
+    margin-top:14px;
+    padding:12px;
+    border-radius:15px;
+    background:#F4FBF6;
+}
+
+.accounting-number-active-panel > div,
+.accounting-number-working-summary > div{
+    min-width:0;
+}
+
+.accounting-number-active-panel strong,
+.accounting-number-working-summary strong{
+    display:block;
+    overflow-wrap:anywhere;
+    color:#20332A;
+    font-size:.9rem;
+}
+
+.accounting-number-active-panel small,
+.accounting-number-working-summary small{
+    display:block;
+    margin-top:3px;
+    color:#687875;
+    line-height:1.35;
+}
+
+.accounting-number-edit-form{
+    margin-top:14px;
+    padding:13px;
+    border:1px solid rgba(116,171,134,.25);
+    border-radius:15px;
+    background:#FCFEFC;
+}
+
+.accounting-number-form-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr 1fr;
+    gap:10px;
+}
+
+.accounting-number-form-grid label{
+    min-width:0;
+}
+
+.accounting-number-form-grid label.wide{
+    grid-column:span 2;
+}
+
+.accounting-number-form-grid small{
+    display:block;
+    margin-top:4px;
+    color:#6D7A77;
+    font-size:.76rem;
+}
+
+.accounting-number-preview-row{
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid rgba(116,171,134,.20);
+}
+
+.accounting-number-preview-row strong{
+    color:#1E6539;
+    overflow-wrap:anywhere;
+}
+
+.accounting-number-actions{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
+    margin-top:12px;
+}
+
+.accounting-number-actions form{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+}
+
+.accounting-number-actions input{
+    min-width:0;
+}
+
+.accounting-number-actions button{
+    flex:0 0 auto;
+}
+
+.accounting-number-revision-form,
+.accounting-number-missing{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:12px;
+    margin-top:12px;
+}
+
+.accounting-number-missing{
+    align-items:flex-start;
+    justify-content:flex-start;
+    padding:12px;
+    border-radius:14px;
+    background:#FAFCFA;
+}
+
+.accounting-number-missing p{
+    margin:0;
+    color:#60706C;
+}
+
+.accounting-number-history{
+    margin-top:12px;
+}
+
+@media (max-width:1150px){
+    .accounting-number-summary-grid{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+    }
+
+    .accounting-number-flow{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+    }
+
+    .accounting-number-active-panel,
+    .accounting-number-working-summary{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+    }
+
+    .accounting-number-form-grid{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+    }
+}
+
+@media (max-width:760px){
+    .accounting-number-summary-grid,
+    .accounting-number-flow,
+    .accounting-number-active-panel,
+    .accounting-number-working-summary,
+    .accounting-number-form-grid,
+    .accounting-number-actions{
+        grid-template-columns:1fr;
+    }
+
+    .accounting-number-form-grid label.wide{
+        grid-column:auto;
+    }
+
+    .accounting-number-initialize,
+    .accounting-number-initialize form,
+    .accounting-number-item-heading,
+    .accounting-number-preview-row,
+    .accounting-number-actions form{
+        align-items:stretch;
+        flex-direction:column;
+    }
+
+    .accounting-number-item-statuses{
+        justify-content:flex-start;
+    }
+
+    .accounting-number-actions button,
+    .accounting-number-initialize button{
+        width:100%;
+    }
+}
+
+.accounting-state-pill.danger{
+    color:#9B2C2C;
+    background:#FDECEC;
+    border-color:#F3C1C1;
+}
+
+/* --------------------------------------------------------------------------
+   Stage 2 Batch 7: Financial Year lifecycle controls
+   -------------------------------------------------------------------------- */
+
+.status-closed{
+    color:#92400E;
+    background:#FEF3C7;
+}
+
+.status-locked{
+    color:#991B1B;
+    background:#FEE2E2;
+}
+
+.status-approved{
+    color:#166534;
+    background:#DCFCE7;
+}
+
+.status-cancelled{
+    color:#475569;
+    background:#E2E8F0;
+}
+
+.accounting-fy-lifecycle{
+    margin-top:18px;
+    padding:17px;
+    border:1px solid rgba(79,154,106,.22);
+    border-radius:18px;
+    background:linear-gradient(180deg,#F9FDF9,#F2FAF4);
+}
+
+.accounting-fy-lifecycle-heading{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:18px;
+}
+
+.accounting-fy-lifecycle-heading h4{
+    margin:0;
+    color:#17252A;
+    font-size:1.08rem;
+}
+
+.accounting-fy-lifecycle-heading p:not(.accounting-eyebrow){
+    max-width:760px;
+    margin:5px 0 0;
+    color:#60716F;
+    line-height:1.5;
+}
+
+.accounting-fy-lifecycle-summary,
+.accounting-fy-control-meta{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-top:14px;
+}
+
+.accounting-fy-lifecycle-summary > div,
+.accounting-fy-control-meta > div{
+    min-width:0;
+    padding:12px;
+    border:1px solid rgba(79,154,106,.13);
+    border-radius:14px;
+    background:#fff;
+}
+
+.accounting-fy-lifecycle-summary span,
+.accounting-fy-control-meta span{
+    display:block;
+    margin-bottom:5px;
+    color:#667773;
+    font-size:.7rem;
+    font-weight:900;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+
+.accounting-fy-lifecycle-summary strong,
+.accounting-fy-control-meta strong{
+    display:block;
+    color:#17252A;
+    font-size:.88rem;
+    line-height:1.38;
+    overflow-wrap:anywhere;
+}
+
+.accounting-fy-control-request{
+    margin-top:15px;
+    padding:15px;
+    border:1px solid rgba(79,154,106,.2);
+    border-radius:17px;
+    background:#fff;
+}
+
+.accounting-fy-control-request.status-pending_approval{
+    border-color:#BFDBFE;
+    background:#F8FBFF;
+}
+
+.accounting-fy-control-request.status-returned_for_correction{
+    border-color:#FDE68A;
+    background:#FFFDF5;
+}
+
+.accounting-fy-control-request-header,
+.accounting-fy-control-request-header > div{
+    display:flex;
+    align-items:flex-start;
+    gap:11px;
+}
+
+.accounting-fy-control-request-header{
+    justify-content:space-between;
+}
+
+.accounting-fy-control-request-header > div:nth-child(1){
+    flex:1 1 auto;
+    min-width:0;
+}
+
+.accounting-fy-control-request-header strong{
+    color:#17252A;
+}
+
+.accounting-fy-control-request-header p{
+    margin:4px 0 0;
+    color:#60716F;
+    line-height:1.45;
+}
+
+.accounting-fy-control-options{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+    margin-top:15px;
+}
+
+.accounting-fy-control-option{
+    display:grid;
+    gap:11px;
+    min-width:0;
+    padding:15px;
+    border:1px solid rgba(79,154,106,.2);
+    border-radius:16px;
+    background:#fff;
+}
+
+.accounting-fy-control-option > div:first-child strong{
+    color:#17252A;
+}
+
+.accounting-fy-control-option > div:first-child p{
+    margin:5px 0 0;
+    color:#60716F;
+    line-height:1.45;
+}
+
+.accounting-fy-control-option label{
+    display:grid;
+    gap:7px;
+}
+
+.accounting-fy-control-option label > span{
+    color:#40515A;
+    font-size:.82rem;
+    font-weight:800;
+}
+
+.accounting-fy-control-option textarea{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid #C7E2D0;
+    border-radius:12px;
+    color:#17252A;
+    background:#fff;
+    font:inherit;
+    resize:vertical;
+    outline:none;
+}
+
+.accounting-fy-control-option textarea:focus{
+    border-color:#4F9A6A;
+    box-shadow:0 0 0 3px rgba(79,154,106,.12);
+}
+
+.accounting-fy-control-option button{
+    justify-self:start;
+}
+
+.accounting-fy-control-history{
+    margin-top:15px;
+}
+
+@media (max-width:1050px){
+    .accounting-fy-lifecycle-summary,
+    .accounting-fy-control-meta{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+}
+
+@media (max-width:760px){
+    .accounting-fy-lifecycle-heading,
+    .accounting-fy-control-request-header{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .accounting-fy-lifecycle-summary,
+    .accounting-fy-control-meta,
+    .accounting-fy-control-options{
+        grid-template-columns:1fr;
+    }
+
+    .accounting-fy-control-option button{
+        width:100%;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Stage 2 Batch 8: disabled Centre, Mitra and Farmer hierarchy pre-mapping
+   -------------------------------------------------------------------------- */
+.accounting-entity-mapping-card{
+    width:100%;
+    padding:clamp(18px, 1.7vw, 28px);
+    border:1px solid rgba(116,171,134,.30);
+    border-radius:26px;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 20px 48px rgba(31,82,48,.08);
+    scroll-margin-top:calc(var(--header-h) + 18px);
+}
+
+.accounting-mapping-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    margin-top:18px;
+}
+
+.accounting-mapping-summary-grid > div{
+    min-width:0;
+    min-height:98px;
+    padding:15px;
+    border:1px solid rgba(116,171,134,.24);
+    border-radius:16px;
+    background:#F7FCF8;
+}
+
+.accounting-mapping-summary-grid span,
+.accounting-mapping-last-run span,
+.accounting-mapping-centre-metrics span{
+    display:block;
+    margin-bottom:6px;
+    color:#667773;
+    font-size:.72rem;
+    font-weight:900;
+    letter-spacing:.055em;
+    text-transform:uppercase;
+}
+
+.accounting-mapping-summary-grid strong{
+    display:block;
+    color:#17252A;
+    font-size:1.24rem;
+    line-height:1.3;
+}
+
+.accounting-mapping-summary-grid small,
+.accounting-mapping-last-run small{
+    display:block;
+    margin-top:5px;
+    color:#687875;
+    line-height:1.4;
+}
+
+.accounting-mapping-sync-box{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    margin-top:18px;
+    padding:17px;
+    border:1px dashed rgba(56,132,82,.42);
+    border-radius:18px;
+    background:#F0FBF3;
+}
+
+.accounting-mapping-sync-box strong,
+.accounting-mapping-hierarchy-heading strong{
+    color:#17252A;
+}
+
+.accounting-mapping-sync-box p,
+.accounting-mapping-hierarchy-heading p{
+    margin:6px 0 0;
+    color:#60716F;
+    line-height:1.5;
+}
+
+.accounting-mapping-sync-box form{
+    flex:0 0 auto;
+}
+
+.accounting-mapping-last-run{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-top:18px;
+    padding:14px;
+    border:1px solid rgba(116,171,134,.22);
+    border-radius:17px;
+    background:#F8FCF9;
+}
+
+.accounting-mapping-last-run.has-error{
+    border-color:#FECACA;
+    background:#FEF2F2;
+}
+
+.accounting-mapping-last-run > div{
+    min-width:0;
+    padding:11px;
+    border-radius:13px;
+    background:#fff;
+}
+
+.accounting-mapping-last-run strong{
+    display:block;
+    color:#17252A;
+    overflow-wrap:anywhere;
+}
+
+.accounting-mapping-warning-list{
+    margin-top:14px;
+}
+
+.accounting-mapping-warning-list .accounting-history-list p{
+    margin:0;
+}
+
+.accounting-mapping-hierarchy-heading{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:18px;
+    margin-top:22px;
+    padding-bottom:12px;
+    border-bottom:1px solid rgba(116,171,134,.22);
+}
+
+.accounting-mapping-hierarchy-heading > span{
+    color:#60716F;
+    font-weight:800;
+    white-space:nowrap;
+}
+
+.accounting-mapping-centre-list{
+    display:grid;
+    gap:12px;
+    margin-top:14px;
+}
+
+.accounting-mapping-centre-row{
+    display:grid;
+    grid-template-columns:minmax(220px,1.35fr) minmax(340px,1.7fr) minmax(190px,.85fr);
+    gap:14px;
+    align-items:center;
+    padding:15px;
+    border:1px solid rgba(116,171,134,.26);
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 8px 20px rgba(31,82,48,.035);
+}
+
+.accounting-mapping-centre-row.has-warning{
+    border-color:#FDE68A;
+    background:#FFFDF7;
+}
+
+.accounting-mapping-centre-main{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-width:0;
+}
+
+.accounting-mapping-centre-main > div:last-child{
+    min-width:0;
+}
+
+.accounting-mapping-centre-main strong{
+    display:block;
+    color:#17252A;
+    overflow-wrap:anywhere;
+}
+
+.accounting-mapping-centre-main p{
+    margin:4px 0 0;
+    color:#60716F;
+    font-size:.86rem;
+    line-height:1.4;
+}
+
+.accounting-mapping-centre-metrics{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;
+}
+
+.accounting-mapping-centre-metrics > div{
+    min-width:0;
+    padding:10px;
+    border-radius:13px;
+    background:#F5FAF6;
+}
+
+.accounting-mapping-centre-metrics strong{
+    color:#17252A;
+}
+
+.accounting-mapping-centre-state{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:7px;
+    min-width:0;
+    text-align:right;
+}
+
+.accounting-mapping-centre-state small{
+    color:#667773;
+    line-height:1.4;
+}
+
+@media (max-width:1180px){
+    .accounting-mapping-summary-grid,
+    .accounting-mapping-last-run{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .accounting-mapping-centre-row{
+        grid-template-columns:1fr;
+        align-items:stretch;
+    }
+
+    .accounting-mapping-centre-state{
+        align-items:flex-start;
+        text-align:left;
+    }
+}
+
+@media (max-width:760px){
+    .accounting-mapping-summary-grid,
+    .accounting-mapping-last-run,
+    .accounting-mapping-centre-metrics{
+        grid-template-columns:1fr;
+    }
+
+    .accounting-mapping-sync-box,
+    .accounting-mapping-hierarchy-heading{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .accounting-mapping-sync-box form,
+    .accounting-mapping-sync-box button{
+        width:100%;
+    }
+}
+
+
 </style>
 {% endblock %}
 
@@ -1372,8 +2271,9 @@
             <h1 id="accountingPageTitle">Accounting</h1>
             <p class="accounting-subtitle">
                 The Accounting foundation now includes permanent access mapping,
-                Financial Year control, versioned AVPL entity configuration and
-                approved Accounting policy settings without changing current MIS transactions.
+                controlled Financial Year lifecycle, approved AVPL configuration,
+                invoice/voucher numbering, disabled future-entity hierarchy mapping,
+                protected account groups, default AVPL ledgers and controlled supplier/customer party masters without changing current MIS transactions.
             </p>
         </div>
 
@@ -1398,8 +2298,8 @@
 
         <article class="accounting-status-card">
             <span class="accounting-card-label">Approval queue</span>
-            <strong>{{ pending_financial_years|length }}</strong>
-            <p>Pending Financial Years waiting for Super Admin review.</p>
+            <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count + party_ledger_overview.counts.pending_approval }}</strong>
+            <p>Financial Year, number-series and party-ledger items waiting for authorized review.</p>
         </article>
     </div>
 
@@ -1505,15 +2405,22 @@
                 <p class="accounting-eyebrow">Stage 2 · Financial Year foundation</p>
                 <h2>Financial Year control</h2>
                 <p class="accounting-section-description">
-                    AVPL Admin creates and corrects. Super Admin approves or sends
-                    back. Accounts can use only an approved, open year.
+                    AVPL Admin creates and corrects. Super Admin approves opening and
+                    controlled close, lock, unlock or reopen requests. Accounts can use
+                    only an approved, open and unlocked year.
                 </p>
             </div>
 
-            {% if open_financial_years %}
+            {% if financial_year_control_overview.pending_count %}
+                <span class="accounting-state-pill review">Lifecycle approval pending</span>
+            {% elif open_financial_years %}
                 <span class="accounting-state-pill active">Open year available</span>
+            {% elif locked_financial_years %}
+                <span class="accounting-state-pill danger">Financial Year locked</span>
+            {% elif closed_financial_years %}
+                <span class="accounting-state-pill pending">Financial Year closed</span>
             {% elif pending_financial_years %}
-                <span class="accounting-state-pill review">Approval pending</span>
+                <span class="accounting-state-pill review">Opening approval pending</span>
             {% else %}
                 <span class="accounting-state-pill pending">Setup required</span>
             {% endif %}
@@ -1538,6 +2445,17 @@
                 <div><span>3</span><strong>Super Admin reviews</strong></div>
                 <div><span>4</span><strong>Approve or return</strong></div>
             </div>
+
+            {% if financial_year_control_setup_error %}
+                <div class="accounting-notice danger">
+                    {{ financial_year_control_setup_error }}
+                </div>
+            {% elif not financial_year_control_capabilities.can_view %}
+                <div class="accounting-notice warning">
+                    Financial Year lifecycle permissions are not synchronized for this user yet.
+                    Super Admin should synchronize permanent access mappings once.
+                </div>
+            {% endif %}
 
             {% if financial_year_capabilities.can_create %}
                 <form class="accounting-form-card" method="post" action="{{ url_for('accounting.financial_year_create') }}">
@@ -1690,11 +2608,21 @@
                                 </div>
                             {% endif %}
 
-                            {% if fy.status == 'open' %}
+                            {% if fy.status == 'open' and not fy.is_locked %}
                                 <div class="accounting-notice success compact">
                                     This Financial Year is approved, open and available for future Accounting postings.
                                 </div>
+                            {% elif fy.status == 'closed' %}
+                                <div class="accounting-notice warning compact">
+                                    This Financial Year is closed. New Accounting posting is blocked.
+                                </div>
+                            {% elif fy.status == 'locked' or fy.is_locked %}
+                                <div class="accounting-notice danger compact">
+                                    This Financial Year is locked under final protection. Posting and direct reopening are blocked.
+                                </div>
                             {% endif %}
+
+                            {% include "accounting/_financial_year_lifecycle_panel.html" %}
 
                             <details class="accounting-history">
                                 <summary>Workflow history ({{ fy.workflow_history|length }})</summary>
@@ -1723,6 +2651,16 @@
     </div>
 
     {% include "accounting/_configuration_panels.html" %}
+
+    {% include "accounting/_number_series_panel.html" %}
+
+    {% include "accounting/_entity_mapping_panel.html" %}
+
+    {% include "accounting/_account_groups_panel.html" %}
+
+    {% include "accounting/_ledgers_panel.html" %}
+
+    {% include "accounting/_party_ledgers_panel.html" %}
 
     {% if user_access_capabilities.can_view %}
         <div class="accounting-user-access-card" id="user-access">
@@ -1779,7 +2717,7 @@
                         {{ user_access_summary.schema_outdated_count }} permanent mapping(s) need
                         permission schema {{ user_access_summary.permission_schema_version }}.
                         Super Admin should run the synchronization once before AVPL Admin and
-                        Accounts test the Batch 5 screens.
+                        Accounts test the Batch 7 screens.
                     </div>
                 {% endif %}
 
@@ -1943,7 +2881,7 @@
                 <p class="accounting-eyebrow">Controlled rollout</p>
                 <h2>Foundation checkpoints</h2>
             </div>
-            <span>Batch 5</span>
+            <span>Stage 3 · Batch 3</span>
         </div>
 
         <div class="accounting-checklist">
@@ -1992,6 +2930,46 @@
                 <div>
                     <strong>Approved Accounting policy settings</strong>
                     <p>Weighted Average, maker-checker, stock, backdating, document and payment defaults.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if number_series_overview.active_count == number_series_overview.required_count and number_series_overview.required_count > 0 %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if number_series_overview.active_count == number_series_overview.required_count and number_series_overview.required_count > 0 %}✓{% else %}7{% endif %}</span>
+                <div>
+                    <strong>Entity-wise invoice and voucher numbering</strong>
+                    <p>Financial-Year series, maker-checker approval, atomic reservation and non-reuse recovery controls.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if entity_mapping_overview.is_complete %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if entity_mapping_overview.is_complete %}✓{% else %}8{% endif %}</span>
+                <div>
+                    <strong>Disabled future Accounting hierarchy</strong>
+                    <p>Centres mapped under AVPL, Mitras linked under Centres and Farmers prepared under Mitras without enabling future books.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if account_group_overview.health.is_complete %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if account_group_overview.health.is_complete %}✓{% else %}9{% endif %}</span>
+                <div>
+                    <strong>Protected AVPL account groups</strong>
+                    <p>Fifteen permanent system classifications with entity isolation, hierarchy validation, audit history and rename/deletion protection.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if ledger_overview.health.is_complete %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if ledger_overview.health.is_complete %}✓{% else %}10{% endif %}</span>
+                <div>
+                    <strong>Protected default AVPL ledgers</strong>
+                    <p>Fourteen permanent cash, trade, GST, inventory and settlement ledgers with protected identity, account-group mapping and posting-ready metadata.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if party_ledger_overview.counts.active > 0 or party_ledger_overview.non_cancelled_count > 0 %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if party_ledger_overview.counts.active > 0 or party_ledger_overview.non_cancelled_count > 0 %}✓{% else %}11{% endif %}</span>
+                <div>
+                    <strong>Supplier and customer party ledgers</strong>
+                    <p>GST/PAN-validated AVPL party masters with maker-checker approval, credit terms, deactivation controls and permanent audit history.</p>
                 </div>
             </div>
         </div>

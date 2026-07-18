@@ -1,0 +1,191 @@
+{% if entity_mapping_capabilities.can_view %}
+<section class="accounting-entity-mapping-card" id="future-entity-mapping">
+    <div class="accounting-section-heading">
+        <div>
+            <p class="accounting-eyebrow">Stage 2 · Batch 8</p>
+            <h2>Future Accounting entity hierarchy</h2>
+            <p class="accounting-section-description">
+                Pre-maps UnnatFarm Centres under AVPL, Mitras under their Centres and
+                Farmers under their Mitras. Centre and Farmer books remain disabled
+                until their later rollout stages are explicitly activated.
+            </p>
+        </div>
+
+        {% if entity_mapping_overview.is_complete %}
+            <span class="accounting-state-pill active">Hierarchy synchronized</span>
+        {% elif entity_mapping_overview.latest_run and entity_mapping_overview.latest_run.recovery_required %}
+            <span class="accounting-state-pill danger">Recovery required</span>
+        {% elif entity_mapping_overview.mapping_counts.total > 0 %}
+            <span class="accounting-state-pill review">Synchronization incomplete</span>
+        {% else %}
+            <span class="accounting-state-pill pending">Not synchronized</span>
+        {% endif %}
+    </div>
+
+    {% if entity_mapping_setup_error %}
+        <div class="accounting-notice danger">{{ entity_mapping_setup_error }}</div>
+    {% elif not accounting_entity %}
+        <div class="accounting-notice info">
+            Initialize the AVPL Accounting entity before pre-mapping Centres, Mitras and Farmers.
+        </div>
+    {% else %}
+        <div class="accounting-mapping-summary-grid">
+            <div>
+                <span>Source hierarchy</span>
+                <strong>{{ entity_mapping_overview.source_counts.centres }} Centres</strong>
+                <small>{{ entity_mapping_overview.source_counts.mitras }} Mitras · {{ entity_mapping_overview.source_counts.farmers }} Farmers</small>
+            </div>
+            <div>
+                <span>Permanent mappings</span>
+                <strong>{{ entity_mapping_overview.mapping_counts.total }} / {{ entity_mapping_overview.mapping_counts.expected_total }}</strong>
+                <small>Centre, Mitra and Farmer source records</small>
+            </div>
+            <div>
+                <span>Disabled future entities</span>
+                <strong>{{ entity_mapping_overview.entity_counts.centres }} Centres</strong>
+                <small>{{ entity_mapping_overview.entity_counts.farmers }} Farmer entities prepared</small>
+            </div>
+            <div>
+                <span>Hierarchy health</span>
+                <strong>{{ entity_mapping_overview.unresolved_count }} unresolved</strong>
+                <small>{{ entity_mapping_overview.stale_count }} source-missing historical mapping(s)</small>
+            </div>
+        </div>
+
+        {% if entity_mapping_overview.avpl_only_active %}
+            <div class="accounting-notice success compact">
+                <strong>Activation guard verified:</strong> AVPL is the only active Accounting entity.
+                All Centre and Farmer entities are stored in disabled pre-mapped mode.
+            </div>
+        {% else %}
+            <div class="accounting-notice danger compact">
+                <strong>Activation guard failed:</strong>
+                {{ entity_mapping_overview.entity_counts.active_non_avpl }} non-AVPL entity record(s) appear active.
+                Synchronization is blocked until Super Admin reviews them.
+            </div>
+        {% endif %}
+
+        {% if entity_mapping_capabilities.can_sync %}
+            <div class="accounting-mapping-sync-box">
+                <div>
+                    <strong>Synchronize the current UnnatFarm hierarchy</strong>
+                    <p>
+                        This idempotent process creates missing disabled mappings and refreshes
+                        source names, identifiers and parent links. It never enables Centre or Farmer books,
+                        never changes the existing operational masters and never hard-deletes history.
+                    </p>
+                </div>
+                <form method="post" action="{{ url_for('accounting.entity_mappings_synchronize') }}"
+                      onsubmit="return confirm('Synchronize the current Centre, Mitra and Farmer hierarchy in disabled Accounting mode?');">
+                    <button type="submit" class="accounting-primary-button">
+                        Synchronize hierarchy
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+
+        {% if entity_mapping_overview.latest_run %}
+            <div class="accounting-mapping-last-run {% if entity_mapping_overview.latest_run.recovery_required %}has-error{% endif %}">
+                <div>
+                    <span>Latest synchronization</span>
+                    <strong>{{ entity_mapping_overview.latest_run.status.replace('_', ' ').title() }}</strong>
+                    {% if entity_mapping_overview.latest_run.completed_at %}
+                        <small>{{ entity_mapping_overview.latest_run.completed_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+                    {% endif %}
+                </div>
+                <div>
+                    <span>Executed by</span>
+                    <strong>{{ entity_mapping_overview.latest_run.actor_name or 'Super Admin' }}</strong>
+                    <small>Run {{ entity_mapping_overview.latest_run.run_id[:8] }}</small>
+                </div>
+                <div>
+                    <span>Created</span>
+                    <strong>{{ entity_mapping_overview.latest_run.counts.get('entities_created', 0) }} entities</strong>
+                    <small>{{ entity_mapping_overview.latest_run.counts.get('mappings_created', 0) }} mappings</small>
+                </div>
+                <div>
+                    <span>Updated</span>
+                    <strong>{{ entity_mapping_overview.latest_run.counts.get('entities_updated', 0) }} entities</strong>
+                    <small>{{ entity_mapping_overview.latest_run.counts.get('mappings_updated', 0) }} mappings</small>
+                </div>
+            </div>
+
+            {% if entity_mapping_overview.latest_run.error %}
+                <div class="accounting-notice danger compact">
+                    {{ entity_mapping_overview.latest_run.error }}
+                </div>
+            {% endif %}
+
+            {% if entity_mapping_overview.latest_run.warnings %}
+                <details class="accounting-history accounting-mapping-warning-list">
+                    <summary>Synchronization warnings ({{ entity_mapping_overview.latest_run.warnings|length }})</summary>
+                    <div class="accounting-history-list">
+                        {% for warning in entity_mapping_overview.latest_run.warnings %}
+                            <div><p>{{ warning }}</p></div>
+                        {% endfor %}
+                    </div>
+                </details>
+            {% endif %}
+        {% endif %}
+
+        <div class="accounting-mapping-hierarchy-heading">
+            <div>
+                <strong>Centre hierarchy summary</strong>
+                <p>Mitras are operator links; Farmers are prepared as simplified disabled entities.</p>
+            </div>
+            <span>{{ entity_mapping_overview.centre_rows|length }} Centre record(s)</span>
+        </div>
+
+        {% if entity_mapping_overview.centre_rows %}
+            <div class="accounting-mapping-centre-list">
+                {% for centre in entity_mapping_overview.centre_rows %}
+                    <article class="accounting-mapping-centre-row {% if centre.unresolved_count %}has-warning{% endif %}">
+                        <div class="accounting-mapping-centre-main">
+                            <div class="accounting-number-type-mark">{{ centre.centre_uid[:4] }}</div>
+                            <div>
+                                <strong>{{ centre.display_name }}</strong>
+                                <p>{{ centre.centre_uid }} · Source {{ centre.source_operational_status.replace('_', ' ').title() }}</p>
+                            </div>
+                        </div>
+                        <div class="accounting-mapping-centre-metrics">
+                            <div>
+                                <span>Mitra links</span>
+                                <strong>{{ centre.mitra_count }}</strong>
+                            </div>
+                            <div>
+                                <span>Farmers</span>
+                                <strong>{{ centre.farmer_count }}</strong>
+                            </div>
+                            <div>
+                                <span>Unresolved</span>
+                                <strong>{{ centre.unresolved_count }}</strong>
+                            </div>
+                            <div>
+                                <span>Accounting</span>
+                                <strong>{% if centre.accounting_enabled %}Enabled{% else %}Disabled{% endif %}</strong>
+                            </div>
+                        </div>
+                        <div class="accounting-mapping-centre-state">
+                            {% if centre.entity_created %}
+                                <span class="accounting-state-pill pending">Pre-mapped</span>
+                            {% else %}
+                                <span class="accounting-state-pill danger">Entity missing</span>
+                            {% endif %}
+                            {% if centre.activation_eligible %}
+                                <small>Source approved; activation still intentionally blocked.</small>
+                            {% else %}
+                                <small>Source is not yet eligible for future activation.</small>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="accounting-empty-financial-years">
+                <strong>No Centre hierarchy has been synchronized yet.</strong>
+                <p>Super Admin should run the one-time hierarchy synchronization.</p>
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+{% endif %}
