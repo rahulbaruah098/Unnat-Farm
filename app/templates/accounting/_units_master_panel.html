@@ -1,0 +1,130 @@
+{% if unit_capabilities.can_view %}
+<style>
+.unit-master-card{padding:clamp(22px,2vw,32px);border:1px solid rgba(79,154,106,.22);border-radius:26px;background:rgba(255,255,255,.94);box-shadow:0 18px 42px rgba(23,37,42,.08)}
+.unit-summary-grid,.unit-form-grid,.unit-card-grid{display:grid;gap:14px}.unit-summary-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin:20px 0}.unit-summary-grid>div{padding:16px;border:1px solid rgba(79,154,106,.15);border-radius:16px;background:#F8FCF9}.unit-summary-grid span,.unit-field label{display:block;color:#60716F;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}.unit-summary-grid strong{display:block;margin-top:7px;color:#17252A;font-size:1.2rem}.unit-master-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.unit-panel{margin-top:18px;padding:18px;border:1px solid rgba(79,154,106,.16);border-radius:20px;background:#FBFEFC}.unit-panel>summary{cursor:pointer;color:#17252A;font-weight:850}.unit-form-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px}.unit-field.full{grid-column:1/-1}.unit-field input,.unit-field select,.unit-field textarea{width:100%;margin-top:7px;padding:11px 12px;border:1px solid rgba(79,154,106,.28);border-radius:11px;background:#fff;color:#17252A;font:inherit}.unit-field textarea{min-height:84px;resize:vertical}.unit-checkbox{display:flex;gap:8px;align-items:center;margin-top:24px;color:#344B43;font-weight:700}.unit-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}.unit-record{padding:16px;border:1px solid rgba(79,154,106,.16);border-radius:17px;background:#fff}.unit-record-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.unit-record h4{margin:0;color:#17252A}.unit-record p{margin:6px 0;color:#60716F;line-height:1.5}.unit-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:13px 0}.unit-meta div{padding:9px;border-radius:10px;background:#F4F9F5}.unit-meta span{display:block;color:#6B7D76;font-size:.68rem;font-weight:800;text-transform:uppercase}.unit-meta strong{display:block;margin-top:4px;color:#23342F;font-size:.9rem}.unit-action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.unit-action-row form{display:flex;gap:7px;flex:1 1 210px}.unit-action-row input{min-width:0;flex:1;padding:9px;border:1px solid rgba(79,154,106,.25);border-radius:9px}.unit-button{border:0;border-radius:10px;padding:10px 13px;cursor:pointer;font:inherit;font-weight:800;background:#2F7548;color:#fff}.unit-button.secondary{background:#EAF7EE;color:#285F3D}.unit-button.warning{background:#B7791F}.unit-button.danger{background:#B42318}.unit-table-wrap{overflow:auto;margin-top:14px}.unit-table{width:100%;border-collapse:collapse;min-width:760px}.unit-table th,.unit-table td{text-align:left;padding:10px;border-bottom:1px solid #E3EEE6;font-size:.86rem}.unit-table th{color:#50635B;background:#F4F9F5}.unit-protection-note{margin-top:16px;padding:14px;border-radius:13px;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E3A5F}.unit-empty{padding:20px;text-align:center;color:#60716F}
+@media(max-width:980px){.unit-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.unit-form-grid{grid-template-columns:1fr 1fr}.unit-card-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.unit-summary-grid,.unit-form-grid{grid-template-columns:1fr}.unit-field.full{grid-column:auto}.unit-meta{grid-template-columns:1fr}.unit-record-head{flex-direction:column}}
+</style>
+<section class="unit-master-card" id="units-master">
+    <div class="accounting-section-heading">
+        <div>
+            <p class="accounting-eyebrow">Stage 4 · Batch 2</p>
+            <h2>Units and alternate-unit conversions</h2>
+            <p class="accounting-section-description">Protected GST UQC units provide invoice-compatible quantity codes. Accounts may prepare business-specific units and direct conversion rules for AVPL Admin approval.</p>
+        </div>
+        {% if unit_overview.foundation.is_complete %}<span class="accounting-state-pill active">UQC foundation verified</span>{% else %}<span class="accounting-state-pill pending">UQC setup required</span>{% endif %}
+    </div>
+
+    {% if unit_setup_error %}
+        <div class="accounting-notice danger">{{ unit_setup_error }}</div>
+    {% elif not accounting_entity %}
+        <div class="accounting-notice info">Initialize the AVPL Accounting entity before configuring units.</div>
+    {% else %}
+        <div class="unit-summary-grid">
+            <div><span>Protected UQC units</span><strong>{{ unit_overview.foundation.present_count }} / {{ unit_overview.foundation.required_count }}</strong></div>
+            <div><span>Active custom units</span><strong>{{ unit_overview.custom_active|length }}</strong></div>
+            <div><span>Active conversions</span><strong>{{ unit_overview.conversion_active|length }}</strong></div>
+            <div><span>Pending review</span><strong>{{ unit_overview.custom_pending|length + unit_overview.conversion_pending|length }}</strong></div>
+        </div>
+
+        {% if unit_capabilities.can_bootstrap %}
+            <div class="unit-master-actions">
+                <form method="post" action="{{ url_for('accounting.units_synchronize') }}">
+                    <button class="unit-button" type="submit">{% if unit_overview.foundation.present_count %}Verify and repair UQC units{% else %}Initialize protected UQC units{% endif %}</button>
+                </form>
+                <span class="accounting-section-description">Idempotent: repeated runs do not create duplicates.</span>
+            </div>
+        {% endif %}
+
+        {% if unit_overview.foundation.missing or unit_overview.foundation.drifted %}
+            <div class="accounting-notice warning"><strong>Foundation mismatch:</strong> {{ unit_overview.foundation.missing|length }} missing and {{ unit_overview.foundation.drifted|length }} drifted protected unit(s).</div>
+        {% endif %}
+
+        <details class="unit-panel">
+            <summary>Protected GST UQC catalog ({{ unit_overview.standard_units|length }})</summary>
+            <div class="unit-table-wrap"><table class="unit-table"><thead><tr><th>UQC</th><th>Name</th><th>Symbol</th><th>Dimension</th><th>Fractions</th><th>Decimals</th></tr></thead><tbody>
+            {% for unit in unit_overview.standard_units %}<tr><td><strong>{{ unit.uqc_code }}</strong></td><td>{{ unit.name }}</td><td>{{ unit.symbol }}</td><td>{{ unit.dimension_display }}</td><td>{{ 'Allowed' if unit.allows_fractional else 'Whole only' }}</td><td>{{ unit.decimal_places }}</td></tr>{% endfor %}
+            </tbody></table></div>
+            <div class="unit-protection-note"><strong>Protected master:</strong> system UQC units cannot be renamed, deactivated or deleted. Custom operational units map back to one official UQC code.</div>
+        </details>
+
+        {% if unit_capabilities.can_create %}
+        <details class="unit-panel" open>
+            <summary>Create custom unit draft</summary>
+            {% if not unit_overview.foundation.is_complete %}<div class="accounting-notice warning">Synchronize the protected UQC catalog before creating custom units.</div>{% endif %}
+            <form method="post" action="{{ url_for('accounting.custom_unit_create') }}" class="unit-form-grid">
+                <div class="unit-field"><label>Unit code</label><input name="unit_code" maxlength="20" placeholder="BAG_25KG" required></div>
+                <div class="unit-field"><label>Unit name</label><input name="name" maxlength="100" placeholder="25 kg Bag" required></div>
+                <div class="unit-field"><label>Symbol</label><input name="symbol" maxlength="30" placeholder="25kg bag" required></div>
+                <div class="unit-field"><label>GST UQC mapping</label><select name="uqc_code" required><option value="">Select UQC</option>{% for unit in unit_overview.options.standard_uqc_units %}<option value="{{ unit.uqc_code }}">{{ unit.uqc_code }} — {{ unit.name }}</option>{% endfor %}</select></div>
+                <div class="unit-field"><label>Dimension</label><select name="dimension" required>{% for code,label in unit_overview.options.dimension_labels.items() %}<option value="{{ code }}" {% if code == 'weight' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                <div class="unit-field"><label>Decimal places</label><input name="decimal_places" type="number" min="0" max="6" value="0" required></div>
+                <label class="unit-checkbox"><input type="checkbox" name="allows_fractional" value="1"> Allow fractional quantity</label>
+                <div class="unit-field full"><label>Description</label><textarea name="description" placeholder="Business use and packaging definition"></textarea></div>
+                <div class="unit-field full"><button class="unit-button" type="submit">Create custom unit draft</button></div>
+            </form>
+        </details>
+        {% endif %}
+
+        <details class="unit-panel" {% if unit_overview.custom_pending %}open{% endif %}>
+            <summary>Custom unit workflow ({{ unit_overview.custom_units|length }})</summary>
+            {% if unit_overview.custom_units %}<div class="unit-card-grid">
+            {% for unit in unit_overview.custom_units %}
+                <article class="unit-record">
+                    <div class="unit-record-head"><div><h4>{{ unit.name }} · {{ unit.unit_code }}</h4><p>{{ unit.description or 'No description' }}</p></div><span class="accounting-status-badge status-{{ unit.status }}">{{ unit.status_display }}</span></div>
+                    <div class="unit-meta"><div><span>GST UQC</span><strong>{{ unit.uqc_code }}</strong></div><div><span>Dimension</span><strong>{{ unit.dimension_display }}</strong></div><div><span>Quantity</span><strong>{{ unit.decimal_places }} decimal(s)</strong></div></div>
+                    {% if unit.return_reason %}<div class="accounting-notice warning compact"><strong>Correction:</strong> {{ unit.return_reason }}</div>{% endif %}
+                    {% set is_maker = unit.created_by == current_user_id %}
+                    {% if unit_capabilities.can_edit and is_maker and unit.status in ['draft','returned_for_correction'] %}
+                    <details><summary>Edit draft</summary><form method="post" action="{{ url_for('accounting.custom_unit_edit', unit_id=unit.id) }}" class="unit-form-grid"><input type="hidden" name="version" value="{{ unit.version }}"><div class="unit-field"><label>Code</label><input name="unit_code" value="{{ unit.unit_code }}" required></div><div class="unit-field"><label>Name</label><input name="name" value="{{ unit.name }}" required></div><div class="unit-field"><label>Symbol</label><input name="symbol" value="{{ unit.symbol }}" required></div><div class="unit-field"><label>GST UQC</label><select name="uqc_code" required>{% for option in unit_overview.options.standard_uqc_units %}<option value="{{ option.uqc_code }}" {% if option.uqc_code==unit.uqc_code %}selected{% endif %}>{{ option.uqc_code }} — {{ option.name }}</option>{% endfor %}</select></div><div class="unit-field"><label>Dimension</label><select name="dimension">{% for code,label in unit_overview.options.dimension_labels.items() %}<option value="{{ code }}" {% if code==unit.dimension %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="unit-field"><label>Decimals</label><input name="decimal_places" type="number" min="0" max="6" value="{{ unit.decimal_places }}"></div><label class="unit-checkbox"><input type="checkbox" name="allows_fractional" value="1" {% if unit.allows_fractional %}checked{% endif %}> Allow fractions</label><div class="unit-field full"><label>Description</label><textarea name="description">{{ unit.description }}</textarea></div><div class="unit-field full"><button class="unit-button secondary">Save draft</button></div></form></details>
+                    {% endif %}
+                    <div class="unit-action-row">
+                    {% if unit_capabilities.can_submit and is_maker and unit.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('accounting.custom_unit_submit', unit_id=unit.id) }}"><input type="hidden" name="version" value="{{ unit.version }}"><input name="submission_note" placeholder="Submission note"><button class="unit-button">Submit</button></form>{% endif %}
+                    {% if unit_capabilities.can_withdraw and is_maker and unit.status=='pending_approval' %}<form method="post" action="{{ url_for('accounting.custom_unit_withdraw', unit_id=unit.id) }}"><input type="hidden" name="version" value="{{ unit.version }}"><input name="reason" placeholder="Withdrawal reason" required><button class="unit-button warning">Withdraw</button></form>{% endif %}
+                    {% if unit_capabilities.can_cancel and is_maker and unit.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('accounting.custom_unit_cancel', unit_id=unit.id) }}"><input type="hidden" name="version" value="{{ unit.version }}"><input name="reason" placeholder="Cancellation reason" required><button class="unit-button danger">Cancel</button></form>{% endif %}
+                    {% if unit_capabilities.can_approve and unit.status=='pending_approval' %}<form method="post" action="{{ url_for('accounting.custom_unit_approve', unit_id=unit.id) }}"><input type="hidden" name="version" value="{{ unit.version }}"><input name="approval_note" placeholder="Approval note"><button class="unit-button">Approve</button></form>{% endif %}
+                    {% if unit_capabilities.can_return and unit.status=='pending_approval' %}<form method="post" action="{{ url_for('accounting.custom_unit_return', unit_id=unit.id) }}"><input type="hidden" name="version" value="{{ unit.version }}"><input name="return_reason" placeholder="Correction reason" required><button class="unit-button warning">Return</button></form>{% endif %}
+                    {% if unit_capabilities.can_deactivate and unit.status=='active' %}<form method="post" action="{{ url_for('accounting.custom_unit_deactivate', unit_id=unit.id) }}"><input type="hidden" name="version" value="{{ unit.version }}"><input name="reason" placeholder="Deactivation reason" required><button class="unit-button danger">Deactivate</button></form>{% endif %}
+                    {% if unit_capabilities.can_reactivate and unit.status=='inactive' %}<form method="post" action="{{ url_for('accounting.custom_unit_reactivate', unit_id=unit.id) }}"><input type="hidden" name="version" value="{{ unit.version }}"><input name="reason" placeholder="Reactivation reason" required><button class="unit-button">Reactivate</button></form>{% endif %}
+                    </div>
+                </article>
+            {% endfor %}</div>{% else %}<div class="unit-empty">No custom unit has been created.</div>{% endif %}
+        </details>
+
+        {% if unit_capabilities.can_create %}
+        <details class="unit-panel">
+            <summary>Create alternate-unit conversion draft</summary>
+            <form method="post" action="{{ url_for('accounting.unit_conversion_create') }}" class="unit-form-grid">
+                <div class="unit-field"><label>From unit</label><select name="from_unit_id" required><option value="">Select unit</option>{% for unit in unit_overview.options.active_units %}<option value="{{ unit.id }}">{{ unit.unit_code }} — {{ unit.name }}</option>{% endfor %}</select></div>
+                <div class="unit-field"><label>To unit</label><select name="to_unit_id" required><option value="">Select unit</option>{% for unit in unit_overview.options.active_units %}<option value="{{ unit.id }}">{{ unit.unit_code }} — {{ unit.name }}</option>{% endfor %}</select></div>
+                <div class="unit-field"><label>Factor</label><input name="factor" type="number" min="0.000000001" step="0.000000001" placeholder="25" required></div>
+                <label class="unit-checkbox"><input type="checkbox" name="is_bidirectional" value="1" checked> Permit reciprocal conversion</label>
+                <div class="unit-field full"><label>Description</label><textarea name="description" placeholder="Example: 1 BAG_25KG = 25 KGS"></textarea></div>
+                <div class="unit-field full"><button class="unit-button">Create conversion draft</button></div>
+            </form>
+        </details>
+        {% endif %}
+
+        <details class="unit-panel" {% if unit_overview.conversion_pending %}open{% endif %}>
+            <summary>Alternate-unit conversion workflow ({{ unit_overview.conversions|length }})</summary>
+            {% if unit_overview.conversions %}<div class="unit-card-grid">{% for conversion in unit_overview.conversions %}
+            <article class="unit-record"><div class="unit-record-head"><div><h4>1 {{ conversion.from_unit_code }} = {{ conversion.factor }} {{ conversion.to_unit_code }}</h4><p>{{ conversion.description or 'Direct approved conversion only; no chained conversion is performed.' }}</p></div><span class="accounting-status-badge status-{{ conversion.status }}">{{ conversion.status_display }}</span></div><div class="unit-meta"><div><span>Direction</span><strong>{{ conversion.from_unit }} → {{ conversion.to_unit }}</strong></div><div><span>Reverse</span><strong>{{ 'Allowed' if conversion.is_bidirectional else 'Blocked' }}</strong></div><div><span>Dimension</span><strong>Same dimension</strong></div></div>
+            {% set is_maker = conversion.created_by == current_user_id %}
+            {% if unit_capabilities.can_edit and is_maker and conversion.status in ['draft','returned_for_correction'] %}
+            <details><summary>Edit conversion draft</summary><form method="post" action="{{ url_for('accounting.unit_conversion_edit', conversion_id=conversion.id) }}" class="unit-form-grid"><input type="hidden" name="version" value="{{ conversion.version }}"><div class="unit-field"><label>From unit</label><select name="from_unit_id" required>{% for unit in unit_overview.options.active_units %}<option value="{{ unit.id }}" {% if unit.id==conversion.from_unit_id %}selected{% endif %}>{{ unit.unit_code }} — {{ unit.name }}</option>{% endfor %}</select></div><div class="unit-field"><label>To unit</label><select name="to_unit_id" required>{% for unit in unit_overview.options.active_units %}<option value="{{ unit.id }}" {% if unit.id==conversion.to_unit_id %}selected{% endif %}>{{ unit.unit_code }} — {{ unit.name }}</option>{% endfor %}</select></div><div class="unit-field"><label>Factor</label><input name="factor" type="number" min="0.000000001" step="0.000000001" value="{{ conversion.factor }}" required></div><label class="unit-checkbox"><input type="checkbox" name="is_bidirectional" value="1" {% if conversion.is_bidirectional %}checked{% endif %}> Permit reciprocal conversion</label><div class="unit-field full"><label>Description</label><textarea name="description">{{ conversion.description }}</textarea></div><div class="unit-field full"><button class="unit-button secondary">Save conversion draft</button></div></form></details>
+            {% endif %}
+            {% if conversion.return_reason %}<div class="accounting-notice warning compact"><strong>Correction:</strong> {{ conversion.return_reason }}</div>{% endif %}
+            <div class="unit-action-row">
+            {% if unit_capabilities.can_submit and is_maker and conversion.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('accounting.unit_conversion_submit', conversion_id=conversion.id) }}"><input type="hidden" name="version" value="{{ conversion.version }}"><input name="submission_note" placeholder="Submission note"><button class="unit-button">Submit</button></form>{% endif %}
+            {% if unit_capabilities.can_withdraw and is_maker and conversion.status=='pending_approval' %}<form method="post" action="{{ url_for('accounting.unit_conversion_withdraw', conversion_id=conversion.id) }}"><input type="hidden" name="version" value="{{ conversion.version }}"><input name="reason" placeholder="Withdrawal reason" required><button class="unit-button warning">Withdraw</button></form>{% endif %}
+            {% if unit_capabilities.can_cancel and is_maker and conversion.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('accounting.unit_conversion_cancel', conversion_id=conversion.id) }}"><input type="hidden" name="version" value="{{ conversion.version }}"><input name="reason" placeholder="Cancellation reason" required><button class="unit-button danger">Cancel</button></form>{% endif %}
+            {% if unit_capabilities.can_approve and conversion.status=='pending_approval' %}<form method="post" action="{{ url_for('accounting.unit_conversion_approve', conversion_id=conversion.id) }}"><input type="hidden" name="version" value="{{ conversion.version }}"><input name="approval_note" placeholder="Approval note"><button class="unit-button">Approve</button></form>{% endif %}
+            {% if unit_capabilities.can_return and conversion.status=='pending_approval' %}<form method="post" action="{{ url_for('accounting.unit_conversion_return', conversion_id=conversion.id) }}"><input type="hidden" name="version" value="{{ conversion.version }}"><input name="return_reason" placeholder="Correction reason" required><button class="unit-button warning">Return</button></form>{% endif %}
+            {% if unit_capabilities.can_deactivate and conversion.status=='active' %}<form method="post" action="{{ url_for('accounting.unit_conversion_deactivate', conversion_id=conversion.id) }}"><input type="hidden" name="version" value="{{ conversion.version }}"><input name="reason" placeholder="Deactivation reason" required><button class="unit-button danger">Deactivate</button></form>{% endif %}
+            {% if unit_capabilities.can_reactivate and conversion.status=='inactive' %}<form method="post" action="{{ url_for('accounting.unit_conversion_reactivate', conversion_id=conversion.id) }}"><input type="hidden" name="version" value="{{ conversion.version }}"><input name="reason" placeholder="Reactivation reason" required><button class="unit-button">Reactivate</button></form>{% endif %}
+            </div></article>
+            {% endfor %}</div>{% else %}<div class="unit-empty">No alternate-unit conversion has been created.</div>{% endif %}
+        </details>
+    {% endif %}
+</section>
+{% endif %}

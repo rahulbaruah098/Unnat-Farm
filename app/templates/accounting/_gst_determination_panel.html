@@ -1,0 +1,354 @@
+{% if gst_determination_capabilities.can_view %}
+<style>
+.accounting-gst-det-card{
+    padding:clamp(22px,2vw,32px);
+    border:1px solid rgba(73,139,101,.22);
+    border-radius:26px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 18px 42px rgba(23,37,42,.08);
+}
+.accounting-gst-det-summary{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:14px;
+    margin-top:20px;
+}
+.accounting-gst-det-summary>div{
+    padding:16px;
+    border:1px solid rgba(79,154,106,.17);
+    border-radius:17px;
+    background:#F7FCF8;
+}
+.accounting-gst-det-summary span,
+.accounting-gst-det-meta span{
+    display:block;
+    color:#60716F;
+    font-size:.74rem;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.accounting-gst-det-summary strong{
+    display:block;
+    margin-top:7px;
+    color:#17252A;
+    font-size:1.04rem;
+    line-height:1.35;
+}
+.accounting-gst-det-form,
+.accounting-gst-det-result{
+    margin-top:18px;
+    padding:19px;
+    border:1px solid rgba(79,154,106,.18);
+    border-radius:20px;
+    background:#FBFEFC;
+}
+.accounting-gst-det-form h3,
+.accounting-gst-det-result h3{margin:0;color:#17252A;}
+.accounting-gst-det-form>p,
+.accounting-gst-det-result>p{margin:6px 0 0;color:#60716F;line-height:1.55;}
+.accounting-gst-det-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:13px;
+    margin-top:16px;
+}
+.accounting-gst-det-grid label{display:grid;gap:7px;min-width:0;}
+.accounting-gst-det-grid label.wide{grid-column:span 2;}
+.accounting-gst-det-grid label>span{color:#40515A;font-size:.8rem;font-weight:800;}
+.accounting-gst-det-grid input,
+.accounting-gst-det-grid select{
+    width:100%;
+    min-height:43px;
+    padding:10px 11px;
+    border:1px solid rgba(116,171,134,.4);
+    border-radius:11px;
+    background:#fff;
+    color:#23342F;
+    font:inherit;
+}
+.accounting-gst-det-footer{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:15px;
+}
+.accounting-gst-det-footer small{color:#60716F;line-height:1.5;max-width:720px;}
+.accounting-gst-det-flow{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-top:16px;
+}
+.accounting-gst-det-flow>div{
+    position:relative;
+    padding:14px;
+    border-radius:15px;
+    background:#F1F8F3;
+    border:1px solid rgba(79,154,106,.17);
+}
+.accounting-gst-det-flow strong{display:block;margin-top:5px;color:#213A2D;line-height:1.4;}
+.accounting-gst-det-result-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+}
+.accounting-gst-det-result-badge{
+    flex:0 0 auto;
+    padding:8px 11px;
+    border-radius:999px;
+    background:#DDF3E4;
+    color:#24673C;
+    font-size:.78rem;
+    font-weight:900;
+}
+.accounting-gst-det-meta{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-top:15px;
+}
+.accounting-gst-det-meta>div{
+    min-width:0;
+    padding:12px;
+    border-radius:13px;
+    background:#F3F9F5;
+}
+.accounting-gst-det-meta strong{
+    display:block;
+    margin-top:5px;
+    color:#243B31;
+    overflow-wrap:anywhere;
+}
+.accounting-gst-component-table{
+    width:100%;
+    margin-top:15px;
+    border-collapse:collapse;
+    overflow:hidden;
+    border-radius:14px;
+}
+.accounting-gst-component-table th,
+.accounting-gst-component-table td{
+    padding:11px 12px;
+    border-bottom:1px solid rgba(79,154,106,.14);
+    text-align:left;
+}
+.accounting-gst-component-table th{
+    background:#EAF5ED;
+    color:#355443;
+    font-size:.76rem;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+.accounting-gst-component-table td{background:#fff;color:#263B31;}
+.accounting-gst-det-totals{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+    margin-top:14px;
+}
+.accounting-gst-det-totals>div{
+    padding:14px;
+    border-radius:14px;
+    background:#EEF8F1;
+    border:1px solid rgba(79,154,106,.16);
+}
+.accounting-gst-det-totals span{display:block;color:#60716F;font-size:.76rem;font-weight:800;text-transform:uppercase;}
+.accounting-gst-det-totals strong{display:block;margin-top:6px;color:#1F5132;font-size:1.08rem;}
+@media(max-width:1050px){
+    .accounting-gst-det-summary,
+    .accounting-gst-det-flow,
+    .accounting-gst-det-meta{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .accounting-gst-det-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .accounting-gst-det-grid label.wide{grid-column:span 1;}
+}
+@media(max-width:680px){
+    .accounting-gst-det-summary,
+    .accounting-gst-det-flow,
+    .accounting-gst-det-meta,
+    .accounting-gst-det-grid,
+    .accounting-gst-det-totals{grid-template-columns:1fr;}
+    .accounting-gst-det-result-head,
+    .accounting-gst-det-footer{align-items:stretch;flex-direction:column;}
+    .accounting-gst-det-result-badge{align-self:flex-start;}
+    .accounting-gst-component-table{display:block;overflow-x:auto;}
+}
+</style>
+<section class="accounting-gst-det-card" id="gst-determination">
+    <div class="accounting-section-heading">
+        <div>
+            <p class="accounting-eyebrow">Stage 4 · Batch 4</p>
+            <h2>State and GST determination</h2>
+            <p class="accounting-section-description">
+                Resolves seller state, party state and place of supply, then selects
+                CGST + SGST for intra-state supplies or IGST for inter-state supplies.
+                Exempt, Nil Rated and Non-GST products bypass GST component posting.
+            </p>
+        </div>
+        {% if gst_determination_overview.prerequisites.is_ready %}
+            <span class="accounting-state-pill active">Determination ready</span>
+        {% else %}
+            <span class="accounting-state-pill pending">Setup incomplete</span>
+        {% endif %}
+    </div>
+
+    {% if gst_determination_setup_error %}
+        <div class="accounting-notice danger">{{ gst_determination_setup_error }}</div>
+    {% elif not accounting_entity %}
+        <div class="accounting-notice info">Initialize the AVPL Accounting entity first.</div>
+    {% else %}
+        <div class="accounting-gst-det-summary">
+            <div>
+                <span>AVPL registered state</span>
+                <strong>{{ gst_determination_overview.seller.state_name or 'Not configured' }}{% if gst_determination_overview.seller.state_code %} ({{ gst_determination_overview.seller.state_code }}){% endif %}</strong>
+            </div>
+            <div>
+                <span>Default place of supply</span>
+                <strong>{{ gst_determination_overview.default_place_of_supply.state_name or 'Not configured' }}{% if gst_determination_overview.default_place_of_supply.state_code %} ({{ gst_determination_overview.default_place_of_supply.state_code }}){% endif %}</strong>
+            </div>
+            <div>
+                <span>Active parties</span>
+                <strong>{{ gst_determination_overview.counts.suppliers }} suppliers · {{ gst_determination_overview.counts.customers }} customers</strong>
+            </div>
+            <div>
+                <span>Accounting-ready products</span>
+                <strong>{{ gst_determination_overview.counts.product_mappings }}</strong>
+            </div>
+        </div>
+
+        <div class="accounting-notice info compact">
+            <strong>Posting contract:</strong> this preview does not create an invoice, voucher,
+            stock movement or ledger balance. Future purchase and sales modules will call the same
+            determination service before controlled posting.
+        </div>
+
+        {% if not gst_determination_overview.prerequisites.is_ready %}
+            <div class="accounting-notice warning">
+                <strong>Complete the prerequisites first.</strong>
+                {% if not gst_determination_overview.prerequisites.seller_state_ready %}Approve the AVPL entity state. {% endif %}
+                {% if not gst_determination_overview.prerequisites.has_parties %}Approve at least one supplier or customer ledger. {% endif %}
+                {% if not gst_determination_overview.prerequisites.has_product_mappings %}Approve at least one product Accounting mapping.{% endif %}
+            </div>
+        {% endif %}
+
+        {% if gst_determination_capabilities.can_preview and gst_determination_overview.prerequisites.is_ready %}
+            <form method="post"
+                  action="{{ url_for('accounting.gst_determination_preview_route') }}"
+                  class="accounting-gst-det-form">
+                <h3>Run controlled GST preview</h3>
+                <p>Select one real approved party and one Accounting-ready product to test the production determination path.</p>
+
+                <div class="accounting-gst-det-grid">
+                    <label>
+                        <span>Transaction type</span>
+                        <select name="transaction_type" required>
+                            <option value="sales">Sales</option>
+                            <option value="purchase">Purchase</option>
+                        </select>
+                    </label>
+                    <label class="wide">
+                        <span>Supplier or customer ledger</span>
+                        <select name="party_ledger_id" required>
+                            <option value="">Select approved party</option>
+                            {% for party in gst_determination_overview.parties %}
+                                <option value="{{ party.id }}">
+                                    {{ party.party_role_label }} · {{ party.ledger_code }} · {{ party.name }} · {{ party.state_name }} ({{ party.state_code }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="wide">
+                        <span>Accounting-ready product</span>
+                        <select name="product_mapping_id" required>
+                            <option value="">Select mapped product</option>
+                            {% for mapping in gst_determination_overview.product_mappings %}
+                                <option value="{{ mapping.id }}">
+                                    {{ mapping.source_product_name }} · {{ mapping.mapping_code }} · HSN {{ mapping.hsn_code }} · {{ mapping.taxability_name }}{% if mapping.gst_rate_code %} · {{ mapping.gst_rate_code }}{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Transaction date</span>
+                        <input type="date" name="transaction_date" value="{{ gst_determination_overview.today }}" required>
+                    </label>
+                    <label>
+                        <span>Taxable value</span>
+                        <input type="number" name="taxable_value" min="0.01" step="0.01" value="1000.00" required>
+                    </label>
+                    <label class="wide">
+                        <span>Place of supply override (optional)</span>
+                        <select name="place_of_supply_state_code">
+                            <option value="">Use party ledger state</option>
+                            {% for state in gst_determination_overview.states %}
+                                <option value="{{ state.code }}">{{ state.code }} · {{ state.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
+
+                <div class="accounting-gst-det-footer">
+                    <small>
+                        Select Sales with a customer or Purchase with a supplier. The service blocks mismatched party roles and invalid GST registration combinations.
+                    </small>
+                    <button type="submit" class="accounting-primary-button">Preview GST determination</button>
+                </div>
+            </form>
+        {% endif %}
+
+        {% if gst_determination_preview %}
+            <div class="accounting-gst-det-result">
+                <div class="accounting-gst-det-result-head">
+                    <div>
+                        <h3>GST determination result</h3>
+                        <p>{{ gst_determination_preview.transaction_type_label }} · {{ gst_determination_preview.transaction_date_display }} · {{ gst_determination_preview.product.name }}</p>
+                    </div>
+                    <span class="accounting-gst-det-result-badge">{{ gst_determination_preview.supply_type_label }}</span>
+                </div>
+
+                <div class="accounting-gst-det-flow">
+                    <div><span>Seller</span><strong>{{ gst_determination_preview.seller.name }} · {{ gst_determination_preview.seller.state_name }} ({{ gst_determination_preview.seller.state_code }})</strong></div>
+                    <div><span>Recipient</span><strong>{{ gst_determination_preview.recipient.name }} · {{ gst_determination_preview.recipient.state_name }} ({{ gst_determination_preview.recipient.state_code }})</strong></div>
+                    <div><span>Place of supply</span><strong>{{ gst_determination_preview.place_of_supply.state_name }} ({{ gst_determination_preview.place_of_supply.state_code }})</strong></div>
+                    <div><span>Selected posting</span><strong>{{ gst_determination_preview.posting_rule }}</strong></div>
+                </div>
+
+                <div class="accounting-gst-det-meta">
+                    <div><span>Product mapping</span><strong>{{ gst_determination_preview.product.mapping_code }}</strong></div>
+                    <div><span>HSN / taxability</span><strong>{{ gst_determination_preview.product.hsn_code }} · {{ gst_determination_preview.product.taxability_label }}</strong></div>
+                    <div><span>GST rate</span><strong>{% if gst_determination_preview.is_taxable %}{{ gst_determination_preview.effective_rate.rate_code }} · {{ gst_determination_preview.effective_rate.total_rate }}%{% else %}Not applicable{% endif %}</strong></div>
+                    <div><span>Place source</span><strong>{{ gst_determination_preview.place_of_supply.source }}</strong></div>
+                </div>
+
+                <table class="accounting-gst-component-table">
+                    <thead>
+                        <tr><th>Component</th><th>Rate</th><th>Amount</th><th>Direction</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for component in gst_determination_preview.components %}
+                            <tr>
+                                <td>{{ component.code }}</td>
+                                <td>{{ component.rate }}%</td>
+                                <td>₹{{ component.amount }}</td>
+                                <td>{{ component.ledger_direction.replace('_', ' ').title() }}</td>
+                            </tr>
+                            {% if component.reason %}
+                                <tr><td colspan="4">{{ component.reason }}</td></tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="accounting-gst-det-totals">
+                    <div><span>Taxable value</span><strong>₹{{ gst_determination_preview.taxable_value }}</strong></div>
+                    <div><span>Total GST</span><strong>₹{{ gst_determination_preview.total_tax }}</strong></div>
+                    <div><span>Gross value</span><strong>₹{{ gst_determination_preview.gross_value }}</strong></div>
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+{% endif %}

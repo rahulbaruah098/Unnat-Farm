@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app.services.accounting_account_group_service import (
@@ -23,6 +25,90 @@ from app.services.accounting_party_ledger_service import (
     submit_party_ledger,
     update_party_ledger,
     withdraw_party_ledger,
+)
+from app.services.accounting_gst_tax_service import (
+    approve_gst_tax_rate,
+    cancel_gst_tax_rate,
+    create_gst_tax_rate,
+    ensure_gst_tax_indexes,
+    get_gst_tax_option_catalog,
+    get_gst_tax_overview,
+    retire_gst_tax_rate,
+    return_gst_tax_rate,
+    seed_gst_tax_foundation,
+    submit_gst_tax_rate,
+    update_gst_tax_rate,
+    withdraw_gst_tax_rate,
+)
+from app.services.accounting_unit_service import (
+    approve_custom_unit,
+    approve_unit_conversion,
+    cancel_custom_unit,
+    cancel_unit_conversion,
+    create_custom_unit,
+    create_unit_conversion,
+    deactivate_custom_unit,
+    deactivate_unit_conversion,
+    ensure_unit_indexes,
+    get_unit_option_catalog,
+    get_unit_overview,
+    reactivate_custom_unit,
+    reactivate_unit_conversion,
+    return_custom_unit,
+    return_unit_conversion,
+    seed_standard_units,
+    submit_custom_unit,
+    submit_unit_conversion,
+    update_custom_unit,
+    update_unit_conversion,
+    withdraw_custom_unit,
+    withdraw_unit_conversion,
+)
+from app.services.accounting_hsn_service import (
+    approve_hsn_master,
+    cancel_hsn_master,
+    create_hsn_master,
+    deactivate_hsn_master,
+    ensure_hsn_indexes,
+    get_hsn_option_catalog,
+    get_hsn_overview,
+    reactivate_hsn_master,
+    return_hsn_master,
+    submit_hsn_master,
+    update_hsn_master,
+    withdraw_hsn_master,
+)
+from app.services.accounting_product_mapping_service import (
+    approve_product_mapping,
+    cancel_product_mapping,
+    create_product_mapping,
+    deactivate_product_mapping,
+    ensure_product_mapping_indexes,
+    get_product_mapping_option_catalog,
+    get_product_mapping_overview,
+    reactivate_product_mapping,
+    return_product_mapping,
+    submit_product_mapping,
+    update_product_mapping,
+    withdraw_product_mapping,
+)
+from app.services.accounting_gst_determination_service import (
+    get_gst_determination_overview,
+    preview_gst_determination,
+)
+from app.services.accounting_product_tracking_service import (
+    approve_product_tracking_profile,
+    cancel_product_tracking_profile,
+    create_product_tracking_profile,
+    deactivate_product_tracking_profile,
+    ensure_product_tracking_indexes,
+    get_product_tracking_overview,
+    preview_product_tracking_validation,
+    reactivate_product_tracking_profile,
+    return_product_tracking_profile,
+    submit_product_tracking_profile,
+    update_product_tracking_profile,
+    withdraw_product_tracking_profile,
 )
 from app.services.accounting_configuration_service import (
     approve_accounting_policy,
@@ -196,6 +282,73 @@ def _run_party_ledger_action(action):
         flash(result.get("message") or "Party ledger updated.", "success")
 
     return _redirect_dashboard("party-ledgers")
+
+
+def _run_gst_tax_action(action):
+    try:
+        result = action()
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        category = "warning" if result.get("repaired") else "success"
+        flash(result.get("message") or "GST tax master updated.", category)
+
+    return _redirect_dashboard("gst-tax-master")
+
+
+def _run_unit_action(action):
+    try:
+        result = action()
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        category = "warning" if result.get("repaired") else "success"
+        flash(result.get("message") or "Units master updated.", category)
+
+    return _redirect_dashboard("units-master")
+
+
+def _run_hsn_action(action):
+    try:
+        result = action()
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        flash(result.get("message") or "HSN master updated.", "success")
+
+    return _redirect_dashboard("hsn-master")
+
+
+def _run_product_mapping_action(action):
+    try:
+        result = action()
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        flash(result.get("message") or "Product Accounting mapping updated.", "success")
+
+    return _redirect_dashboard("product-accounting-mapping")
+
+
+def _run_product_tracking_action(action):
+    try:
+        result = action()
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        flash(result.get("message") or "Product tracking controls updated.", "success")
+
+    return _redirect_dashboard("product-tracking-controls")
 
 
 def _run_financial_year_control_action(action):
@@ -654,6 +807,369 @@ def dashboard():
         except (PermissionError, ValueError, RuntimeError) as exc:
             party_ledger_setup_error = str(exc)
 
+    gst_tax_capabilities = {
+        "can_view": has_accounting_permission(
+            access, "accounting.gst_tax.view"
+        ),
+        "can_bootstrap": (
+            session.get("role") == "super_admin"
+            and has_accounting_permission(
+                access, "accounting.gst_tax.bootstrap"
+            )
+        ),
+        "can_create": has_accounting_permission(
+            access, "accounting.gst_tax.create"
+        ),
+        "can_edit": has_accounting_permission(
+            access, "accounting.gst_tax.edit"
+        ),
+        "can_submit": has_accounting_permission(
+            access, "accounting.gst_tax.submit"
+        ),
+        "can_withdraw": has_accounting_permission(
+            access, "accounting.gst_tax.withdraw"
+        ),
+        "can_cancel": has_accounting_permission(
+            access, "accounting.gst_tax.cancel"
+        ),
+        "can_approve": has_accounting_permission(
+            access, "accounting.gst_tax.approve"
+        ),
+        "can_return": has_accounting_permission(
+            access, "accounting.gst_tax.return"
+        ),
+        "can_retire": has_accounting_permission(
+            access, "accounting.gst_tax.retire"
+        ),
+    }
+    gst_tax_overview = {
+        "entity_id": "",
+        "entity_code": "AVPL",
+        "entity_name": "AVPL",
+        "foundation": {
+            "components": [],
+            "taxabilities": [],
+            "required_component_count": 3,
+            "present_component_count": 0,
+            "missing_components": ["cgst", "sgst", "igst"],
+            "drifted_components": [],
+            "required_taxability_count": 4,
+            "present_taxability_count": 0,
+            "missing_taxabilities": ["taxable", "exempt", "nil_rated", "non_gst"],
+            "drifted_taxabilities": [],
+            "is_complete": False,
+            "audit_recovery_count": 0,
+        },
+        "rows": [],
+        "working_rows": [],
+        "pending_rows": [],
+        "active_rows": [],
+        "retired_rows": [],
+        "cancelled_rows": [],
+        "current_active_rows": [],
+        "future_active_rows": [],
+        "counts": {
+            "draft": 0,
+            "pending_approval": 0,
+            "returned_for_correction": 0,
+            "active": 0,
+            "retired": 0,
+            "cancelled": 0,
+        },
+        "total_count": 0,
+        "audit_recovery_count": 0,
+        "options": get_gst_tax_option_catalog(),
+        "form_defaults": {
+            "effective_from": "",
+            "effective_to": "",
+            "taxability_code": "TAXABLE",
+        },
+    }
+    gst_tax_setup_error = ""
+
+    if avpl_entity_document and gst_tax_capabilities["can_view"]:
+        try:
+            ensure_gst_tax_indexes()
+            gst_tax_overview = get_gst_tax_overview(
+                avpl_entity_document["_id"],
+                session["user_id"],
+            )
+        except (PermissionError, ValueError, RuntimeError) as exc:
+            gst_tax_setup_error = str(exc)
+
+    unit_capabilities = {
+        "can_view": has_accounting_permission(access, "accounting.unit.view"),
+        "can_bootstrap": (
+            session.get("role") == "super_admin"
+            and has_accounting_permission(access, "accounting.unit.bootstrap")
+        ),
+        "can_create": has_accounting_permission(access, "accounting.unit.create"),
+        "can_edit": has_accounting_permission(access, "accounting.unit.edit"),
+        "can_submit": has_accounting_permission(access, "accounting.unit.submit"),
+        "can_withdraw": has_accounting_permission(access, "accounting.unit.withdraw"),
+        "can_cancel": has_accounting_permission(access, "accounting.unit.cancel"),
+        "can_approve": has_accounting_permission(access, "accounting.unit.approve"),
+        "can_return": has_accounting_permission(access, "accounting.unit.return"),
+        "can_deactivate": has_accounting_permission(access, "accounting.unit.deactivate"),
+        "can_reactivate": has_accounting_permission(access, "accounting.unit.reactivate"),
+    }
+    unit_overview = {
+        "entity_id": "",
+        "entity_code": "AVPL",
+        "entity_name": "AVPL",
+        "foundation": {
+            "required_count": 45,
+            "present_count": 0,
+            "missing": [],
+            "drifted": [],
+            "is_complete": False,
+        },
+        "units": [],
+        "standard_units": [],
+        "custom_units": [],
+        "custom_working": [],
+        "custom_pending": [],
+        "custom_active": [],
+        "custom_inactive": [],
+        "unit_counts": {},
+        "conversions": [],
+        "conversion_working": [],
+        "conversion_pending": [],
+        "conversion_active": [],
+        "conversion_inactive": [],
+        "conversion_counts": {},
+        "audit_recovery_count": 0,
+        "options": get_unit_option_catalog(),
+    }
+    unit_setup_error = ""
+
+    if avpl_entity_document and unit_capabilities["can_view"]:
+        try:
+            ensure_unit_indexes()
+            unit_overview = get_unit_overview(
+                avpl_entity_document["_id"],
+                session["user_id"],
+            )
+        except (PermissionError, ValueError, RuntimeError) as exc:
+            unit_setup_error = str(exc)
+
+    hsn_capabilities = {
+        "can_view": has_accounting_permission(access, "accounting.hsn.view"),
+        "can_create": has_accounting_permission(access, "accounting.hsn.create"),
+        "can_edit": has_accounting_permission(access, "accounting.hsn.edit"),
+        "can_submit": has_accounting_permission(access, "accounting.hsn.submit"),
+        "can_withdraw": has_accounting_permission(access, "accounting.hsn.withdraw"),
+        "can_cancel": has_accounting_permission(access, "accounting.hsn.cancel"),
+        "can_approve": has_accounting_permission(access, "accounting.hsn.approve"),
+        "can_return": has_accounting_permission(access, "accounting.hsn.return"),
+        "can_deactivate": has_accounting_permission(access, "accounting.hsn.deactivate"),
+        "can_reactivate": has_accounting_permission(access, "accounting.hsn.reactivate"),
+    }
+    hsn_overview = {
+        "entity_id": "",
+        "entity_code": "AVPL",
+        "entity_name": "AVPL",
+        "rows": [],
+        "working_rows": [],
+        "pending_rows": [],
+        "active_rows": [],
+        "inactive_rows": [],
+        "cancelled_rows": [],
+        "counts": {},
+        "taxability_counts": {},
+        "total_count": 0,
+        "audit_recovery_count": 0,
+        "options": get_hsn_option_catalog(),
+    }
+    hsn_setup_error = ""
+
+    if avpl_entity_document and hsn_capabilities["can_view"]:
+        try:
+            ensure_hsn_indexes()
+            hsn_overview = get_hsn_overview(
+                avpl_entity_document["_id"],
+                session["user_id"],
+            )
+        except (PermissionError, ValueError, RuntimeError) as exc:
+            hsn_setup_error = str(exc)
+
+    product_mapping_capabilities = {
+        "can_view": has_accounting_permission(access, "accounting.product_mapping.view"),
+        "can_create": has_accounting_permission(access, "accounting.product_mapping.create"),
+        "can_edit": has_accounting_permission(access, "accounting.product_mapping.edit"),
+        "can_submit": has_accounting_permission(access, "accounting.product_mapping.submit"),
+        "can_withdraw": has_accounting_permission(access, "accounting.product_mapping.withdraw"),
+        "can_cancel": has_accounting_permission(access, "accounting.product_mapping.cancel"),
+        "can_approve": has_accounting_permission(access, "accounting.product_mapping.approve"),
+        "can_return": has_accounting_permission(access, "accounting.product_mapping.return"),
+        "can_deactivate": has_accounting_permission(access, "accounting.product_mapping.deactivate"),
+        "can_reactivate": has_accounting_permission(access, "accounting.product_mapping.reactivate"),
+    }
+    product_mapping_overview = {
+        "entity_id": "",
+        "entity_code": "AVPL",
+        "entity_name": "AVPL",
+        "rows": [],
+        "working_rows": [],
+        "pending_rows": [],
+        "active_rows": [],
+        "inactive_rows": [],
+        "cancelled_rows": [],
+        "counts": {},
+        "total_mapping_count": 0,
+        "active_operational_product_count": 0,
+        "active_mapped_product_count": 0,
+        "unmapped_active_product_count": 0,
+        "audit_recovery_count": 0,
+        "options": get_product_mapping_option_catalog(),
+        "prerequisites": {
+            "has_active_hsn": False,
+            "has_active_units": False,
+            "has_purchase_ledger": False,
+            "has_sales_ledger": False,
+            "has_inventory_ledger": False,
+            "is_ready": False,
+        },
+    }
+    product_mapping_setup_error = ""
+
+    if avpl_entity_document and product_mapping_capabilities["can_view"]:
+        try:
+            ensure_product_mapping_indexes()
+            product_mapping_overview = get_product_mapping_overview(
+                avpl_entity_document["_id"],
+                session["user_id"],
+            )
+        except (PermissionError, ValueError, RuntimeError) as exc:
+            product_mapping_setup_error = str(exc)
+
+    gst_determination_capabilities = {
+        "can_view": has_accounting_permission(
+            access, "accounting.gst_determination.view"
+        ),
+        "can_preview": has_accounting_permission(
+            access, "accounting.gst_determination.preview"
+        ),
+    }
+    gst_determination_overview = {
+        "entity_id": "",
+        "entity_code": "AVPL",
+        "seller": {},
+        "default_place_of_supply": {},
+        "parties": [],
+        "suppliers": [],
+        "customers": [],
+        "product_mappings": [],
+        "states": [],
+        "transaction_types": [],
+        "today": "",
+        "counts": {"suppliers": 0, "customers": 0, "product_mappings": 0},
+        "prerequisites": {
+            "seller_state_ready": False,
+            "seller_gst_profile_ready": False,
+            "has_policy": False,
+            "has_parties": False,
+            "has_suppliers": False,
+            "has_customers": False,
+            "has_product_mappings": False,
+            "is_ready": False,
+        },
+    }
+    gst_determination_setup_error = ""
+    gst_determination_preview = session.pop(
+        "accounting_gst_determination_preview", None
+    )
+
+    if avpl_entity_document and gst_determination_capabilities["can_view"]:
+        try:
+            gst_determination_overview = get_gst_determination_overview(
+                avpl_entity_document["_id"],
+                session["user_id"],
+            )
+        except (PermissionError, ValueError, RuntimeError) as exc:
+            gst_determination_setup_error = str(exc)
+
+    product_tracking_capabilities = {
+        "can_view": has_accounting_permission(
+            access, "accounting.product_tracking.view"
+        ),
+        "can_create": has_accounting_permission(
+            access, "accounting.product_tracking.create"
+        ),
+        "can_edit": has_accounting_permission(
+            access, "accounting.product_tracking.edit"
+        ),
+        "can_submit": has_accounting_permission(
+            access, "accounting.product_tracking.submit"
+        ),
+        "can_withdraw": has_accounting_permission(
+            access, "accounting.product_tracking.withdraw"
+        ),
+        "can_cancel": has_accounting_permission(
+            access, "accounting.product_tracking.cancel"
+        ),
+        "can_approve": has_accounting_permission(
+            access, "accounting.product_tracking.approve"
+        ),
+        "can_return": has_accounting_permission(
+            access, "accounting.product_tracking.return"
+        ),
+        "can_deactivate": has_accounting_permission(
+            access, "accounting.product_tracking.deactivate"
+        ),
+        "can_reactivate": has_accounting_permission(
+            access, "accounting.product_tracking.reactivate"
+        ),
+        "can_validate": has_accounting_permission(
+            access, "accounting.product_tracking.validate"
+        ),
+    }
+    product_tracking_overview = {
+        "entity_id": "",
+        "entity_code": "AVPL",
+        "entity_name": "AVPL",
+        "rows": [],
+        "working_rows": [],
+        "pending_rows": [],
+        "active_rows": [],
+        "inactive_rows": [],
+        "cancelled_rows": [],
+        "counts": {},
+        "total_profile_count": 0,
+        "active_profile_count": 0,
+        "barcode_profile_count": 0,
+        "batch_profile_count": 0,
+        "expiry_profile_count": 0,
+        "unconfigured_mapping_count": 0,
+        "audit_recovery_count": 0,
+        "options": {
+            "eligible_mappings": [],
+            "all_active_mappings": [],
+            "barcode_types": [],
+            "movement_types": [],
+            "status_labels": {},
+        },
+        "prerequisites": {
+            "has_accounting_ready_products": False,
+            "has_unconfigured_products": False,
+            "is_ready": False,
+        },
+    }
+    product_tracking_setup_error = ""
+    product_tracking_preview = session.pop(
+        "accounting_product_tracking_preview", None
+    )
+
+    if avpl_entity_document and product_tracking_capabilities["can_view"]:
+        try:
+            ensure_product_tracking_indexes()
+            product_tracking_overview = get_product_tracking_overview(
+                avpl_entity_document["_id"],
+                session["user_id"],
+            )
+        except (PermissionError, ValueError, RuntimeError) as exc:
+            product_tracking_setup_error = str(exc)
+
     user_access_capabilities = {
         "can_view": has_accounting_permission(
             access, "accounting.user_access.view"
@@ -725,6 +1241,27 @@ def dashboard():
         party_ledger_capabilities=party_ledger_capabilities,
         party_ledger_overview=party_ledger_overview,
         party_ledger_setup_error=party_ledger_setup_error,
+        gst_tax_capabilities=gst_tax_capabilities,
+        gst_tax_overview=gst_tax_overview,
+        gst_tax_setup_error=gst_tax_setup_error,
+        unit_capabilities=unit_capabilities,
+        unit_overview=unit_overview,
+        unit_setup_error=unit_setup_error,
+        hsn_capabilities=hsn_capabilities,
+        hsn_overview=hsn_overview,
+        hsn_setup_error=hsn_setup_error,
+        product_mapping_capabilities=product_mapping_capabilities,
+        product_mapping_overview=product_mapping_overview,
+        product_mapping_setup_error=product_mapping_setup_error,
+        gst_determination_capabilities=gst_determination_capabilities,
+        gst_determination_overview=gst_determination_overview,
+        gst_determination_setup_error=gst_determination_setup_error,
+        gst_determination_preview=gst_determination_preview,
+        product_tracking_capabilities=product_tracking_capabilities,
+        product_tracking_overview=product_tracking_overview,
+        product_tracking_setup_error=product_tracking_setup_error,
+        product_tracking_preview=product_tracking_preview,
+        product_tracking_today=date.today().isoformat(),
         user_access_capabilities=user_access_capabilities,
         user_access_summary=user_access_summary,
         user_access_setup_error=user_access_setup_error,
@@ -1578,4 +2115,724 @@ def party_ledger_reactivate(ledger_id):
             reason=request.form.get("reason"),
         )
     )
+
+# ---------------------------------------------------------------------------
+# Stage 4 Batch 1: GST components, taxability and effective-dated tax rates
+# ---------------------------------------------------------------------------
+
+@accounting_bp.route("/gst-tax-master/synchronize", methods=["POST"])
+@login_required
+@roles_required("super_admin")
+@accounting_permission_required("accounting.gst_tax.bootstrap")
+def gst_tax_master_synchronize():
+    entity = get_avpl_entity()
+    if not entity:
+        flash("Initialize the active AVPL Accounting entity first.", "danger")
+        return _redirect_dashboard("gst-tax-master")
+
+    return _run_gst_tax_action(
+        lambda: seed_gst_tax_foundation(
+            actor_user_id=session["user_id"],
+            accounting_entity_id=entity["_id"],
+        )
+    )
+
+
+@accounting_bp.route("/gst-tax-rates/create", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.gst_tax.create")
+def gst_tax_rate_create():
+    entity = get_avpl_entity()
+    if not entity:
+        flash("Initialize the active AVPL Accounting entity first.", "danger")
+        return _redirect_dashboard("gst-tax-master")
+
+    return _run_gst_tax_action(
+        lambda: create_gst_tax_rate(
+            accounting_entity_id=entity["_id"],
+            actor_user_id=session["user_id"],
+            raw_payload=request.form.to_dict(),
+        )
+    )
+
+
+@accounting_bp.route("/gst-tax-rates/<rate_id>/edit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.gst_tax.edit")
+def gst_tax_rate_edit(rate_id):
+    return _run_gst_tax_action(
+        lambda: update_gst_tax_rate(
+            rate_id=rate_id,
+            actor_user_id=session["user_id"],
+            raw_payload=request.form.to_dict(),
+            expected_version=request.form.get("version"),
+        )
+    )
+
+
+@accounting_bp.route("/gst-tax-rates/<rate_id>/submit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.gst_tax.submit")
+def gst_tax_rate_submit(rate_id):
+    return _run_gst_tax_action(
+        lambda: submit_gst_tax_rate(
+            rate_id=rate_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+            submission_note=request.form.get("submission_note"),
+        )
+    )
+
+
+@accounting_bp.route("/gst-tax-rates/<rate_id>/withdraw", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.gst_tax.withdraw")
+def gst_tax_rate_withdraw(rate_id):
+    return _run_gst_tax_action(
+        lambda: withdraw_gst_tax_rate(
+            rate_id=rate_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+            reason=request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/gst-tax-rates/<rate_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.gst_tax.cancel")
+def gst_tax_rate_cancel(rate_id):
+    return _run_gst_tax_action(
+        lambda: cancel_gst_tax_rate(
+            rate_id=rate_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+            reason=request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/gst-tax-rates/<rate_id>/approve", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.gst_tax.approve")
+def gst_tax_rate_approve(rate_id):
+    return _run_gst_tax_action(
+        lambda: approve_gst_tax_rate(
+            rate_id=rate_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+            approval_note=request.form.get("approval_note"),
+        )
+    )
+
+
+@accounting_bp.route("/gst-tax-rates/<rate_id>/return", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.gst_tax.return")
+def gst_tax_rate_return(rate_id):
+    return _run_gst_tax_action(
+        lambda: return_gst_tax_rate(
+            rate_id=rate_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+            return_reason=request.form.get("return_reason"),
+        )
+    )
+
+
+@accounting_bp.route("/gst-tax-rates/<rate_id>/retire", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.gst_tax.retire")
+def gst_tax_rate_retire(rate_id):
+    return _run_gst_tax_action(
+        lambda: retire_gst_tax_rate(
+            rate_id=rate_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+            effective_to=request.form.get("effective_to"),
+            reason=request.form.get("reason"),
+        )
+    )
+
+# ---------------------------------------------------------------------------
+# Stage 4 Batch 2 — Units, conversions and HSN masters
+# ---------------------------------------------------------------------------
+
+@accounting_bp.route("/units/synchronize", methods=["POST"])
+@login_required
+@roles_required("super_admin")
+@accounting_permission_required("accounting.unit.bootstrap")
+def units_synchronize():
+    entity = get_avpl_entity()
+    if not entity:
+        flash("Initialize the AVPL Accounting entity first.", "danger")
+        return _redirect_dashboard("units-master")
+    return _run_unit_action(lambda: seed_standard_units(entity["_id"], session["user_id"]))
+
+
+@accounting_bp.route("/units/create", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.create")
+def custom_unit_create():
+    entity = get_avpl_entity()
+    if not entity:
+        flash("The active AVPL Accounting entity is not available.", "danger")
+        return _redirect_dashboard("units-master")
+    return _run_unit_action(lambda: create_custom_unit(entity["_id"], session["user_id"], request.form))
+
+
+@accounting_bp.route("/units/<unit_id>/edit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.edit")
+def custom_unit_edit(unit_id):
+    return _run_unit_action(lambda: update_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form))
+
+
+@accounting_bp.route("/units/<unit_id>/submit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.submit")
+def custom_unit_submit(unit_id):
+    return _run_unit_action(lambda: submit_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form.get("submission_note")))
+
+
+@accounting_bp.route("/units/<unit_id>/withdraw", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.withdraw")
+def custom_unit_withdraw(unit_id):
+    return _run_unit_action(lambda: withdraw_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/units/<unit_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.cancel")
+def custom_unit_cancel(unit_id):
+    return _run_unit_action(lambda: cancel_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/units/<unit_id>/approve", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.unit.approve")
+def custom_unit_approve(unit_id):
+    return _run_unit_action(lambda: approve_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form.get("approval_note")))
+
+
+@accounting_bp.route("/units/<unit_id>/return", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.unit.return")
+def custom_unit_return(unit_id):
+    return _run_unit_action(lambda: return_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form.get("return_reason")))
+
+
+@accounting_bp.route("/units/<unit_id>/deactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.unit.deactivate")
+def custom_unit_deactivate(unit_id):
+    return _run_unit_action(lambda: deactivate_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/units/<unit_id>/reactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.unit.reactivate")
+def custom_unit_reactivate(unit_id):
+    return _run_unit_action(lambda: reactivate_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/unit-conversions/create", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.create")
+def unit_conversion_create():
+    entity = get_avpl_entity()
+    if not entity:
+        flash("The active AVPL Accounting entity is not available.", "danger")
+        return _redirect_dashboard("units-master")
+    return _run_unit_action(lambda: create_unit_conversion(entity["_id"], session["user_id"], request.form))
+
+
+@accounting_bp.route("/unit-conversions/<conversion_id>/edit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.edit")
+def unit_conversion_edit(conversion_id):
+    return _run_unit_action(lambda: update_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form))
+
+
+@accounting_bp.route("/unit-conversions/<conversion_id>/submit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.submit")
+def unit_conversion_submit(conversion_id):
+    return _run_unit_action(lambda: submit_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form.get("submission_note")))
+
+
+@accounting_bp.route("/unit-conversions/<conversion_id>/withdraw", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.withdraw")
+def unit_conversion_withdraw(conversion_id):
+    return _run_unit_action(lambda: withdraw_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/unit-conversions/<conversion_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.unit.cancel")
+def unit_conversion_cancel(conversion_id):
+    return _run_unit_action(lambda: cancel_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/unit-conversions/<conversion_id>/approve", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.unit.approve")
+def unit_conversion_approve(conversion_id):
+    return _run_unit_action(lambda: approve_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form.get("approval_note")))
+
+
+@accounting_bp.route("/unit-conversions/<conversion_id>/return", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.unit.return")
+def unit_conversion_return(conversion_id):
+    return _run_unit_action(lambda: return_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form.get("return_reason")))
+
+
+@accounting_bp.route("/unit-conversions/<conversion_id>/deactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.unit.deactivate")
+def unit_conversion_deactivate(conversion_id):
+    return _run_unit_action(lambda: deactivate_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/unit-conversions/<conversion_id>/reactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.unit.reactivate")
+def unit_conversion_reactivate(conversion_id):
+    return _run_unit_action(lambda: reactivate_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/hsn-masters/create", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.hsn.create")
+def hsn_master_create():
+    entity = get_avpl_entity()
+    if not entity:
+        flash("The active AVPL Accounting entity is not available.", "danger")
+        return _redirect_dashboard("hsn-master")
+    return _run_hsn_action(lambda: create_hsn_master(entity["_id"], session["user_id"], request.form))
+
+
+@accounting_bp.route("/hsn-masters/<hsn_id>/edit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.hsn.edit")
+def hsn_master_edit(hsn_id):
+    return _run_hsn_action(lambda: update_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form))
+
+
+@accounting_bp.route("/hsn-masters/<hsn_id>/submit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.hsn.submit")
+def hsn_master_submit(hsn_id):
+    return _run_hsn_action(lambda: submit_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form.get("submission_note")))
+
+
+@accounting_bp.route("/hsn-masters/<hsn_id>/withdraw", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.hsn.withdraw")
+def hsn_master_withdraw(hsn_id):
+    return _run_hsn_action(lambda: withdraw_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/hsn-masters/<hsn_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.hsn.cancel")
+def hsn_master_cancel(hsn_id):
+    return _run_hsn_action(lambda: cancel_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/hsn-masters/<hsn_id>/approve", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.hsn.approve")
+def hsn_master_approve(hsn_id):
+    return _run_hsn_action(lambda: approve_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form.get("approval_note")))
+
+
+@accounting_bp.route("/hsn-masters/<hsn_id>/return", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.hsn.return")
+def hsn_master_return(hsn_id):
+    return _run_hsn_action(lambda: return_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form.get("return_reason")))
+
+
+@accounting_bp.route("/hsn-masters/<hsn_id>/deactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.hsn.deactivate")
+def hsn_master_deactivate(hsn_id):
+    return _run_hsn_action(lambda: deactivate_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+
+@accounting_bp.route("/hsn-masters/<hsn_id>/reactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.hsn.reactivate")
+def hsn_master_reactivate(hsn_id):
+    return _run_hsn_action(lambda: reactivate_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form.get("reason")))
+
+# ---------------------------------------------------------------------------
+# Stage 4 · Batch 3 — Product Accounting mapping
+# ---------------------------------------------------------------------------
+
+
+@accounting_bp.route("/product-mappings/create", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_mapping.create")
+def product_mapping_create():
+    entity = get_avpl_entity()
+    if not entity:
+        flash("The active AVPL Accounting entity is not available.", "danger")
+        return _redirect_dashboard("product-accounting-mapping")
+    return _run_product_mapping_action(
+        lambda: create_product_mapping(entity["_id"], session["user_id"], request.form)
+    )
+
+
+@accounting_bp.route("/product-mappings/<mapping_id>/edit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_mapping.edit")
+def product_mapping_edit(mapping_id):
+    return _run_product_mapping_action(
+        lambda: update_product_mapping(
+            mapping_id, session["user_id"], request.form.get("version"), request.form
+        )
+    )
+
+
+@accounting_bp.route("/product-mappings/<mapping_id>/submit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_mapping.submit")
+def product_mapping_submit(mapping_id):
+    return _run_product_mapping_action(
+        lambda: submit_product_mapping(
+            mapping_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("submission_note"),
+        )
+    )
+
+
+@accounting_bp.route("/product-mappings/<mapping_id>/withdraw", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_mapping.withdraw")
+def product_mapping_withdraw(mapping_id):
+    return _run_product_mapping_action(
+        lambda: withdraw_product_mapping(
+            mapping_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/product-mappings/<mapping_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_mapping.cancel")
+def product_mapping_cancel(mapping_id):
+    return _run_product_mapping_action(
+        lambda: cancel_product_mapping(
+            mapping_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/product-mappings/<mapping_id>/approve", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.product_mapping.approve")
+def product_mapping_approve(mapping_id):
+    return _run_product_mapping_action(
+        lambda: approve_product_mapping(
+            mapping_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("approval_note"),
+        )
+    )
+
+
+@accounting_bp.route("/product-mappings/<mapping_id>/return", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.product_mapping.return")
+def product_mapping_return(mapping_id):
+    return _run_product_mapping_action(
+        lambda: return_product_mapping(
+            mapping_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("return_reason"),
+        )
+    )
+
+
+@accounting_bp.route("/product-mappings/<mapping_id>/deactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.product_mapping.deactivate")
+def product_mapping_deactivate(mapping_id):
+    return _run_product_mapping_action(
+        lambda: deactivate_product_mapping(
+            mapping_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/product-mappings/<mapping_id>/reactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.product_mapping.reactivate")
+def product_mapping_reactivate(mapping_id):
+    return _run_product_mapping_action(
+        lambda: reactivate_product_mapping(
+            mapping_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("reason"),
+        )
+    )
+
+@accounting_bp.route("/gst-determination/preview", methods=["POST"])
+@login_required
+@roles_required("super_admin", "avpl_admin", "accounts")
+@accounting_permission_required("accounting.gst_determination.preview")
+def gst_determination_preview_route():
+    entity = get_avpl_entity(include_inactive=False)
+    if not entity:
+        flash("Initialize and activate the AVPL Accounting entity first.", "danger")
+        return _redirect_dashboard("gst-determination")
+
+    try:
+        result = preview_gst_determination(
+            entity["_id"],
+            session["user_id"],
+            request.form,
+        )
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        session["accounting_gst_determination_preview"] = result
+        flash(
+            f"GST preview resolved as {result['supply_type_label']}.",
+            "success",
+        )
+
+    return _redirect_dashboard("gst-determination")
+
+# ---------------------------------------------------------------------------
+# Stage 4 · Batch 5 — Barcode, batch and expiry controls
+# ---------------------------------------------------------------------------
+
+
+@accounting_bp.route("/product-tracking/create", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_tracking.create")
+def product_tracking_create():
+    entity = get_avpl_entity(include_inactive=False)
+    if not entity:
+        flash("The active AVPL Accounting entity is not available.", "danger")
+        return _redirect_dashboard("product-tracking-controls")
+    return _run_product_tracking_action(
+        lambda: create_product_tracking_profile(
+            entity["_id"], session["user_id"], request.form
+        )
+    )
+
+
+@accounting_bp.route("/product-tracking/<profile_id>/edit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_tracking.edit")
+def product_tracking_edit(profile_id):
+    return _run_product_tracking_action(
+        lambda: update_product_tracking_profile(
+            profile_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form,
+        )
+    )
+
+
+@accounting_bp.route("/product-tracking/<profile_id>/submit", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_tracking.submit")
+def product_tracking_submit(profile_id):
+    return _run_product_tracking_action(
+        lambda: submit_product_tracking_profile(
+            profile_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("submission_note"),
+        )
+    )
+
+
+@accounting_bp.route("/product-tracking/<profile_id>/withdraw", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_tracking.withdraw")
+def product_tracking_withdraw(profile_id):
+    return _run_product_tracking_action(
+        lambda: withdraw_product_tracking_profile(
+            profile_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/product-tracking/<profile_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("accounts")
+@accounting_permission_required("accounting.product_tracking.cancel")
+def product_tracking_cancel(profile_id):
+    return _run_product_tracking_action(
+        lambda: cancel_product_tracking_profile(
+            profile_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/product-tracking/<profile_id>/approve", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.product_tracking.approve")
+def product_tracking_approve(profile_id):
+    return _run_product_tracking_action(
+        lambda: approve_product_tracking_profile(
+            profile_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("approval_note"),
+        )
+    )
+
+
+@accounting_bp.route("/product-tracking/<profile_id>/return", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.product_tracking.return")
+def product_tracking_return(profile_id):
+    return _run_product_tracking_action(
+        lambda: return_product_tracking_profile(
+            profile_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("return_reason"),
+        )
+    )
+
+
+@accounting_bp.route("/product-tracking/<profile_id>/deactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.product_tracking.deactivate")
+def product_tracking_deactivate(profile_id):
+    return _run_product_tracking_action(
+        lambda: deactivate_product_tracking_profile(
+            profile_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/product-tracking/<profile_id>/reactivate", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.product_tracking.reactivate")
+def product_tracking_reactivate(profile_id):
+    return _run_product_tracking_action(
+        lambda: reactivate_product_tracking_profile(
+            profile_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/product-tracking/validate", methods=["POST"])
+@login_required
+@roles_required("super_admin", "avpl_admin", "accounts")
+@accounting_permission_required("accounting.product_tracking.validate")
+def product_tracking_validate():
+    entity = get_avpl_entity(include_inactive=False)
+    if not entity:
+        flash("Initialize and activate the AVPL Accounting entity first.", "danger")
+        return _redirect_dashboard("product-tracking-controls")
+
+    try:
+        result = preview_product_tracking_validation(
+            entity["_id"],
+            session["user_id"],
+            request.form,
+        )
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        session["accounting_product_tracking_preview"] = result
+        flash("Product tracking controls validated successfully.", "success")
+
+    return _redirect_dashboard("product-tracking-controls")
 

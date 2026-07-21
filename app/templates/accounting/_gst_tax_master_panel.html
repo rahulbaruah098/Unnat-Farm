@@ -1,0 +1,641 @@
+{% if gst_tax_capabilities.can_view %}
+<style>
+.accounting-gst-card{
+    padding:clamp(22px,2vw,32px);
+    border:1px solid rgba(79,154,106,.22);
+    border-radius:26px;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 18px 42px rgba(23,37,42,.08);
+}
+.accounting-gst-summary{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    margin-top:18px;
+}
+.accounting-gst-summary>div{
+    min-height:102px;
+    padding:15px;
+    border:1px solid rgba(79,154,106,.18);
+    border-radius:16px;
+    background:#F8FCF9;
+}
+.accounting-gst-summary span,
+.accounting-gst-meta span,
+.accounting-gst-foundation-card span{
+    display:block;
+    color:#60716F;
+    font-size:.71rem;
+    font-weight:850;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+}
+.accounting-gst-summary strong{
+    display:block;
+    margin:6px 0 4px;
+    color:#17252A;
+    font-size:1.22rem;
+}
+.accounting-gst-summary small{color:#60716F;line-height:1.4;}
+.accounting-gst-foundation{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-top:18px;
+}
+.accounting-gst-foundation-box{
+    padding:17px;
+    border:1px solid rgba(79,154,106,.18);
+    border-radius:18px;
+    background:#FBFEFC;
+}
+.accounting-gst-foundation-heading{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:flex-start;
+    margin-bottom:12px;
+}
+.accounting-gst-foundation-heading h3,
+.accounting-gst-rate-heading h3,
+.accounting-gst-form-heading h3{
+    margin:0;
+    color:#17252A;
+    font-size:1rem;
+}
+.accounting-gst-foundation-heading p,
+.accounting-gst-form-heading p{
+    margin:5px 0 0;
+    color:#60716F;
+    font-size:.84rem;
+    line-height:1.45;
+}
+.accounting-gst-foundation-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+}
+.accounting-gst-foundation-card{
+    padding:12px;
+    border:1px solid rgba(79,154,106,.15);
+    border-radius:13px;
+    background:#F4FAF6;
+}
+.accounting-gst-foundation-card strong{
+    display:block;
+    margin:5px 0;
+    color:#21332C;
+    font-size:.9rem;
+}
+.accounting-gst-foundation-card small{color:#60716F;line-height:1.35;}
+.accounting-gst-sync{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-top:16px;
+    padding:15px;
+    border:1px solid rgba(47,117,72,.2);
+    border-radius:16px;
+    background:#F0FDF4;
+}
+.accounting-gst-sync strong{display:block;color:#173B25;}
+.accounting-gst-sync p{margin:5px 0 0;color:#52636C;font-size:.84rem;line-height:1.45;}
+.accounting-gst-form{
+    margin-top:20px;
+    padding:18px;
+    border:1px solid rgba(79,154,106,.2);
+    border-radius:19px;
+    background:#F8FCF9;
+}
+.accounting-gst-form-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    margin-top:15px;
+}
+.accounting-gst-field{display:grid;gap:6px;}
+.accounting-gst-field.span-2{grid-column:span 2;}
+.accounting-gst-field.span-4{grid-column:1/-1;}
+.accounting-gst-field label{
+    color:#40515A;
+    font-size:.75rem;
+    font-weight:850;
+}
+.accounting-gst-field input,
+.accounting-gst-field select,
+.accounting-gst-field textarea{
+    width:100%;
+    min-height:42px;
+    padding:10px 11px;
+    border:1px solid rgba(116,171,134,.36);
+    border-radius:11px;
+    background:#fff;
+    color:#23342F;
+    font:inherit;
+}
+.accounting-gst-field textarea{min-height:76px;resize:vertical;}
+.accounting-gst-form-actions,
+.accounting-gst-actions{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:14px;
+}
+.accounting-gst-secondary-button,
+.accounting-gst-danger-button,
+.accounting-gst-warning-button{
+    border:0;
+    cursor:pointer;
+    min-height:40px;
+    padding:10px 14px;
+    border-radius:11px;
+    font:inherit;
+    font-weight:850;
+}
+.accounting-gst-secondary-button{color:#245A39;background:#E5F5EA;}
+.accounting-gst-warning-button{color:#854D0E;background:#FEF3C7;}
+.accounting-gst-danger-button{color:#991B1B;background:#FEE2E2;}
+.accounting-gst-rates{display:grid;gap:13px;margin-top:20px;}
+.accounting-gst-rate{
+    border:1px solid rgba(79,154,106,.18);
+    border-radius:18px;
+    background:#fff;
+    overflow:hidden;
+}
+.accounting-gst-rate-header{
+    display:flex;
+    justify-content:space-between;
+    gap:15px;
+    align-items:flex-start;
+    padding:16px;
+    border-bottom:1px solid rgba(79,154,106,.13);
+    background:#FBFEFC;
+}
+.accounting-gst-rate-title{
+    display:flex;
+    gap:11px;
+    align-items:flex-start;
+}
+.accounting-gst-rate-mark{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:50px;
+    height:50px;
+    padding:0 8px;
+    border-radius:15px;
+    color:#2F7548;
+    background:#DDF2E4;
+    font-weight:900;
+}
+.accounting-gst-rate-heading p{margin:5px 0 0;color:#60716F;font-size:.83rem;}
+.accounting-gst-meta{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:10px;
+    padding:15px 16px;
+}
+.accounting-gst-meta>div{
+    padding:11px;
+    border-radius:12px;
+    background:#F5FAF7;
+}
+.accounting-gst-meta strong{
+    display:block;
+    margin-top:5px;
+    color:#263A32;
+    font-size:.88rem;
+    overflow-wrap:anywhere;
+}
+.accounting-gst-rule{
+    margin:0 16px 15px;
+    padding:12px 14px;
+    border-radius:13px;
+    color:#355044;
+    background:#F0FDF4;
+    font-size:.82rem;
+    line-height:1.5;
+}
+.accounting-gst-rate details{
+    margin:0 16px 16px;
+    border:1px solid rgba(79,154,106,.16);
+    border-radius:14px;
+    background:#FCFEFD;
+}
+.accounting-gst-rate summary{
+    cursor:pointer;
+    padding:12px 14px;
+    color:#2F7548;
+    font-weight:850;
+}
+.accounting-gst-detail-body{padding:0 14px 14px;}
+.accounting-gst-inline-form{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid rgba(79,154,106,.13);
+}
+.accounting-gst-inline-form .accounting-gst-form-grid{margin-top:0;}
+.accounting-gst-empty{
+    margin-top:18px;
+    padding:22px;
+    border:1px dashed rgba(79,154,106,.35);
+    border-radius:17px;
+    text-align:center;
+    color:#60716F;
+    background:#FAFDFC;
+}
+.accounting-gst-compliance-note{
+    margin-top:18px;
+    padding:14px 16px;
+    border:1px solid #BFDBFE;
+    border-radius:15px;
+    color:#1E3A5F;
+    background:#EFF6FF;
+    line-height:1.55;
+}
+@media(max-width:1100px){
+    .accounting-gst-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .accounting-gst-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .accounting-gst-field.span-4{grid-column:1/-1;}
+    .accounting-gst-meta{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media(max-width:760px){
+    .accounting-gst-foundation,
+    .accounting-gst-summary,
+    .accounting-gst-form-grid,
+    .accounting-gst-meta{grid-template-columns:1fr;}
+    .accounting-gst-field.span-2,
+    .accounting-gst-field.span-4{grid-column:auto;}
+    .accounting-gst-sync,
+    .accounting-gst-rate-header{flex-direction:column;align-items:stretch;}
+    .accounting-gst-sync form,
+    .accounting-gst-sync button{width:100%;}
+    .accounting-gst-actions button,
+    .accounting-gst-form-actions button{flex:1 1 100%;}
+}
+</style>
+
+<section class="accounting-gst-card" id="gst-tax-master" aria-labelledby="gstTaxMasterTitle">
+    <div class="accounting-section-heading">
+        <div>
+            <p class="accounting-eyebrow">Stage 4 · Batch 1</p>
+            <h2 id="gstTaxMasterTitle">GST tax master</h2>
+            <p class="accounting-section-description">
+                Protected CGST, SGST and IGST components, controlled taxability classifications,
+                and maker-checker approved tax rates with permanent effective-date history.
+            </p>
+        </div>
+        {% if gst_tax_overview.foundation.is_complete %}
+            <span class="accounting-state-pill active">GST foundation verified</span>
+        {% elif gst_tax_overview.foundation.present_component_count or gst_tax_overview.foundation.present_taxability_count %}
+            <span class="accounting-state-pill review">Foundation needs repair</span>
+        {% else %}
+            <span class="accounting-state-pill pending">Initialization required</span>
+        {% endif %}
+    </div>
+
+    {% if gst_tax_setup_error %}
+        <div class="accounting-notice danger">{{ gst_tax_setup_error }}</div>
+    {% elif not accounting_entity %}
+        <div class="accounting-notice info">
+            Initialize the active AVPL Accounting entity before configuring GST masters.
+        </div>
+    {% else %}
+        <div class="accounting-gst-summary">
+            <div>
+                <span>GST components</span>
+                <strong>{{ gst_tax_overview.foundation.present_component_count }} / {{ gst_tax_overview.foundation.required_component_count }}</strong>
+                <small>Protected CGST, SGST and IGST definitions</small>
+            </div>
+            <div>
+                <span>Taxability classes</span>
+                <strong>{{ gst_tax_overview.foundation.present_taxability_count }} / {{ gst_tax_overview.foundation.required_taxability_count }}</strong>
+                <small>Taxable, Exempt, Nil Rated and Non-GST</small>
+            </div>
+            <div>
+                <span>Effective today</span>
+                <strong>{{ gst_tax_overview.current_active_rows|length }}</strong>
+                <small>{{ gst_tax_overview.future_active_rows|length }} approved future rate(s)</small>
+            </div>
+            <div>
+                <span>Approval queue</span>
+                <strong>{{ gst_tax_overview.counts.pending_approval }}</strong>
+                <small>{{ gst_tax_overview.counts.returned_for_correction }} returned for correction</small>
+            </div>
+        </div>
+
+        <div class="accounting-gst-foundation">
+            <div class="accounting-gst-foundation-box">
+                <div class="accounting-gst-foundation-heading">
+                    <div>
+                        <h3>GST components</h3>
+                        <p>Component selection logic is fixed; state determination is added in Stage 4 Batch 4.</p>
+                    </div>
+                    <span class="accounting-state-pill {% if gst_tax_overview.foundation.drifted_components or gst_tax_overview.foundation.missing_components %}review{% else %}active{% endif %}">
+                        {{ gst_tax_overview.foundation.present_component_count }} present
+                    </span>
+                </div>
+                <div class="accounting-gst-foundation-grid">
+                    {% for component in gst_tax_overview.foundation.components %}
+                        <div class="accounting-gst-foundation-card">
+                            <span>{{ component.transaction_scope_display }}</span>
+                            <strong>{{ component.component_code }}</strong>
+                            <small>{{ component.name }}</small>
+                        </div>
+                    {% else %}
+                        <div class="accounting-gst-foundation-card">
+                            <strong>Not initialized</strong>
+                            <small>Super Admin must initialize the protected GST foundation.</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="accounting-gst-foundation-box">
+                <div class="accounting-gst-foundation-heading">
+                    <div>
+                        <h3>Taxability classifications</h3>
+                        <p>Products will use these protected values during Stage 4 Batch 3 mapping.</p>
+                    </div>
+                    <span class="accounting-state-pill {% if gst_tax_overview.foundation.drifted_taxabilities or gst_tax_overview.foundation.missing_taxabilities %}review{% else %}active{% endif %}">
+                        {{ gst_tax_overview.foundation.present_taxability_count }} present
+                    </span>
+                </div>
+                <div class="accounting-gst-foundation-grid">
+                    {% for item in gst_tax_overview.foundation.taxabilities %}
+                        <div class="accounting-gst-foundation-card">
+                            <span>{{ item.taxability_code }}</span>
+                            <strong>{{ item.name }}</strong>
+                            <small>{% if item.requires_tax_rate %}Approved rate required{% else %}No GST rate required{% endif %}</small>
+                        </div>
+                    {% else %}
+                        <div class="accounting-gst-foundation-card">
+                            <strong>Not initialized</strong>
+                            <small>Super Admin must initialize the protected taxability catalog.</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if gst_tax_capabilities.can_bootstrap %}
+            <div class="accounting-gst-sync">
+                <div>
+                    <strong>Initialize or repair the protected GST foundation</strong>
+                    <p>
+                        The operation is idempotent. It creates only missing system masters and restores
+                        recognized protected definitions. Custom data is never silently overwritten.
+                    </p>
+                </div>
+                <form method="post" action="{{ url_for('accounting.gst_tax_master_synchronize') }}">
+                    <button class="accounting-primary-button" type="submit">
+                        {% if gst_tax_overview.foundation.is_complete %}Verify and repair GST foundation{% else %}Initialize GST foundation{% endif %}
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+
+        {% if gst_tax_overview.foundation.is_complete and gst_tax_capabilities.can_create %}
+            <form class="accounting-gst-form" method="post" action="{{ url_for('accounting.gst_tax_rate_create') }}">
+                <div class="accounting-gst-form-heading">
+                    <h3>Create effective-dated GST rate</h3>
+                    <p>
+                        Accounts prepares the rate; AVPL Admin approves it. No default statutory rate is
+                        hard-coded, so the approved catalog can follow future legal changes safely.
+                    </p>
+                </div>
+                <div class="accounting-gst-form-grid">
+                    <div class="accounting-gst-field">
+                        <label for="gstRateCode">Rate code</label>
+                        <input id="gstRateCode" name="rate_code" maxlength="40" placeholder="GST_18" required>
+                    </div>
+                    <div class="accounting-gst-field">
+                        <label for="gstRateName">Rate name</label>
+                        <input id="gstRateName" name="name" maxlength="140" placeholder="GST 18%" required>
+                    </div>
+                    <div class="accounting-gst-field">
+                        <label for="gstTotalRate">Total GST rate (%)</label>
+                        <input id="gstTotalRate" name="total_rate" type="number" min="0.001" max="100" step="0.001" placeholder="18" required>
+                    </div>
+                    <div class="accounting-gst-field">
+                        <label for="gstEffectiveFrom">Effective from</label>
+                        <input id="gstEffectiveFrom" name="effective_from" type="date" value="{{ gst_tax_overview.form_defaults.effective_from }}" required>
+                    </div>
+                    <div class="accounting-gst-field">
+                        <label for="gstEffectiveTo">Effective to</label>
+                        <input id="gstEffectiveTo" name="effective_to" type="date">
+                    </div>
+                    <div class="accounting-gst-field span-2">
+                        <label for="gstSupersedes">Replaces an approved rate (optional)</label>
+                        <select id="gstSupersedes" name="supersedes_rate_id">
+                            <option value="">New independent rate code</option>
+                            {% for active_rate in gst_tax_overview.active_rows %}
+                                <option value="{{ active_rate.id }}">
+                                    {{ active_rate.rate_code }} · {{ active_rate.total_rate_display }} · from {{ active_rate.effective_from_display }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="accounting-gst-field span-4">
+                        <label for="gstDescription">Description / statutory reference</label>
+                        <textarea id="gstDescription" name="description" maxlength="1200" placeholder="Optional internal description, notification reference or applicability note."></textarea>
+                    </div>
+                </div>
+                <div class="accounting-gst-form-actions">
+                    <button class="accounting-primary-button" type="submit">Create GST rate draft</button>
+                </div>
+            </form>
+        {% elif not gst_tax_overview.foundation.is_complete %}
+            <div class="accounting-notice warning">
+                Complete the protected GST foundation before Accounts creates effective-dated tax rates.
+            </div>
+        {% endif %}
+
+        {% if gst_tax_overview.rows %}
+            <div class="accounting-gst-rates">
+                {% for rate in gst_tax_overview.rows %}
+                    {% set is_maker = rate.created_by == current_user_id %}
+                    <article class="accounting-gst-rate status-{{ rate.status }}">
+                        <div class="accounting-gst-rate-header">
+                            <div class="accounting-gst-rate-title">
+                                <span class="accounting-gst-rate-mark">{{ rate.total_rate_display }}</span>
+                                <div class="accounting-gst-rate-heading">
+                                    <h3>{{ rate.name }}</h3>
+                                    <p>{{ rate.rate_code }} · Effective {{ rate.effective_from_display }} to {{ rate.effective_to_display }}</p>
+                                </div>
+                            </div>
+                            <span class="accounting-status-badge status-{{ rate.status }}">{{ rate.status_display }}</span>
+                        </div>
+
+                        <div class="accounting-gst-meta">
+                            <div><span>Taxability</span><strong>Taxable</strong></div>
+                            <div><span>Intra-state</span><strong>{{ rate.cgst_rate }}% CGST + {{ rate.sgst_rate }}% SGST</strong></div>
+                            <div><span>Inter-state</span><strong>{{ rate.igst_rate }}% IGST</strong></div>
+                            <div><span>Maker</span><strong>{{ rate.created_by_name or 'Accounts' }}</strong></div>
+                            <div><span>Current today</span><strong>{% if rate.is_current_today %}Yes{% else %}No{% endif %}</strong></div>
+                        </div>
+
+                        {% if rate.supersedes_rate_id %}
+                            <div class="accounting-gst-rule">
+                                <strong>Replacement control:</strong> This rate supersedes {{ rate.supersedes_rate_code }}.
+                                Approval automatically closes the previous effective period one day before this rate begins.
+                            </div>
+                        {% else %}
+                            <div class="accounting-gst-rule">
+                                <strong>Permanent history:</strong> Approved rate rows are not edited or deleted.
+                                Future changes use another effective-dated row.
+                            </div>
+                        {% endif %}
+
+                        {% if rate.return_reason %}
+                            <div class="accounting-notice warning compact"><strong>Correction requested:</strong> {{ rate.return_reason }}</div>
+                        {% endif %}
+                        {% if rate.retirement_reason %}
+                            <div class="accounting-notice info compact"><strong>Retirement reason:</strong> {{ rate.retirement_reason }}</div>
+                        {% endif %}
+                        {% if rate.audit_sync_required %}
+                            <div class="accounting-notice danger compact">Audit-log recovery is required for this record.</div>
+                        {% endif %}
+
+                        <details>
+                            <summary>View details and available actions</summary>
+                            <div class="accounting-gst-detail-body">
+                                {% if rate.description %}<p class="accounting-section-description">{{ rate.description }}</p>{% endif %}
+
+                                {% if rate.status in ['draft', 'returned_for_correction'] and is_maker and gst_tax_capabilities.can_edit %}
+                                    <form class="accounting-gst-inline-form" method="post" action="{{ url_for('accounting.gst_tax_rate_edit', rate_id=rate.id) }}">
+                                        <input type="hidden" name="version" value="{{ rate.version }}">
+                                        <div class="accounting-gst-form-grid">
+                                            <div class="accounting-gst-field">
+                                                <label>Rate code</label>
+                                                <input name="rate_code" value="{{ rate.rate_code }}" maxlength="40" required>
+                                            </div>
+                                            <div class="accounting-gst-field">
+                                                <label>Rate name</label>
+                                                <input name="name" value="{{ rate.name }}" maxlength="140" required>
+                                            </div>
+                                            <div class="accounting-gst-field">
+                                                <label>Total GST rate (%)</label>
+                                                <input name="total_rate" type="number" min="0.001" max="100" step="0.001" value="{{ rate.total_rate }}" required>
+                                            </div>
+                                            <div class="accounting-gst-field">
+                                                <label>Effective from</label>
+                                                <input name="effective_from" type="date" value="{{ rate.effective_from }}" required>
+                                            </div>
+                                            <div class="accounting-gst-field">
+                                                <label>Effective to</label>
+                                                <input name="effective_to" type="date" value="{{ rate.effective_to }}">
+                                            </div>
+                                            <div class="accounting-gst-field span-2">
+                                                <label>Replaces approved rate</label>
+                                                <select name="supersedes_rate_id">
+                                                    <option value="">New independent rate code</option>
+                                                    {% for active_rate in gst_tax_overview.active_rows %}
+                                                        {% if active_rate.id != rate.id %}
+                                                            <option value="{{ active_rate.id }}" {% if rate.supersedes_rate_id == active_rate.id %}selected{% endif %}>
+                                                                {{ active_rate.rate_code }} · {{ active_rate.total_rate_display }}
+                                                            </option>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="accounting-gst-field span-4">
+                                                <label>Description / statutory reference</label>
+                                                <textarea name="description" maxlength="1200">{{ rate.description }}</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="accounting-gst-actions">
+                                            <button class="accounting-gst-secondary-button" type="submit">Save changes</button>
+                                        </div>
+                                    </form>
+                                {% endif %}
+
+                                {% if rate.status in ['draft', 'returned_for_correction'] and is_maker %}
+                                    <div class="accounting-gst-actions">
+                                        {% if gst_tax_capabilities.can_submit %}
+                                            <form method="post" action="{{ url_for('accounting.gst_tax_rate_submit', rate_id=rate.id) }}">
+                                                <input type="hidden" name="version" value="{{ rate.version }}">
+                                                <input type="hidden" name="submission_note" value="Submitted for effective-date and rate review.">
+                                                <button class="accounting-primary-button" type="submit">Submit to AVPL Admin</button>
+                                            </form>
+                                        {% endif %}
+                                        {% if gst_tax_capabilities.can_cancel %}
+                                            <form method="post" action="{{ url_for('accounting.gst_tax_rate_cancel', rate_id=rate.id) }}">
+                                                <input type="hidden" name="version" value="{{ rate.version }}">
+                                                <input name="reason" placeholder="Mandatory cancellation reason" required>
+                                                <button class="accounting-gst-danger-button" type="submit">Cancel draft</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                {% if rate.status == 'pending_approval' and is_maker and gst_tax_capabilities.can_withdraw %}
+                                    <form class="accounting-gst-inline-form" method="post" action="{{ url_for('accounting.gst_tax_rate_withdraw', rate_id=rate.id) }}">
+                                        <input type="hidden" name="version" value="{{ rate.version }}">
+                                        <div class="accounting-gst-field">
+                                            <label>Withdrawal reason</label>
+                                            <input name="reason" maxlength="1000" required>
+                                        </div>
+                                        <div class="accounting-gst-actions"><button class="accounting-gst-warning-button" type="submit">Withdraw to draft</button></div>
+                                    </form>
+                                {% endif %}
+
+                                {% if rate.status == 'pending_approval' and not is_maker and (gst_tax_capabilities.can_approve or gst_tax_capabilities.can_return) %}
+                                    <div class="accounting-gst-actions">
+                                        {% if gst_tax_capabilities.can_approve %}
+                                            <form method="post" action="{{ url_for('accounting.gst_tax_rate_approve', rate_id=rate.id) }}">
+                                                <input type="hidden" name="version" value="{{ rate.version }}">
+                                                <input name="approval_note" placeholder="Optional approval note">
+                                                <button class="accounting-primary-button" type="submit">Approve rate</button>
+                                            </form>
+                                        {% endif %}
+                                        {% if gst_tax_capabilities.can_return %}
+                                            <form method="post" action="{{ url_for('accounting.gst_tax_rate_return', rate_id=rate.id) }}">
+                                                <input type="hidden" name="version" value="{{ rate.version }}">
+                                                <input name="return_reason" placeholder="Mandatory correction reason" required>
+                                                <button class="accounting-gst-warning-button" type="submit">Return to Accounts</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+
+                                {% if rate.status == 'active' and gst_tax_capabilities.can_retire %}
+                                    <form class="accounting-gst-inline-form" method="post" action="{{ url_for('accounting.gst_tax_rate_retire', rate_id=rate.id) }}">
+                                        <input type="hidden" name="version" value="{{ rate.version }}">
+                                        <div class="accounting-gst-form-grid">
+                                            <div class="accounting-gst-field">
+                                                <label>Final effective date</label>
+                                                <input name="effective_to" type="date" min="{{ rate.effective_from }}" max="{{ gst_tax_overview.options.today }}" value="{{ rate.effective_to or gst_tax_overview.options.today }}" required>
+                                            </div>
+                                            <div class="accounting-gst-field span-2">
+                                                <label>Retirement reason</label>
+                                                <input name="reason" maxlength="1000" required>
+                                            </div>
+                                        </div>
+                                        <div class="accounting-gst-actions"><button class="accounting-gst-danger-button" type="submit">Retire rate</button></div>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </details>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="accounting-gst-empty">
+                <strong>No GST tax rates have been configured.</strong>
+                <p>Accounts can create the first effective-dated rate after the protected foundation is verified.</p>
+            </div>
+        {% endif %}
+
+        <div class="accounting-gst-compliance-note">
+            <strong>Stage boundary:</strong> This batch defines GST components, taxability and effective-dated rates only.
+            HSN, units, product mapping and seller/place-of-supply state determination remain disabled until their respective Stage 4 batches.
+        </div>
+    {% endif %}
+</section>
+{% endif %}

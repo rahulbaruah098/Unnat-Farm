@@ -2273,7 +2273,7 @@
                 The Accounting foundation now includes permanent access mapping,
                 controlled Financial Year lifecycle, approved AVPL configuration,
                 invoice/voucher numbering, disabled future-entity hierarchy mapping,
-                protected account groups, default AVPL ledgers and controlled supplier/customer party masters without changing current MIS transactions.
+                protected account groups, default AVPL ledgers, controlled supplier/customer party masters, GST/HSN/unit masters and approved product Accounting mappings without changing current MIS transactions.
             </p>
         </div>
 
@@ -2298,8 +2298,8 @@
 
         <article class="accounting-status-card">
             <span class="accounting-card-label">Approval queue</span>
-            <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count + party_ledger_overview.counts.pending_approval }}</strong>
-            <p>Financial Year, number-series and party-ledger items waiting for authorized review.</p>
+            <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count + party_ledger_overview.counts.pending_approval + gst_tax_overview.counts.pending_approval + unit_overview.custom_pending|length + unit_overview.conversion_pending|length + hsn_overview.pending_rows|length }}</strong>
+            <p>Financial Year, number-series, party-ledger and GST-rate items waiting for authorized review.</p>
         </article>
     </div>
 
@@ -2662,6 +2662,18 @@
 
     {% include "accounting/_party_ledgers_panel.html" %}
 
+    {% include "accounting/_gst_tax_master_panel.html" %}
+
+    {% include "accounting/_units_master_panel.html" %}
+
+    {% include "accounting/_hsn_master_panel.html" %}
+
+    {% include "accounting/_product_mapping_panel.html" %}
+
+    {% include "accounting/_gst_determination_panel.html" %}
+
+    {% include "accounting/_product_tracking_panel.html" %}
+
     {% if user_access_capabilities.can_view %}
         <div class="accounting-user-access-card" id="user-access">
             <div class="accounting-section-heading">
@@ -2881,7 +2893,7 @@
                 <p class="accounting-eyebrow">Controlled rollout</p>
                 <h2>Foundation checkpoints</h2>
             </div>
-            <span>Stage 3 · Batch 3</span>
+            <span>Stage 4 · Batch 4</span>
         </div>
 
         <div class="accounting-checklist">
@@ -2970,6 +2982,54 @@
                 <div>
                     <strong>Supplier and customer party ledgers</strong>
                     <p>GST/PAN-validated AVPL party masters with maker-checker approval, credit terms, deactivation controls and permanent audit history.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if gst_tax_overview.foundation.is_complete %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if gst_tax_overview.foundation.is_complete %}✓{% else %}12{% endif %}</span>
+                <div>
+                    <strong>GST tax master foundation</strong>
+                    <p>Protected CGST, SGST and IGST components, Taxable/Exempt/Nil Rated/Non-GST classification and effective-dated maker-checker tax rates.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if unit_overview.foundation.is_complete %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if unit_overview.foundation.is_complete %}✓{% else %}13{% endif %}</span>
+                <div>
+                    <strong>Protected UQC units and alternate conversions</strong>
+                    <p>Official GST UQC foundation, custom unit maker-checker workflow, decimal controls and approved direct conversion factors.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if hsn_overview.active_rows|length > 0 %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if hsn_overview.active_rows|length > 0 %}✓{% else %}14{% endif %}</span>
+                <div>
+                    <strong>HSN classification master</strong>
+                    <p>Validated 4/6/8-digit goods HSN records mapped to taxability and effective-dated GST rate codes.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if product_mapping_overview.active_mapped_product_count > 0 %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if product_mapping_overview.active_mapped_product_count > 0 %}✓{% else %}15{% endif %}</span>
+                <div>
+                    <strong>Product Accounting mapping</strong>
+                    <p>Approved AVPL product links to HSN, taxability, units and purchase, sales and inventory ledgers without altering operational product records.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if gst_determination_overview.prerequisites.is_ready %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if gst_determination_overview.prerequisites.is_ready %}✓{% else %}16{% endif %}</span>
+                <div>
+                    <strong>State and GST determination service</strong>
+                    <p>Posting-ready seller-state, party-state and place-of-supply logic with CGST + SGST, IGST and non-taxable treatment.</p>
+                </div>
+            </div>
+
+            <div class="accounting-checklist-item {% if product_tracking_overview.active_profile_count > 0 or product_tracking_overview.prerequisites.has_accounting_ready_products %}complete{% else %}pending{% endif %}">
+                <span aria-hidden="true">{% if product_tracking_overview.active_profile_count > 0 or product_tracking_overview.prerequisites.has_accounting_ready_products %}✓{% else %}17{% endif %}</span>
+                <div>
+                    <strong>Optional barcode, batch and expiry controls</strong>
+                    <p>Approved product-level enforcement policies, barcode uniqueness, shelf-life safeguards and posting-ready lot validation without changing operational stock.</p>
                 </div>
             </div>
         </div>

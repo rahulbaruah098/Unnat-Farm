@@ -1,0 +1,515 @@
+{% if product_tracking_capabilities.can_view %}
+<style>
+.accounting-tracking-card{
+    padding:clamp(22px,2vw,32px);
+    border:1px solid rgba(79,154,106,.22);
+    border-radius:26px;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 18px 42px rgba(23,37,42,.08);
+}
+.accounting-tracking-summary{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:12px;
+    margin-top:20px;
+}
+.accounting-tracking-summary>div,
+.accounting-tracking-meta>div,
+.accounting-tracking-result-grid>div{
+    padding:14px;
+    border:1px solid rgba(79,154,106,.16);
+    border-radius:16px;
+    background:#F8FCF9;
+    min-width:0;
+}
+.accounting-tracking-summary span,
+.accounting-tracking-meta span,
+.accounting-tracking-result-grid span{
+    display:block;
+    color:#60716F;
+    font-size:.73rem;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.accounting-tracking-summary strong,
+.accounting-tracking-meta strong,
+.accounting-tracking-result-grid strong{
+    display:block;
+    margin-top:6px;
+    color:#17252A;
+    overflow-wrap:anywhere;
+}
+.accounting-tracking-summary strong{font-size:1.2rem;}
+.accounting-tracking-form,
+.accounting-tracking-row,
+.accounting-tracking-preview{
+    margin-top:18px;
+    padding:18px;
+    border:1px solid rgba(79,154,106,.17);
+    border-radius:20px;
+    background:#FBFEFC;
+}
+.accounting-tracking-form h3,
+.accounting-tracking-row h3,
+.accounting-tracking-preview h3{margin:0;color:#17252A;}
+.accounting-tracking-form>p,
+.accounting-tracking-preview>p{margin:6px 0 0;color:#60716F;line-height:1.5;}
+.accounting-tracking-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:13px;
+    margin-top:16px;
+}
+.accounting-tracking-grid label{display:grid;gap:7px;min-width:0;}
+.accounting-tracking-grid label.wide{grid-column:span 2;}
+.accounting-tracking-grid label.full{grid-column:1/-1;}
+.accounting-tracking-grid label>span{color:#40515A;font-size:.8rem;font-weight:800;}
+.accounting-tracking-grid input,
+.accounting-tracking-grid select,
+.accounting-tracking-grid textarea{
+    width:100%;
+    min-height:43px;
+    padding:10px 11px;
+    border:1px solid rgba(116,171,134,.4);
+    border-radius:11px;
+    background:#fff;
+    color:#23342F;
+    font:inherit;
+}
+.accounting-tracking-toggle-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+    margin-top:13px;
+}
+.accounting-tracking-toggle{
+    display:flex;
+    gap:9px;
+    align-items:flex-start;
+    padding:12px;
+    border:1px solid rgba(79,154,106,.18);
+    border-radius:13px;
+    background:#fff;
+}
+.accounting-tracking-toggle input{margin-top:3px;accent-color:#2F7548;}
+.accounting-tracking-toggle strong{display:block;color:#243B31;font-size:.88rem;}
+.accounting-tracking-toggle small{display:block;margin-top:3px;color:#6B7C78;line-height:1.4;}
+.accounting-tracking-footer,
+.accounting-tracking-actions,
+.accounting-tracking-row-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:15px;
+}
+.accounting-tracking-row-header{align-items:flex-start;margin-top:0;}
+.accounting-tracking-row-header p{margin:5px 0 0;color:#60716F;}
+.accounting-tracking-meta,
+.accounting-tracking-result-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-top:14px;
+}
+.accounting-tracking-list{display:grid;gap:14px;margin-top:18px;}
+.accounting-tracking-action-form{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;}
+.accounting-tracking-action-form label{display:grid;gap:5px;}
+.accounting-tracking-action-form label span{font-size:.74rem;font-weight:800;color:#60716F;}
+.accounting-tracking-action-form input{
+    min-height:39px;
+    min-width:210px;
+    padding:8px 10px;
+    border:1px solid rgba(116,171,134,.38);
+    border-radius:10px;
+}
+.accounting-tracking-empty{
+    margin-top:16px;
+    padding:18px;
+    border:1px dashed rgba(79,154,106,.3);
+    border-radius:16px;
+    color:#60716F;
+    background:#FAFDFA;
+}
+.accounting-tracking-badges{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;}
+.accounting-tracking-badge{
+    display:inline-flex;
+    padding:6px 9px;
+    border-radius:999px;
+    background:#E8F4EC;
+    color:#285D3C;
+    font-size:.75rem;
+    font-weight:800;
+}
+.accounting-tracking-badge.off{background:#EEF1F3;color:#64748B;}
+.accounting-primary-button,
+.accounting-secondary-button,
+.accounting-danger-button{
+    border:0;
+    cursor:pointer;
+    padding:10px 13px;
+    border-radius:11px;
+    font:inherit;
+    font-weight:800;
+}
+.accounting-primary-button{color:#fff;background:#2F7548;}
+.accounting-secondary-button{color:#285D3C;background:#E8F4EC;}
+.accounting-danger-button{color:#991B1B;background:#FEE2E2;}
+@media(max-width:1120px){
+    .accounting-tracking-summary{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .accounting-tracking-meta,
+    .accounting-tracking-result-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:860px){
+    .accounting-tracking-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .accounting-tracking-grid label.wide{grid-column:span 1;}
+    .accounting-tracking-toggle-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:650px){
+    .accounting-tracking-summary,
+    .accounting-tracking-meta,
+    .accounting-tracking-result-grid,
+    .accounting-tracking-grid,
+    .accounting-tracking-toggle-grid{grid-template-columns:1fr;}
+    .accounting-tracking-grid label.full{grid-column:auto;}
+    .accounting-tracking-row-header,
+    .accounting-tracking-footer,
+    .accounting-tracking-action-form{align-items:stretch;flex-direction:column;}
+    .accounting-tracking-action-form input,
+    .accounting-tracking-action-form button{width:100%;min-width:0;}
+}
+</style>
+<section class="accounting-tracking-card" id="product-tracking-controls">
+    <div class="accounting-section-heading">
+        <div>
+            <p class="accounting-eyebrow">Stage 4 · Batch 5</p>
+            <h2>Barcode, batch and expiry controls</h2>
+            <p class="accounting-section-description">
+                Defines optional product-level controls for future Accounting purchases, sales,
+                stock receipts, issues and adjustments. This setup stores policy only; it does not
+                create stock lots, alter operational stock or post any voucher.
+            </p>
+        </div>
+        {% if product_tracking_overview.active_profile_count > 0 %}
+            <span class="accounting-state-pill active">{{ product_tracking_overview.active_profile_count }} active profile{% if product_tracking_overview.active_profile_count != 1 %}s{% endif %}</span>
+        {% else %}
+            <span class="accounting-state-pill pending">Optional setup</span>
+        {% endif %}
+    </div>
+
+    {% if product_tracking_setup_error %}
+        <div class="accounting-notice danger">{{ product_tracking_setup_error }}</div>
+    {% elif not accounting_entity %}
+        <div class="accounting-notice info">Initialize the AVPL Accounting entity first.</div>
+    {% else %}
+        <div class="accounting-tracking-summary">
+            <div><span>Active profiles</span><strong>{{ product_tracking_overview.active_profile_count }}</strong></div>
+            <div><span>Barcode enabled</span><strong>{{ product_tracking_overview.barcode_profile_count }}</strong></div>
+            <div><span>Batch tracked</span><strong>{{ product_tracking_overview.batch_profile_count }}</strong></div>
+            <div><span>Expiry tracked</span><strong>{{ product_tracking_overview.expiry_profile_count }}</strong></div>
+            <div><span>Without profile</span><strong>{{ product_tracking_overview.unconfigured_mapping_count }}</strong></div>
+        </div>
+
+        <div class="accounting-notice info compact">
+            <strong>Permanent separation:</strong> profiles are stored in
+            <code>accounting_product_tracking_profiles</code>. Actual batch quantities and expiry lots
+            will be created later by Accounting stock documents and <code>stock_movements</code>.
+        </div>
+
+        {% if product_tracking_overview.audit_recovery_count > 0 %}
+            <div class="accounting-notice warning compact">
+                {{ product_tracking_overview.audit_recovery_count }} tracking profile(s) require audit-log recovery review.
+            </div>
+        {% endif %}
+
+        {% if not product_tracking_overview.prerequisites.has_accounting_ready_products %}
+            <div class="accounting-notice warning">
+                Approve at least one Product Accounting mapping before configuring barcode, batch or expiry controls.
+            </div>
+        {% endif %}
+
+        {% if product_tracking_capabilities.can_create and product_tracking_overview.options.eligible_mappings %}
+            <form method="post"
+                  action="{{ url_for('accounting.product_tracking_create') }}"
+                  class="accounting-tracking-form">
+                <h3>Create product tracking profile</h3>
+                <p>Configure only the controls required by the selected product. A product needing no control does not require a profile.</p>
+
+                <div class="accounting-tracking-grid">
+                    <label class="wide">
+                        <span>Accounting-ready product</span>
+                        <select name="product_mapping_id" required>
+                            <option value="">Select mapped product</option>
+                            {% for mapping in product_tracking_overview.options.eligible_mappings %}
+                                <option value="{{ mapping.id }}">
+                                    {{ mapping.source_product_name }} · {{ mapping.mapping_code }} · {{ mapping.base_unit_code }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Barcode type</span>
+                        <select name="barcode_type">
+                            {% for barcode_type in product_tracking_overview.options.barcode_types %}
+                                <option value="{{ barcode_type.code }}">{{ barcode_type.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="wide">
+                        <span>Primary barcode (optional)</span>
+                        <input type="text" name="primary_barcode" maxlength="64" placeholder="Example: valid EAN-13 or internal code">
+                    </label>
+                    <label>
+                        <span>Shelf life in days</span>
+                        <input type="number" name="shelf_life_days" min="0" max="3650" value="0">
+                    </label>
+                    <label>
+                        <span>Minimum remaining shelf life</span>
+                        <input type="number" name="minimum_remaining_shelf_life_days" min="0" max="3650" value="0">
+                    </label>
+                    <label class="full">
+                        <span>Internal setup note</span>
+                        <textarea name="tracking_note" rows="2" maxlength="1500" placeholder="Why these controls are required for this product"></textarea>
+                    </label>
+                </div>
+
+                <div class="accounting-tracking-toggle-grid">
+                    <label class="accounting-tracking-toggle">
+                        <input type="checkbox" name="barcode_required_on_transaction" value="1">
+                        <span><strong>Barcode required</strong><small>Future Accounting documents must scan or provide the approved barcode.</small></span>
+                    </label>
+                    <label class="accounting-tracking-toggle">
+                        <input type="checkbox" name="batch_tracking_enabled" value="1">
+                        <span><strong>Enable batch tracking</strong><small>Future stock lots will remain identifiable by batch or lot.</small></span>
+                    </label>
+                    <label class="accounting-tracking-toggle">
+                        <input type="checkbox" name="batch_number_required" value="1">
+                        <span><strong>Batch number required</strong><small>Batch number cannot be omitted during future posting.</small></span>
+                    </label>
+                    <label class="accounting-tracking-toggle">
+                        <input type="checkbox" name="manufacturing_date_required" value="1">
+                        <span><strong>Manufacturing date required</strong><small>Useful for food, seed, fertilizer and other dated products.</small></span>
+                    </label>
+                    <label class="accounting-tracking-toggle">
+                        <input type="checkbox" name="expiry_tracking_enabled" value="1">
+                        <span><strong>Enable expiry tracking</strong><small>Automatically enables batch tracking and blocks expired stock.</small></span>
+                    </label>
+                    <label class="accounting-tracking-toggle">
+                        <input type="checkbox" name="expiry_date_required" value="1">
+                        <span><strong>Expiry date required</strong><small>Every future tracked lot must carry an expiry date.</small></span>
+                    </label>
+                </div>
+
+                <div class="accounting-tracking-footer">
+                    <small>EAN/UPC/GTIN values are check-digit validated. Live barcodes must be unique inside AVPL Accounting.</small>
+                    <button type="submit" class="accounting-primary-button">Create tracking draft</button>
+                </div>
+            </form>
+        {% elif product_tracking_capabilities.can_create and product_tracking_overview.prerequisites.has_accounting_ready_products %}
+            <div class="accounting-tracking-empty">
+                Every Accounting-ready product already has a live tracking profile. Products that need no tracking control may remain without one.
+            </div>
+        {% endif %}
+
+        {% if product_tracking_overview.rows %}
+            <div class="accounting-tracking-list">
+                {% for profile in product_tracking_overview.rows %}
+                    <article class="accounting-tracking-row">
+                        <div class="accounting-tracking-row-header">
+                            <div>
+                                <h3>{{ profile.source_product_name }}</h3>
+                                <p>{{ profile.profile_code }} · {{ profile.mapping_code }} · {{ profile.base_unit_code or profile.base_unit_name }}</p>
+                            </div>
+                            <span class="accounting-state-pill {% if profile.status == 'active' %}active{% elif profile.status == 'pending_approval' %}review{% else %}pending{% endif %}">
+                                {{ profile.status_display }}
+                            </span>
+                        </div>
+
+                        <div class="accounting-tracking-meta">
+                            <div><span>Barcode</span><strong>{{ profile.primary_barcode or 'Not configured' }}</strong></div>
+                            <div><span>Barcode policy</span><strong>{{ profile.barcode_type_label }}{% if profile.barcode_required_on_transaction %} · Required{% endif %}</strong></div>
+                            <div><span>Batch</span><strong>{% if profile.batch_tracking_enabled %}Enabled{% if profile.batch_number_required %} · Number required{% endif %}{% else %}Not enabled{% endif %}</strong></div>
+                            <div><span>Expiry</span><strong>{% if profile.expiry_tracking_enabled %}Enabled{% if profile.expiry_date_required %} · Date required{% endif %}{% else %}Not enabled{% endif %}</strong></div>
+                        </div>
+
+                        <div class="accounting-tracking-badges">
+                            <span class="accounting-tracking-badge {% if not profile.manufacturing_date_required %}off{% endif %}">Manufacturing date {% if profile.manufacturing_date_required %}required{% else %}optional{% endif %}</span>
+                            <span class="accounting-tracking-badge {% if not profile.shelf_life_days %}off{% endif %}">Shelf life: {% if profile.shelf_life_days %}{{ profile.shelf_life_days }} days{% else %}not fixed{% endif %}</span>
+                            <span class="accounting-tracking-badge {% if not profile.minimum_remaining_shelf_life_days %}off{% endif %}">Minimum remaining: {{ profile.minimum_remaining_shelf_life_days }} days</span>
+                            <span class="accounting-tracking-badge">Expired stock blocked</span>
+                        </div>
+
+                        {% if profile.tracking_note %}
+                            <div class="accounting-notice info compact">{{ profile.tracking_note }}</div>
+                        {% endif %}
+                        {% if profile.return_reason %}
+                            <div class="accounting-notice warning compact"><strong>Returned:</strong> {{ profile.return_reason }}</div>
+                        {% endif %}
+                        {% if profile.deactivation_reason %}
+                            <div class="accounting-notice warning compact"><strong>Inactive reason:</strong> {{ profile.deactivation_reason }}</div>
+                        {% endif %}
+
+                        {% if product_tracking_capabilities.can_edit and profile.status in ['draft','returned_for_correction'] and profile.created_by == current_user_id %}
+                            <details class="accounting-history">
+                                <summary>Edit tracking draft</summary>
+                                <form method="post" action="{{ url_for('accounting.product_tracking_edit', profile_id=profile.id) }}" class="accounting-tracking-form">
+                                    <input type="hidden" name="version" value="{{ profile.version }}">
+                                    <input type="hidden" name="product_mapping_id" value="{{ profile.product_mapping_id }}">
+                                    <div class="accounting-tracking-grid">
+                                        <label>
+                                            <span>Barcode type</span>
+                                            <select name="barcode_type">
+                                                {% for barcode_type in product_tracking_overview.options.barcode_types %}
+                                                    <option value="{{ barcode_type.code }}" {% if barcode_type.code == profile.barcode_type %}selected{% endif %}>{{ barcode_type.label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label class="wide"><span>Primary barcode</span><input type="text" name="primary_barcode" value="{{ profile.primary_barcode }}" maxlength="64"></label>
+                                        <label><span>Shelf life days</span><input type="number" name="shelf_life_days" min="0" max="3650" value="{{ profile.shelf_life_days }}"></label>
+                                        <label><span>Minimum remaining days</span><input type="number" name="minimum_remaining_shelf_life_days" min="0" max="3650" value="{{ profile.minimum_remaining_shelf_life_days }}"></label>
+                                        <label class="full"><span>Internal note</span><textarea name="tracking_note" rows="2" maxlength="1500">{{ profile.tracking_note }}</textarea></label>
+                                    </div>
+                                    <div class="accounting-tracking-toggle-grid">
+                                        <label class="accounting-tracking-toggle"><input type="checkbox" name="barcode_required_on_transaction" value="1" {% if profile.barcode_required_on_transaction %}checked{% endif %}><span><strong>Barcode required</strong></span></label>
+                                        <label class="accounting-tracking-toggle"><input type="checkbox" name="batch_tracking_enabled" value="1" {% if profile.batch_tracking_enabled %}checked{% endif %}><span><strong>Batch tracking</strong></span></label>
+                                        <label class="accounting-tracking-toggle"><input type="checkbox" name="batch_number_required" value="1" {% if profile.batch_number_required %}checked{% endif %}><span><strong>Batch number required</strong></span></label>
+                                        <label class="accounting-tracking-toggle"><input type="checkbox" name="manufacturing_date_required" value="1" {% if profile.manufacturing_date_required %}checked{% endif %}><span><strong>Manufacturing date required</strong></span></label>
+                                        <label class="accounting-tracking-toggle"><input type="checkbox" name="expiry_tracking_enabled" value="1" {% if profile.expiry_tracking_enabled %}checked{% endif %}><span><strong>Expiry tracking</strong></span></label>
+                                        <label class="accounting-tracking-toggle"><input type="checkbox" name="expiry_date_required" value="1" {% if profile.expiry_date_required %}checked{% endif %}><span><strong>Expiry date required</strong></span></label>
+                                    </div>
+                                    <div class="accounting-tracking-footer"><span></span><button type="submit" class="accounting-primary-button">Save draft</button></div>
+                                </form>
+                            </details>
+                        {% endif %}
+
+                        <div class="accounting-tracking-actions">
+                            {% if product_tracking_capabilities.can_submit and profile.status in ['draft','returned_for_correction'] and profile.created_by == current_user_id %}
+                                <form method="post" action="{{ url_for('accounting.product_tracking_submit', profile_id=profile.id) }}" class="accounting-tracking-action-form">
+                                    <input type="hidden" name="version" value="{{ profile.version }}">
+                                    <label><span>Submission note</span><input type="text" name="submission_note" maxlength="1000" placeholder="Optional"></label>
+                                    <button type="submit" class="accounting-primary-button">Submit</button>
+                                </form>
+                            {% endif %}
+
+                            {% if product_tracking_capabilities.can_withdraw and profile.status == 'pending_approval' and profile.created_by == current_user_id %}
+                                <form method="post" action="{{ url_for('accounting.product_tracking_withdraw', profile_id=profile.id) }}" class="accounting-tracking-action-form">
+                                    <input type="hidden" name="version" value="{{ profile.version }}">
+                                    <label><span>Reason</span><input type="text" name="reason" required maxlength="1000"></label>
+                                    <button type="submit" class="accounting-secondary-button">Withdraw</button>
+                                </form>
+                            {% endif %}
+
+                            {% if product_tracking_capabilities.can_cancel and profile.status in ['draft','returned_for_correction'] and profile.created_by == current_user_id %}
+                                <form method="post" action="{{ url_for('accounting.product_tracking_cancel', profile_id=profile.id) }}" class="accounting-tracking-action-form">
+                                    <input type="hidden" name="version" value="{{ profile.version }}">
+                                    <label><span>Cancel reason</span><input type="text" name="reason" required maxlength="1000"></label>
+                                    <button type="submit" class="accounting-danger-button">Cancel</button>
+                                </form>
+                            {% endif %}
+
+                            {% if product_tracking_capabilities.can_approve and profile.status == 'pending_approval' %}
+                                <form method="post" action="{{ url_for('accounting.product_tracking_approve', profile_id=profile.id) }}" class="accounting-tracking-action-form">
+                                    <input type="hidden" name="version" value="{{ profile.version }}">
+                                    <label><span>Approval note</span><input type="text" name="approval_note" maxlength="1000" placeholder="Optional"></label>
+                                    <button type="submit" class="accounting-primary-button">Approve</button>
+                                </form>
+                            {% endif %}
+
+                            {% if product_tracking_capabilities.can_return and profile.status == 'pending_approval' %}
+                                <form method="post" action="{{ url_for('accounting.product_tracking_return', profile_id=profile.id) }}" class="accounting-tracking-action-form">
+                                    <input type="hidden" name="version" value="{{ profile.version }}">
+                                    <label><span>Return reason</span><input type="text" name="return_reason" required maxlength="1000"></label>
+                                    <button type="submit" class="accounting-secondary-button">Return</button>
+                                </form>
+                            {% endif %}
+
+                            {% if product_tracking_capabilities.can_deactivate and profile.status == 'active' %}
+                                <form method="post" action="{{ url_for('accounting.product_tracking_deactivate', profile_id=profile.id) }}" class="accounting-tracking-action-form">
+                                    <input type="hidden" name="version" value="{{ profile.version }}">
+                                    <label><span>Deactivate reason</span><input type="text" name="reason" required maxlength="1000"></label>
+                                    <button type="submit" class="accounting-danger-button">Deactivate</button>
+                                </form>
+                            {% endif %}
+
+                            {% if product_tracking_capabilities.can_reactivate and profile.status == 'inactive' %}
+                                <form method="post" action="{{ url_for('accounting.product_tracking_reactivate', profile_id=profile.id) }}" class="accounting-tracking-action-form">
+                                    <input type="hidden" name="version" value="{{ profile.version }}">
+                                    <label><span>Reactivate reason</span><input type="text" name="reason" required maxlength="1000"></label>
+                                    <button type="submit" class="accounting-primary-button">Reactivate</button>
+                                </form>
+                            {% endif %}
+                        </div>
+
+                        <details class="accounting-history">
+                            <summary>Workflow history ({{ profile.change_history|length }})</summary>
+                            <div class="accounting-history-list">
+                                {% for event in profile.change_history|reverse %}
+                                    <div>
+                                        <strong>{{ event.action.replace('_',' ').title() }}</strong>
+                                        <span>{{ event.actor_name or event.actor_role.replace('_',' ').title() }}</span>
+                                        {% if event.at %}<small>{{ event.at.strftime('%d %b %Y, %I:%M %p') }}</small>{% endif %}
+                                        {% if event.reason %}<p>Reason: {{ event.reason }}</p>{% endif %}
+                                        {% if event.note %}<p>Note: {{ event.note }}</p>{% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="accounting-tracking-empty">No product tracking profiles have been created.</div>
+        {% endif %}
+
+        {% if product_tracking_capabilities.can_validate and product_tracking_overview.active_rows %}
+            <div class="accounting-tracking-preview">
+                <h3>Validate future lot controls</h3>
+                <p>This preview uses the same posting-ready validation helper future purchase, sale and stock screens will call. It does not save a batch or change stock.</p>
+                <form method="post" action="{{ url_for('accounting.product_tracking_validate') }}">
+                    <div class="accounting-tracking-grid">
+                        <label class="wide">
+                            <span>Active tracking profile</span>
+                            <select name="profile_id" required>
+                                <option value="">Select product</option>
+                                {% for profile in product_tracking_overview.active_rows %}
+                                    <option value="{{ profile.id }}">{{ profile.source_product_name }} · {{ profile.profile_code }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            <span>Movement type</span>
+                            <select name="movement_type" required>
+                                {% for movement in product_tracking_overview.options.movement_types %}
+                                    <option value="{{ movement.code }}">{{ movement.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label><span>Transaction date</span><input type="date" name="transaction_date" value="{{ product_tracking_today }}" required></label>
+                        <label><span>Scanned barcode</span><input type="text" name="scanned_barcode" maxlength="64"></label>
+                        <label><span>Batch number</span><input type="text" name="batch_number" maxlength="80"></label>
+                        <label><span>Manufacturing date</span><input type="date" name="manufacturing_date"></label>
+                        <label><span>Expiry date</span><input type="date" name="expiry_date"></label>
+                    </div>
+                    <div class="accounting-tracking-footer"><small>Expired stock is always blocked. Minimum remaining shelf life applies to receipts.</small><button type="submit" class="accounting-primary-button">Validate controls</button></div>
+                </form>
+
+                {% if product_tracking_preview %}
+                    <div class="accounting-notice success compact"><strong>{{ product_tracking_preview.message }}</strong></div>
+                    <div class="accounting-tracking-result-grid">
+                        <div><span>Product</span><strong>{{ product_tracking_preview.source_product_name }}</strong></div>
+                        <div><span>Movement</span><strong>{{ product_tracking_preview.movement_type_label }}</strong></div>
+                        <div><span>Batch</span><strong>{{ product_tracking_preview.batch_number or 'Not required' }}</strong></div>
+                        <div><span>Expiry</span><strong>{{ product_tracking_preview.expiry_date or 'Not required' }}</strong></div>
+                        <div><span>Barcode</span><strong>{{ product_tracking_preview.scanned_barcode or 'Not required' }}</strong></div>
+                        <div><span>Manufactured</span><strong>{{ product_tracking_preview.manufacturing_date or 'Not required' }}</strong></div>
+                        <div><span>Remaining shelf life</span><strong>{% if product_tracking_preview.remaining_shelf_life_days is not none %}{{ product_tracking_preview.remaining_shelf_life_days }} days{% else %}Not applicable{% endif %}</strong></div>
+                        <div><span>Controls applied</span><strong>{{ product_tracking_preview.controls_applied|join(', ') or 'Profile validation' }}</strong></div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+{% endif %}

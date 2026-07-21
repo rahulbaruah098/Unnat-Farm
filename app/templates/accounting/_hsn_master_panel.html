@@ -1,0 +1,74 @@
+{% if hsn_capabilities.can_view %}
+<style>
+.hsn-master-card{padding:clamp(22px,2vw,32px);border:1px solid rgba(79,154,106,.22);border-radius:26px;background:rgba(255,255,255,.94);box-shadow:0 18px 42px rgba(23,37,42,.08)}
+.hsn-summary-grid,.hsn-form-grid,.hsn-card-grid{display:grid;gap:14px}.hsn-summary-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin:20px 0}.hsn-summary-grid>div{padding:16px;border:1px solid rgba(79,154,106,.15);border-radius:16px;background:#F8FCF9}.hsn-summary-grid span,.hsn-field label{display:block;color:#60716F;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}.hsn-summary-grid strong{display:block;margin-top:7px;color:#17252A;font-size:1.2rem}.hsn-panel{margin-top:18px;padding:18px;border:1px solid rgba(79,154,106,.16);border-radius:20px;background:#FBFEFC}.hsn-panel>summary{cursor:pointer;color:#17252A;font-weight:850}.hsn-form-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px}.hsn-field.full{grid-column:1/-1}.hsn-field input,.hsn-field select,.hsn-field textarea{width:100%;margin-top:7px;padding:11px 12px;border:1px solid rgba(79,154,106,.28);border-radius:11px;background:#fff;color:#17252A;font:inherit}.hsn-field textarea{min-height:84px;resize:vertical}.hsn-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}.hsn-record{padding:16px;border:1px solid rgba(79,154,106,.16);border-radius:17px;background:#fff}.hsn-record-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.hsn-record h4{margin:0;color:#17252A}.hsn-record p{margin:6px 0;color:#60716F;line-height:1.5}.hsn-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:13px 0}.hsn-meta div{padding:9px;border-radius:10px;background:#F4F9F5}.hsn-meta span{display:block;color:#6B7D76;font-size:.68rem;font-weight:800;text-transform:uppercase}.hsn-meta strong{display:block;margin-top:4px;color:#23342F;font-size:.9rem}.hsn-action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.hsn-action-row form{display:flex;gap:7px;flex:1 1 210px}.hsn-action-row input{min-width:0;flex:1;padding:9px;border:1px solid rgba(79,154,106,.25);border-radius:9px}.hsn-button{border:0;border-radius:10px;padding:10px 13px;cursor:pointer;font:inherit;font-weight:800;background:#2F7548;color:#fff}.hsn-button.secondary{background:#EAF7EE;color:#285F3D}.hsn-button.warning{background:#B7791F}.hsn-button.danger{background:#B42318}.hsn-empty{padding:20px;text-align:center;color:#60716F}.hsn-rule-note{margin-top:16px;padding:14px;border-radius:13px;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E3A5F}
+@media(max-width:980px){.hsn-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hsn-form-grid{grid-template-columns:1fr 1fr}.hsn-card-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.hsn-summary-grid,.hsn-form-grid{grid-template-columns:1fr}.hsn-field.full{grid-column:auto}.hsn-meta{grid-template-columns:1fr}.hsn-record-head{flex-direction:column}}
+</style>
+<section class="hsn-master-card" id="hsn-master">
+    <div class="accounting-section-heading">
+        <div>
+            <p class="accounting-eyebrow">Stage 4 · Batch 2</p>
+            <h2>HSN classification master</h2>
+            <p class="accounting-section-description">Accounts prepares validated goods HSN classifications and maps each one to GST taxability and an approved effective-dated GST rate code. AVPL Admin controls activation.</p>
+        </div>
+        {% if hsn_overview.active_rows %}<span class="accounting-state-pill active">{{ hsn_overview.active_rows|length }} active HSN</span>{% else %}<span class="accounting-state-pill pending">No active HSN</span>{% endif %}
+    </div>
+
+    {% if hsn_setup_error %}
+        <div class="accounting-notice danger">{{ hsn_setup_error }}</div>
+    {% elif not accounting_entity %}
+        <div class="accounting-notice info">Initialize the AVPL Accounting entity before configuring HSN masters.</div>
+    {% else %}
+        <div class="hsn-summary-grid">
+            <div><span>Total HSN records</span><strong>{{ hsn_overview.total_count }}</strong></div>
+            <div><span>Active</span><strong>{{ hsn_overview.active_rows|length }}</strong></div>
+            <div><span>Pending approval</span><strong>{{ hsn_overview.pending_rows|length }}</strong></div>
+            <div><span>Audit recovery</span><strong>{{ hsn_overview.audit_recovery_count }}</strong></div>
+        </div>
+
+        <div class="hsn-rule-note"><strong>Future posting rule:</strong> taxable HSN records store a GST rate code, not a fixed percentage. Purchase and sales posting will resolve the approved rate effective on the transaction date.</div>
+
+        {% if hsn_capabilities.can_create %}
+        <details class="hsn-panel" open>
+            <summary>Create HSN master draft</summary>
+            {% if not gst_tax_overview.foundation.is_complete %}<div class="accounting-notice warning">Initialize the GST foundation before creating HSN masters.</div>{% endif %}
+            <form method="post" action="{{ url_for('accounting.hsn_master_create') }}" class="hsn-form-grid">
+                <div class="hsn-field"><label>HSN code</label><input name="hsn_code" inputmode="numeric" pattern="[0-9]{4}|[0-9]{6}|[0-9]{8}" maxlength="8" placeholder="3105" required></div>
+                <div class="hsn-field"><label>Taxability</label><select name="taxability_code" required><option value="">Select classification</option>{% for code,item in hsn_overview.options.taxability.items() %}<option value="{{ code }}">{{ item.name }}</option>{% endfor %}</select></div>
+                <div class="hsn-field"><label>GST rate code</label><select name="gst_rate_code"><option value="">Not applicable</option>{% for code,item in hsn_overview.options.rates.items() %}<option value="{{ code }}">{{ code }} — {{ item.name }} ({{ item.total_rate }}%)</option>{% endfor %}</select></div>
+                <div class="hsn-field full"><label>Description</label><input name="description" maxlength="300" placeholder="Goods classification description" required></div>
+                <div class="hsn-field full"><label>Source reference</label><input name="source_reference" maxlength="300" placeholder="Optional GST/CBIC notification or internal verification reference"></div>
+                <div class="hsn-field full"><label>Notes</label><textarea name="notes" placeholder="Optional classification notes"></textarea></div>
+                <div class="hsn-field full"><button class="hsn-button" type="submit">Create HSN draft</button></div>
+            </form>
+        </details>
+        {% endif %}
+
+        <details class="hsn-panel" {% if hsn_overview.pending_rows or hsn_overview.working_rows %}open{% endif %}>
+            <summary>HSN workflow ({{ hsn_overview.rows|length }})</summary>
+            {% if hsn_overview.rows %}<div class="hsn-card-grid">
+            {% for row in hsn_overview.rows %}
+                <article class="hsn-record">
+                    <div class="hsn-record-head"><div><h4>{{ row.hsn_code }} · {{ row.description }}</h4><p>{{ row.notes or row.source_reference or 'No additional reference' }}</p></div><span class="accounting-status-badge status-{{ row.status }}">{{ row.status_display }}</span></div>
+                    <div class="hsn-meta"><div><span>Chapter</span><strong>{{ row.chapter_code }}</strong></div><div><span>Taxability</span><strong>{{ row.taxability_name }}</strong></div><div><span>GST rate code</span><strong>{{ row.gst_rate_code or 'Not applicable' }}</strong></div></div>
+                    {% if row.return_reason %}<div class="accounting-notice warning compact"><strong>Correction:</strong> {{ row.return_reason }}</div>{% endif %}
+                    {% set is_maker = row.created_by == current_user_id %}
+                    {% if hsn_capabilities.can_edit and is_maker and row.status in ['draft','returned_for_correction'] %}
+                    <details><summary>Edit draft</summary><form method="post" action="{{ url_for('accounting.hsn_master_edit', hsn_id=row.id) }}" class="hsn-form-grid"><input type="hidden" name="version" value="{{ row.version }}"><div class="hsn-field"><label>HSN code</label><input name="hsn_code" value="{{ row.hsn_code }}" pattern="[0-9]{4}|[0-9]{6}|[0-9]{8}" required></div><div class="hsn-field"><label>Taxability</label><select name="taxability_code" required>{% for code,item in hsn_overview.options.taxability.items() %}<option value="{{ code }}" {% if code==row.taxability_code %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></div><div class="hsn-field"><label>GST rate code</label><select name="gst_rate_code"><option value="">Not applicable</option>{% for code,item in hsn_overview.options.rates.items() %}<option value="{{ code }}" {% if code==row.gst_rate_code %}selected{% endif %}>{{ code }} — {{ item.name }} ({{ item.total_rate }}%)</option>{% endfor %}</select></div><div class="hsn-field full"><label>Description</label><input name="description" value="{{ row.description }}" required></div><div class="hsn-field full"><label>Source reference</label><input name="source_reference" value="{{ row.source_reference }}"></div><div class="hsn-field full"><label>Notes</label><textarea name="notes">{{ row.notes }}</textarea></div><div class="hsn-field full"><button class="hsn-button secondary">Save draft</button></div></form></details>
+                    {% endif %}
+                    <div class="hsn-action-row">
+                    {% if hsn_capabilities.can_submit and is_maker and row.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('accounting.hsn_master_submit', hsn_id=row.id) }}"><input type="hidden" name="version" value="{{ row.version }}"><input name="submission_note" placeholder="Submission note"><button class="hsn-button">Submit</button></form>{% endif %}
+                    {% if hsn_capabilities.can_withdraw and is_maker and row.status=='pending_approval' %}<form method="post" action="{{ url_for('accounting.hsn_master_withdraw', hsn_id=row.id) }}"><input type="hidden" name="version" value="{{ row.version }}"><input name="reason" placeholder="Withdrawal reason" required><button class="hsn-button warning">Withdraw</button></form>{% endif %}
+                    {% if hsn_capabilities.can_cancel and is_maker and row.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('accounting.hsn_master_cancel', hsn_id=row.id) }}"><input type="hidden" name="version" value="{{ row.version }}"><input name="reason" placeholder="Cancellation reason" required><button class="hsn-button danger">Cancel</button></form>{% endif %}
+                    {% if hsn_capabilities.can_approve and row.status=='pending_approval' %}<form method="post" action="{{ url_for('accounting.hsn_master_approve', hsn_id=row.id) }}"><input type="hidden" name="version" value="{{ row.version }}"><input name="approval_note" placeholder="Approval note"><button class="hsn-button">Approve</button></form>{% endif %}
+                    {% if hsn_capabilities.can_return and row.status=='pending_approval' %}<form method="post" action="{{ url_for('accounting.hsn_master_return', hsn_id=row.id) }}"><input type="hidden" name="version" value="{{ row.version }}"><input name="return_reason" placeholder="Correction reason" required><button class="hsn-button warning">Return</button></form>{% endif %}
+                    {% if hsn_capabilities.can_deactivate and row.status=='active' %}<form method="post" action="{{ url_for('accounting.hsn_master_deactivate', hsn_id=row.id) }}"><input type="hidden" name="version" value="{{ row.version }}"><input name="reason" placeholder="Deactivation reason" required><button class="hsn-button danger">Deactivate</button></form>{% endif %}
+                    {% if hsn_capabilities.can_reactivate and row.status=='inactive' %}<form method="post" action="{{ url_for('accounting.hsn_master_reactivate', hsn_id=row.id) }}"><input type="hidden" name="version" value="{{ row.version }}"><input name="reason" placeholder="Reactivation reason" required><button class="hsn-button">Reactivate</button></form>{% endif %}
+                    </div>
+                </article>
+            {% endfor %}</div>{% else %}<div class="hsn-empty">No HSN master has been created.</div>{% endif %}
+        </details>
+    {% endif %}
+</section>
+{% endif %}
