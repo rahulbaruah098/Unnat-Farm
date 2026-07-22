@@ -110,6 +110,36 @@ from app.services.accounting_product_tracking_service import (
     update_product_tracking_profile,
     withdraw_product_tracking_profile,
 )
+from app.services.accounting_voucher_service import (
+    add_voucher_draft_line,
+    create_voucher_draft,
+    ensure_voucher_indexes,
+    get_voucher_option_catalog,
+    get_voucher_overview,
+    remove_voucher_draft_line,
+    update_voucher_draft,
+    update_voucher_draft_line,
+    validate_voucher_draft,
+)
+
+from app.services.accounting_voucher_posting_service import (
+    ensure_voucher_posting_indexes,
+    post_voucher_draft,
+)
+
+
+from app.services.accounting_voucher_reversal_service import (
+    cancel_voucher_draft,
+    reverse_posted_voucher,
+)
+
+from app.services.accounting_voucher_recovery_service import (
+    ensure_voucher_recovery_indexes,
+    get_voucher_recovery_overview,
+    recover_voucher_posting,
+)
+
+
 from app.services.accounting_configuration_service import (
     approve_accounting_policy,
     approve_entity_profile,
@@ -349,6 +379,22 @@ def _run_product_tracking_action(action):
         flash(result.get("message") or "Product tracking controls updated.", "success")
 
     return _redirect_dashboard("product-tracking-controls")
+
+
+def _run_voucher_action(action):
+    try:
+        result = action()
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        category = result.get("category")
+        if not category:
+            category = "info" if result.get("idempotent_replay") else "success"
+        flash(result.get("message") or "Accounting voucher updated.", category)
+
+    return _redirect_dashboard("voucher-engine")
 
 
 def _run_financial_year_control_action(action):
@@ -1170,6 +1216,90 @@ def dashboard():
         except (PermissionError, ValueError, RuntimeError) as exc:
             product_tracking_setup_error = str(exc)
 
+    voucher_capabilities = {
+        "can_view": has_accounting_permission(access, "accounting.voucher.view"),
+        "can_create": has_accounting_permission(access, "accounting.voucher.create"),
+        "can_edit": has_accounting_permission(access, "accounting.voucher.edit"),
+        "can_validate": has_accounting_permission(access, "accounting.voucher.validate"),
+        "can_cancel": has_accounting_permission(access, "accounting.voucher.cancel"),
+        "can_post": has_accounting_permission(access, "accounting.voucher.post"),
+        "can_reverse": has_accounting_permission(access, "accounting.voucher.reverse"),
+        "can_audit_view": has_accounting_permission(
+            access, "accounting.voucher.audit.view"
+        ),
+        "can_recover": has_accounting_permission(
+            access, "accounting.voucher.recovery"
+        ),
+    }
+    voucher_overview = {
+        "entity_id": "",
+        "entity_code": "AVPL",
+        "entity_name": "AVPL",
+        "rows": [],
+        "draft_rows": [],
+        "posted_rows": [],
+        "cancelled_rows": [],
+        "reversed_rows": [],
+        "counts": {"draft": 0, "posted": 0, "cancelled": 0, "reversed": 0},
+        "voucher_type_counts": {},
+        "validation_counts": {"not_validated": 0, "valid": 0, "invalid": 0},
+        "ledger_options": [],
+        "active_ledger_count": 0,
+        "total_count": 0,
+        "audit_recovery_count": 0,
+        "voucher_line_count": 0,
+        "index_health": {
+            "required_count": 8,
+            "present_count": 0,
+            "missing_count": 8,
+            "present": [],
+            "missing": [],
+            "is_complete": False,
+        },
+        "open_financial_years": [],
+        "options": get_voucher_option_catalog(),
+        "form_defaults": {
+            "voucher_type": "journal_voucher",
+            "financial_year_id": "",
+            "transaction_date": "",
+            "reference_date": "",
+            "voucher_role": "primary",
+            "idempotency_key": "",
+        },
+        "prerequisites": {
+            "has_open_financial_year": False,
+            "indexes_ready": False,
+            "is_ready_for_draft_headers": False,
+            "has_active_ledgers": False,
+            "is_ready_for_line_entry": False,
+            "is_ready_for_posting": False,
+        },
+    }
+    voucher_setup_error = ""
+    voucher_recovery_overview = {
+        "rows": [],
+        "count": 0,
+        "recovery_required_count": 0,
+        "stale_lock_count": 0,
+    }
+
+    if avpl_entity_document and voucher_capabilities["can_view"]:
+        try:
+            ensure_voucher_indexes()
+            ensure_voucher_posting_indexes()
+            voucher_overview = get_voucher_overview(
+                avpl_entity_document["_id"],
+                session["user_id"],
+            )
+            if voucher_capabilities["can_recover"] and session.get("role") == "super_admin":
+                ensure_voucher_recovery_indexes()
+                voucher_recovery_overview = get_voucher_recovery_overview(
+                    avpl_entity_document["_id"],
+                    session["user_id"],
+                )
+        except (PermissionError, ValueError, RuntimeError) as exc:
+            voucher_setup_error = str(exc)
+
     user_access_capabilities = {
         "can_view": has_accounting_permission(
             access, "accounting.user_access.view"
@@ -1262,6 +1392,10 @@ def dashboard():
         product_tracking_setup_error=product_tracking_setup_error,
         product_tracking_preview=product_tracking_preview,
         product_tracking_today=date.today().isoformat(),
+        voucher_capabilities=voucher_capabilities,
+        voucher_overview=voucher_overview,
+        voucher_recovery_overview=voucher_recovery_overview,
+        voucher_setup_error=voucher_setup_error,
         user_access_capabilities=user_access_capabilities,
         user_access_summary=user_access_summary,
         user_access_setup_error=user_access_setup_error,
@@ -2836,3 +2970,166 @@ def product_tracking_validate():
 
     return _redirect_dashboard("product-tracking-controls")
 
+# ---------------------------------------------------------------------------
+# Stage 5 · Batches 1–2 — Voucher headers, draft lines and validation
+# ---------------------------------------------------------------------------
+
+
+@accounting_bp.route("/vouchers/create", methods=["POST"])
+@login_required
+@roles_required("accounts", "super_admin")
+@accounting_permission_required("accounting.voucher.create")
+def voucher_create():
+    entity = get_avpl_entity(include_inactive=False)
+    if not entity:
+        flash("Initialize and activate the AVPL Accounting entity first.", "danger")
+        return _redirect_dashboard("voucher-engine")
+
+    return _run_voucher_action(
+        lambda: create_voucher_draft(
+            accounting_entity_id=entity["_id"],
+            actor_user_id=session["user_id"],
+            raw_payload=request.form.to_dict(flat=True),
+        )
+    )
+
+
+@accounting_bp.route("/vouchers/<voucher_id>/edit", methods=["POST"])
+@login_required
+@roles_required("accounts", "super_admin")
+@accounting_permission_required("accounting.voucher.edit")
+def voucher_edit(voucher_id):
+    return _run_voucher_action(
+        lambda: update_voucher_draft(
+            voucher_id=voucher_id,
+            actor_user_id=session["user_id"],
+            raw_payload=request.form.to_dict(flat=True),
+            expected_version=request.form.get("version"),
+        )
+    )
+
+
+@accounting_bp.route("/vouchers/<voucher_id>/lines/add", methods=["POST"])
+@login_required
+@roles_required("accounts", "super_admin")
+@accounting_permission_required("accounting.voucher.edit")
+def voucher_line_add(voucher_id):
+    return _run_voucher_action(
+        lambda: add_voucher_draft_line(
+            voucher_id=voucher_id,
+            actor_user_id=session["user_id"],
+            raw_payload=request.form.to_dict(flat=True),
+            expected_version=request.form.get("version"),
+        )
+    )
+
+
+@accounting_bp.route(
+    "/vouchers/<voucher_id>/lines/<line_id>/edit",
+    methods=["POST"],
+)
+@login_required
+@roles_required("accounts", "super_admin")
+@accounting_permission_required("accounting.voucher.edit")
+def voucher_line_edit(voucher_id, line_id):
+    return _run_voucher_action(
+        lambda: update_voucher_draft_line(
+            voucher_id=voucher_id,
+            line_id=line_id,
+            actor_user_id=session["user_id"],
+            raw_payload=request.form.to_dict(flat=True),
+            expected_version=request.form.get("version"),
+        )
+    )
+
+
+@accounting_bp.route(
+    "/vouchers/<voucher_id>/lines/<line_id>/remove",
+    methods=["POST"],
+)
+@login_required
+@roles_required("accounts", "super_admin")
+@accounting_permission_required("accounting.voucher.edit")
+def voucher_line_remove(voucher_id, line_id):
+    return _run_voucher_action(
+        lambda: remove_voucher_draft_line(
+            voucher_id=voucher_id,
+            line_id=line_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+        )
+    )
+
+
+@accounting_bp.route("/vouchers/<voucher_id>/validate", methods=["POST"])
+@login_required
+@roles_required("accounts", "avpl_admin", "super_admin")
+@accounting_permission_required("accounting.voucher.validate")
+def voucher_validate(voucher_id):
+    return _run_voucher_action(
+        lambda: validate_voucher_draft(
+            voucher_id=voucher_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+        )
+    )
+
+
+
+@accounting_bp.route("/vouchers/<voucher_id>/post", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.voucher.post")
+def voucher_post(voucher_id):
+    return _run_voucher_action(
+        lambda: post_voucher_draft(
+            voucher_id=voucher_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+        )
+    )
+
+
+@accounting_bp.route("/vouchers/<voucher_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("accounts", "super_admin")
+@accounting_permission_required("accounting.voucher.cancel")
+def voucher_cancel(voucher_id):
+    return _run_voucher_action(
+        lambda: cancel_voucher_draft(
+            voucher_id=voucher_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+            reason=request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/vouchers/<voucher_id>/reverse", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.voucher.reverse")
+def voucher_reverse(voucher_id):
+    return _run_voucher_action(
+        lambda: reverse_posted_voucher(
+            voucher_id=voucher_id,
+            actor_user_id=session["user_id"],
+            expected_version=request.form.get("version"),
+            financial_year_id=request.form.get("financial_year_id"),
+            reversal_date=request.form.get("reversal_date"),
+            reason=request.form.get("reason"),
+        )
+    )
+
+
+@accounting_bp.route("/vouchers/<voucher_id>/recover", methods=["POST"])
+@login_required
+@roles_required("super_admin")
+@accounting_permission_required("accounting.voucher.recovery")
+def voucher_recover(voucher_id):
+    return _run_voucher_action(
+        lambda: recover_voucher_posting(
+            voucher_id=voucher_id,
+            actor_user_id=session["user_id"],
+        )
+    )

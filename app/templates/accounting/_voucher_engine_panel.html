@@ -1,0 +1,852 @@
+{% if voucher_capabilities.can_view %}
+<style>
+.accounting-voucher-card{
+    padding:clamp(22px,2vw,32px);
+    border:1px solid rgba(79,154,106,.22);
+    border-radius:26px;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 18px 42px rgba(23,37,42,.08);
+}
+.accounting-voucher-summary{
+    display:grid;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:11px;
+    margin-top:18px;
+}
+.accounting-voucher-summary>div,
+.accounting-voucher-meta>div,
+.accounting-voucher-totals>div{
+    min-width:0;
+    padding:13px;
+    border:1px solid rgba(79,154,106,.16);
+    border-radius:14px;
+    background:#F8FCF9;
+}
+.accounting-voucher-summary span,
+.accounting-voucher-meta span,
+.accounting-voucher-totals span{
+    display:block;
+    color:#60716F;
+    font-size:.74rem;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+.accounting-voucher-summary strong,
+.accounting-voucher-meta strong,
+.accounting-voucher-totals strong{
+    display:block;
+    margin-top:6px;
+    color:#1F362C;
+    overflow-wrap:anywhere;
+}
+.accounting-voucher-form,
+.accounting-voucher-row,
+.accounting-voucher-lines-panel{
+    margin-top:18px;
+    padding:18px;
+    border:1px solid rgba(79,154,106,.18);
+    border-radius:18px;
+    background:#FBFEFC;
+}
+.accounting-voucher-form h3,
+.accounting-voucher-row h3,
+.accounting-voucher-lines-panel h4{
+    margin:0;
+    color:#20362D;
+}
+.accounting-voucher-form>p,
+.accounting-voucher-row-header p,
+.accounting-voucher-lines-panel>p{
+    margin:7px 0 0;
+    color:#60716F;
+    line-height:1.55;
+}
+.accounting-voucher-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:13px;
+    margin-top:16px;
+}
+.accounting-voucher-grid label{
+    display:grid;
+    gap:7px;
+    min-width:0;
+}
+.accounting-voucher-grid label.span-2{grid-column:span 2;}
+.accounting-voucher-grid label.full{grid-column:1/-1;}
+.accounting-voucher-grid label>span{
+    color:#40515A;
+    font-size:.8rem;
+    font-weight:800;
+}
+.accounting-voucher-grid input,
+.accounting-voucher-grid select,
+.accounting-voucher-grid textarea{
+    width:100%;
+    min-height:43px;
+    padding:10px 11px;
+    border:1px solid rgba(116,171,134,.4);
+    border-radius:11px;
+    background:#fff;
+    color:#23342F;
+    font:inherit;
+}
+.accounting-voucher-grid textarea{resize:vertical;}
+.accounting-voucher-grid input[readonly]{background:#F2F6F3;color:#4F625A;}
+.accounting-voucher-event{
+    margin-top:15px;
+    border:1px solid rgba(79,154,106,.17);
+    border-radius:14px;
+    background:#fff;
+}
+.accounting-voucher-event summary{
+    cursor:pointer;
+    padding:13px 15px;
+    color:#285D3C;
+    font-weight:850;
+}
+.accounting-voucher-event-body{padding:0 15px 15px;}
+.accounting-voucher-footer,
+.accounting-voucher-row-header,
+.accounting-voucher-line-actions,
+.accounting-voucher-validation-actions{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:16px;
+}
+.accounting-voucher-row-header{margin-top:0;}
+.accounting-voucher-idempotency{
+    max-width:700px;
+    padding:11px 13px;
+    border-radius:12px;
+    background:#EFF7F1;
+    color:#52665D;
+    font-size:.82rem;
+    line-height:1.5;
+    overflow-wrap:anywhere;
+}
+.accounting-voucher-list{display:grid;gap:15px;margin-top:18px;}
+.accounting-voucher-tags{display:flex;gap:7px;flex-wrap:wrap;}
+.accounting-voucher-tag{
+    display:inline-flex;
+    align-items:center;
+    padding:6px 9px;
+    border-radius:999px;
+    background:#E8F4EC;
+    color:#285D3C;
+    font-size:.75rem;
+    font-weight:850;
+}
+.accounting-voucher-tag.neutral{background:#EEF1F3;color:#52636C;}
+.accounting-voucher-tag.warning{background:#FEF3C7;color:#92400E;}
+.accounting-voucher-tag.danger{background:#FEE2E2;color:#991B1B;}
+.accounting-voucher-meta{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:10px;
+    margin-top:14px;
+}
+.accounting-voucher-source-link{
+    margin-top:13px;
+    padding:12px 13px;
+    border-left:4px solid #4F9A6A;
+    border-radius:10px;
+    background:#F2F8F4;
+    color:#4D6258;
+    line-height:1.5;
+}
+.accounting-voucher-empty{
+    margin-top:18px;
+    padding:20px;
+    border:1px dashed rgba(79,154,106,.32);
+    border-radius:16px;
+    background:#FAFDFA;
+    color:#60716F;
+}
+.accounting-voucher-history{
+    margin-top:14px;
+    border-top:1px solid rgba(79,154,106,.16);
+    padding-top:12px;
+}
+.accounting-voucher-history summary{cursor:pointer;color:#285D3C;font-weight:850;}
+.accounting-voucher-history-list{display:grid;gap:9px;margin-top:11px;}
+.accounting-voucher-history-list>div{
+    padding:11px 12px;
+    border-radius:11px;
+    background:#F6FAF7;
+    color:#52636C;
+}
+.accounting-voucher-history-list strong{color:#263D33;}
+.accounting-voucher-history-list span,
+.accounting-voucher-history-list small{margin-left:7px;}
+.accounting-voucher-history-list p{margin:5px 0 0;}
+.accounting-voucher-totals{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-top:14px;
+}
+.accounting-voucher-totals .balanced{background:#ECFDF3;border-color:#A7E9BC;}
+.accounting-voucher-totals .unbalanced{background:#FFF7ED;border-color:#FED7AA;}
+.accounting-voucher-lines-list{display:grid;gap:12px;margin-top:14px;}
+.accounting-voucher-line{
+    padding:14px;
+    border:1px solid rgba(79,154,106,.16);
+    border-radius:14px;
+    background:#fff;
+}
+.accounting-voucher-line-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+}
+.accounting-voucher-line-title strong{display:block;color:#22392F;}
+.accounting-voucher-line-title small{display:block;margin-top:4px;color:#6A7B74;}
+.accounting-voucher-line-amounts{display:flex;gap:8px;flex-wrap:wrap;}
+.accounting-voucher-line-amount{
+    min-width:130px;
+    padding:9px 11px;
+    border-radius:10px;
+    background:#F3F8F4;
+    text-align:right;
+}
+.accounting-voucher-line-amount span{display:block;font-size:.7rem;font-weight:800;text-transform:uppercase;color:#6A7B74;}
+.accounting-voucher-line-amount strong{display:block;margin-top:3px;color:#233B30;}
+.accounting-voucher-line-edit{
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid rgba(79,154,106,.13);
+}
+.accounting-voucher-line-edit summary{cursor:pointer;color:#285D3C;font-weight:800;}
+.accounting-voucher-validation{
+    margin-top:15px;
+    padding:14px;
+    border-radius:14px;
+    border:1px solid rgba(79,154,106,.18);
+    background:#F8FCF9;
+}
+.accounting-voucher-validation.valid{background:#ECFDF3;border-color:#A7E9BC;}
+.accounting-voucher-validation.invalid{background:#FFF7ED;border-color:#FED7AA;}
+.accounting-voucher-validation h5{margin:0;color:#233B30;font-size:.95rem;}
+.accounting-voucher-validation p{margin:7px 0 0;color:#52636C;}
+.accounting-voucher-validation ul{margin:10px 0 0;padding-left:20px;color:#52636C;}
+.accounting-voucher-validation small{display:block;margin-top:8px;color:#6A7B74;}
+.accounting-voucher-danger-button{
+    border:1px solid #F0B4B4;
+    border-radius:10px;
+    padding:10px 14px;
+    background:#FFF4F4;
+    color:#A51D1D;
+    font-weight:800;
+    cursor:pointer;
+}
+@media(max-width:1180px){
+    .accounting-voucher-summary{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .accounting-voucher-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .accounting-voucher-meta{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .accounting-voucher-totals{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:680px){
+    .accounting-voucher-summary,
+    .accounting-voucher-grid,
+    .accounting-voucher-meta,
+    .accounting-voucher-totals{grid-template-columns:1fr;}
+    .accounting-voucher-grid label.span-2,
+    .accounting-voucher-grid label.full{grid-column:auto;}
+    .accounting-voucher-footer,
+    .accounting-voucher-row-header,
+    .accounting-voucher-line-actions,
+    .accounting-voucher-validation-actions{flex-direction:column;align-items:stretch;}
+    .accounting-voucher-footer button,
+    .accounting-voucher-line-actions button,
+    .accounting-voucher-validation-actions button{width:100%;}
+    .accounting-voucher-line-amounts{width:100%;}
+    .accounting-voucher-line-amount{flex:1;}
+}
+</style>
+
+<section class="accounting-voucher-card" id="voucher-engine">
+    <div class="accounting-section-heading">
+        <div>
+            <p class="accounting-eyebrow">Stage 5 · Batch 4</p>
+            <h2>Core voucher engine — cancellation and reversal</h2>
+            <p class="accounting-section-description">
+                Cancels unposted drafts safely and reverses posted vouchers through a new opposite, officially numbered voucher without editing financial history.
+            </p>
+        </div>
+        {% if voucher_overview.prerequisites.is_ready_for_line_entry %}
+            <span class="accounting-state-pill active">Line entry ready</span>
+        {% else %}
+            <span class="accounting-state-pill pending">Open year and ledgers required</span>
+        {% endif %}
+    </div>
+
+    {% if voucher_setup_error %}
+        <div class="accounting-notice danger">{{ voucher_setup_error }}</div>
+    {% elif not accounting_entity %}
+        <div class="accounting-notice info">Initialize the active AVPL Accounting entity first.</div>
+    {% else %}
+        <div class="accounting-voucher-summary">
+            <div><span>All vouchers</span><strong>{{ voucher_overview.total_count }}</strong></div>
+            <div><span>Draft</span><strong>{{ voucher_overview.counts.draft }}</strong></div>
+            <div><span>Validated</span><strong>{{ voucher_overview.validation_counts.valid }}</strong></div>
+            <div><span>Invalid</span><strong>{{ voucher_overview.validation_counts.invalid }}</strong></div>
+            <div><span>Active ledgers</span><strong>{{ voucher_overview.active_ledger_count }}</strong></div>
+            <div><span>Official lines</span><strong>{{ voucher_overview.voucher_line_count }}</strong></div>
+        </div>
+
+        <div class="accounting-notice info compact">
+            <strong>Stage 5 final rule:</strong> only a currently validated and balanced draft can post.
+            The maker cannot post the same voucher. Official numbers and <code>voucher_lines</code> are idempotent, linked business events cannot post twice, and interrupted postings can be resumed safely by Super Admin.
+
+        </div>
+
+        {% if not voucher_overview.index_health.is_complete %}
+            <div class="accounting-notice danger compact">
+                Voucher index health is incomplete: {{ voucher_overview.index_health.missing_count }} required index(es) are missing.
+            </div>
+        {% else %}
+            <div class="accounting-notice success compact">
+                All {{ voucher_overview.index_health.required_count }} voucher-header indexes are installed and verified.
+            </div>
+        {% endif %}
+
+        {% if voucher_overview.audit_recovery_count > 0 %}
+            <div class="accounting-notice warning compact">
+                {{ voucher_overview.audit_recovery_count }} voucher(s) require audit-log recovery review.
+            </div>
+        {% endif %}
+
+        {% if voucher_capabilities.can_recover and voucher_recovery_overview.count > 0 %}
+            <div class="accounting-notice warning">
+                <strong>Interrupted posting recovery</strong><br>
+                {{ voucher_recovery_overview.recovery_required_count }} voucher(s) are marked for recovery and
+                {{ voucher_recovery_overview.stale_lock_count }} have an expired posting lock.
+            </div>
+
+            {% for recovery_voucher in voucher_recovery_overview.rows %}
+                <form method="post"
+                      action="{{ url_for('accounting.voucher_recover', voucher_id=recovery_voucher.id) }}"
+                      class="accounting-voucher-form"
+                      onsubmit="return confirm('Resume this interrupted posting? The same number and official lines will be reused safely.');">
+                    <div class="accounting-voucher-card-head">
+                        <div>
+                            <strong>{{ recovery_voucher.voucher_id }}</strong>
+                            <small>
+                                {{ recovery_voucher.voucher_type_label }} ·
+                                {{ recovery_voucher.posting_state|replace('_', ' ')|title }} ·
+                                {{ recovery_voucher.official_line_count_live }} official line(s) currently stored
+                            </small>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Resume posting safely</button>
+                    </div>
+                    {% if recovery_voucher.posting_error %}
+                        <p class="accounting-muted">Last error: {{ recovery_voucher.posting_error }}</p>
+                    {% endif %}
+                </form>
+            {% endfor %}
+        {% endif %}
+
+        {% if not voucher_overview.prerequisites.has_open_financial_year %}
+            <div class="accounting-notice warning">An approved, open and unlocked Financial Year is required.</div>
+        {% endif %}
+        {% if not voucher_overview.prerequisites.has_active_ledgers %}
+            <div class="accounting-notice warning">Synchronize and activate Accounting ledgers before entering voucher lines.</div>
+        {% endif %}
+
+        {% if voucher_capabilities.can_create and voucher_overview.prerequisites.has_open_financial_year %}
+            <form method="post"
+                  action="{{ url_for('accounting.voucher_create') }}"
+                  class="accounting-voucher-form accounting-voucher-header-form">
+                <h3>Create voucher-header draft</h3>
+                <p>Create the controlled identity first, then add debit and credit lines below.</p>
+
+                <div class="accounting-voucher-grid">
+                    <label class="span-2">
+                        <span>Voucher type</span>
+                        <select name="voucher_type" required>
+                            {% for voucher_type in voucher_overview.options.voucher_types %}
+                                <option value="{{ voucher_type.document_type }}"
+                                        {% if voucher_type.document_type == voucher_overview.form_defaults.voucher_type %}selected{% endif %}>
+                                    {{ voucher_type.label }} · {{ voucher_type.short_code }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Financial Year</span>
+                        <select name="financial_year_id" class="accounting-voucher-fy-select" required>
+                            {% for financial_year in voucher_overview.open_financial_years %}
+                                <option value="{{ financial_year.id }}"
+                                        data-start="{{ financial_year.start_date_input }}"
+                                        data-end="{{ financial_year.end_date_input }}"
+                                        {% if financial_year.id == voucher_overview.form_defaults.financial_year_id %}selected{% endif %}>
+                                    {{ financial_year.display_name or financial_year.fy_code }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Transaction date</span>
+                        <input type="date" name="transaction_date" class="accounting-voucher-transaction-date" value="{{ voucher_overview.form_defaults.transaction_date }}" required>
+                    </label>
+                    <label class="span-2">
+                        <span>External/reference number (optional)</span>
+                        <input type="text" name="reference_number" maxlength="160" placeholder="Supplier bill, internal memo or source reference">
+                    </label>
+                    <label>
+                        <span>Reference date (optional)</span>
+                        <input type="date" name="reference_date">
+                    </label>
+                    <label class="full">
+                        <span>Voucher narration</span>
+                        <textarea name="narration" rows="3" maxlength="2000" required placeholder="Describe the accounting purpose clearly"></textarea>
+                    </label>
+                    <label class="full">
+                        <span>Stable idempotency key</span>
+                        <input type="text" name="idempotency_key" value="{{ voucher_overview.form_defaults.idempotency_key }}" minlength="8" maxlength="160" readonly required>
+                    </label>
+                </div>
+
+                <details class="accounting-voucher-event">
+                    <summary>Optional linked business-event details</summary>
+                    <div class="accounting-voucher-event-body">
+                        <div class="accounting-voucher-grid">
+                            <label><span>Business event type</span><input type="text" name="business_event_type" maxlength="80" placeholder="Example: purchase_invoice"></label>
+                            <label><span>Business event ID</span><input type="text" name="business_event_id" maxlength="160" placeholder="Stable source event identifier"></label>
+                            <label><span>Voucher role</span><input type="text" name="voucher_role" maxlength="80" value="{{ voucher_overview.form_defaults.voucher_role }}"></label>
+                            <label><span>Source collection</span><input type="text" name="source_collection" maxlength="80" placeholder="Example: purchase_invoices"></label>
+                            <label class="span-2"><span>Source document ID</span><input type="text" name="source_document_id" maxlength="160"></label>
+                            <label class="span-2"><span>Source document number</span><input type="text" name="source_document_number" maxlength="160"></label>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="accounting-voucher-footer">
+                    <div class="accounting-voucher-idempotency">The same idempotency key always returns the same draft.</div>
+                    <button type="submit" class="accounting-primary-button">Create draft header</button>
+                </div>
+            </form>
+        {% endif %}
+
+        {% if voucher_overview.rows %}
+            <div class="accounting-voucher-list">
+                {% for voucher in voucher_overview.rows %}
+                    <article class="accounting-voucher-row">
+                        <div class="accounting-voucher-row-header">
+                            <div>
+                                <h3>{{ voucher.voucher_type_label }} · {{ voucher.voucher_id }}</h3>
+                                <p>{{ voucher.narration }}</p>
+                            </div>
+                            <div class="accounting-voucher-tags">
+                                <span class="accounting-voucher-tag">{{ voucher.status_display }}</span>
+                                <span class="accounting-voucher-tag neutral">{{ voucher.voucher_type_short_code }}</span>
+                                {% if voucher.validation_status == 'valid' %}
+                                    <span class="accounting-voucher-tag">Validated</span>
+                                {% elif voucher.validation_status == 'invalid' %}
+                                    <span class="accounting-voucher-tag danger">Validation failed</span>
+                                {% else %}
+                                    <span class="accounting-voucher-tag warning">Not validated</span>
+                                {% endif %}
+                                {% if voucher.voucher_number %}
+                                    <span class="accounting-voucher-tag">{{ voucher.voucher_number }}</span>
+                                {% else %}
+                                    <span class="accounting-voucher-tag warning">Official number not allocated</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="accounting-voucher-meta">
+                            <div><span>Transaction date</span><strong>{{ voucher.transaction_date_display }}</strong></div>
+                            <div><span>Financial Year</span><strong>{{ voucher.financial_year_name or voucher.financial_year_code }}</strong></div>
+                            <div><span>Reference</span><strong>{{ voucher.reference_number or '—' }}</strong></div>
+                            <div><span>Maker</span><strong>{{ voucher.created_by_name or 'Unknown user' }}</strong></div>
+                            <div><span>Version</span><strong>{{ voucher.version }}</strong></div>
+                        </div>
+
+                        {% if voucher.has_business_event %}
+                            <div class="accounting-voucher-source-link">
+                                <strong>Linked business event:</strong>
+                                {{ voucher.business_event_type }} · {{ voucher.business_event_id }} · role {{ voucher.voucher_role }}
+                                {% if voucher.source_document_number %} · source {{ voucher.source_document_number }}{% endif %}
+                            </div>
+                        {% endif %}
+
+                        <div class="accounting-voucher-totals">
+                            <div><span>Draft lines</span><strong>{{ voucher.draft_line_count }}</strong></div>
+                            <div><span>Total Debit</span><strong>₹{{ voucher.draft_debit_total }}</strong></div>
+                            <div><span>Total Credit</span><strong>₹{{ voucher.draft_credit_total }}</strong></div>
+                            <div class="{% if voucher.draft_is_balanced %}balanced{% else %}unbalanced{% endif %}">
+                                <span>Difference</span><strong>₹{{ voucher.draft_absolute_difference }}</strong>
+                            </div>
+                        </div>
+
+                        {% set is_voucher_maker = voucher.created_by == current_user_id %}
+                        {% if voucher.status == 'draft' and is_voucher_maker and voucher_capabilities.can_edit and voucher_overview.prerequisites.has_open_financial_year %}
+                            <form method="post" action="{{ url_for('accounting.voucher_edit', voucher_id=voucher.id) }}" class="accounting-voucher-form accounting-voucher-header-form">
+                                <input type="hidden" name="version" value="{{ voucher.version }}">
+                                <h3>Edit draft header</h3>
+                                <div class="accounting-voucher-grid">
+                                    <label class="span-2">
+                                        <span>Voucher type</span>
+                                        <select name="voucher_type" required>
+                                            {% for voucher_type in voucher_overview.options.voucher_types %}
+                                                <option value="{{ voucher_type.document_type }}" {% if voucher_type.document_type == voucher.voucher_type %}selected{% endif %}>
+                                                    {{ voucher_type.label }} · {{ voucher_type.short_code }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label>
+                                        <span>Financial Year</span>
+                                        <select name="financial_year_id" class="accounting-voucher-fy-select" required>
+                                            {% for financial_year in voucher_overview.open_financial_years %}
+                                                <option value="{{ financial_year.id }}" data-start="{{ financial_year.start_date_input }}" data-end="{{ financial_year.end_date_input }}" {% if financial_year.id == voucher.financial_year_id %}selected{% endif %}>
+                                                    {{ financial_year.display_name or financial_year.fy_code }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label><span>Transaction date</span><input type="date" name="transaction_date" class="accounting-voucher-transaction-date" value="{{ voucher.transaction_date_input }}" required></label>
+                                    <label class="span-2"><span>External/reference number</span><input type="text" name="reference_number" maxlength="160" value="{{ voucher.reference_number }}"></label>
+                                    <label><span>Reference date</span><input type="date" name="reference_date" value="{{ voucher.reference_date_input }}"></label>
+                                    <label class="full"><span>Voucher narration</span><textarea name="narration" rows="3" maxlength="2000" required>{{ voucher.narration }}</textarea></label>
+                                </div>
+                                <details class="accounting-voucher-event" {% if voucher.has_business_event %}open{% endif %}>
+                                    <summary>Optional linked business-event details</summary>
+                                    <div class="accounting-voucher-event-body">
+                                        <div class="accounting-voucher-grid">
+                                            <label><span>Business event type</span><input type="text" name="business_event_type" maxlength="80" value="{{ voucher.business_event_type }}"></label>
+                                            <label><span>Business event ID</span><input type="text" name="business_event_id" maxlength="160" value="{{ voucher.business_event_id }}"></label>
+                                            <label><span>Voucher role</span><input type="text" name="voucher_role" maxlength="80" value="{{ voucher.voucher_role or 'primary' }}"></label>
+                                            <label><span>Source collection</span><input type="text" name="source_collection" maxlength="80" value="{{ voucher.source_collection }}"></label>
+                                            <label class="span-2"><span>Source document ID</span><input type="text" name="source_document_id" maxlength="160" value="{{ voucher.source_document_id }}"></label>
+                                            <label class="span-2"><span>Source document number</span><input type="text" name="source_document_number" maxlength="160" value="{{ voucher.source_document_number }}"></label>
+                                        </div>
+                                    </div>
+                                </details>
+                                <div class="accounting-voucher-footer">
+                                    <div class="accounting-voucher-idempotency">Immutable creation key: {{ voucher.idempotency_key }}</div>
+                                    <button type="submit" class="accounting-secondary-button">Save header changes</button>
+                                </div>
+                            </form>
+                        {% endif %}
+
+                        {% if voucher.status == 'draft' %}
+                            <section class="accounting-voucher-lines-panel">
+                                <h4>Debit and credit lines</h4>
+                                <p>Every line must use one active entity-owned ledger and exactly one positive debit or credit amount.</p>
+
+                                {% if voucher.draft_lines %}
+                                    <div class="accounting-voucher-lines-list">
+                                        {% for line in voucher.draft_lines %}
+                                            <div class="accounting-voucher-line">
+                                                <div class="accounting-voucher-line-head">
+                                                    <div class="accounting-voucher-line-title">
+                                                        <strong>{{ line.sequence }}. {{ line.ledger_name }} · {{ line.ledger_code }}</strong>
+                                                        <small>{{ line.account_group_name or line.ledger_type }}{% if line.line_narration %} · {{ line.line_narration }}{% endif %}</small>
+                                                    </div>
+                                                    <div class="accounting-voucher-line-amounts">
+                                                        <div class="accounting-voucher-line-amount"><span>Debit</span><strong>₹{{ line.debit_amount }}</strong></div>
+                                                        <div class="accounting-voucher-line-amount"><span>Credit</span><strong>₹{{ line.credit_amount }}</strong></div>
+                                                    </div>
+                                                </div>
+
+                                                {% if is_voucher_maker and voucher_capabilities.can_edit %}
+                                                    <details class="accounting-voucher-line-edit">
+                                                        <summary>Edit this line</summary>
+                                                        <form method="post" action="{{ url_for('accounting.voucher_line_edit', voucher_id=voucher.id, line_id=line.line_id) }}" class="accounting-voucher-line-form">
+                                                            <input type="hidden" name="version" value="{{ voucher.version }}">
+                                                            <div class="accounting-voucher-grid">
+                                                                <label class="span-2">
+                                                                    <span>Ledger</span>
+                                                                    <select name="ledger_id" required>
+                                                                        {% for ledger in voucher_overview.ledger_options %}
+                                                                            <option value="{{ ledger.id }}" {% if ledger.id == line.ledger_id %}selected{% endif %}>{{ ledger.display_name }}</option>
+                                                                        {% endfor %}
+                                                                    </select>
+                                                                </label>
+                                                                <label><span>Debit amount</span><input type="number" name="debit_amount" min="0" step="0.01" value="{{ line.debit_amount }}"></label>
+                                                                <label><span>Credit amount</span><input type="number" name="credit_amount" min="0" step="0.01" value="{{ line.credit_amount }}"></label>
+                                                                <label class="full"><span>Line narration</span><textarea name="line_narration" rows="2" maxlength="500">{{ line.line_narration }}</textarea></label>
+                                                            </div>
+                                                            <div class="accounting-voucher-line-actions">
+                                                                <span class="accounting-voucher-idempotency">Saving any line change resets the voucher validation status.</span>
+                                                                <button type="submit" class="accounting-secondary-button">Save line changes</button>
+                                                            </div>
+                                                        </form>
+                                                        <form method="post" action="{{ url_for('accounting.voucher_line_remove', voucher_id=voucher.id, line_id=line.line_id) }}" onsubmit="return confirm('Remove this draft voucher line?');">
+                                                            <input type="hidden" name="version" value="{{ voucher.version }}">
+                                                            <div class="accounting-voucher-line-actions">
+                                                                <span></span>
+                                                                <button type="submit" class="accounting-voucher-danger-button">Remove line</button>
+                                                            </div>
+                                                        </form>
+                                                    </details>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="accounting-voucher-empty">No debit or credit line has been added to this draft.</div>
+                                {% endif %}
+
+                                {% if is_voucher_maker and voucher_capabilities.can_edit and voucher_overview.prerequisites.has_active_ledgers %}
+                                    <form method="post" action="{{ url_for('accounting.voucher_line_add', voucher_id=voucher.id) }}" class="accounting-voucher-form accounting-voucher-line-form">
+                                        <input type="hidden" name="version" value="{{ voucher.version }}">
+                                        <h3>Add voucher line</h3>
+                                        <div class="accounting-voucher-grid">
+                                            <label class="span-2">
+                                                <span>Active ledger</span>
+                                                <select name="ledger_id" required>
+                                                    <option value="">Select ledger</option>
+                                                    {% for ledger in voucher_overview.ledger_options %}
+                                                        <option value="{{ ledger.id }}">{{ ledger.display_name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </label>
+                                            <label><span>Debit amount</span><input type="number" name="debit_amount" min="0" step="0.01" placeholder="0.00"></label>
+                                            <label><span>Credit amount</span><input type="number" name="credit_amount" min="0" step="0.01" placeholder="0.00"></label>
+                                            <label class="full"><span>Line narration (optional)</span><textarea name="line_narration" rows="2" maxlength="500"></textarea></label>
+                                        </div>
+                                        <div class="accounting-voucher-footer">
+                                            <div class="accounting-voucher-idempotency">Use only one side. A line with both debit and credit, or both zero, is rejected.</div>
+                                            <button type="submit" class="accounting-primary-button">Add voucher line</button>
+                                        </div>
+                                    </form>
+                                {% endif %}
+
+                                {% if voucher.last_validation_result %}
+                                    <div class="accounting-voucher-validation {% if voucher.last_validation_result.is_valid %}valid{% else %}invalid{% endif %}">
+                                        <h5>{% if voucher.last_validation_result.is_valid %}Validation passed{% else %}Validation failed{% endif %}</h5>
+                                        <p>
+                                            Debit ₹{{ voucher.last_validation_result.debit_total }} ·
+                                            Credit ₹{{ voucher.last_validation_result.credit_total }} ·
+                                            Difference ₹{{ voucher.last_validation_result.absolute_difference }}
+                                        </p>
+                                        {% if voucher.last_validation_result.errors %}
+                                            <ul>
+                                                {% for error in voucher.last_validation_result.errors %}
+                                                    <li>{% if error.line_number %}Line {{ error.line_number }}: {% endif %}{{ error.message }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                        {% if voucher.last_validation_result.warnings %}
+                                            <ul>
+                                                {% for warning in voucher.last_validation_result.warnings %}
+                                                    <li>{% if warning.line_number %}Line {{ warning.line_number }}: {% endif %}{{ warning.message }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                        <small>
+                                            Checked by {{ voucher.last_validation_result.validated_by_name or voucher.last_validated_by_name or 'Accounting user' }}
+                                            {% if voucher.last_validation_result.validated_at %} on {{ voucher.last_validation_result.validated_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}.
+                                            No official posting was created.
+                                        </small>
+                                    </div>
+                                {% endif %}
+
+                                {% if voucher_capabilities.can_validate %}
+                                    <form method="post" action="{{ url_for('accounting.voucher_validate', voucher_id=voucher.id) }}">
+                                        <input type="hidden" name="version" value="{{ voucher.version }}">
+                                        <div class="accounting-voucher-validation-actions">
+                                            <div class="accounting-voucher-idempotency">
+                                                Required: at least two valid lines and Total Debit = Total Credit. Validation rechecks the Financial Year and every ledger.
+                                            </div>
+                                            <button type="submit" class="accounting-primary-button">Validate double entry</button>
+                                        </div>
+                                    </form>
+                                {% endif %}
+
+                                {% if voucher_capabilities.can_post %}
+                                    {% if is_voucher_maker %}
+                                        <div class="accounting-notice warning compact">
+                                            Maker-checker control: the user who created this voucher cannot post it. Log in as another authorized AVPL Admin or Super Admin.
+                                        </div>
+                                    {% elif voucher.validation_status != 'valid' or not voucher.is_validation_current %}
+                                        <div class="accounting-notice warning compact">
+                                            Run double-entry validation successfully before posting this voucher.
+                                        </div>
+                                    {% else %}
+                                        <form method="post"
+                                              action="{{ url_for('accounting.voucher_post', voucher_id=voucher.id) }}"
+                                              onsubmit="return confirm('Post this voucher officially? The voucher number and official lines cannot be edited afterward.');">
+                                            <input type="hidden" name="version" value="{{ voucher.version }}">
+                                            <div class="accounting-voucher-validation-actions">
+                                                <div class="accounting-voucher-idempotency">
+                                                    Posting will reserve the approved {{ voucher.voucher_type_short_code }} number and create {{ voucher.draft_line_count }} immutable official line(s). Retrying the same voucher is safe.
+                                                </div>
+                                                <button type="submit" class="accounting-primary-button">
+                                                    {% if voucher.posting_state == 'recovery_required' %}Retry posting safely{% else %}Post official voucher{% endif %}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                            </section>
+                        {% endif %}
+
+                        {% if voucher.status == 'posted' %}
+                            <div class="accounting-notice success compact">
+                                <strong>Official posting completed:</strong> {{ voucher.voucher_number }} ·
+                                {{ voucher.posted_line_count }} immutable line(s) ·
+                                Total Debit ₹{{ voucher.draft_debit_total }} = Total Credit ₹{{ voucher.draft_credit_total }}.
+                            </div>
+
+                            {% if voucher.is_reversal %}
+                                <div class="accounting-notice warning compact">
+                                    <strong>Reversal voucher:</strong> this voucher reverses {{ voucher.reverses_voucher_number or voucher.reverses_voucher_internal_id }}.
+                                    {% if voucher.reversal_reason %} Reason: {{ voucher.reversal_reason }}{% endif %}
+                                </div>
+                            {% elif voucher_capabilities.can_reverse and voucher_overview.open_financial_years %}
+                                <details class="accounting-voucher-event">
+                                    <summary>Reverse this posted voucher</summary>
+                                    <div class="accounting-voucher-event-body">
+                                        <form method="post"
+                                              action="{{ url_for('accounting.voucher_reverse', voucher_id=voucher.id) }}"
+                                              onsubmit="return confirm('Create and post an opposite reversal voucher? The original lines will remain immutable.');">
+                                            <input type="hidden" name="version" value="{{ voucher.version }}">
+                                            <div class="accounting-voucher-grid">
+                                                <label class="span-2">
+                                                    <span>Reversal Financial Year</span>
+                                                    <select name="financial_year_id" required>
+                                                        {% for financial_year in voucher_overview.open_financial_years %}
+                                                            <option value="{{ financial_year.id }}">{{ financial_year.display_name or financial_year.fy_code }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </label>
+                                                <label class="span-2">
+                                                    <span>Reversal date</span>
+                                                    <input type="date" name="reversal_date" value="{{ voucher_overview.form_defaults.transaction_date }}" required>
+                                                </label>
+                                                <label class="full">
+                                                    <span>Mandatory reversal reason</span>
+                                                    <textarea name="reason" rows="3" maxlength="1000" required placeholder="Explain why this posted voucher must be reversed"></textarea>
+                                                </label>
+                                            </div>
+                                            <div class="accounting-voucher-validation-actions">
+                                                <div class="accounting-voucher-idempotency">
+                                                    A new {{ voucher.voucher_type_short_code }} number and opposite official lines will be created. The original voucher and original <code>voucher_lines</code> are never edited or deleted.
+                                                </div>
+                                                <button type="submit" class="accounting-voucher-danger-button">Post reversal voucher</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </details>
+                            {% endif %}
+                        {% endif %}
+
+                        {% if voucher.status == 'reversed' %}
+                            <div class="accounting-notice warning compact">
+                                <strong>Voucher reversed:</strong> {{ voucher.voucher_number }} was reversed through
+                                {{ voucher.reversal_voucher_number or voucher.reversal_voucher_internal_id }}.
+                                {% if voucher.reversal_reason %} Reason: {{ voucher.reversal_reason }}{% endif %}
+                            </div>
+                        {% endif %}
+
+                        {% if voucher.status == 'cancelled' %}
+                            <div class="accounting-notice warning compact">
+                                <strong>Draft cancelled:</strong> no official number and no financial entry were created.
+                                {% if voucher.cancellation_reason %} Reason: {{ voucher.cancellation_reason }}{% endif %}
+                            </div>
+                        {% endif %}
+
+                        {% if voucher.status == 'draft' and is_voucher_maker and voucher_capabilities.can_cancel %}
+                            <details class="accounting-voucher-event">
+                                <summary>Cancel this unposted draft</summary>
+                                <div class="accounting-voucher-event-body">
+                                    <form method="post"
+                                          action="{{ url_for('accounting.voucher_cancel', voucher_id=voucher.id) }}"
+                                          onsubmit="return confirm('Cancel this draft permanently? It cannot be edited or posted afterward.');">
+                                        <input type="hidden" name="version" value="{{ voucher.version }}">
+                                        <div class="accounting-voucher-grid">
+                                            <label class="full">
+                                                <span>Mandatory cancellation reason</span>
+                                                <textarea name="reason" rows="3" maxlength="1000" required placeholder="Explain why this unposted draft is being cancelled"></textarea>
+                                            </label>
+                                        </div>
+                                        <div class="accounting-voucher-validation-actions">
+                                            <div class="accounting-voucher-idempotency">
+                                                Cancellation creates no official number and no financial entry. The draft and its audit history remain preserved.
+                                            </div>
+                                            <button type="submit" class="accounting-voucher-danger-button">Cancel draft</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </details>
+                        {% endif %}
+
+                        {% if voucher_capabilities.can_audit_view %}
+                            <details class="accounting-voucher-history">
+                                <summary>Voucher audit history ({{ voucher.change_history|length }})</summary>
+                                <div class="accounting-voucher-history-list">
+                                    {% for event in voucher.change_history|reverse %}
+                                        <div>
+                                            <strong>{{ event.action.replace('_', ' ').title() }}</strong>
+                                            <span>{{ event.actor_name or event.actor_role.replace('_', ' ').title() }}</span>
+                                            {% if event.at %}<small>{{ event.at.strftime('%d %b %Y, %I:%M %p') }}</small>{% endif %}
+                                            {% if event.changed_fields %}<p>Fields: {{ event.changed_fields|join(', ') }}</p>{% endif %}
+                                            {% if event.remarks %}<p>{{ event.remarks }}</p>{% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </details>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="accounting-voucher-empty">
+                <strong>No voucher draft exists.</strong>
+                <p>Create a header, add debit and credit lines, then run Batch 2 validation.</p>
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+
+<script>
+(function(){
+    function applyFinancialYearRange(form){
+        const select = form.querySelector('.accounting-voucher-fy-select');
+        const transactionDate = form.querySelector('.accounting-voucher-transaction-date');
+        if(!select || !transactionDate){ return; }
+        const option = select.options[select.selectedIndex];
+        if(!option){ return; }
+        const start = option.dataset.start || '';
+        const end = option.dataset.end || '';
+        transactionDate.min = start;
+        transactionDate.max = end;
+        if(transactionDate.value && start && transactionDate.value < start){ transactionDate.value = start; }
+        if(transactionDate.value && end && transactionDate.value > end){ transactionDate.value = end; }
+    }
+
+    document.querySelectorAll('.accounting-voucher-header-form').forEach(function(form){
+        const select = form.querySelector('.accounting-voucher-fy-select');
+        if(select){
+            select.addEventListener('change', function(){ applyFinancialYearRange(form); });
+            applyFinancialYearRange(form);
+        }
+    });
+
+    document.querySelectorAll('.accounting-voucher-line-form').forEach(function(form){
+        form.addEventListener('submit', function(event){
+            const debitInput = form.querySelector('input[name="debit_amount"]');
+            const creditInput = form.querySelector('input[name="credit_amount"]');
+            if(!debitInput || !creditInput){ return; }
+            const debit = Number(debitInput.value || 0);
+            const credit = Number(creditInput.value || 0);
+            if((debit > 0 && credit > 0) || (debit <= 0 && credit <= 0)){
+                event.preventDefault();
+                window.alert('Enter one positive amount only: Debit or Credit.');
+            }
+        });
+    });
+})();
+</script>
+{% endif %}

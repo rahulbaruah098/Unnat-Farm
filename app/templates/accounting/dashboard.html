@@ -2674,6 +2674,9 @@
 
     {% include "accounting/_product_tracking_panel.html" %}
 
+    {# Stage 5 Batch 2: draft voucher lines and non-posting double-entry validation. #}
+    {% include "accounting/_voucher_engine_panel.html" %}
+
     {% if user_access_capabilities.can_view %}
         <div class="accounting-user-access-card" id="user-access">
             <div class="accounting-section-heading">
