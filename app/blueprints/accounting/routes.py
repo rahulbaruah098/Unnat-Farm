@@ -140,6 +140,8 @@ from app.services.accounting_voucher_recovery_service import (
 )
 
 
+
+
 from app.services.accounting_configuration_service import (
     approve_accounting_policy,
     approve_entity_profile,
@@ -395,6 +397,24 @@ def _run_voucher_action(action):
         flash(result.get("message") or "Accounting voucher updated.", category)
 
     return _redirect_dashboard("voucher-engine")
+
+
+def _run_purchase_invoice_action(action):
+    try:
+        result = action()
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        category = "info" if result.get("idempotent_replay") else "success"
+        flash(
+            result.get("message") or "External purchase header updated.",
+            category,
+        )
+
+    return _redirect_dashboard("purchase-invoices")
+ 
 
 
 def _run_financial_year_control_action(action):
@@ -1300,6 +1320,7 @@ def dashboard():
         except (PermissionError, ValueError, RuntimeError) as exc:
             voucher_setup_error = str(exc)
 
+
     user_access_capabilities = {
         "can_view": has_accounting_permission(
             access, "accounting.user_access.view"
@@ -1396,6 +1417,7 @@ def dashboard():
         voucher_overview=voucher_overview,
         voucher_recovery_overview=voucher_recovery_overview,
         voucher_setup_error=voucher_setup_error,
+
         user_access_capabilities=user_access_capabilities,
         user_access_summary=user_access_summary,
         user_access_setup_error=user_access_setup_error,
