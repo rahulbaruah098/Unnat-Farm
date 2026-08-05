@@ -52,6 +52,28 @@ PURCHASE_GROUP_KEY = "purchase_accounts"
 SALES_GROUP_KEY = "sales_accounts"
 INVENTORY_GROUP_KEY = "stock_in_hand"
 
+TRACKING_PROFILE_COLLECTION = "accounting_product_tracking_profiles"
+
+PRODUCT_MASTER_ROLES = {
+    "input",
+    "output",
+    "both",
+}
+
+PRODUCT_READINESS_LABELS = {
+    "disabled": "Disabled",
+    "product_master_incomplete": "Product Master Incomplete",
+    "accounting_unmapped": "Accounting Unmapped",
+    "accounting_mapping_pending": "Accounting Mapping Pending",
+    "tracking_configuration_pending": "Tracking Configuration Pending",
+    "purchase_disabled": "Purchase Disabled",
+    "avpl_only_ready": "AVPL-Only Ready",
+    "sales_disabled": "Sales Disabled",
+    "commercial_setup_pending": "Commercial Setup Pending",
+    "waiting_for_stock": "Waiting for Stock",
+    "ready": "Ready",
+}
+
 
 # ---------------------------------------------------------------------------
 # Shared safety helpers
@@ -1397,4 +1419,619 @@ def assert_product_ready_for_accounting(
         operation=operation,
     )
 
+def _readiness_decimal(value):
+    try:
+        return Decimal(str(value or 0))
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal("0")
+
+
+def _product_master_missing_fields(product):
+    missing = []
+
+    if not str(product.get("name") or "").strip():
+        missing.append("Product name")
+
+    if not str(product.get("product_code") or "").strip():
+        missing.append("Product code")
+
+    if not str(product.get("category") or "").strip():
+        missing.append("Category")
+
+    product_role = str(
+        product.get("product_role")
+        or product.get("type")
+        or ""
+    ).strip().lower()
+
+    if product_role not in PRODUCT_MASTER_ROLES:
+        missing.append("Product role")
+
+    if not str(product.get("metadata_source") or "").strip():
+        missing.append("Metadata source")
+
+    if not product.get("base_unit_id"):
+        missing.append("Base unit")
+
+    if _readiness_decimal(product.get("pack_size")) <= 0:
+        missing.append("Pack size")
+
+    return missing
+
+
+def get_product_readiness_snapshot(
+    accounting_entity_id,
+    source_product_id,
+    *,
+    product_document=None,
+    mapping_document=None,
+    transaction_date=None,
+):
+    """
+    Return a non-posting readiness summary for an AVPL product.
+
+    This function does not create stock, invoices, vouchers or ledger lines.
+    Stage 2 purchase and later sale services can use the assertion helpers
+    below before accepting a transaction.
+    """
+    entity = _assert_active_avpl_entity(accounting_entity_id)
+
+    product = product_document or _get_source_product(
+        source_product_id,
+        include_inactive=True,
+    )
+
+    product_status = str(
+        product.get("status") or "active"
+    ).strip().lower()
+
+    product_is_active = (
+        product.get("is_active", True) is not False
+        and product_status not in {
+            "inactive",
+            "disabled",
+            "deleted",
+        }
+        and product.get("is_deleted") is not True
+    )
+
+    master_missing_fields = _product_master_missing_fields(product)
+    product_master_ready = not master_missing_fields
+
+    mapping = mapping_document
+
+    if mapping is None:
+        mapping = mongo.db[MAPPING_COLLECTION].find_one(
+            {
+                "accounting_entity_id": entity["_id"],
+                "source_product_id": product["_id"],
+                "is_deleted": {"$ne": True},
+                "status": {"$ne": STATUS_CANCELLED},
+            },
+            sort=[("updated_at", DESCENDING)],
+        )
+
+    mapping_status = (
+        str(mapping.get("status") or STATUS_DRAFT)
+        if mapping
+        else "unmapped"
+    )
+
+    accounting_ready = False
+    accounting_error = ""
+
+    if product_is_active and mapping:
+        try:
+            get_product_accounting_mapping_for_posting(
+                entity["_id"],
+                product["_id"],
+                transaction_date=transaction_date or date.today(),
+            )
+            accounting_ready = True
+        except Exception as exc:
+            accounting_error = str(exc)
+    elif not mapping:
+        accounting_error = (
+            "Create and activate the Product Accounting mapping."
+        )
+    elif mapping_status != STATUS_ACTIVE:
+        accounting_error = (
+            "The Product Accounting mapping is "
+            f"{STATUS_LABELS.get(mapping_status, mapping_status)}."
+        )
+
+    purchase_enabled = bool(
+        mapping
+        and mapping_status == STATUS_ACTIVE
+        and mapping.get("purchase_enabled") is not False
+    )
+
+    sales_enabled = bool(
+        mapping
+        and mapping_status == STATUS_ACTIVE
+        and mapping.get("sales_enabled") is not False
+    )
+
+    tracking_profile = mongo.db[
+        TRACKING_PROFILE_COLLECTION
+    ].find_one(
+        {
+            "accounting_entity_id": entity["_id"],
+            "source_product_id": product["_id"],
+            "is_deleted": {"$ne": True},
+            "status": {"$ne": STATUS_CANCELLED},
+        },
+        sort=[("updated_at", DESCENDING)],
+    )
+
+    tracking_ready = True
+    tracking_status = "optional_not_configured"
+    tracking_issues = []
+
+    if tracking_profile:
+        tracking_status = str(
+            tracking_profile.get("status") or STATUS_DRAFT
+        )
+
+        if (
+            tracking_status != STATUS_ACTIVE
+            or tracking_profile.get("is_active") is not True
+        ):
+            tracking_ready = False
+            tracking_issues.append(
+                "Complete and activate the product tracking profile."
+            )
+        else:
+            if (
+                tracking_profile.get(
+                    "barcode_required_on_transaction"
+                )
+                and not (
+                    tracking_profile.get("primary_barcode")
+                    or product.get("barcode")
+                )
+            ):
+                tracking_ready = False
+                tracking_issues.append(
+                    "A barcode is required by the active tracking profile."
+                )
+
+            if (
+                tracking_profile.get("batch_number_required")
+                and not tracking_profile.get(
+                    "batch_tracking_enabled"
+                )
+            ):
+                tracking_ready = False
+                tracking_issues.append(
+                    "Batch-number tracking is required but not enabled."
+                )
+
+            if (
+                tracking_profile.get("expiry_date_required")
+                and not tracking_profile.get(
+                    "expiry_tracking_enabled"
+                )
+            ):
+                tracking_ready = False
+                tracking_issues.append(
+                    "Expiry-date tracking is required but not enabled."
+                )
+
+    selected_centres = product.get("available_centres") or []
+
+    if isinstance(selected_centres, str):
+        selected_centres = (
+            [selected_centres]
+            if selected_centres.strip()
+            else []
+        )
+
+    selling_price = _readiness_decimal(product.get("price"))
+    available_quantity = _readiness_decimal(
+        product.get("available_quantity")
+        or product.get("quantity")
+        or product.get("stock_quantity")
+        or product.get("stock")
+        or 0
+    )
+
+    commercial_configured = bool(
+        product.get("commercial_setup_status") == "configured"
+        or selected_centres
+    )
+
+    commercial_issues = []
+
+    if not commercial_configured:
+        commercial_issues.append(
+            "Complete the Commercial Setup."
+        )
+
+    if selling_price <= 0:
+        commercial_issues.append(
+            "Set a selling price greater than zero."
+        )
+
+    if not selected_centres:
+        commercial_issues.append(
+            "Select at least one Centre."
+        )
+
+    commercial_ready = (
+        commercial_configured
+        and selling_price > 0
+        and bool(selected_centres)
+    )
+
+    stock_ready = available_quantity > 0
+
+    unnatfarm_eligible = (
+        product.get("unnatfarm_eligible", True) is not False
+    )
+
+    purchase_ready = bool(
+        product_is_active
+        and product_master_ready
+        and accounting_ready
+        and purchase_enabled
+        and tracking_ready
+    )
+
+    listing_ready = bool(
+        product_is_active
+        and product_master_ready
+        and accounting_ready
+        and tracking_ready
+        and unnatfarm_eligible
+        and sales_enabled
+        and commercial_ready
+    )
+
+    sale_ready = bool(
+        listing_ready
+        and stock_ready
+    )
+
+    issues = []
+
+    if not product_is_active:
+        issues.append("Enable the product.")
+
+    if master_missing_fields:
+        issues.append(
+            "Complete: " + ", ".join(master_missing_fields) + "."
+        )
+
+    if accounting_error:
+        issues.append(accounting_error)
+
+    issues.extend(tracking_issues)
+
+    if (
+        unnatfarm_eligible
+        and sales_enabled
+    ):
+        issues.extend(commercial_issues)
+
+    if (
+        listing_ready
+        and not stock_ready
+    ):
+        issues.append(
+            "Receive or add stock before selling the product."
+        )
+
+    if not product_is_active:
+        status = "disabled"
+    elif not product_master_ready:
+        status = "product_master_incomplete"
+    elif not mapping:
+        status = "accounting_unmapped"
+    elif not accounting_ready:
+        status = "accounting_mapping_pending"
+    elif not tracking_ready:
+        status = "tracking_configuration_pending"
+    elif not purchase_enabled:
+        status = "purchase_disabled"
+    elif not unnatfarm_eligible:
+        status = "avpl_only_ready"
+    elif not sales_enabled:
+        status = "sales_disabled"
+    elif not commercial_ready:
+        status = "commercial_setup_pending"
+    elif not stock_ready:
+        status = "waiting_for_stock"
+    else:
+        status = "ready"
+
+    tone_by_status = {
+        "ready": "active",
+        "avpl_only_ready": "info",
+        "waiting_for_stock": "info",
+        "commercial_setup_pending": "pending",
+        "accounting_mapping_pending": "pending",
+        "tracking_configuration_pending": "pending",
+        "purchase_disabled": "pending",
+        "sales_disabled": "pending",
+        "product_master_incomplete": "error",
+        "accounting_unmapped": "error",
+        "disabled": "disabled",
+    }
+
+    return {
+        "status": status,
+        "label": PRODUCT_READINESS_LABELS.get(
+            status,
+            status.replace("_", " ").title(),
+        ),
+        "tone": tone_by_status.get(status, "pending"),
+        "product_master_ready": product_master_ready,
+        "master_missing_fields": master_missing_fields,
+        "accounting_ready": accounting_ready,
+        "mapping_status": mapping_status,
+        "purchase_enabled": purchase_enabled,
+        "sales_enabled": sales_enabled,
+        "tracking_ready": tracking_ready,
+        "tracking_status": tracking_status,
+        "commercial_ready": commercial_ready,
+        "stock_ready": stock_ready,
+        "unnatfarm_eligible": unnatfarm_eligible,
+        "purchase_ready": purchase_ready,
+        "listing_ready": listing_ready,
+        "sale_ready": sale_ready,
+        "selling_price": format(selling_price, "f"),
+        "available_quantity": format(
+            available_quantity,
+            "f",
+        ),
+        "issues": issues,
+        "primary_issue": issues[0] if issues else "",
+    }
+
+
+def assert_product_ready_for_avpl_purchase(
+    accounting_entity_id,
+    source_product_id,
+    *,
+    transaction_date=None,
+):
+    readiness = get_product_readiness_snapshot(
+        accounting_entity_id,
+        source_product_id,
+        transaction_date=transaction_date,
+    )
+
+    if not readiness.get("purchase_ready"):
+        raise ValueError(
+            readiness.get("primary_issue")
+            or "This product is not ready for an AVPL purchase."
+        )
+
+    accounting_context = (
+        get_product_accounting_mapping_for_posting(
+            accounting_entity_id,
+            source_product_id,
+            transaction_date=transaction_date,
+            operation="purchase",
+        )
+    )
+
+    return {
+        "readiness": readiness,
+        "accounting": accounting_context,
+    }
+
+
+def assert_product_ready_for_avpl_sale(
+    accounting_entity_id,
+    source_product_id,
+    *,
+    transaction_date=None,
+):
+    readiness = get_product_readiness_snapshot(
+        accounting_entity_id,
+        source_product_id,
+        transaction_date=transaction_date,
+    )
+
+    if not readiness.get("sale_ready"):
+        raise ValueError(
+            readiness.get("primary_issue")
+            or "This product is not ready for an AVPL sale."
+        )
+
+    accounting_context = (
+        get_product_accounting_mapping_for_posting(
+            accounting_entity_id,
+            source_product_id,
+            transaction_date=transaction_date,
+            operation="sales",
+        )
+    )
+
+    return {
+        "readiness": readiness,
+        "accounting": accounting_context,
+    }
+
+
+
+def upsert_product_mapping_request_from_product_master(
+    accounting_entity_id,
+    actor_user_id,
+    source_product_id,
+    form,
+):
+    """Create or refresh a product Accounting mapping from the AVPL product form.
+
+    An AVPL Admin is the authorised product-master approver, so mappings saved
+    from this form are activated immediately. An Accounts user may prepare the
+    same mapping, but it remains Draft for AVPL Admin review. This keeps the
+    product-entry flow fast without allowing an Accounts maker to approve their
+    own Accounting master.
+    """
+    actor = _get_actor(actor_user_id, allowed_roles={"accounts", "avpl_admin"})
+    entity = _assert_active_avpl_entity(accounting_entity_id)
+    ensure_product_mapping_indexes()
+
+    values = dict(form or {})
+    values["source_product_id"] = str(source_product_id)
+    payload = _mapping_payload(entity["_id"], values)
+    live_mapping_key = f"{entity['_id']}:{payload['source_product_id']}"
+    existing = mongo.db[MAPPING_COLLECTION].find_one({"live_mapping_key": live_mapping_key})
+    timestamp = now_utc()
+
+    auto_approve = actor.get("resolved_role") == "avpl_admin"
+    target_status = STATUS_ACTIVE if auto_approve else STATUS_DRAFT
+    active_state = bool(auto_approve)
+
+    # Pending mappings must still complete their existing workflow. Inactive
+    # mappings must be reactivated through the controlled Accounting action.
+    if existing and existing.get("status") in {STATUS_PENDING_APPROVAL, STATUS_INACTIVE}:
+        raise ValueError(
+            "The product already has a pending or inactive Accounting mapping. "
+            "Complete that action from Accounting Product Mapping first."
+        )
+
+    # An Accounts user cannot overwrite an already approved mapping.
+    if existing and existing.get("status") == STATUS_ACTIVE and not auto_approve:
+        raise PermissionError(
+            "Only AVPL Admin can update and automatically approve an active product Accounting mapping."
+        )
+
+    approval_fields = {}
+    if auto_approve:
+        approval_fields = {
+            "approved_by": actor["_id"],
+            "approved_by_str": str(actor["_id"]),
+            "approved_by_name": actor.get("resolved_name") or "",
+            "approved_at": timestamp,
+            "approval_note": payload.get("mapping_note") or "Auto-approved from AVPL Product Master.",
+            "return_reason": "",
+        }
+
+    if existing:
+        current_version = int(existing.get("version") or 1)
+        changed_fields = _changed_fields(existing, payload)
+        event_name = (
+            "mapping_auto_approved_from_product_master"
+            if auto_approve
+            else "mapping_request_refreshed_from_product_master"
+        )
+        event = _workflow_event(
+            event_name,
+            actor,
+            previous_status=existing.get("status"),
+            new_status=target_status,
+            note=payload.get("mapping_note"),
+            changed_fields=changed_fields,
+        )
+        result = mongo.db[MAPPING_COLLECTION].update_one(
+            {"_id": existing["_id"], "version": current_version},
+            {
+                "$set": {
+                    **payload,
+                    "status": target_status,
+                    "is_active": active_state,
+                    "is_accounting_eligible": active_state,
+                    "workflow_origin": "product_master",
+                    "requested_by": actor["_id"],
+                    "requested_by_str": str(actor["_id"]),
+                    "requested_by_name": actor.get("resolved_name") or "",
+                    "requested_by_role": actor.get("resolved_role") or "",
+                    "requested_at": timestamp,
+                    **approval_fields,
+                    "updated_by": actor["_id"],
+                    "updated_by_str": str(actor["_id"]),
+                    "updated_at": timestamp,
+                    "version": current_version + 1,
+                },
+                "$push": {"change_history": event},
+            },
+        )
+        if result.modified_count != 1:
+            raise RuntimeError(
+                "This product Accounting mapping changed in another session. Refresh and try again."
+            )
+        updated = _get_mapping(existing["_id"])
+        _record_audit(
+            updated,
+            actor,
+            "auto_approve_product_mapping" if auto_approve else "refresh_product_mapping_request",
+            previous_status=existing.get("status"),
+            remarks=payload.get("mapping_note"),
+            changed_fields=changed_fields,
+        )
+        return {
+            "mapping": serialize_product_mapping(updated),
+            "message": (
+                "Product Accounting mapping updated and activated automatically."
+                if auto_approve
+                else "Product Accounting mapping request refreshed as Draft for AVPL Admin approval."
+            ),
+        }
+
+    mapping_code = f"APM-{str(payload['source_product_id'])[-8:].upper()}"
+    document = {
+        "accounting_entity_id": entity["_id"],
+        "accounting_entity_id_str": str(entity["_id"]),
+        "entity_code": entity.get("entity_code") or AVPL_ENTITY_CODE,
+        "mapping_code": mapping_code,
+        "live_mapping_key": live_mapping_key,
+        **payload,
+        "status": target_status,
+        "is_active": active_state,
+        "is_accounting_eligible": active_state,
+        "is_deleted": False,
+        "workflow_origin": "product_master",
+        "requested_by": actor["_id"],
+        "requested_by_str": str(actor["_id"]),
+        "requested_by_name": actor.get("resolved_name") or "",
+        "requested_by_role": actor.get("resolved_role") or "",
+        "requested_at": timestamp,
+        **approval_fields,
+        "version": 1,
+        "created_by": actor["_id"],
+        "created_by_str": str(actor["_id"]),
+        "created_by_name": actor.get("resolved_name") or "",
+        "created_at": timestamp,
+        "updated_by": actor["_id"],
+        "updated_by_str": str(actor["_id"]),
+        "updated_at": timestamp,
+        "audit_sync_required": False,
+        "change_history": [
+            _workflow_event(
+                "mapping_auto_approved_from_product_master"
+                if auto_approve
+                else "mapping_request_created_from_product_master",
+                actor,
+                previous_status=None,
+                new_status=target_status,
+                note=payload.get("mapping_note"),
+            )
+        ],
+    }
+    try:
+        result = mongo.db[MAPPING_COLLECTION].insert_one(document)
+    except DuplicateKeyError as exc:
+        raise ValueError(
+            "This AVPL product already has a live Accounting mapping."
+        ) from exc
+
+    document["_id"] = result.inserted_id
+    _record_audit(
+        document,
+        actor,
+        "auto_approve_product_mapping" if auto_approve else "create_product_mapping_request",
+        remarks=payload.get("mapping_note"),
+    )
+    return {
+        "mapping": serialize_product_mapping(document),
+        "message": (
+            f"Product Accounting mapping {mapping_code} created and activated automatically."
+            if auto_approve
+            else f"Product Accounting mapping {mapping_code} created as Draft for AVPL Admin approval."
+        ),
+    }
 

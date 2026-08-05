@@ -1,13 +1,24 @@
 import re
 from bson import ObjectId
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from app.extensions import mongo
 from app.utils.decorators import login_required, roles_required
 from app.utils.helpers import now_utc
 from app.utils.security import save_file
 from datetime import datetime
+from uuid import uuid4
 
 modules_bp = Blueprint("modules", __name__, url_prefix="/modules")
+
+
+def _legacy_source_reference(prefix):
+    """Create a permanent trace key for legacy operational records.
+
+    Stage 0 does not post these records into Accounting. The reference simply
+    makes later migration, reconciliation and duplicate detection reliable.
+    """
+    clean_prefix = str(prefix or "EVENT").strip().upper().replace(" ", "_")
+    return f"LEGACY-{clean_prefix}-{uuid4().hex.upper()}"
 
 def json_safe(value):
     if isinstance(value, ObjectId):
@@ -430,6 +441,18 @@ def buy():
         # Source collection: products
         # ----------------------------------------------------
         if source == "avpl":
+            if not current_app.config.get("LEGACY_DIRECT_AVPL_ORDER_ENABLED", True):
+                if wants_json_response():
+                    return json_error(
+                        "Direct AVPL ordering is temporarily disabled during the staged AVPL workflow rollout.",
+                        409,
+                    )
+                flash(
+                    "Direct AVPL ordering is temporarily disabled during the staged AVPL workflow rollout.",
+                    "warning",
+                )
+                return redirect(url_for("modules.buy"))
+
             product = mongo.db.products.find_one({
                 "_id": product_oid,
                 "is_deleted": {"$ne": True},
@@ -532,6 +555,9 @@ def buy():
 
                 "created_at": now_utc(),
                 "updated_at": now_utc(),
+                "source_reference": _legacy_source_reference("AVPL_ORDER"),
+                "accounting_status": "not_posted",
+                "migration_status": "legacy_operational",
             }
 
             mongo.db.orders.insert_one(order_doc)
@@ -660,7 +686,8 @@ def buy():
             except Exception:
                 buyer_user = {}
 
-                buyer_role = buyer_user.get("role") or session.get("role") or ""
+        buyer_role = buyer_user.get("role") or session.get("role") or ""
+        farmer_order_doc = None
 
         if buyer_role == "farmer":
             buyer_farmer = (
@@ -702,9 +729,13 @@ def buy():
                 "status": "placed",
                 "created_at": now_utc(),
                 "updated_at": now_utc(),
+                "source_reference": _legacy_source_reference("FARMER_MARKET_ORDER"),
+                "accounting_status": "not_posted",
+                "migration_status": "legacy_operational",
             }
 
-        mongo.db.orders.insert_one(farmer_order_doc)
+        if farmer_order_doc:
+            mongo.db.orders.insert_one(farmer_order_doc)
 
         mongo.db.mitra_product_purchases.insert_one(purchase_doc)
 
@@ -1967,6 +1998,7 @@ def transactions():
 
 #changes by atlanta
 @modules_bp.route("/profile")
+@login_required
 def profile():
     is_app = request.args.get("user_id")
 
@@ -2218,6 +2250,7 @@ def profile():
 
 
 @modules_bp.route("/profile/update-request", methods=["POST"])
+@login_required
 def request_profile_update():
     is_app = bool(request.form.get("user_id")) or request.headers.get("Accept") == "application/json"
 
@@ -2659,6 +2692,9 @@ def pos():
             'bonus_percentage': bonus_percentage,
             'bonus_amount': bonus_amount,
             'invoice_no': f"AVPL-{centre_uid}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            'source_reference': _legacy_source_reference("UFC_POS_SALE"),
+            'accounting_status': 'not_posted',
+            'migration_status': 'legacy_operational',
             'created_at': datetime.utcnow()
         }
 
@@ -3274,6 +3310,13 @@ def place_farmer_order():
             return redirect(url_for("modules.buy"))
 
     else:
+        if not current_app.config.get("LEGACY_DIRECT_AVPL_ORDER_ENABLED", True):
+            flash(
+                "Direct AVPL ordering is temporarily disabled during the staged AVPL workflow rollout.",
+                "warning",
+            )
+            return redirect(url_for("modules.buy"))
+
         if product_id:
             try:
                 avpl_product = mongo.db.products.find_one({
@@ -3336,8 +3379,15 @@ def place_farmer_order():
         "order_type": "farmer_purchase",
         "product_source": product_source,
         "status": "placed",
-        "created_at": now_utc()
+        "source_reference": _legacy_source_reference("FARMER_DIRECT_ORDER"),
+        "accounting_status": "not_posted",
+        "migration_status": "legacy_operational",
+        "created_at": now_utc(),
+        "updated_at": now_utc(),
     })
 
     flash("Order placed successfully.", "success")
     return redirect(url_for("modules.buy"))
+
+
+

@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% block title %}Product Commercial Setup{% endblock %}
+{% block content %}
+
+{% set values = form_data or product or {} %}
+{% set readiness = product.get('_readiness') or {} %}
+<style>
+.commercial-page{
+    width:100%;
+    max-width:1050px;
+    margin:0 auto;
+    padding:24px;
+    border:1px solid rgba(220,238,226,.95);
+    border-radius:24px;
+    background:#fff;
+    box-shadow:0 18px 45px rgba(15,23,42,.08);
+    font-family:"Times New Roman", Georgia, serif;
+}
+
+.commercial-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+}
+
+.commercial-header h2{
+    margin:0 0 5px;
+    color:#0F172A;
+    font-size:1.55rem;
+}
+
+.commercial-header p{
+    margin:0;
+    color:#64748B;
+    line-height:1.5;
+}
+
+.back-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:8px 15px;
+    border-radius:999px;
+    text-decoration:none;
+    border:1px solid #CFE6D8;
+    background:#F3FBF6;
+    color:#2F7A4C;
+    font-weight:700;
+}
+
+.notice{
+    margin-bottom:18px;
+    padding:14px 16px;
+    border:1px solid #F4D38A;
+    border-radius:16px;
+    background:#FFF8E8;
+    color:#6B5316;
+    line-height:1.55;
+}
+
+.product-summary{
+    display:grid;
+    grid-template-columns:repeat(
+        auto-fit,
+        minmax(155px, 1fr)
+    );
+    gap:12px;
+    margin-bottom:18px;
+}
+
+.summary-item{
+    padding:13px 14px;
+    border:1px solid #E2EFE6;
+    border-radius:16px;
+    background:#FCFEFC;
+}
+
+.summary-item small{
+    display:block;
+    margin-bottom:4px;
+    color:#64748B;
+}
+
+.summary-item strong{
+    color:#17252A;
+    word-break:break-word;
+}
+
+.form-section{
+    padding:20px;
+    border:1px solid #E2EFE6;
+    border-radius:20px;
+    background:#FCFEFC;
+}
+
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:16px;
+}
+
+.field-label{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+    color:#263B31;
+    font-weight:700;
+}
+
+.field-label input{
+    width:100%;
+    min-height:44px;
+    padding:10px 12px;
+    border:1px solid #CFE2D5;
+    border-radius:12px;
+    background:#fff;
+    color:#17252A;
+    font:inherit;
+}
+
+.full{ grid-column:1 / -1; }
+
+.centre-list{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
+    max-height:310px;
+    overflow:auto;
+    padding:12px;
+    border:1px solid #CFE2D5;
+    border-radius:14px;
+    background:#fff;
+}
+
+.centre-option{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+    padding:10px 11px;
+    border:1px solid #E4EEE7;
+    border-radius:12px;
+    background:#F9FCFA;
+    color:#33483D;
+}
+
+.centre-option input{ margin-top:3px; }
+
+.field-help{
+    color:#6B7B72;
+    font-size:.88rem;
+    font-weight:400;
+    line-height:1.45;
+}
+
+.form-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:18px;
+}
+
+.form-actions a,
+.form-actions button{
+    min-height:42px;
+    padding:9px 18px;
+    border-radius:999px;
+    font:inherit;
+    font-weight:800;
+    cursor:pointer;
+    text-decoration:none;
+}
+
+.cancel-btn{
+    border:1px solid #CFE2D5;
+    background:#fff;
+    color:#425466;
+}
+
+.save-btn{
+    border:1px solid #5FA878;
+    background:#5FA878;
+    color:#fff;
+}
+
+@media(max-width:760px){
+    .commercial-page{ padding:16px; border-radius:18px; }
+    .product-summary,
+    .form-grid,
+    .centre-list{ grid-template-columns:1fr; }
+    .form-actions a,
+    .form-actions button{ width:100%; }
+}
+</style>
+
+<div class="commercial-page">
+    <div class="commercial-header">
+        <div>
+            <h2>Temporary Commercial Setup</h2>
+            <p>Configure the current catalogue price, compatibility quantity and Centre visibility separately from the Product Master.</p>
+        </div>
+        <a class="back-link" href="{{ url_for('admin.product_list') }}">Back to Products</a>
+    </div>
+
+    <div class="notice">
+        <strong>Stage 1 compatibility:</strong> this screen keeps the existing AVPL/UFC/Farmer catalogue working.
+        The future Purchase, Inventory and Marketplace Listing stages will replace these legacy commercial fields with transaction-controlled stock and listings.
+    </div>
+
+    <div class="product-summary">
+        <div class="summary-item"><small>Product</small><strong>{{ product.name }}</strong></div>
+        <div class="summary-item"><small>Code</small><strong>{{ product.product_code or 'Legacy' }}</strong></div>
+        <div class="summary-item"><small>Role</small><strong>{{ (product.product_role or product.type or '-')|title }}</strong></div>
+        <div class="summary-item"><small>Accounting</small><strong>{{ 'Ready' if product.accounting_mapping_status == 'active' else (product.accounting_mapping_status or 'Unmapped')|title }}</strong></div>
+        <div class="summary-item">
+            <small>Overall Readiness</small>
+            <strong>
+                {{ readiness.get('label', 'Not Checked') }}
+            </strong>
+        </div>
+
+        <div class="summary-item">
+            <small>AVPL Purchase</small>
+            <strong>
+                {{ 'Ready' if readiness.get('purchase_ready')
+                else 'Not Ready' }}
+            </strong>
+        </div>
+    </div>
+
+    <form method="POST" class="form-section">
+        <div class="form-grid">
+            <label class="field-label">
+                Current Selling Price
+                <input type="number" name="price" min="0" step="0.01" value="{{ values.get('price', product.get('price', 0)) }}" required>
+                <span class="field-help">Temporary catalogue price only. A proper listing price will be added in the Marketplace Listing stage.</span>
+            </label>
+
+            <label class="field-label">
+                Legacy Available Quantity
+                <input type="number" name="available_quantity" min="0" step="0.01" value="{{ values.get('available_quantity', product.get('available_quantity', 0)) }}" required>
+                <span class="field-help">Temporary compatibility quantity. Real stock will later come only from purchases, receipts, returns and approved adjustments.</span>
+            </label>
+
+            <div class="field-label full">
+                Available Centres
+                <div class="centre-list">
+                    <label class="centre-option">
+                        <input type="checkbox" name="available_centres" value="all" class="centre-check" data-all {% if 'all' in selected_centres %}checked{% endif %}>
+                        <span><strong>All Centres</strong><br><span class="field-help">Show in every current UFC catalogue.</span></span>
+                    </label>
+
+                    {% for centre in centres %}
+                        <label class="centre-option">
+                            <input type="checkbox" name="available_centres" value="{{ centre.centre_uid }}" class="centre-check" {% if centre.centre_uid in selected_centres %}checked{% endif %}>
+                            <span>
+                                <strong>{{ centre.centre_uid }}</strong>
+                                {% if centre.name %}<br>{{ centre.name }}{% elif centre.name_of_enterprise %}<br>{{ centre.name_of_enterprise }}{% endif %}
+                            </span>
+                        </label>
+                    {% endfor %}
+                </div>
+                <span class="field-help">Select All Centres or one or more individual Centres.</span>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a class="cancel-btn" href="{{ url_for('admin.product_list') }}">Cancel</a>
+            <button class="save-btn" type="submit">Save Commercial Setup</button>
+        </div>
+    </form>
+</div>
+
+<script>
+(function(){
+    const all = document.querySelector('[data-all]');
+    const checks = Array.from(document.querySelectorAll('.centre-check'));
+    if(!all || !checks.length) return;
+
+    checks.forEach(function(check){
+        check.addEventListener('change', function(){
+            if(check === all && check.checked){
+                checks.forEach(function(item){
+                    if(item !== all) item.checked = false;
+                });
+            }else if(check !== all && check.checked){
+                all.checked = false;
+            }
+        });
+    });
+})();
+</script>
+
+{% endblock %}

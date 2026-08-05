@@ -799,6 +799,40 @@
     border-color:#FDE68A;
 }
 
+.product-status-pill.pending{
+    background:#FFF7E6;
+    color:#8A5B00;
+    border-color:#F4D38A;
+}
+
+.product-status-pill.info{
+    color:#1D4ED8;
+    background:#EFF6FF;
+    border-color:#BFDBFE;
+}
+
+.product-status-pill.error{
+    color:#B91C1C;
+    background:#FEF2F2;
+    border-color:#FECACA;
+}
+
+.product-readiness-note{
+    margin:0 0 10px;
+    padding:9px 11px;
+    border:1px solid #E2EFE6;
+    border-radius:12px;
+    background:#F8FBF9;
+    color:#586B61;
+    font-size:.82rem;
+    line-height:1.4;
+}
+
+.product-readiness-note strong{
+    color:#2F5F43;
+}
+
+
 .product-admin-actions{
     display:flex;
     gap:8px;
@@ -814,6 +848,9 @@
 
 .product-admin-btn{
     min-height:34px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
     border:none;
     border-radius:999px;
     padding:7px 13px;
@@ -822,6 +859,19 @@
     font-weight:900;
     cursor:pointer;
     transition:.2s ease;
+    text-decoration:none;
+}
+
+.product-admin-btn.edit{
+    background:#EFF6FF;
+    color:#1D4ED8;
+    border:1px solid #BFDBFE;
+}
+
+.product-admin-btn.commercial{
+    background:#F3FBF6;
+    color:#2F7A4C;
+    border:1px solid #BFE2CB;
 }
 
 .product-admin-btn.enable{
@@ -1002,7 +1052,7 @@
 
     <div class="products-toolbar">
         <div class="product-search">
-            <input type="text" id="productSearchInput" placeholder="Search products by name, category, type, centre or price">
+            <input type="text" id="productSearchInput" placeholder="Search by product code, name, brand, manufacturer, category, role, unit, barcode, centre or price">
         </div>
 
         <div class="view-toggle">
@@ -1015,6 +1065,7 @@
         <button type="button" class="product-chip active" data-filter="all">All Products</button>
         <button type="button" class="product-chip" data-filter="input">Input</button>
         <button type="button" class="product-chip" data-filter="output">Output</button>
+        <button type="button" class="product-chip" data-filter="both">Both</button>
 <div class="centre-filter-wrap" id="centreFilterWrap">
     <button type="button" class="centre-filter-btn" id="centreFilterBtn">
         Centre-wise Availability
@@ -1060,11 +1111,15 @@
     <div class="product-grid" id="productGrid">
         {% for p in products %}
     {% set product_is_active = p.get('is_active', True) %}
+    {% set product_role = p.product_role or p.type or '' %}
+    {% set accounting_mapping = p.get('_accounting_mapping') or {} %}
+    {% set readiness = p.get('_readiness') or {} %}
+    {% set commercial_configured = p.get('commercial_setup_status') == 'configured' or p.get('available_centres') %}
     <article class="product-card {% if not product_is_active %}is-disabled{% endif %}"
-         data-type="{{ p.type|lower }}"
+         data-type="{{ product_role|lower }}"
          data-status="{{ 'active' if product_is_active else 'disabled' }}"
          data-centres="{% if p.available_centres is iterable and p.available_centres is not string %}{{ p.available_centres|join('|') }}{% else %}{{ p.available_centres }}{% endif %}"
-         data-search="{{ p.name }} {{ p.category }} {{ p.type }} {% if p.available_centres is iterable and p.available_centres is not string %}{{ p.available_centres|join(' ') }}{% else %}{{ p.available_centres }}{% endif %} {{ p.price }}">
+         data-search="{{ p.product_code }} {{ p.name }} {{ p.brand }} {{ p.manufacturer }} {{ p.supplier_product_code }} {{ p.barcode }} {{ p.category }} {{ product_role }} {{ p.base_unit_code }} {{ p.base_unit_name }} {{ accounting_mapping.get('hsn_code', '') }} {{ accounting_mapping.get('gst_rate_code', '') }} {{ accounting_mapping.get('taxability_name', '') }} {{ accounting_mapping.get('mapping_code', '') }} {% if p.available_centres is iterable and p.available_centres is not string %}{{ p.available_centres|join(' ') }}{% else %}{{ p.available_centres }}{% endif %} {{ p.price }} {{ readiness.get('label', '') }}">
                 <div class="product-image-wrap">
                     {% if p.image_name %}
                         <img src="{{ url_for('documents.serve', filename=p.image_name) }}" alt="{{ p.name }}">
@@ -1076,12 +1131,27 @@
                 <div class="product-content">
                     <div class="product-name-row">
                         <h3 class="product-name">{{ p.name }}</h3>
-                        <div class="product-price">₹{{ p.price }}</div>
+                        <div class="product-price">
+                            {% if commercial_configured %}
+                                ₹{{ p.get('price', 0) }}
+                            {% else %}
+                                Not set
+                            {% endif %}
+                        </div>
                     </div>
 
         <div class="product-meta">
+    <span><strong>Code:</strong> {{ p.product_code or 'Legacy' }}</span>
     <span><strong>Category:</strong> {{ p.category or '-' }}</span>
-    <span><strong>Type:</strong> {{ p.type|title if p.type else '-' }}</span>
+    <span><strong>Role:</strong> {{ product_role|title if product_role else '-' }}</span>
+    {% if p.brand %}<span><strong>Brand:</strong> {{ p.brand }}</span>{% endif %}
+    {% if p.base_unit_code %}
+        <span><strong>Pack:</strong> {{ p.pack_size or 1 }} {{ p.base_unit_code }}</span>
+    {% endif %}
+    {% if accounting_mapping %}
+        <span><strong>HSN:</strong> {{ accounting_mapping.get('hsn_code') or '-' }}</span>
+        <span><strong>Tax:</strong> {{ accounting_mapping.get('taxability_name') or accounting_mapping.get('taxability_code') or '-' }}{% if accounting_mapping.get('gst_rate_code') %} · {{ accounting_mapping.get('gst_rate_code') }}{% endif %}</span>
+    {% endif %}
 </div>
 
 <div class="product-status-row">
@@ -1090,10 +1160,40 @@
     {% else %}
         <span class="product-status-pill disabled">Disabled</span>
     {% endif %}
+    {% if p.unnatfarm_eligible is sameas false %}
+        <span class="product-status-pill disabled">Not UnnatFarm Eligible</span>
+    {% else %}
+        <span class="product-status-pill active">UnnatFarm Eligible</span>
+    {% endif %}
+   
+    <span
+    class="product-status-pill {{ readiness.get('tone', 'pending') }}"
+    title="{{ readiness.get('issues', [])|join(' • ') }}"
+    >
+        Readiness:
+        {{ readiness.get('label', 'Not Checked') }}
+    </span>
+
+    {% if readiness.get('purchase_ready') %}
+        <span class="product-status-pill active">
+            Purchase Ready
+        </span>
+    {% else %}
+        <span class="product-status-pill pending">
+            Purchase Not Ready
+        </span>
+    {% endif %}
 </div>
 
+{% if readiness.get('primary_issue') %}
+    <div class="product-readiness-note">
+        <strong>Next action:</strong>
+        {{ readiness.get('primary_issue') }}
+    </div>
+{% endif %}
+
 <span class="product-qty">
-    Available:
+    Legacy available:
     {% if p.available_quantity is defined and p.available_quantity is not none %}
         {{ p.available_quantity }}
     {% elif p.quantity is defined and p.quantity is not none %}
@@ -1103,26 +1203,32 @@
     {% elif p.stock is defined and p.stock is not none %}
         {{ p.stock }}
     {% else %}
-        -
+        0
     {% endif %}
 </span>
 
+{% if commercial_configured %}
 <form method="POST"
       action="{{ url_for('admin.restock_product', product_id=p._id) }}"
-      class="restock-form">
+      class="restock-form"
+      title="Temporary legacy refill. This will be replaced by the AVPL purchase and inventory workflow.">
     <input
         type="number"
         name="restock_quantity"
         min="0.01"
         step="0.01"
-        placeholder="Refill qty"
+        placeholder="Legacy refill qty"
         required
     >
-    <button type="submit">Refill</button>
+    <button type="submit">Legacy Refill</button>
 </form>
+{% endif %}
 
 {% if session.get('role') in ['avpl_admin', 'accounts'] %}
 <div class="product-admin-actions">
+    <a href="{{ url_for('admin.edit_product', product_id=p._id) }}" class="product-admin-btn edit">Edit Master</a>
+    <a href="{{ url_for('admin.product_commercial_setup', product_id=p._id) }}" class="product-admin-btn commercial">Commercial Setup</a>
+
     <form method="POST"
           action="{{ url_for('admin.toggle_product_status', product_id=p._id) }}"
           class="inline-action-form product-confirm-form"
@@ -1149,13 +1255,15 @@
 {% endif %}
 
 <div class="product-centres">
-    <strong>Available Centres:</strong>
-                        {% if p.available_centres is iterable and p.available_centres is not string %}
-                            {{ p.available_centres|join(', ') }}
-                        {% else %}
-                            {{ p.available_centres }}
-                        {% endif %}
-                    </div>
+    <strong>Current Centre visibility:</strong>
+    {% if not commercial_configured %}
+        Pending commercial setup
+    {% elif p.available_centres is iterable and p.available_centres is not string %}
+        {{ p.available_centres|join(', ') }}
+    {% else %}
+        {{ p.available_centres or '-' }}
+    {% endif %}
+</div>
                 </div>
             </article>
         {% else %}
@@ -1397,11 +1505,15 @@ document.addEventListener('keydown', function(e){
             let matchesFilter = true;
 
             if(activeFilter === 'input'){
-                matchesFilter = type === 'input';
+                matchesFilter = type === 'input' || type === 'both';
             }
 
             if(activeFilter === 'output'){
-                matchesFilter = type === 'output';
+                matchesFilter = type === 'output' || type === 'both';
+            }
+
+            if(activeFilter === 'both'){
+                matchesFilter = type === 'both';
             }
 
             const matchesCentre =

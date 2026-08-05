@@ -18,6 +18,13 @@ from app.blueprints.accounting.routes import accounting_bp
 from flask_cors import CORS
 
 
+def _env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return bool(default)
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def create_app():
     app = Flask(
         __name__,
@@ -41,6 +48,20 @@ def create_app():
         "doc", "docx",
         "mp4", "mov", "avi", "mkv", "webm"
     }
+
+    # AVPL staged-rollout controls. New modules remain disabled until their
+    # approved implementation stage is released. Legacy flags default to True
+    # so Stage 0 does not alter existing operational behaviour.
+    app.config.update(
+        AVPL_PRODUCT_MASTER_V2_ENABLED=_env_bool("AVPL_PRODUCT_MASTER_V2_ENABLED", False),
+        AVPL_PURCHASE_WORKFLOW_ENABLED=_env_bool("AVPL_PURCHASE_WORKFLOW_ENABLED", False),
+        AVPL_INVENTORY_LEDGER_ENABLED=_env_bool("AVPL_INVENTORY_LEDGER_ENABLED", False),
+        AVPL_LISTING_WORKFLOW_ENABLED=_env_bool("AVPL_LISTING_WORKFLOW_ENABLED", False),
+        AVPL_SALES_ACCOUNTING_ENABLED=_env_bool("AVPL_SALES_ACCOUNTING_ENABLED", False),
+        AVPL_REPORTS_ENABLED=_env_bool("AVPL_REPORTS_ENABLED", False),
+        LEGACY_PRODUCT_RESTOCK_ENABLED=_env_bool("LEGACY_PRODUCT_RESTOCK_ENABLED", True),
+        LEGACY_DIRECT_AVPL_ORDER_ENABLED=_env_bool("LEGACY_DIRECT_AVPL_ORDER_ENABLED", True),
+    )
 
     mongo.init_app(app)
     ensure_upload_folder(app)

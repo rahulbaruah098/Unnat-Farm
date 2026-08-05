@@ -1,5 +1,5 @@
 from bson import ObjectId
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.extensions import mongo
 from app.utils.decorators import login_required, roles_required
@@ -8,7 +8,13 @@ from app.services.user_service import create_user
 from app.services.audit_service import log_action
 from app.services.document_service import store_document
 from app.services.location_service import list_states
+from app.services.accounting_product_mapping_service import (
+    get_product_mapping_option_catalog,
+    get_product_readiness_snapshot,
+    upsert_product_mapping_request_from_product_master,
+)
 from datetime import datetime
+from math import isfinite
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -870,24 +876,360 @@ def lms_upload():
     return render_template('admin/lms_upload.html', items=items)
 
 
+PRODUCT_MASTER_ROLES = {"input", "output", "both"}
+PRODUCT_METADATA_SOURCES = {
+    "supplier_label",
+    "manufacturer_catalogue",
+    "manual_entry",
+    "existing_internal_record",
+}
+
+
+def _clean_product_field(value, maximum=500):
+    text = str(value or "").strip()
+    return text[:maximum]
+
+
+def _active_avpl_product_units():
+    """Return active Accounting units for the AVPL product form."""
+    entity = mongo.db.accounting_entities.find_one({
+        'entity_code': 'AVPL',
+        'entity_type': 'avpl',
+        'status': 'active',
+        'accounting_enabled': {'$ne': False},
+        'is_deleted': {'$ne': True},
+    })
+    if not entity:
+        return []
+
+    rows = list(mongo.db.accounting_units.find({
+        'accounting_entity_id': entity['_id'],
+        'status': 'active',
+        'is_active': True,
+        'is_deleted': False,
+    }).sort([('is_system', -1), ('name', 1), ('unit_code', 1)]))
+
+    return [
+        {
+            'id': str(row['_id']),
+            'unit_code': row.get('unit_code') or row.get('uqc_code') or '',
+            'name': row.get('name') or row.get('unit_code') or 'Unit',
+            'symbol': row.get('symbol') or '',
+            'allows_fractional': row.get('allows_fractional') is True,
+        }
+        for row in rows
+    ]
+
+
+def _active_avpl_accounting_entity():
+    return mongo.db.accounting_entities.find_one({
+        'entity_code': 'AVPL',
+        'entity_type': 'avpl',
+        'status': 'active',
+        'accounting_enabled': {'$ne': False},
+        'is_deleted': {'$ne': True},
+    })
+
+
+def _attach_product_readiness(product, mapping=None):
+    if not product:
+        return product
+
+    entity = _active_avpl_accounting_entity()
+
+    if not entity:
+        product['_readiness'] = {
+            'status': 'accounting_unmapped',
+            'label': 'Accounting Entity Unavailable',
+            'tone': 'error',
+            'product_master_ready': False,
+            'accounting_ready': False,
+            'commercial_ready': False,
+            'stock_ready': False,
+            'purchase_ready': False,
+            'listing_ready': False,
+            'sale_ready': False,
+            'issues': [
+                'The active AVPL Accounting entity is unavailable.'
+            ],
+            'primary_issue': (
+                'The active AVPL Accounting entity is unavailable.'
+            ),
+        }
+        return product
+
+    try:
+        product['_readiness'] = get_product_readiness_snapshot(
+            entity['_id'],
+            product['_id'],
+            product_document=product,
+            mapping_document=mapping,
+        )
+    except Exception as exc:
+        product['_readiness'] = {
+            'status': 'accounting_mapping_pending',
+            'label': 'Readiness Check Failed',
+            'tone': 'error',
+            'product_master_ready': False,
+            'accounting_ready': False,
+            'commercial_ready': False,
+            'stock_ready': False,
+            'purchase_ready': False,
+            'listing_ready': False,
+            'sale_ready': False,
+            'issues': [str(exc)],
+            'primary_issue': str(exc),
+        }
+
+    return product
+
+
+
+def _product_accounting_form_catalog(product=None):
+    entity = _active_avpl_accounting_entity()
+    if not entity:
+        return {
+            'entity': None,
+            'hsn_masters': [],
+            'units': [],
+            'purchase_ledgers': [],
+            'sales_ledgers': [],
+            'inventory_ledgers': [],
+            'mapping': None,
+        }
+
+    options = get_product_mapping_option_catalog(entity['_id'])
+    mapping = None
+    if product and product.get('_id'):
+        mapping = mongo.db.accounting_product_mappings.find_one({
+            'accounting_entity_id': entity['_id'],
+            'source_product_id': product['_id'],
+            'is_deleted': {'$ne': True},
+            'status': {'$ne': 'cancelled'},
+        })
+
+    return {
+        'entity': entity,
+        'hsn_masters': options.get('hsn_masters') or [],
+        'units': options.get('units') or [],
+        'purchase_ledgers': options.get('purchase_ledgers') or [],
+        'sales_ledgers': options.get('sales_ledgers') or [],
+        'inventory_ledgers': options.get('inventory_ledgers') or [],
+        'mapping': mapping,
+    }
+
+
+
+def _product_master_form_context(product=None, form_data=None):
+    categories = list(mongo.db.product_categories.find({
+        'is_deleted': {'$ne': True},
+        'is_active': {'$ne': False},
+    }).sort('name', 1))
+
+    accounting_catalog = _product_accounting_form_catalog(product=product)
+    mapping = accounting_catalog.get('mapping') or {}
+    values = form_data or product or {}
+
+    return {
+        'categories': categories,
+        'units': accounting_catalog.get('units') or _active_avpl_product_units(),
+        'hsn_masters': accounting_catalog.get('hsn_masters') or [],
+        'purchase_ledgers': accounting_catalog.get('purchase_ledgers') or [],
+        'sales_ledgers': accounting_catalog.get('sales_ledgers') or [],
+        'inventory_ledgers': accounting_catalog.get('inventory_ledgers') or [],
+        'accounting_entity': accounting_catalog.get('entity'),
+        'accounting_mapping': mapping,
+        'product': product,
+        'form_data': values,
+        'metadata_sources': [
+            ('supplier_label', 'Supplier / manufacturer label'),
+            ('manufacturer_catalogue', 'Manufacturer catalogue'),
+            ('manual_entry', 'Manual AVPL entry'),
+            ('existing_internal_record', 'Existing internal record'),
+        ],
+    }
+
+
+
+
+def _parse_non_negative_number(raw_value, field_label):
+    try:
+        value = float(str(raw_value or '0').strip() or 0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f'{field_label} must be a valid number.') from exc
+    if not isfinite(value):
+        raise ValueError(f'{field_label} must be a finite number.')
+    if value < 0:
+        raise ValueError(f'{field_label} cannot be negative.')
+    return value
+
+
+def _build_product_accounting_mapping_form():
+    return {
+        'hsn_master_id': _clean_product_field(request.form.get('hsn_master_id'), 60),
+        'base_unit_id': _clean_product_field(request.form.get('base_unit_id'), 60),
+        'purchase_ledger_id': _clean_product_field(request.form.get('purchase_ledger_id'), 60),
+        'sales_ledger_id': _clean_product_field(request.form.get('sales_ledger_id'), 60),
+        'inventory_ledger_id': _clean_product_field(request.form.get('inventory_ledger_id'), 60),
+        'inventory_tracking_enabled': request.form.get('inventory_tracking_enabled') == 'on',
+        'purchase_enabled': request.form.get('purchase_enabled') == 'on',
+        'sales_enabled': request.form.get('sales_enabled') == 'on',
+        'mapping_note': _clean_product_field(request.form.get('mapping_note'), 1500),
+    }
+
+
+def _upsert_product_accounting_mapping(product_id):
+    entity = _active_avpl_accounting_entity()
+    if not entity:
+        raise ValueError('The active AVPL Accounting entity is not available.')
+
+    form = _build_product_accounting_mapping_form()
+    required = {
+        'hsn_master_id': 'HSN classification',
+        'base_unit_id': 'base unit',
+        'purchase_ledger_id': 'purchase ledger',
+        'sales_ledger_id': 'sales ledger',
+        'inventory_ledger_id': 'inventory ledger',
+    }
+    for key, label in required.items():
+        if not form.get(key):
+            raise ValueError(f'Select an approved {label}.')
+
+    return upsert_product_mapping_request_from_product_master(
+        entity['_id'],
+        session.get('user_id'),
+        product_id,
+        form,
+    )
+
+
+def _build_product_master_payload(existing_product=None):
+    existing_product = existing_product or {}
+    name = _clean_product_field(request.form.get('name'), 240)
+    category = _clean_product_field(request.form.get('category'), 160)
+    product_role = _clean_product_field(
+        request.form.get('product_role') or request.form.get('type'),
+        30,
+    ).lower()
+    brand = _clean_product_field(request.form.get('brand'), 160)
+    manufacturer = _clean_product_field(request.form.get('manufacturer'), 200)
+    supplier_product_code = _clean_product_field(
+        request.form.get('supplier_product_code'),
+        120,
+    )
+    metadata_source = _clean_product_field(
+        request.form.get('metadata_source') or 'manual_entry',
+        60,
+    ).lower()
+    barcode = _clean_product_field(request.form.get('barcode'), 120)
+    barcode_normalized = barcode.upper() if barcode else ''
+    description = _clean_product_field(request.form.get('description'), 2000)
+    base_unit_id_raw = _clean_product_field(request.form.get('base_unit_id'), 60)
+    pack_size = _parse_non_negative_number(
+        request.form.get('pack_size') or 1,
+        'Pack size',
+    )
+
+    unnatfarm_eligible = request.form.get('unnatfarm_eligible') == 'on'
+
+    if not name:
+        raise ValueError('Product name is required.')
+    if not category:
+        raise ValueError('Product category is required.')
+    if product_role not in PRODUCT_MASTER_ROLES:
+        raise ValueError('Select a valid product role: Input, Output or Both.')
+    if metadata_source not in PRODUCT_METADATA_SOURCES:
+        raise ValueError('Select a valid metadata source.')
+    if pack_size <= 0:
+        raise ValueError('Pack size must be greater than 0.')
+
+    category_row = mongo.db.product_categories.find_one({
+        'name': category,
+        'is_deleted': {'$ne': True},
+        'is_active': {'$ne': False},
+    })
+    if not category_row:
+        raise ValueError('The selected product category is not active.')
+
+    try:
+        base_unit_object_id = ObjectId(base_unit_id_raw)
+    except Exception as exc:
+        raise ValueError('Select a valid approved base unit.') from exc
+
+    avpl_entity = mongo.db.accounting_entities.find_one({
+        'entity_code': 'AVPL',
+        'entity_type': 'avpl',
+        'status': 'active',
+        'accounting_enabled': {'$ne': False},
+        'is_deleted': {'$ne': True},
+    })
+    if not avpl_entity:
+        raise ValueError('The active AVPL Accounting entity is not available.')
+
+    unit = mongo.db.accounting_units.find_one({
+        '_id': base_unit_object_id,
+        'accounting_entity_id': avpl_entity['_id'],
+        'status': 'active',
+        'is_active': True,
+        'is_deleted': False,
+    })
+    if not unit:
+        raise ValueError('The selected base unit is not active in Accounting.')
+
+    duplicate_query = {
+        'barcode_normalized': barcode_normalized,
+        'is_deleted': {'$ne': True},
+    }
+    if existing_product.get('_id'):
+        duplicate_query['_id'] = {'$ne': existing_product['_id']}
+    if barcode_normalized and mongo.db.products.find_one(duplicate_query):
+        raise ValueError('This barcode is already assigned to another product.')
+
+    return {
+        'name': name,
+        'category': category,
+        # Keep the legacy `type` field because existing farmer/UFC pages still
+        # read it. `product_role` is the explicit Stage 1 master field.
+        'type': product_role,
+        'product_role': product_role,
+        'brand': brand,
+        'manufacturer': manufacturer,
+        'supplier_product_code': supplier_product_code,
+        'metadata_source': metadata_source,
+        'barcode': barcode,
+        'barcode_normalized': barcode_normalized,
+        'description': description,
+        'base_unit_id': unit['_id'],
+        'base_unit_id_str': str(unit['_id']),
+        'base_unit_code': unit.get('unit_code') or unit.get('uqc_code') or '',
+        'base_unit_name': unit.get('name') or unit.get('unit_code') or '',
+        'base_unit_symbol': unit.get('symbol') or '',
+        'pack_size': pack_size,
+        'unnatfarm_eligible': unnatfarm_eligible,
+        'product_master_version': 3,
+        'product_master_updated_by': session.get('user_id'),
+        'product_master_updated_at': now_utc(),
+        # Legacy commercial fields stay active until Stage 1 Batch 1.3.
+        'updated_at': now_utc(),
+    }
+
+
 @admin_bp.route('/products/add', methods=['GET', 'POST'])
 @login_required
 @roles_required('avpl_admin', 'accounts')
 def add_product():
-    categories = list(
-    mongo.db.product_categories.find({
-        'is_deleted': {'$ne': True},
-        'is_active': {'$ne': False}
-    }).sort('name', 1)
-)
-    centres = list(mongo.db.ufc_admin_master.find({
-        'centre_uid': {'$exists': True, '$ne': ''}
-    }).sort('centre_uid', 1))
-
     if request.method == 'POST':
+        try:
+            payload = _build_product_master_payload()
+        except ValueError as exc:
+            flash(str(exc), 'danger')
+            context = _product_master_form_context(
+                form_data=request.form,
+            )
+            return render_template('admin/add_product.html', **context), 400
+
         image_file = request.files.get('product_image')
         image_name = None
-
         if image_file and image_file.filename:
             doc = store_document(
                 image_file,
@@ -895,41 +1237,348 @@ def add_product():
                 None,
                 session['user_id'],
                 session['role'],
-                'Product Image'
+                'Product Image',
             )
             image_name = doc['filename'] if doc else None
 
-        available_quantity = request.form.get('available_quantity', '').strip()
+        product_id = ObjectId()
+        product_code = f"AVPL-P-{str(product_id)[-8:].upper()}"
+        payload.update({
+            '_id': product_id,
+            'product_code': product_code,
+            'image_name': image_name,
+            'is_active': True,
+            'is_deleted': False,
+            'status': 'active',
 
+            # Temporary compatibility defaults.
+            # These are configured after the Product Master is saved.
+            'price': '0',
+            'available_quantity': 0,
+            'available_centres': [],
+            'commercial_setup_status': 'pending',
+            'commercial_setup_version': 1,
+
+            'created_by': session['user_id'],
+            'created_at': now_utc(),
+        })
+        mongo.db.products.insert_one(payload)
         try:
-            available_quantity = float(available_quantity or 0)
-        except ValueError:
-            available_quantity = 0
+            mapping_result = _upsert_product_accounting_mapping(product_id)
+        except Exception as exc:
+            mongo.db.products.delete_one({'_id': product_id})
+            flash(f'Product was not created because the Accounting mapping failed: {exc}', 'danger')
+            context = _product_master_form_context(
+                form_data=request.form,
+            )
+            return render_template('admin/add_product.html', **context), 400
 
-        mongo.db.products.insert_one({
-        'name': request.form.get('name', '').strip(),
-        'category': request.form.get('category', '').strip(),
-        'type': request.form.get('type', '').strip(),
-        'available_centres': request.form.getlist('available_centres'),
-        'price': request.form.get('price', '').strip(),
-        'available_quantity': available_quantity,
-        'image_name': image_name,
-        'is_active': True,
-        'is_deleted': False,
-        'status': 'active',
-        'created_by': session['user_id'],
-        'created_at': now_utc(),
-        'updated_at': now_utc()
-    })
+        mapping = mapping_result.get('mapping') or {}
+        mongo.db.products.update_one(
+            {'_id': product_id},
+            {'$set': {
+                'accounting_mapping_id': ObjectId(mapping['id']) if mapping.get('id') else None,
+                'accounting_mapping_status': mapping.get('status') or 'active',
+                'accounting_mapping_code': mapping.get('mapping_code') or '',
+                'accounting_mapping_updated_at': now_utc(),
+            }},
+        )
 
-        flash('Product added.', 'success')
+        log_action(
+            session['user_id'],
+            'create_product_master',
+            'product',
+            str(product_id),
+            metadata={
+                'product_code': product_code,
+                'product_name': payload.get('name'),
+                'product_role': payload.get('product_role'),
+                'base_unit_code': payload.get('base_unit_code'),
+                'metadata_source': payload.get('metadata_source'),
+            },
+        )
+
+        flash(
+            (
+                mapping_result.get('message')
+                or 'Product master and Accounting mapping saved successfully.'
+            )
+            + ' Complete the separate commercial setup before using this '
+            'product in the current catalogue.',
+            'success',
+        )
+
+        return redirect(
+            url_for(
+                'admin.product_commercial_setup',
+                product_id=product_id,
+            )
+        )
+
+    context = _product_master_form_context()
+    return render_template('admin/add_product.html', **context)
+
+
+@admin_bp.route('/products/<product_id>/edit', methods=['GET', 'POST'])
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def edit_product(product_id):
+    try:
+        product_object_id = ObjectId(product_id)
+    except Exception:
+        flash('Invalid product reference.', 'danger')
         return redirect(url_for('admin.product_list'))
 
-    return render_template(
-        'admin/add_product.html',
-        categories=categories,
-        centres=centres
+    product = mongo.db.products.find_one({
+        '_id': product_object_id,
+        'is_deleted': {'$ne': True},
+    })
+    if not product:
+        flash('Product not found.', 'danger')
+        return redirect(url_for('admin.product_list'))
+
+    if request.method == 'POST':
+        try:
+            payload = _build_product_master_payload(existing_product=product)
+        except ValueError as exc:
+            flash(str(exc), 'danger')
+            context = _product_master_form_context(
+                product=product,
+                form_data=request.form,
+            )
+            return render_template('admin/add_product.html', **context), 400
+
+        image_file = request.files.get('product_image')
+        if image_file and image_file.filename:
+            doc = store_document(
+                image_file,
+                session['user_id'],
+                None,
+                session['user_id'],
+                session['role'],
+                'Product Image',
+            )
+            if doc:
+                payload['image_name'] = doc['filename']
+
+        if not product.get('product_code'):
+            payload['product_code'] = f"AVPL-P-{str(product['_id'])[-8:].upper()}"
+
+        previous_product = dict(product)
+        mongo.db.products.update_one({'_id': product['_id']}, {'$set': payload})
+        try:
+            mapping_result = _upsert_product_accounting_mapping(product['_id'])
+        except Exception as exc:
+            mongo.db.products.replace_one({'_id': product['_id']}, previous_product)
+            flash(f'Product was not updated because the Accounting mapping failed: {exc}', 'danger')
+            refreshed = mongo.db.products.find_one({'_id': product['_id']})
+            context = _product_master_form_context(
+                product=refreshed,
+                form_data=request.form,
+                
+            )
+            return render_template('admin/add_product.html', **context), 400
+
+        mapping = mapping_result.get('mapping') or {}
+        mongo.db.products.update_one(
+            {'_id': product['_id']},
+            {'$set': {
+                'accounting_mapping_id': ObjectId(mapping['id']) if mapping.get('id') else None,
+                'accounting_mapping_status': mapping.get('status') or 'active',
+                'accounting_mapping_code': mapping.get('mapping_code') or '',
+                'accounting_mapping_updated_at': now_utc(),
+            }},
+        )
+
+        log_action(
+            session['user_id'],
+            'update_product_master',
+            'product',
+            product_id,
+            metadata={
+                'product_code': payload.get('product_code') or product.get('product_code'),
+                'product_name': payload.get('name'),
+                'product_role': payload.get('product_role'),
+                'base_unit_code': payload.get('base_unit_code'),
+                'metadata_source': payload.get('metadata_source'),
+            },
+        )
+
+        flash(mapping_result.get('message') or 'Product master and Accounting mapping updated successfully.', 'success')
+        return redirect(url_for('admin.product_list'))
+
+    context = _product_master_form_context(product=product)
+    return render_template('admin/add_product.html', **context)
+
+
+
+@admin_bp.route(
+    '/products/<product_id>/commercial-setup',
+    methods=['GET', 'POST'],
+)
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def product_commercial_setup(product_id):
+    try:
+        product_object_id = ObjectId(product_id)
+    except Exception:
+        flash('Invalid product reference.', 'danger')
+        return redirect(url_for('admin.product_list'))
+
+    product = mongo.db.products.find_one({
+        '_id': product_object_id,
+        'is_deleted': {'$ne': True},
+    })
+
+    if not product:
+        flash('Product not found.', 'danger')
+        return redirect(url_for('admin.product_list'))
+
+    accounting_catalog = _product_accounting_form_catalog(
+        product=product,
     )
+
+    _attach_product_readiness(
+        product,
+        accounting_catalog.get('mapping'),
+    )
+
+    centres = list(mongo.db.ufc_admin_master.find({
+        'centre_uid': {
+            '$exists': True,
+            '$ne': '',
+        },
+    }).sort('centre_uid', 1))
+
+    if request.method == 'POST':
+        try:
+            selling_price = _parse_non_negative_number(
+                request.form.get('price'),
+                'Selling price',
+            )
+
+            available_quantity = _parse_non_negative_number(
+                request.form.get('available_quantity'),
+                'Legacy available quantity',
+            )
+        except ValueError as exc:
+            flash(str(exc), 'danger')
+
+            return render_template(
+                'admin/product_commercial_compatibility.html',
+                product=product,
+                centres=centres,
+                selected_centres=request.form.getlist(
+                    'available_centres'
+                ),
+                form_data=request.form,
+            ), 400
+
+        available_centres = [
+            _clean_product_field(value, 80)
+            for value in request.form.getlist('available_centres')
+            if _clean_product_field(value, 80)
+        ]
+
+        if not available_centres:
+            flash(
+                'Select at least one Centre for the current '
+                'legacy catalogue.',
+                'danger',
+            )
+
+            return render_template(
+                'admin/product_commercial_compatibility.html',
+                product=product,
+                centres=centres,
+                selected_centres=[],
+                form_data=request.form,
+            ), 400
+
+        if 'all' in available_centres:
+            available_centres = ['all']
+        else:
+            valid_centre_uids = {
+                str(row.get('centre_uid'))
+                for row in centres
+                if row.get('centre_uid')
+            }
+
+            available_centres = list(
+                dict.fromkeys(available_centres)
+            )
+
+            invalid_centres = [
+                value
+                for value in available_centres
+                if value not in valid_centre_uids
+            ]
+
+            if invalid_centres:
+                flash(
+                    'One or more selected Centres are invalid.',
+                    'danger',
+                )
+
+                return render_template(
+                    'admin/product_commercial_compatibility.html',
+                    product=product,
+                    centres=centres,
+                    selected_centres=available_centres,
+                    form_data=request.form,
+                ), 400
+
+        update = {
+            'price': f'{selling_price:g}',
+            'available_quantity': available_quantity,
+            'available_centres': available_centres,
+            'commercial_setup_status': 'configured',
+            'commercial_setup_version': 1,
+            'commercial_setup_updated_by': session.get('user_id'),
+            'commercial_setup_updated_at': now_utc(),
+            'updated_at': now_utc(),
+        }
+
+        mongo.db.products.update_one(
+            {'_id': product_object_id},
+            {'$set': update},
+        )
+
+        log_action(
+            session['user_id'],
+            'update_product_commercial_compatibility',
+            'product',
+            product_id,
+            metadata={
+                'product_code': product.get('product_code'),
+                'selling_price': update['price'],
+                'available_quantity': available_quantity,
+                'available_centres': available_centres,
+            },
+        )
+
+        flash(
+            'Temporary commercial setup saved separately '
+            'from the Product Master.',
+            'success',
+        )
+
+        return redirect(url_for('admin.product_list'))
+
+    selected_centres = product.get('available_centres') or []
+
+    if isinstance(selected_centres, str):
+        selected_centres = [selected_centres]
+
+    return render_template(
+        'admin/product_commercial_compatibility.html',
+        product=product,
+        centres=centres,
+        selected_centres=selected_centres,
+        form_data=product,
+    )
+
+
 
 @admin_bp.route('/products/categories', methods=['GET', 'POST'])
 @login_required
@@ -1065,12 +1714,13 @@ def delete_product_category(category_id):
 
 @admin_bp.route('/products')
 @login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
 def product_list():
     products = list(
     mongo.db.products.find({
         'is_deleted': {'$ne': True}
     }).sort('created_at', -1)
-)
+    )
 
     farmer_products = list(
         mongo.db.farmer_products
@@ -1083,6 +1733,23 @@ def product_list():
         .find({}, {"centre_uid": 1, "name": 1, "name_of_enterprise": 1})
         .sort("centre_uid", 1)
     )
+
+    product_ids = [row['_id'] for row in products]
+    mapping_by_product = {
+        str(row.get('source_product_id')): row
+        for row in mongo.db.accounting_product_mappings.find({
+            'source_product_id': {'$in': product_ids},
+            'is_deleted': {'$ne': True},
+            'status': {'$ne': 'cancelled'},
+        })
+    } if product_ids else {}
+    for row in products:
+        mapping = mapping_by_product.get(str(row['_id']))
+        row['_accounting_mapping'] = mapping
+        _attach_product_readiness(
+            row,
+            mapping,
+        )
 
     return render_template(
         'admin/product_list.html',
@@ -1184,54 +1851,122 @@ def delete_product(product_id):
 @login_required
 @roles_required('avpl_admin', 'accounts')
 def restock_product(product_id):
+    if not current_app.config.get(
+        'LEGACY_PRODUCT_RESTOCK_ENABLED',
+        True,
+    ):
+        flash(
+            'Direct product restocking is disabled. '
+            'Use the approved AVPL purchase or '
+            'stock-adjustment workflow.',
+            'warning',
+        )
+        return redirect(url_for('admin.product_list'))
+
+    try:
+        product_object_id = ObjectId(product_id)
+    except Exception:
+        flash('Invalid product reference.', 'danger')
+        return redirect(url_for('admin.product_list'))
+
     product = mongo.db.products.find_one({
-    '_id': ObjectId(product_id),
-    'is_deleted': {'$ne': True}
-})
+        '_id': product_object_id,
+        'is_deleted': {'$ne': True},
+    })
 
     if not product:
         flash('Product not found.', 'danger')
         return redirect(url_for('admin.product_list'))
 
-    restock_quantity_raw = request.form.get('restock_quantity', '').strip()
+    commercial_configured = (
+        product.get('commercial_setup_status') == 'configured'
+        or bool(product.get('available_centres'))
+    )
+
+    if not commercial_configured:
+        flash(
+            'Complete the separate Commercial Setup before '
+            'using legacy refill.',
+            'warning',
+        )
+
+        return redirect(
+            url_for(
+                'admin.product_commercial_setup',
+                product_id=product_id,
+            )
+        )
+
+    restock_quantity_raw = request.form.get(
+        'restock_quantity',
+        '',
+    ).strip()
 
     try:
-        restock_quantity = float(restock_quantity_raw or 0)
-    except ValueError:
+        restock_quantity = float(
+            restock_quantity_raw or 0
+        )
+    except (TypeError, ValueError):
         restock_quantity = 0
 
-    if restock_quantity <= 0:
-        flash('Please enter a valid restock quantity greater than 0.', 'danger')
+    if (
+        not isfinite(restock_quantity)
+        or restock_quantity <= 0
+    ):
+        flash(
+            'Please enter a valid restock quantity '
+            'greater than 0.',
+            'danger',
+        )
         return redirect(url_for('admin.product_list'))
 
-    current_quantity_raw = product.get('available_quantity', 0)
+    current_quantity_raw = product.get(
+        'available_quantity',
+        0,
+    )
 
     try:
-        current_quantity = float(current_quantity_raw or 0)
+        current_quantity = float(
+            current_quantity_raw or 0
+        )
     except (TypeError, ValueError):
         current_quantity = 0
 
-    new_quantity = current_quantity + restock_quantity
+    if not isfinite(current_quantity):
+        current_quantity = 0
+
+    new_quantity = (
+        current_quantity
+        + restock_quantity
+    )
+
+    timestamp = now_utc()
 
     mongo.db.products.update_one(
-        {'_id': ObjectId(product_id)},
+        {'_id': product_object_id},
         {
             '$set': {
                 'available_quantity': new_quantity,
-                'updated_at': now_utc(),
-                'last_restock_at': now_utc(),
-                'last_restock_by': session.get('user_id')
+                'updated_at': timestamp,
+                'last_restock_at': timestamp,
+                'last_restock_by': session.get(
+                    'user_id'
+                ),
             },
             '$push': {
                 'restock_history': {
                     'quantity_added': restock_quantity,
                     'previous_quantity': current_quantity,
                     'new_quantity': new_quantity,
-                    'restocked_by': session.get('user_id'),
-                    'restocked_at': now_utc()
+                    'restocked_by': session.get(
+                        'user_id'
+                    ),
+                    'restocked_at': timestamp,
+                    'source': 'legacy_product_restock',
+                    'stage': 'stage_1_compatibility',
                 }
-            }
-        }
+            },
+        },
     )
 
     log_action(
@@ -1242,12 +1977,21 @@ def restock_product(product_id):
         metadata={
             'quantity_added': restock_quantity,
             'previous_quantity': current_quantity,
-            'new_quantity': new_quantity
-        }
+            'new_quantity': new_quantity,
+            'source': 'legacy_product_restock',
+        },
     )
 
-    flash(f'Product restocked successfully. New available quantity: {new_quantity:g}', 'success')
+    flash(
+        'Product restocked successfully. '
+        f'New available quantity: {new_quantity:g}',
+        'success',
+    )
+
     return redirect(url_for('admin.product_list'))
+
+
+
 
 @admin_bp.route('/traders/onboard', methods=['GET', 'POST'])
 @login_required

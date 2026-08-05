@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+    .farmer-orders-card {
+        width: 100%;
+        padding: 28px;
+        border: 1px solid rgba(220, 238, 226, .95);
+        border-radius: 26px;
+        background: rgba(255, 255, 255, .94);
+        box-shadow: 0 22px 55px rgba(23, 37, 42, .10);
+        font-family: "Times New Roman", Georgia, serif;
+    }
+
+    .farmer-orders-header,
+    .farmer-orders-summary,
+    .farmer-orders-actions,
+    .farmer-orders-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .farmer-orders-header h2 {
+        margin: 0;
+        color: #17252A;
+        font-size: clamp(1.45rem, 2.1vw, 1.9rem);
+    }
+
+    .farmer-orders-actions input,
+    .farmer-orders-actions select {
+        min-height: 42px;
+        padding: 9px 13px;
+        border: 1px solid rgba(95, 168, 120, .28);
+        border-radius: 13px;
+        background: #fff;
+        color: #334155;
+        font: inherit;
+    }
+
+    .farmer-orders-actions input {
+        width: min(320px, 100%);
+    }
+
+    .farmer-orders-actions button,
+    .farmer-orders-actions a,
+    .farmer-orders-pagination a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 9px 18px;
+        border: 0;
+        border-radius: 999px;
+        background: #5FA878;
+        color: #fff;
+        text-decoration: none;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .farmer-orders-actions a,
+    .farmer-orders-pagination a.secondary {
+        background: #E8F5EC;
+        color: #3B7D55;
+    }
+
+    .farmer-orders-summary {
+        margin: 20px 0 16px;
+    }
+
+    .farmer-order-stat {
+        flex: 1 1 210px;
+        padding: 15px 18px;
+        border: 1px solid rgba(95, 168, 120, .20);
+        border-radius: 16px;
+        background: rgba(228, 247, 234, .42);
+        color: #425466;
+    }
+
+    .farmer-order-stat strong {
+        display: block;
+        margin-top: 4px;
+        color: #17252A;
+        font-size: 1.25rem;
+    }
+
+    .farmer-orders-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid rgba(220, 238, 226, .95);
+        border-radius: 20px;
+        background: #fff;
+    }
+
+    .farmer-orders-table {
+        width: 100%;
+        min-width: 850px;
+        border-collapse: collapse;
+    }
+
+    .farmer-orders-table th,
+    .farmer-orders-table td {
+        padding: 13px 14px;
+        border-right: 1px solid rgba(220, 238, 226, .85);
+        border-bottom: 1px solid rgba(220, 238, 226, .85);
+        text-align: left;
+        color: #425466;
+    }
+
+    .farmer-orders-table th {
+        background: rgba(228, 247, 234, .78);
+        color: #17252A;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #E8F8EF;
+        color: #2F855A;
+        font-size: .88rem;
+        font-weight: 700;
+        text-transform: capitalize;
+    }
+
+    .farmer-orders-pagination {
+        margin-top: 18px;
+    }
+
+    .farmer-orders-pagination span {
+        color: #64748B;
+    }
+
+    @media (max-width: 700px) {
+        .farmer-orders-card { padding: 18px; border-radius: 20px; }
+        .farmer-orders-actions { width: 100%; }
+        .farmer-orders-actions input,
+        .farmer-orders-actions select,
+        .farmer-orders-actions button,
+        .farmer-orders-actions a { width: 100%; }
+    }
+</style>
+
+<div class="farmer-orders-card">
+    <div class="farmer-orders-header">
+        <div>
+            <h2>My Orders</h2>
+            <p style="margin:6px 0 0;color:#64748B;">Track the products you have ordered.</p>
+        </div>
+
+        <form method="get" class="farmer-orders-actions">
+            <input type="text" name="q" value="{{ q or '' }}" placeholder="Search product, seller or status">
+            <select name="per_page" aria-label="Rows per page">
+                {% for size in [10, 25, 50] %}
+                    <option value="{{ size }}" {% if per_page == size %}selected{% endif %}>{{ size }} rows</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Search</button>
+            {% if q %}<a href="{{ url_for('modules.farmer_my_orders') }}">Clear</a>{% endif %}
+        </form>
+    </div>
+
+    <div class="farmer-orders-summary">
+        <div class="farmer-order-stat">Total Orders<strong>{{ total_orders or 0 }}</strong></div>
+        <div class="farmer-order-stat">Total Order Value<strong>₹{{ '%.2f'|format(total_amount or 0) }}</strong></div>
+    </div>
+
+    <div class="farmer-orders-table-wrap">
+        <table class="farmer-orders-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Seller / Source</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <td>{{ order.product_name or 'Product' }}</td>
+                        <td>{{ order.source_display or order.seller_name or '—' }}</td>
+                        <td>{{ order.quantity or 0 }}</td>
+                        <td>₹{{ '%.2f'|format(order.unit_price or 0) }}</td>
+                        <td>₹{{ '%.2f'|format(order.total_amount or 0) }}</td>
+                        <td><span class="status-pill">{{ order.status or 'placed' }}</span></td>
+                        <td>{{ order.created_at.strftime('%d %b %Y, %I:%M %p') if order.created_at and order.created_at.strftime else (order.created_at or '—') }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align:center;padding:30px;">No orders found.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="farmer-orders-pagination">
+        <span>Page {{ page }} of {{ total_pages }}</span>
+        <div style="display:flex;gap:8px;">
+            {% if has_prev %}
+                <a class="secondary" href="{{ url_for('modules.farmer_my_orders', page=prev_page, per_page=per_page, q=q) }}">Previous</a>
+            {% endif %}
+            {% if has_next %}
+                <a href="{{ url_for('modules.farmer_my_orders', page=next_page, per_page=per_page, q=q) }}">Next</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

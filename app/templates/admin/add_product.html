@@ -1,8 +1,27 @@
 {% extends 'base.html' %}
 {% block content %}
 
+{% set is_edit = product is not none %}
+{% set values = form_data or {} %}
+{% set selected_role = values.get('product_role') or values.get('type') or '' %}
+{% set selected_source = values.get('metadata_source') or 'manual_entry' %}
+{% set selected_unit_id = values.get('base_unit_id_str') or values.get('base_unit_id') or '' %}
+{% set eligible_value = values.get('unnatfarm_eligible') %}
+{% set selected_hsn_id = values.get('hsn_master_id') or accounting_mapping.get('hsn_master_id_str') or '' %}
+{% set selected_purchase_ledger_id = values.get('purchase_ledger_id') or accounting_mapping.get('purchase_ledger_id_str') or '' %}
+{% set selected_sales_ledger_id = values.get('sales_ledger_id') or accounting_mapping.get('sales_ledger_id_str') or '' %}
+{% set selected_inventory_ledger_id = values.get('inventory_ledger_id') or accounting_mapping.get('inventory_ledger_id_str') or '' %}
+{% set mapping_note_value = values.get('mapping_note') or accounting_mapping.get('mapping_note') or '' %}
+{% set inventory_tracking_value = values.get('inventory_tracking_enabled') %}
+{% set purchase_enabled_value = values.get('purchase_enabled') %}
+{% set sales_enabled_value = values.get('sales_enabled') %}
+{% if request.method != 'POST' and inventory_tracking_value is none %}{% set inventory_tracking_value = accounting_mapping.get('inventory_tracking_enabled', true) %}{% endif %}
+{% if request.method != 'POST' and purchase_enabled_value is none %}{% set purchase_enabled_value = accounting_mapping.get('purchase_enabled', true) %}{% endif %}
+{% if request.method != 'POST' and sales_enabled_value is none %}{% set sales_enabled_value = accounting_mapping.get('sales_enabled', true) %}{% endif %}
+{% if request.method != 'POST' and eligible_value is none %}{% set eligible_value = true %}{% endif %}
+
 <style>
-.page-card{
+.product-master-page{
     width:100%;
     border:1px solid rgba(220,238,226,.95);
     border-radius:24px;
@@ -12,12 +31,11 @@
     font-family:"Times New Roman", Georgia, serif;
 }
 
-/* HEADER */
 .title-row{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    margin-bottom:22px;
+    margin-bottom:18px;
     flex-wrap:wrap;
     gap:14px;
 }
@@ -47,7 +65,6 @@
     cursor:pointer;
 }
 
-/* ACTION BUTTONS */
 .page-actions{
     display:flex;
     gap:10px;
@@ -55,6 +72,9 @@
 }
 
 .page-actions a{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
     padding:8px 16px;
     border-radius:999px;
     text-decoration:none;
@@ -69,46 +89,178 @@
     color:#fff;
 }
 
-/* FORM GRID */
+.batch-note{
+    margin:0 0 20px;
+    padding:14px 16px;
+    border:1px solid #CFE6D8;
+    border-radius:16px;
+    background:#F3FBF6;
+    color:#425466;
+    line-height:1.5;
+}
+
+.batch-note strong{ color:#24563B; }
+
+.form-section{
+    margin-top:18px;
+    padding:20px;
+    border:1px solid #E2EFE6;
+    border-radius:20px;
+    background:#FCFEFC;
+}
+
+.form-section:first-of-type{ margin-top:0; }
+
+.section-heading{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:16px;
+    flex-wrap:wrap;
+}
+
+.section-heading h3{
+    margin:0;
+    color:#17252A;
+    font-size:1.12rem;
+}
+
+.section-heading p{
+    margin:4px 0 0;
+    color:#64748B;
+    font-size:.9rem;
+    line-height:1.45;
+}
+
+.legacy-pill{
+    display:inline-flex;
+    padding:6px 11px;
+    border-radius:999px;
+    background:#FFF7E6;
+    border:1px solid #F4D38A;
+    color:#8A5B00;
+    font-size:.78rem;
+    font-weight:800;
+}
+
 .form-grid{
     display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:18px;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
 }
 
-.full{
-    grid-column:1/-1;
-}
+.full{ grid-column:1/-1; }
 
-/* INPUTS */
-label{
-    font-weight:600;
+label.field-label{
+    font-weight:700;
     color:#334155;
     display:flex;
     flex-direction:column;
     gap:6px;
 }
 
+.required-mark{ color:#B91C1C; }
+
 input,
-select{
-    height:44px;
+select,
+textarea{
+    width:100%;
     border-radius:12px;
     border:1px solid #E2E8F0;
     padding:0 12px;
     font-size:14px;
+    color:#27364A;
+    background:#fff;
     font-family:"Times New Roman", Georgia, serif;
 }
 
+input,
+select{ height:44px; }
+
+textarea{
+    min-height:112px;
+    padding:12px;
+    resize:vertical;
+    line-height:1.45;
+}
+
 input:focus,
-select:focus{
+select:focus,
+textarea:focus{
     outline:none;
     border-color:rgba(95,168,120,.65);
     box-shadow:0 0 0 4px rgba(95,168,120,.12);
 }
 
-/* CUSTOM CENTRE DROPDOWN */
+input[readonly]{
+    background:#F8FAFC;
+    color:#64748B;
+}
+
+.field-help{
+    display:block;
+    color:#64748B;
+    font-size:.84rem;
+    line-height:1.4;
+    font-weight:400;
+}
+
+.checkbox-card{
+    min-height:44px;
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:12px 14px;
+    border:1px solid #DCEEE2;
+    border-radius:14px;
+    background:#F6FCF8;
+    cursor:pointer;
+}
+
+.checkbox-card input{
+    width:18px;
+    height:18px;
+    min-width:18px;
+    margin-top:2px;
+    accent-color:#5FA878;
+}
+
+.checkbox-card span{
+    display:block;
+    color:#334155;
+    font-weight:700;
+}
+
+.checkbox-card small{
+    display:block;
+    margin-top:3px;
+    color:#64748B;
+    font-weight:400;
+    line-height:1.35;
+}
+
+.current-image{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:12px;
+    border:1px solid #E2E8F0;
+    border-radius:14px;
+    background:#F8FAFC;
+}
+
+.current-image img{
+    width:76px;
+    height:76px;
+    border-radius:12px;
+    object-fit:contain;
+    background:#EEF8F1;
+}
+
 .centre-dropdown{
     position:relative;
+    width:100%;
 }
 
 .centre-select-display{
@@ -123,7 +275,8 @@ select:focus{
     justify-content:space-between;
     gap:10px;
     cursor:pointer;
-    color:#3B7D55;
+    color:#334155;
+    font-family:"Times New Roman", Georgia, serif;
     font-weight:600;
 }
 
@@ -139,9 +292,7 @@ select:focus{
     transition:.2s ease;
 }
 
-.centre-dropdown.open .centre-arrow{
-    transform:rotate(180deg);
-}
+.centre-dropdown.open .centre-arrow{ transform:rotate(180deg); }
 
 .centre-menu{
     display:none;
@@ -150,46 +301,25 @@ select:focus{
     right:0;
     top:calc(100% + 8px);
     z-index:9999;
-
     border:1px solid #DCEEE2;
     border-radius:16px;
     background:#fff;
     box-shadow:0 18px 40px rgba(15,23,42,.14);
     padding:12px;
-
-    max-height:280px;              /* ✅ LIMIT HEIGHT */
-    overflow-y:auto;               /* ✅ ENABLE SCROLL */
-    overscroll-behavior:contain;   /* smoother mobile scroll */
-}
-
-.centre-options{
-    max-height:180px;
+    max-height:310px;
     overflow-y:auto;
+    overscroll-behavior:contain;
 }
 
-.centre-menu::-webkit-scrollbar{
-    width:6px;
-}
-.centre-menu::-webkit-scrollbar-thumb{
-    background:#CFE6D8;
-    border-radius:10px;
-}
-
-.centre-dropdown.open .centre-menu{
-    display:block;
-}
+.centre-dropdown.open .centre-menu{ display:block; }
 
 .centre-search{
-    width:100%;
     height:40px;
     margin-bottom:10px;
-    border-radius:12px;
-    border:1px solid #E2E8F0;
-    padding:0 12px;
 }
 
 .centre-options{
-    max-height:220px;
+    max-height:205px;
     overflow:auto;
     display:grid;
     gap:8px;
@@ -208,7 +338,6 @@ select:focus{
     cursor:pointer;
     color:#334155;
     font-weight:600;
-    transition:.18s ease;
 }
 
 .centre-option:hover{
@@ -242,106 +371,82 @@ select:focus{
     cursor:pointer;
 }
 
-.centre-ok-btn{
-    background:#5FA878;
-    color:#fff;
+.centre-ok-btn{ background:#5FA878; color:#fff; }
+.centre-clear-btn{ background:#E4F7EA; color:#3B7D55; }
+
+.form-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:20px;
+    flex-wrap:wrap;
 }
 
-.centre-clear-btn{
-    background:#E4F7EA;
-    color:#3B7D55;
-}
-
-.field-help{
-    display:block;
-    margin-top:6px;
-    color:#64748B;
-    font-size:.92rem;
-    line-height:1.45;
-    font-weight:400;
-}
-
-/* BUTTON */
+.cancel-btn,
 .submit-btn{
-    height:46px;
-    border:none;
+    min-height:46px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
     border-radius:999px;
+    padding:10px 20px;
+    font-family:"Times New Roman", Georgia, serif;
+    font-weight:700;
+    text-decoration:none;
+    cursor:pointer;
+}
+
+.cancel-btn{
+    border:1px solid #CFE6D8;
+    color:#3B7D55;
+    background:#F3FBF6;
+}
+
+.submit-btn{
+    border:none;
     background:#5FA878;
     color:#fff;
-    font-weight:700;
-    cursor:pointer;
-    font-family:"Times New Roman", Georgia, serif;
     box-shadow:0 12px 26px rgba(95,168,120,.22);
 }
 
-.submit-btn:hover{
-    background:#3B7D55;
-}
+.submit-btn:hover{ background:#3B7D55; }
 
-/* MOBILE */
 @media(max-width:900px){
-    .form-grid{
-        grid-template-columns:1fr;
-    }
-
-    .back-btn{
-        display:flex;
-        align-items:center;
-        justify-content:center;
-    }
-
-    .title-row{
-        align-items:stretch;
-        flex-direction:column;
-    }
-
+    .form-grid{ grid-template-columns:1fr; }
+    .back-btn{ display:flex; align-items:center; justify-content:center; }
+    .title-row{ align-items:stretch; flex-direction:column; }
     .page-actions,
-    .page-actions a{
-        width:100%;
-        justify-content:center;
+    .page-actions a{ width:100%; }
+}
+
+@media(max-width:560px){
+    .product-master-page{ padding:16px; border-radius:20px; }
+    .form-section{ padding:15px; border-radius:16px; }
+    .title-left h2{ font-size:1.4rem; }
+    .form-actions,
+    .cancel-btn,
+    .submit-btn{ width:100%; }
+    .centre-menu{
+        position:fixed;
+        left:16px;
+        right:16px;
+        top:100px;
+        width:auto;
+        max-height:calc(100vh - 140px);
     }
-}
-
-@media(max-width:420px){
-    .page-card{
-        padding:18px;
-        border-radius:18px;
-    }
-
-    .title-left h2{
-        font-size:1.45rem;
-    }
-}
-
-.centre-select-display,
-.centre-select-display:hover,
-.centre-select-display:focus,
-.centre-select-display:active{
-    background:#fff !important;
-    color:#334155 !important;
-    outline:none !important;
-    border-color:#DCEEE2 !important;
-    box-shadow:none !important;
-    -webkit-tap-highlight-color:transparent;
-}
-
-.centre-select-display:focus-visible{
-    border-color:#5FA878 !important;
-    box-shadow:0 0 0 4px rgba(95,168,120,.12) !important;
-}
-
-.centre-dropdown{
-    position:relative;
-    width:100%;
 }
 </style>
 
-<div class="page-card">
-
+<div class="product-master-page">
     <div class="title-row">
         <div class="title-left">
             <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
-            <h2>Add Product</h2>
+            <div>
+                <h2>{{ 'Edit Product Master' if is_edit else 'Add Product Master' }}</h2>
+                {% if is_edit and product.product_code %}
+                    <small class="field-help">{{ product.product_code }}</small>
+                {% endif %}
+            </div>
         </div>
 
         <div class="page-actions">
@@ -350,181 +455,269 @@ select:focus{
         </div>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="form-grid" id="addProductForm">
+    <div class="batch-note">
+        <strong>Stage 1 · Product Master:</strong>
+        Product identity, HSN, GST taxability, approved unit
+        and Accounting ledgers are captured together.
 
-        <label>Name
-            <input type="text" name="name" required>
-        </label>
+        AVPL Admin saves activate the Accounting mapping
+        automatically.
 
-        <label>Category
-            <select name="category" required>
-                <option value="">Select Category</option>
-                {% for c in categories %}
-                    <option value="{{ c.name }}">{{ c.name }}</option>
-                {% endfor %}
-            </select>
-        </label>
+        After saving, the Product List displays whether the
+        product is ready for purchase, waiting for commercial
+        setup or waiting for stock.
+    </div>
 
-        <label>Type
-            <select name="type" required>
-                <option value="">Select Type</option>
-                <option value="input">Input</option>
-                <option value="output">Output</option>
-            </select>
-        </label>
-
-        <label>Price
-    <input type="text" name="price" required>
-</label>
-
-<label>Available Quantity
-    <input type="number" name="available_quantity" min="0" step="0.01" placeholder="Enter available quantity" required>
-</label>
-
-<div class="full">
-    <label>Available Centres</label>
-
-            <div class="centre-dropdown" id="centreDropdown">
-                <button type="button" class="centre-select-display" id="centreToggle">
-                    <span id="centreSelectedText">Select Centres</span>
-                    <b class="centre-arrow">⌄</b>
-                </button>
-
-                <div class="centre-menu" id="centreMenu">
-                    <input type="text" class="centre-search" id="centreSearch" placeholder="Search centres...">
-
-                    <div class="centre-options" id="centreOptions">
-                        <label class="centre-option">
-                            <input type="checkbox" name="available_centres" value="all" class="centre-check" data-all>
-                            <span>All Centres</span>
-                        </label>
-
-                        {% for centre in centres %}
-                        <label class="centre-option">
-                            <input type="checkbox" name="available_centres" value="{{ centre.centre_uid }}" class="centre-check">
-                            <span>
-                                {{ centre.centre_uid }}
-                                {% if centre.name %} - {{ centre.name }}{% endif %}
-                            </span>
-                        </label>
-                        {% endfor %}
-                    </div>
-
-                    <div class="centre-menu-footer">
-                        <button type="button" class="centre-clear-btn" id="centreClearBtn">Clear</button>
-                        <button type="button" class="centre-ok-btn" id="centreOkBtn">OK</button>
-                    </div>
+    <form method="post" enctype="multipart/form-data" id="productMasterForm">
+        <section class="form-section">
+            <div class="section-heading">
+                <div>
+                    <h3>Product identity</h3>
+                    <p>Define what the product is and whether it is an agricultural input, output or both.</p>
                 </div>
             </div>
 
-            <small class="field-help">
-                Select one or multiple centres from the dropdown, then click OK.
-            </small>
+            <div class="form-grid">
+                <label class="field-label">Product Name <span class="required-mark">*</span>
+                    <input type="text" name="name" maxlength="240" value="{{ values.get('name', '') }}" required>
+                </label>
+
+                <label class="field-label">Category <span class="required-mark">*</span>
+                    <select name="category" required>
+                        <option value="">Select Category</option>
+                        {% for c in categories %}
+                            <option value="{{ c.name }}" {% if values.get('category') == c.name %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="field-label">Product Role <span class="required-mark">*</span>
+                    <select name="product_role" required>
+                        <option value="">Select Product Role</option>
+                        <option value="input" {% if selected_role == 'input' %}selected{% endif %}>Input — used for farming/production</option>
+                        <option value="output" {% if selected_role == 'output' %}selected{% endif %}>Output — produced/harvested for sale</option>
+                        <option value="both" {% if selected_role == 'both' %}selected{% endif %}>Both — valid for both purposes</option>
+                    </select>
+                </label>
+
+                <label class="field-label">Internal Product Code
+                    <input type="text" value="{{ product.product_code if is_edit and product.product_code else 'Generated automatically after saving' }}" readonly>
+                </label>
+
+                <label class="field-label">Brand
+                    <input type="text" name="brand" maxlength="160" value="{{ values.get('brand', '') }}" placeholder="Example: AVPL, Local Brand">
+                </label>
+
+                <label class="field-label">Manufacturer
+                    <input type="text" name="manufacturer" maxlength="200" value="{{ values.get('manufacturer', '') }}" placeholder="Manufacturer or producer name">
+                </label>
+
+                <label class="field-label">Supplier Product Code
+                    <input type="text" name="supplier_product_code" maxlength="120" value="{{ values.get('supplier_product_code', '') }}" placeholder="Code printed on supplier invoice/label">
+                </label>
+
+                <label class="field-label">Metadata Source <span class="required-mark">*</span>
+                    <select name="metadata_source" required>
+                        {% for source_value, source_label in metadata_sources %}
+                            <option value="{{ source_value }}" {% if selected_source == source_value %}selected{% endif %}>{{ source_label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="field-label">Base Unit <span class="required-mark">*</span>
+                    <select name="base_unit_id" required>
+                        <option value="">Select approved Accounting unit</option>
+                        {% for unit in units %}
+                            <option value="{{ unit.id }}" {% if selected_unit_id|string == unit.id|string %}selected{% endif %}>
+                                {{ unit.unit_code }} — {{ unit.name }}{% if unit.symbol %} ({{ unit.symbol }}){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if not units %}
+                        <small class="field-help">No active AVPL Accounting units are available. Activate the unit foundation before saving.</small>
+                    {% endif %}
+                </label>
+
+                <label class="field-label">Pack Size <span class="required-mark">*</span>
+                    <input type="number" name="pack_size" min="0.0001" step="0.0001" value="{{ values.get('pack_size', 1) }}" required>
+                    <small class="field-help">Example: 1 BAG, 25 KGS, 12 NOS.</small>
+                </label>
+
+                <label class="field-label">Barcode / GTIN / Internal Code
+                    <input type="text" name="barcode" maxlength="120" value="{{ values.get('barcode', '') }}" placeholder="Optional; must be unique when provided">
+                </label>
+
+                <label class="checkbox-card">
+                    <input type="checkbox" name="unnatfarm_eligible" {% if eligible_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
+                    <span>
+                        UnnatFarm Eligible
+                        <small>Only eligible products will later be allowed in the UnnatFarm Centre listing workflow.</small>
+                    </span>
+                </label>
+
+                <label class="field-label full">Description
+                    <textarea name="description" maxlength="2000" placeholder="Product description, grade, variety or important supplier metadata">{{ values.get('description', '') }}</textarea>
+                </label>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="section-heading">
+                <div>
+                    <h3>Accounting and tax mapping</h3>
+                    <p>Select only approved Accounting masters. GST and taxability are inherited from the selected HSN and cannot be typed manually.</p>
+                </div>
+                <span class="legacy-pill">Auto-approved by AVPL Admin</span>
+            </div>
+
+            {% if not accounting_entity %}
+                <div class="batch-note"><strong>Accounting setup unavailable:</strong> The active AVPL Accounting entity was not found.</div>
+            {% endif %}
+
+            <div class="form-grid">
+                <label class="field-label">HSN Classification <span class="required-mark">*</span>
+                    <select name="hsn_master_id" id="hsnMasterSelect" required>
+                        <option value="">Select approved HSN</option>
+                        {% for hsn in hsn_masters %}
+                            <option
+                                value="{{ hsn.id }}"
+                                data-taxability="{{ hsn.taxability_name or hsn.taxability_code }}"
+                                data-gst-rate="{{ hsn.gst_rate_code or 'No GST rate' }}"
+                                {% if selected_hsn_id|string == hsn.id|string %}selected{% endif %}
+                            >
+                                {{ hsn.hsn_code }} — {{ hsn.description or hsn.taxability_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    {% if not hsn_masters %}<small class="field-help">No active HSN master is available. Create and approve it inside Accounting first.</small>{% endif %}
+                </label>
+
+                <label class="field-label">Resolved Tax Treatment
+                    <input type="text" id="resolvedTaxTreatment" value="Select an HSN to resolve GST" readonly>
+                    <small class="field-help">Taxable HSNs use their approved effective-dated GST rate. Exempt, Nil Rated and Non-GST HSNs do not post GST.</small>
+                </label>
+
+                <label class="field-label">Purchase Ledger <span class="required-mark">*</span>
+                    <select name="purchase_ledger_id" required>
+                        <option value="">Select approved purchase ledger</option>
+                        {% for ledger in purchase_ledgers %}
+                            <option value="{{ ledger.id }}" {% if selected_purchase_ledger_id|string == ledger.id|string %}selected{% endif %}>
+                                {{ ledger.ledger_code }} — {{ ledger.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="field-label">Sales Ledger <span class="required-mark">*</span>
+                    <select name="sales_ledger_id" required>
+                        <option value="">Select approved sales ledger</option>
+                        {% for ledger in sales_ledgers %}
+                            <option value="{{ ledger.id }}" {% if selected_sales_ledger_id|string == ledger.id|string %}selected{% endif %}>
+                                {{ ledger.ledger_code }} — {{ ledger.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="field-label">Inventory Ledger <span class="required-mark">*</span>
+                    <select name="inventory_ledger_id" required>
+                        <option value="">Select approved inventory ledger</option>
+                        {% for ledger in inventory_ledgers %}
+                            <option value="{{ ledger.id }}" {% if selected_inventory_ledger_id|string == ledger.id|string %}selected{% endif %}>
+                                {{ ledger.ledger_code }} — {{ ledger.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="checkbox-card">
+                    <input type="checkbox" name="inventory_tracking_enabled" {% if inventory_tracking_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
+                    <span>Inventory Tracking<small>Required for future purchase receipts, stock movement and sale posting.</small></span>
+                </label>
+
+                <label class="checkbox-card">
+                    <input type="checkbox" name="purchase_enabled" {% if purchase_enabled_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
+                    <span>Purchase Enabled<small>Allows this product in the future AVPL supplier-purchase workflow after approval.</small></span>
+                </label>
+
+                <label class="checkbox-card">
+                    <input type="checkbox" name="sales_enabled" {% if sales_enabled_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
+                    <span>Sales Enabled<small>Allows this product in the future AVPL sales/listing workflow after approval.</small></span>
+                </label>
+
+                <label class="field-label full">Mapping Note
+                    <textarea name="mapping_note" maxlength="1500" placeholder="Reason, supplier reference or Accounting note for this mapping">{{ mapping_note_value }}</textarea>
+                </label>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="section-heading">
+                <div>
+                    <h3>Product image</h3>
+                    <p>Use the supplier/manufacturer image or an approved AVPL product image.</p>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                {% if is_edit and product.image_name %}
+                    <div class="current-image full">
+                        <img src="{{ url_for('documents.serve', filename=product.image_name) }}" alt="Current image for {{ product.name }}">
+                        <div>
+                            <strong>Current product image</strong>
+                            <small class="field-help">Upload a new image below only when it should be replaced.</small>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <label class="field-label full">{{ 'Replace Product Image' if is_edit else 'Product Image' }}
+                    <input type="file" name="product_image" accept="image/*">
+                </label>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <div class="section-heading">
+                <div>
+                    <h3>Commercial setup is managed separately</h3>
+                    <p>Price, available quantity and Centre visibility are no longer part of the Product Master.</p>
+                </div>
+                <span class="legacy-pill">Separated in Batch 1.3</span>
+            </div>
+
+            <div class="batch-note" style="margin:0;">
+                <strong>After saving:</strong> configure the temporary commercial setup from the separate screen.
+                Existing products keep their current price, quantity and Centre availability while being edited here.
+                Later AVPL purchase, inventory and marketplace-listing stages will replace these compatibility fields.
+            </div>
+        </section>
+
+        <div class="form-actions">
+            <a href="{{ url_for('admin.product_list') }}" class="cancel-btn">Cancel</a>
+            <button type="submit" class="submit-btn">{{ 'Update Product Master' if is_edit else 'Save Product Master' }}</button>
         </div>
-
-        <label class="full">Product Image
-            <input type="file" name="product_image" accept="image/*">
-        </label>
-
-        <div class="full">
-            <button type="submit" class="submit-btn">Save Product</button>
-        </div>
-
     </form>
-
 </div>
 
 <script>
 (function(){
-    const dropdown = document.getElementById('centreDropdown');
-    const toggle = document.getElementById('centreToggle');
-    const okBtn = document.getElementById('centreOkBtn');
-    const clearBtn = document.getElementById('centreClearBtn');
-    const search = document.getElementById('centreSearch');
-    const selectedText = document.getElementById('centreSelectedText');
-    const checks = Array.from(document.querySelectorAll('.centre-check'));
-    const all = document.querySelector('[data-all]');
-    const options = Array.from(document.querySelectorAll('.centre-option'));
-
-    if(!dropdown || !toggle || !checks.length) return;
-
-    function updateSelectedText(){
-        const selected = checks
-            .filter(c => c.checked)
-            .map(c => c.closest('.centre-option').innerText.trim());
-
-        if(selected.length === 0){
-            selectedText.textContent = 'Select Centres';
-        }else if(selected.includes('All Centres')){
-            selectedText.textContent = 'All Centres';
-        }else if(selected.length <= 2){
-            selectedText.textContent = selected.join(', ');
-        }else{
-            selectedText.textContent = selected.length + ' centres selected';
+    const hsn = document.getElementById('hsnMasterSelect');
+    const output = document.getElementById('resolvedTaxTreatment');
+    function refreshTax(){
+        if(!hsn || !output) return;
+        const option = hsn.options[hsn.selectedIndex];
+        if(!option || !option.value){
+            output.value = 'Select an HSN to resolve GST';
+            return;
         }
-
-        checks[0].setCustomValidity(selected.length ? '' : 'Please select at least one centre.');
+        const taxability = option.dataset.taxability || 'Unknown';
+        const rate = option.dataset.gstRate || 'No GST rate';
+        output.value = taxability + ' · ' + rate;
     }
-
-    toggle.addEventListener('click', function(){
-        dropdown.classList.toggle('open');
-        if(dropdown.classList.contains('open') && search){
-            setTimeout(() => search.focus(), 80);
-        }
-    });
-
-    if(okBtn){
-        okBtn.addEventListener('click', function(){
-            dropdown.classList.remove('open');
-            updateSelectedText();
-        });
-    }
-
-    if(clearBtn){
-        clearBtn.addEventListener('click', function(){
-            checks.forEach(c => c.checked = false);
-            updateSelectedText();
-        });
-    }
-
-    checks.forEach(check => {
-        check.addEventListener('change', function(){
-            if(check === all && check.checked){
-                checks.forEach(c => {
-                    if(c !== all) c.checked = false;
-                });
-            }
-
-            if(check !== all && check.checked && all){
-                all.checked = false;
-            }
-
-            updateSelectedText();
-        });
-    });
-
-    if(search){
-        search.addEventListener('input', function(){
-            const q = search.value.trim().toLowerCase();
-
-            options.forEach(option => {
-                option.style.display = option.innerText.toLowerCase().includes(q) ? 'flex' : 'none';
-            });
-        });
-    }
-
-    document.addEventListener('click', function(e){
-        if(!dropdown.contains(e.target)){
-            dropdown.classList.remove('open');
-        }
-    });
-
-    document.getElementById('addProductForm').addEventListener('submit', function(){
-        updateSelectedText();
-    });
-
-    updateSelectedText();
+    if(hsn){ hsn.addEventListener('change', refreshTax); refreshTax(); }
 })();
+
+
 </script>
 
 {% endblock %}
