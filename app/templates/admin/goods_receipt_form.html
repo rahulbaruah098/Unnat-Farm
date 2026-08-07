@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Edit' if receipt else 'Create' }} Goods Receipt{% endblock %}
+{% block content %}
+{% set values = form_data or receipt or {} %}
+<style>
+.grn-form-page{width:100%;max-width:1500px;margin:0 auto;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.page-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.page-head h2{margin:0;color:#17252A}.page-head p{margin:5px 0 0;color:#64748B}.back-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 16px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C}.notice{margin-bottom:17px;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.section{margin-top:15px;padding:18px;border:1px solid #E2EFE6;border-radius:19px;background:#FCFEFC}.section h3{margin:0 0 14px;color:#17252A}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:7px;color:#263B31;font-weight:800}.field.full{grid-column:1/-1}.field.span2{grid-column:span 2}.field input,.field select,.field textarea{width:100%;min-height:43px;padding:9px 11px;border:1px solid #CFE2D5;border-radius:12px;background:#fff;color:#17252A;font:inherit}.field textarea{min-height:82px;resize:vertical}.field small{color:#64748B;font-size:.84rem;font-weight:400;line-height:1.4}.po-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:14px}.summary-card{padding:12px;border:1px solid #DCECE1;border-radius:14px;background:#fff}.summary-card small{display:block;color:#64748B;margin-bottom:4px}.summary-card strong{color:#17252A}.table-wrap{overflow:auto}.receipt-table{width:100%;border-collapse:separate;border-spacing:0;min-width:1500px}.receipt-table th,.receipt-table td{padding:9px;border-right:1px solid #E2EFE6;border-bottom:1px solid #E2EFE6;vertical-align:top;text-align:left}.receipt-table th{background:#EFF7F1;color:#4B6255;font-size:.82rem;white-space:nowrap}.receipt-table th:first-child,.receipt-table td:first-child{border-left:1px solid #E2EFE6}.receipt-table thead th{border-top:1px solid #E2EFE6}.product-name{font-weight:900;color:#17252A}.sub{display:block;margin-top:3px;color:#64748B;font-size:.8rem}.qty-input,.meta-input{width:100%;min-width:90px;height:38px;padding:7px 8px;border:1px solid #CFE2D5;border-radius:10px;background:#fff;font:inherit}.meta-input{min-width:125px}.readonly{background:#F1F5F9}.line-note{margin-top:5px;font-size:.76rem;color:#64748B}.totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:13px}.total-card{padding:12px;border:1px solid #DCECE1;border-radius:14px;background:#fff}.total-card small{display:block;color:#64748B}.total-card strong{font-size:1.15rem;color:#17252A}.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px}.btn{min-height:42px;padding:9px 18px;border-radius:999px;border:1px solid #CFE2D5;background:#fff;color:#425466;font:inherit;font-weight:900;cursor:pointer;text-decoration:none}.btn.primary{background:#5FA878;border-color:#5FA878;color:#fff}.btn.post{background:#2F7A4C;border-color:#2F7A4C;color:#fff}.empty-lines{padding:24px;text-align:center;border:1px dashed #BFDCC8;border-radius:15px;background:#F6FCF8;color:#64748B}.error-text{color:#B91C1C;font-size:.78rem;font-weight:700;margin-top:4px}
+@media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}.po-summary,.totals{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.grn-form-page{padding:15px;border-radius:18px}.grid,.po-summary,.totals{grid-template-columns:1fr}.field.span2,.field.full{grid-column:auto}.actions,.actions .btn,.back-link{width:100%}}
+</style>
+<div class="grn-form-page">
+    <div class="page-head">
+        <div>
+            <h2>{{ 'Edit Goods Receipt' if receipt else 'Create Goods Receipt' }}</h2>
+            <p>Receive goods against an approved Purchase Order and classify every physical quantity before stock posting.</p>
+        </div>
+        <a class="back-link" href="{{ url_for('admin.goods_receipts') }}">Back to Goods Receipts</a>
+    </div>
+
+    <div class="notice"><strong>Controlled stock rule:</strong> Received quantity is the sum of accepted, rejected and damaged quantities. Posting increases AVPL product stock and inventory lots only by the accepted quantity. Posted GRNs are immutable.</div>
+
+    <form method="post" id="grnForm">
+        {% if receipt %}<input type="hidden" name="expected_version" value="{{ receipt.version }}">{% endif %}
+        <input type="hidden" name="items_json" id="itemsJson">
+
+        <section class="section">
+            <h3>Purchase Order and Receipt Header</h3>
+            <div class="grid">
+                <label class="field span2">Approved Purchase Order
+                    <select name="purchase_order_id" id="purchaseOrderSelect" required {% if receipt %}disabled{% endif %}>
+                        <option value="">Select approved Purchase Order</option>
+                        {% for po in purchase_orders %}
+                        <option value="{{ po.id }}" {% if selected_purchase_order_id|string == po.id|string %}selected{% endif %}>{{ po.po_number }} · {{ po.supplier_name }} · Pending acceptance {{ po.total_pending_quantity }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if receipt %}<input type="hidden" name="purchase_order_id" value="{{ receipt.purchase_order_id }}">{% endif %}
+                    <small>Only approved or partially received Purchase Orders with remaining accepted quantity are available.</small>
+                </label>
+                <label class="field">Receipt Date
+                    <input type="date" name="receipt_date" value="{{ values.get('receipt_date', catalog.get('today', '')) }}" required>
+                </label>
+                <label class="field">Supplier Delivery Note
+                    <input name="supplier_delivery_note" maxlength="120" value="{{ values.get('supplier_delivery_note', '') }}" placeholder="Optional external challan number">
+                    <small>Duplicate delivery-note numbers for the same supplier are blocked.</small>
+                </label>
+                <label class="field">Transporter
+                    <input name="transporter_name" maxlength="120" value="{{ values.get('transporter_name', '') }}">
+                </label>
+                <label class="field">Vehicle Number
+                    <input name="vehicle_number" maxlength="30" value="{{ values.get('vehicle_number', '') }}" style="text-transform:uppercase">
+                </label>
+                <label class="field">Warehouse Code
+                    <input name="warehouse_code" maxlength="40" value="{{ values.get('warehouse_code', catalog.get('warehouse_defaults', {}).get('warehouse_code', 'AVPL-MAIN')) }}" required style="text-transform:uppercase">
+                </label>
+                <label class="field">Warehouse Name
+                    <input name="warehouse_name" maxlength="120" value="{{ values.get('warehouse_name', catalog.get('warehouse_defaults', {}).get('warehouse_name', 'AVPL Main Warehouse')) }}" required>
+                </label>
+                <label class="field">Warehouse Bin / Rack
+                    <input name="warehouse_bin" maxlength="80" value="{{ values.get('warehouse_bin', catalog.get('warehouse_defaults', {}).get('warehouse_bin', '')) }}">
+                </label>
+                <label class="field full">Inspection Note
+                    <textarea name="inspection_note" maxlength="1500" placeholder="Quality observations, rejection reasons or damage notes">{{ values.get('inspection_note', '') }}</textarea>
+                </label>
+                <label class="field full">Remarks
+                    <textarea name="remarks" maxlength="1500">{{ values.get('remarks', '') }}</textarea>
+                </label>
+            </div>
+            <div class="po-summary" id="poSummary" hidden></div>
+        </section>
+
+        <section class="section">
+            <h3>Receipt and Quality Classification</h3>
+            <div id="linesContainer" class="empty-lines">Select a Purchase Order to load product lines.</div>
+            <div class="totals" id="receiptTotals" hidden>
+                <div class="total-card"><small>Physical Received</small><strong id="totalReceived">0.0000</strong></div>
+                <div class="total-card"><small>Accepted to Stock</small><strong id="totalAccepted">0.0000</strong></div>
+                <div class="total-card"><small>Rejected</small><strong id="totalRejected">0.0000</strong></div>
+                <div class="total-card"><small>Damaged</small><strong id="totalDamaged">0.0000</strong></div>
+            </div>
+        </section>
+
+        <div class="actions">
+            <a class="btn" href="{{ url_for('admin.goods_receipts') }}">Cancel</a>
+            <button class="btn primary" type="submit" name="save_action" value="draft">Save Draft</button>
+            {% if session.get('role') in ['avpl_admin','super_admin'] %}<button class="btn post" type="submit" name="save_action" value="post">Save & Post Accepted Stock</button>{% endif %}
+        </div>
+    </form>
+</div>
+
+<script>
+(function(){
+    const catalog = {{ purchase_orders|tojson }};
+    const receipt = {{ (receipt or {})|tojson }};
+    const postedItemsText = {{ (form_data.get('items_json', '') if form_data else '')|tojson }};
+    let initialItems = [];
+    try {
+        initialItems = postedItemsText ? JSON.parse(postedItemsText) : (receipt.items || []);
+    } catch (error) {
+        initialItems = receipt.items || [];
+    }
+
+    const select = document.getElementById('purchaseOrderSelect');
+    const container = document.getElementById('linesContainer');
+    const summary = document.getElementById('poSummary');
+    const totals = document.getElementById('receiptTotals');
+    const itemsJson = document.getElementById('itemsJson');
+    const form = document.getElementById('grnForm');
+
+    function number(value){
+        const parsed = Number(value || 0);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+    function quantity(value){ return number(value).toFixed(4); }
+    function escapeHtml(value){
+        return String(value == null ? '' : value)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+            .replace(/'/g,'&#039;');
+    }
+    function selectedOrder(){
+        const id = select ? select.value : (receipt.purchase_order_id || '');
+        return catalog.find(row => String(row.id) === String(id));
+    }
+    function initialForLine(lineNo){
+        return initialItems.find(row => Number(row.po_line_no) === Number(lineNo)) || {};
+    }
+    function renderSummary(po){
+        if(!po){ summary.hidden = true; summary.innerHTML = ''; return; }
+        summary.hidden = false;
+        summary.innerHTML = `
+            <div class="summary-card"><small>PO Number</small><strong>${escapeHtml(po.po_number)}</strong></div>
+            <div class="summary-card"><small>Supplier</small><strong>${escapeHtml(po.supplier_name)}</strong></div>
+            <div class="summary-card"><small>Order Date</small><strong>${escapeHtml(po.order_date)}</strong></div>
+            <div class="summary-card"><small>Already Accepted</small><strong>${escapeHtml(po.total_accepted_quantity)}</strong></div>
+            <div class="summary-card"><small>Pending Acceptance</small><strong>${escapeHtml(po.total_pending_quantity)}</strong></div>`;
+    }
+    function rowHtml(item){
+        const saved = initialForLine(item.po_line_no);
+        const accepted = saved.accepted_quantity || 0;
+        const rejected = saved.rejected_quantity || 0;
+        const damaged = saved.damaged_quantity || 0;
+        const received = number(accepted) + number(rejected) + number(damaged);
+        return `<tr data-line="${item.po_line_no}" data-max="${escapeHtml(item.pending_quantity)}">
+            <td>${item.po_line_no}</td>
+            <td><span class="product-name">${escapeHtml(item.product_name)}</span><span class="sub">${escapeHtml(item.product_code)} · HSN ${escapeHtml(item.hsn_code)}</span></td>
+            <td>${escapeHtml(item.ordered_quantity)} ${escapeHtml(item.unit_code)}<span class="sub">Accepted earlier: ${escapeHtml(item.accepted_quantity)}</span></td>
+            <td><strong>${escapeHtml(item.pending_quantity)} ${escapeHtml(item.unit_code)}</strong><span class="sub">Maximum accepted now</span></td>
+            <td><input class="qty-input accepted" type="number" min="0" max="${escapeHtml(item.pending_quantity)}" step="0.0001" value="${escapeHtml(accepted)}"></td>
+            <td><input class="qty-input rejected" type="number" min="0" step="0.0001" value="${escapeHtml(rejected)}"></td>
+            <td><input class="qty-input damaged" type="number" min="0" step="0.0001" value="${escapeHtml(damaged)}"></td>
+            <td><input class="qty-input received readonly" type="number" step="0.0001" value="${quantity(received)}" readonly><div class="line-error error-text"></div></td>
+            <td><input class="meta-input barcode" maxlength="120" value="${escapeHtml(saved.barcode || '')}" placeholder="Barcode"></td>
+            <td><input class="meta-input batch" maxlength="80" value="${escapeHtml(saved.batch_number || '')}" placeholder="Batch / lot"></td>
+            <td><input class="meta-input manufacturing" type="date" value="${escapeHtml(saved.manufacturing_date || '')}"></td>
+            <td><input class="meta-input expiry" type="date" value="${escapeHtml(saved.expiry_date || '')}"></td>
+        </tr>`;
+    }
+    function renderLines(){
+        const po = selectedOrder();
+        renderSummary(po);
+        if(!po){
+            container.className = 'empty-lines';
+            container.innerHTML = 'Select a Purchase Order to load product lines.';
+            totals.hidden = true;
+            itemsJson.value = '[]';
+            return;
+        }
+        container.className = 'table-wrap';
+        container.innerHTML = `<table class="receipt-table"><thead><tr><th>#</th><th>Product</th><th>Ordered</th><th>Pending Acceptance</th><th>Accepted</th><th>Rejected</th><th>Damaged</th><th>Physical Received</th><th>Barcode</th><th>Batch</th><th>Manufacturing</th><th>Expiry</th></tr></thead><tbody>${po.items.map(rowHtml).join('')}</tbody></table><div class="line-note">Barcode, batch, manufacturing-date and expiry requirements are validated against the active Product Tracking profile when accepted quantity is above zero.</div>`;
+        totals.hidden = false;
+        container.querySelectorAll('.qty-input:not(.received)').forEach(input => input.addEventListener('input', updateTotals));
+        updateTotals();
+    }
+    function collectItems(showErrors){
+        const rows = Array.from(container.querySelectorAll('tbody tr'));
+        const output = [];
+        let valid = true;
+        rows.forEach(row => {
+            const accepted = number(row.querySelector('.accepted').value);
+            const rejected = number(row.querySelector('.rejected').value);
+            const damaged = number(row.querySelector('.damaged').value);
+            const received = accepted + rejected + damaged;
+            const maxAccepted = number(row.dataset.max);
+            const error = row.querySelector('.line-error');
+            row.querySelector('.received').value = quantity(received);
+            let message = '';
+            if(accepted > maxAccepted + 0.0000001){
+                message = `Accepted quantity cannot exceed ${quantity(maxAccepted)}.`;
+                valid = false;
+            }
+            if(showErrors) error.textContent = message;
+            if(received > 0){
+                output.push({
+                    po_line_no: Number(row.dataset.line),
+                    received_quantity: quantity(received),
+                    accepted_quantity: quantity(accepted),
+                    rejected_quantity: quantity(rejected),
+                    damaged_quantity: quantity(damaged),
+                    barcode: row.querySelector('.barcode').value.trim(),
+                    batch_number: row.querySelector('.batch').value.trim(),
+                    manufacturing_date: row.querySelector('.manufacturing').value,
+                    expiry_date: row.querySelector('.expiry').value
+                });
+            }
+        });
+        itemsJson.value = JSON.stringify(output);
+        return {output, valid};
+    }
+    function updateTotals(){
+        const result = collectItems(false);
+        let accepted = 0, rejected = 0, damaged = 0;
+        result.output.forEach(row => {
+            accepted += number(row.accepted_quantity);
+            rejected += number(row.rejected_quantity);
+            damaged += number(row.damaged_quantity);
+        });
+        document.getElementById('totalAccepted').textContent = quantity(accepted);
+        document.getElementById('totalRejected').textContent = quantity(rejected);
+        document.getElementById('totalDamaged').textContent = quantity(damaged);
+        document.getElementById('totalReceived').textContent = quantity(accepted + rejected + damaged);
+    }
+
+    if(select){ select.addEventListener('change', function(){ initialItems = []; renderLines(); }); }
+    form.addEventListener('submit', function(event){
+        const result = collectItems(true);
+        if(!result.output.length){
+            event.preventDefault();
+            alert('Enter accepted, rejected or damaged quantity for at least one product line.');
+            return;
+        }
+        if(!result.valid){
+            event.preventDefault();
+            alert('Correct the quantity validation errors before saving.');
+        }
+    });
+    renderLines();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}{{ order.po_number }}{% endblock %}
+{% block content %}
+<style>
+.detail{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B}.links{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;border-radius:999px;border:1px solid #CFE2D5;background:#fff;color:#425466;text-decoration:none;font:inherit;font-weight:800;cursor:pointer}.btn.primary{background:#5FA878;border-color:#5FA878;color:#fff}.btn.dark{background:#2F7A4C;border-color:#2F7A4C;color:#fff}.btn.warning{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.btn.danger{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.notice{margin:17px 0;padding:13px 15px;border:1px solid #F4D38A;border-radius:16px;background:#FFF8E8;color:#6B5316;line-height:1.5}.notice.green{border-color:#B9DCCA;background:#F3FBF6;color:#2E6643}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}.card{padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC}.card small{display:block;color:#64748B;margin-bottom:4px}.card strong{color:#17252A;overflow-wrap:anywhere}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:900;border:1px solid}.status.approved,.status.fully_received,.status.posted,.status.matched,.status.paid{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.pending_approval,.status.returned_for_correction,.status.matched_with_warnings,.status.partially_invoiced_with_warnings,.status.prepared,.status.partially_paid{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.draft{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}.status.partially_received,.status.partially_invoiced{background:#F5F3FF;border-color:#DDD6FE;color:#6D28D9}.status.mismatch,.status.recovery_required{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.status.cancelled,.status.not_started,.status.not_recorded,.status.not_posted,.status.unpaid{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.section{margin-top:15px;padding:17px;border:1px solid #E2EFE6;border-radius:18px;background:#FCFEFC}.section h3{margin:0 0 13px;color:#17252A}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:13px}.section-head h3{margin:0}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:1200px}.table.related{min-width:900px}.table th,.table td{padding:10px;border-bottom:1px solid #E2EFE6;text-align:left;vertical-align:top}.table th{color:#64748B;font-size:.84rem;background:#F6FAF7}.total-box{margin-left:auto;width:min(430px,100%);display:grid;gap:7px}.total-row{display:flex;justify-content:space-between;gap:20px;padding:7px 0;border-bottom:1px solid #E2EFE6}.total-row.grand{border:0;font-size:1.15rem;font-weight:900}.workflow{display:flex;gap:8px;flex-wrap:wrap}.workflow form{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.reason{height:38px;min-width:190px;border:1px solid #D6E5DA;border-radius:999px;padding:0 12px;font:inherit}.history{display:grid;gap:8px}.history-item{padding:10px 12px;border-left:3px solid #5FA878;background:#fff;border-radius:0 12px 12px 0;color:#52635A}.history-item strong{color:#263B31}.empty{padding:20px;text-align:center;border:1px dashed #BFDCC8;border-radius:14px;background:#fff;color:#64748B}.qty-stack{display:grid;gap:3px;font-size:.84rem}.qty-stack strong{color:#237A43}.qty-stack .bad{color:#B91C1C}
+@media(max-width:1050px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:650px){.detail{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr}.links,.links .btn,.workflow form,.workflow .btn,.reason{width:100%}}
+</style>
+<div class="detail">
+    <div class="head">
+        <div><h2>{{ order.po_number }}</h2><p>{{ order.supplier_name }} · {{ order.supplier_code }}</p></div>
+        <div class="links">
+            <a class="btn" href="{{ url_for('admin.purchase_orders') }}">Back</a>
+            {% if order.status in ['draft','returned_for_correction'] %}<a class="btn primary" href="{{ url_for('admin.edit_purchase_order_view', order_id=order.id) }}">Edit</a>{% endif %}
+            {% if order.status in ['approved','partially_received'] %}<a class="btn dark" href="{{ url_for('admin.create_goods_receipt_view', po_id=order.id) }}">Create GRN</a>{% endif %}
+            {% if order.status in ['approved','partially_received','fully_received'] %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=order.id) }}">Record Supplier Invoice</a>{% endif %}
+        </div>
+    </div>
+
+    <div class="notice"><strong>Controlled procurement:</strong> Purchase Order approval records commercial intent. Posted GRNs add only accepted quantities to stock. Matched Supplier Invoices can now be prepared and checker-posted as official Purchase Invoices with an Accounting voucher and supplier payable. Purchase posting never increases stock a second time.</div>
+    {% if order.reverse_charge_review_required %}<div class="notice"><strong>Unregistered supplier tax treatment:</strong> Supplier GST is not included in this Purchase Order and input-tax credit is not assumed. Reverse-charge applicability, if any, is reviewed during Supplier Invoice matching and final purchase posting.</div>{% endif %}
+
+    <div class="summary">
+        <div class="card"><small>PO Status</small><span class="status {{ order.status }}">{{ order.status_display }}</span></div>
+        <div class="card"><small>Order Date</small><strong>{{ order.order_date }}</strong></div>
+        <div class="card"><small>Expected Delivery</small><strong>{{ order.expected_delivery_date or '-' }}</strong></div>
+        <div class="card"><small>GRNs / Accepted</small><strong>{{ order.grn_count }} / {{ order.accepted_quantity_total }}</strong></div>
+        <div class="card"><small>Supplier Invoices</small><strong>{{ order.supplier_invoice_count }}</strong></div>
+        <div class="card"><small>Invoice Match</small><span class="status {{ order.invoice_match_status or 'not_recorded' }}">{{ order.invoice_match_status_display }}</span></div>
+    </div>
+
+    <section class="section"><h3>Supplier & Terms</h3><div class="summary" style="margin:0">
+        <div class="card"><small>GST Profile</small><strong>{{ order.supplier_gst_registration_status_label or (order.supplier_gst_registration_status|replace('_',' ')|title) or 'Unregistered' }}</strong></div>
+        <div class="card"><small>Supplier GSTIN</small><strong>{{ order.supplier_gstin or 'Not applicable' }}</strong></div>
+        <div class="card"><small>Supplier State</small><strong>{{ order.supplier_state_name }} ({{ order.supplier_state_code }})</strong></div>
+        <div class="card"><small>Supplier Reference</small><strong>{{ order.supplier_reference or '-' }}</strong></div>
+        <div class="card"><small>Payment Terms</small><strong>{{ order.payment_terms or '-' }}</strong></div>
+        <div class="card"><small>Delivery Address</small><strong>{{ order.delivery_address or '-' }}</strong></div>
+    </div></section>
+
+    <section class="section"><h3>Product Lines</h3><div class="table-wrap"><table class="table"><thead><tr><th>#</th><th>Product</th><th>HSN</th><th>Ordered</th><th>Rate</th><th>Discount</th><th>Taxable</th><th>GST</th><th>Total</th><th>Receipt Progress</th><th>Invoice Progress</th></tr></thead><tbody>
+        {% for item in order.get('items', []) %}
+        <tr>
+            <td>{{ item.line_no }}</td>
+            <td><strong>{{ item.product_name }}</strong><br><small>{{ item.product_code }} · {{ item.unit_code }}</small></td>
+            <td>{{ item.hsn_code }}<br><small>{{ item.taxability_code }}</small></td>
+            <td>{{ item.quantity }}</td>
+            <td>₹{{ item.rate }}</td>
+            <td>{{ item.discount_percent }}%<br><small>₹{{ item.discount_amount }}</small></td>
+            <td>₹{{ item.taxable_value }}</td>
+            <td>₹{{ item.tax_amount }}<br><small>{% if item.gst_treatment_code in ['UNREGISTERED_SUPPLIER_NO_GST','COMPOSITION_SUPPLIER_NO_ITC','EXEMPT_SUPPLIER_NO_GST'] %}{{ item.gst_treatment_label }}{% elif item.igst_amount|float > 0 %}IGST {{ item.igst_rate }}%{% elif item.tax_amount|float > 0 %}CGST {{ item.cgst_rate }}% + SGST {{ item.sgst_rate }}%{% else %}{{ item.gst_treatment_label or 'No GST' }}{% endif %}</small>{% if item.reverse_charge_review_required %}<br><small>RCM review later</small>{% endif %}</td>
+            <td><strong>₹{{ item.line_total }}</strong></td>
+            <td><div class="qty-stack"><span>Received {{ item.received_quantity }}</span><strong>Accepted {{ item.accepted_quantity }}</strong><span class="bad">Rejected {{ item.rejected_quantity }} · Damaged {{ item.damaged_quantity }}</span><span>Pending {{ item.pending_quantity }}</span></div></td>
+            <td><div class="qty-stack"><span>Invoiced {{ item.invoiced_quantity }}</span><span>Pending {{ item.invoice_pending_quantity }}</span></div></td>
+        </tr>
+        {% endfor %}
+    </tbody></table></div></section>
+
+    <section class="section"><h3>Totals</h3><div class="total-box"><div class="total-row"><span>Subtotal</span><strong>₹{{ order.subtotal }}</strong></div><div class="total-row"><span>Discount</span><strong>₹{{ order.discount_total }}</strong></div><div class="total-row"><span>Taxable Value</span><strong>₹{{ order.taxable_total }}</strong></div><div class="total-row"><span>CGST / SGST / IGST</span><strong>₹{{ order.cgst_total }} / ₹{{ order.sgst_total }} / ₹{{ order.igst_total }}</strong></div><div class="total-row"><span>Freight + Other</span><strong>₹{{ order.freight_amount }} + ₹{{ order.other_charges }}</strong></div><div class="total-row grand"><span>Grand Total</span><strong>₹{{ order.grand_total }}</strong></div></div></section>
+
+    <section class="section">
+        <div class="section-head"><h3>Related Goods Receipts</h3>{% if order.status in ['approved','partially_received'] %}<a class="btn dark" href="{{ url_for('admin.create_goods_receipt_view', po_id=order.id) }}">Create GRN</a>{% endif %}</div>
+        {% if goods_receipts %}<div class="table-wrap"><table class="table related"><thead><tr><th>GRN</th><th>Date</th><th>Accepted</th><th>Rejected</th><th>Damaged</th><th>Warehouse</th><th>Status</th><th></th></tr></thead><tbody>{% for grn in goods_receipts %}<tr><td><strong>{{ grn.grn_number }}</strong></td><td>{{ grn.receipt_date }}</td><td>{{ grn.accepted_quantity_total }}</td><td>{{ grn.rejected_quantity_total }}</td><td>{{ grn.damaged_quantity_total }}</td><td>{{ grn.warehouse_code }}{% if grn.warehouse_name %} · {{ grn.warehouse_name }}{% endif %}</td><td><span class="status {{ grn.status }}">{{ grn.status_display }}</span></td><td><a class="btn" href="{{ url_for('admin.goods_receipt_detail', receipt_id=grn.id) }}">View</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty">No Goods Receipt has been created for this Purchase Order.</div>{% endif %}
+    </section>
+
+    <section class="section">
+        <div class="section-head"><h3>Related Supplier Invoices</h3>{% if order.status in ['approved','partially_received','fully_received'] %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=order.id) }}">Record Invoice</a>{% endif %}</div>
+        {% if supplier_invoices %}<div class="table-wrap"><table class="table related"><thead><tr><th>Purchase / Supplier Invoice</th><th>Invoice Date</th><th>Total</th><th>Match</th><th>Posting</th><th>Outstanding</th><th></th></tr></thead><tbody>{% for invoice in supplier_invoices %}<tr><td><strong>{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}</strong><br><small>Supplier: {{ invoice.supplier_invoice_number }} · Internal: {{ invoice.internal_reference }}</small></td><td>{{ invoice.invoice_date }}</td><td>₹{{ invoice.declared_total }}</td><td><span class="status {{ invoice.status }}">{{ invoice.status_display }}</span></td><td><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></td><td>₹{{ invoice.outstanding_amount }}</td><td><a class="btn" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=invoice.id) }}">View</a> <a class="btn" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty">No Supplier Invoice has been recorded for this Purchase Order.</div>{% endif %}
+    </section>
+
+    {% if order.return_reason %}<div class="notice"><strong>Returned for correction:</strong> {{ order.return_reason }}</div>{% endif %}
+    {% if order.cancel_reason %}<div class="notice"><strong>Cancellation reason:</strong> {{ order.cancel_reason }}</div>{% endif %}
+
+    {% if order.status in ['draft','returned_for_correction','pending_approval'] %}
+    <section class="section"><h3>Purchase Order Workflow</h3><div class="workflow">
+        {% if order.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('admin.submit_purchase_order_view', order_id=order.id) }}"><input type="hidden" name="expected_version" value="{{ order.version }}"><button class="btn primary">Submit for Approval</button></form>{% endif %}
+        {% if order.status == 'pending_approval' and session.get('role') in ['avpl_admin','super_admin'] %}<form method="post" action="{{ url_for('admin.approve_purchase_order_view', order_id=order.id) }}"><input type="hidden" name="expected_version" value="{{ order.version }}"><input class="reason" name="approval_note" placeholder="Approval note"><button class="btn primary">Approve</button></form><form method="post" action="{{ url_for('admin.return_purchase_order_view', order_id=order.id) }}"><input type="hidden" name="expected_version" value="{{ order.version }}"><input class="reason" name="reason" placeholder="Correction reason" required><button class="btn warning">Return</button></form>{% endif %}
+        {% if order.status == 'pending_approval' %}<form method="post" action="{{ url_for('admin.withdraw_purchase_order_view', order_id=order.id) }}"><input type="hidden" name="expected_version" value="{{ order.version }}"><input class="reason" name="reason" placeholder="Withdrawal reason"><button class="btn warning">Withdraw</button></form>{% endif %}
+        <form method="post" action="{{ url_for('admin.cancel_purchase_order_view', order_id=order.id) }}"><input type="hidden" name="expected_version" value="{{ order.version }}"><input class="reason" name="reason" placeholder="Cancellation reason" required><button class="btn danger">Cancel</button></form>
+    </div></section>
+    {% endif %}
+
+    <section class="section"><h3>Audit History</h3><div class="history">{% for event in order.change_history|reverse %}<div class="history-item"><strong>{{ event.action|replace('_',' ')|title }}</strong> · {{ event.actor_name }} ({{ event.actor_role|replace('_',' ')|title }}){% if event.reason %}<br>{{ event.reason }}{% endif %}</div>{% else %}<div class="history-item">No history available.</div>{% endfor %}</div></section>
+</div>
+{% endblock %}

@@ -13,6 +13,56 @@ from app.services.accounting_product_mapping_service import (
     get_product_readiness_snapshot,
     upsert_product_mapping_request_from_product_master,
 )
+from app.services.accounting_party_ledger_service import (
+    approve_party_ledger,
+    cancel_party_ledger,
+    create_supplier_from_operational_master,
+    deactivate_party_ledger,
+    get_supplier_master_overview,
+    reactivate_party_ledger,
+    return_party_ledger,
+    submit_party_ledger,
+    update_supplier_from_operational_master,
+    withdraw_party_ledger,
+)
+from app.services.avpl_purchase_order_service import (
+    approve_purchase_order,
+    cancel_purchase_order,
+    create_purchase_order,
+    get_purchase_order,
+    get_purchase_order_form_catalog,
+    get_purchase_order_overview,
+    return_purchase_order,
+    submit_purchase_order,
+    update_purchase_order,
+    withdraw_purchase_order,
+)
+from app.services.avpl_goods_receipt_service import (
+    cancel_goods_receipt,
+    create_goods_receipt,
+    get_goods_receipt,
+    get_goods_receipt_form_catalog,
+    get_goods_receipt_overview,
+    get_goods_receipts_for_purchase_order,
+    post_goods_receipt,
+    return_goods_receipt,
+    submit_goods_receipt,
+    update_goods_receipt,
+)
+from app.services.avpl_supplier_invoice_service import (
+    cancel_supplier_invoice,
+    create_supplier_invoice,
+    get_supplier_invoice,
+    get_supplier_invoice_form_catalog,
+    get_supplier_invoice_overview,
+    get_supplier_invoices_for_purchase_order,
+    update_supplier_invoice,
+)
+from app.services.avpl_purchase_posting_service import (
+    get_purchase_invoice_print_context,
+    post_supplier_invoice_purchase,
+    prepare_supplier_invoice_posting,
+)
 from datetime import datetime
 from math import isfinite
 
@@ -931,12 +981,12 @@ def _active_avpl_accounting_entity():
     })
 
 
+
 def _attach_product_readiness(product, mapping=None):
     if not product:
         return product
 
     entity = _active_avpl_accounting_entity()
-
     if not entity:
         product['_readiness'] = {
             'status': 'accounting_unmapped',
@@ -949,12 +999,8 @@ def _attach_product_readiness(product, mapping=None):
             'purchase_ready': False,
             'listing_ready': False,
             'sale_ready': False,
-            'issues': [
-                'The active AVPL Accounting entity is unavailable.'
-            ],
-            'primary_issue': (
-                'The active AVPL Accounting entity is unavailable.'
-            ),
+            'issues': ['The active AVPL Accounting entity is unavailable.'],
+            'primary_issue': 'The active AVPL Accounting entity is unavailable.',
         }
         return product
 
@@ -980,9 +1026,7 @@ def _attach_product_readiness(product, mapping=None):
             'issues': [str(exc)],
             'primary_issue': str(exc),
         }
-
     return product
-
 
 
 def _product_accounting_form_catalog(product=None):
@@ -1434,14 +1478,8 @@ def product_commercial_setup(product_id):
         flash('Product not found.', 'danger')
         return redirect(url_for('admin.product_list'))
 
-    accounting_catalog = _product_accounting_form_catalog(
-        product=product,
-    )
-
-    _attach_product_readiness(
-        product,
-        accounting_catalog.get('mapping'),
-    )
+    accounting_catalog = _product_accounting_form_catalog(product=product)
+    _attach_product_readiness(product, accounting_catalog.get('mapping'))
 
     centres = list(mongo.db.ufc_admin_master.find({
         'centre_uid': {
@@ -1720,7 +1758,7 @@ def product_list():
     mongo.db.products.find({
         'is_deleted': {'$ne': True}
     }).sort('created_at', -1)
-    )
+)
 
     farmer_products = list(
         mongo.db.farmer_products
@@ -1746,10 +1784,7 @@ def product_list():
     for row in products:
         mapping = mapping_by_product.get(str(row['_id']))
         row['_accounting_mapping'] = mapping
-        _attach_product_readiness(
-            row,
-            mapping,
-        )
+        _attach_product_readiness(row, mapping)
 
     return render_template(
         'admin/product_list.html',
@@ -1851,14 +1886,9 @@ def delete_product(product_id):
 @login_required
 @roles_required('avpl_admin', 'accounts')
 def restock_product(product_id):
-    if not current_app.config.get(
-        'LEGACY_PRODUCT_RESTOCK_ENABLED',
-        True,
-    ):
+    if not current_app.config.get('LEGACY_PRODUCT_RESTOCK_ENABLED', True):
         flash(
-            'Direct product restocking is disabled. '
-            'Use the approved AVPL purchase or '
-            'stock-adjustment workflow.',
+            'Direct product restocking is disabled. Use the approved AVPL purchase or stock-adjustment workflow.',
             'warning',
         )
         return redirect(url_for('admin.product_list'))
@@ -1873,7 +1903,6 @@ def restock_product(product_id):
         '_id': product_object_id,
         'is_deleted': {'$ne': True},
     })
-
     if not product:
         flash('Product not found.', 'danger')
         return redirect(url_for('admin.product_list'))
@@ -1882,66 +1911,34 @@ def restock_product(product_id):
         product.get('commercial_setup_status') == 'configured'
         or bool(product.get('available_centres'))
     )
-
     if not commercial_configured:
         flash(
-            'Complete the separate Commercial Setup before '
-            'using legacy refill.',
+            'Complete the separate Commercial Setup before using legacy refill.',
             'warning',
         )
-
         return redirect(
-            url_for(
-                'admin.product_commercial_setup',
-                product_id=product_id,
-            )
+            url_for('admin.product_commercial_setup', product_id=product_id)
         )
 
-    restock_quantity_raw = request.form.get(
-        'restock_quantity',
-        '',
-    ).strip()
-
+    restock_quantity_raw = request.form.get('restock_quantity', '').strip()
     try:
-        restock_quantity = float(
-            restock_quantity_raw or 0
-        )
+        restock_quantity = float(restock_quantity_raw or 0)
     except (TypeError, ValueError):
         restock_quantity = 0
 
-    if (
-        not isfinite(restock_quantity)
-        or restock_quantity <= 0
-    ):
-        flash(
-            'Please enter a valid restock quantity '
-            'greater than 0.',
-            'danger',
-        )
+    if not isfinite(restock_quantity) or restock_quantity <= 0:
+        flash('Please enter a valid restock quantity greater than 0.', 'danger')
         return redirect(url_for('admin.product_list'))
 
-    current_quantity_raw = product.get(
-        'available_quantity',
-        0,
-    )
-
     try:
-        current_quantity = float(
-            current_quantity_raw or 0
-        )
+        current_quantity = float(product.get('available_quantity', 0) or 0)
     except (TypeError, ValueError):
         current_quantity = 0
-
     if not isfinite(current_quantity):
         current_quantity = 0
 
-    new_quantity = (
-        current_quantity
-        + restock_quantity
-    )
-
+    new_quantity = current_quantity + restock_quantity
     timestamp = now_utc()
-
     mongo.db.products.update_one(
         {'_id': product_object_id},
         {
@@ -1949,18 +1946,14 @@ def restock_product(product_id):
                 'available_quantity': new_quantity,
                 'updated_at': timestamp,
                 'last_restock_at': timestamp,
-                'last_restock_by': session.get(
-                    'user_id'
-                ),
+                'last_restock_by': session.get('user_id'),
             },
             '$push': {
                 'restock_history': {
                     'quantity_added': restock_quantity,
                     'previous_quantity': current_quantity,
                     'new_quantity': new_quantity,
-                    'restocked_by': session.get(
-                        'user_id'
-                    ),
+                    'restocked_by': session.get('user_id'),
                     'restocked_at': timestamp,
                     'source': 'legacy_product_restock',
                     'stage': 'stage_1_compatibility',
@@ -1968,7 +1961,6 @@ def restock_product(product_id):
             },
         },
     )
-
     log_action(
         session['user_id'],
         'restock_product',
@@ -1981,16 +1973,934 @@ def restock_product(product_id):
             'source': 'legacy_product_restock',
         },
     )
-
     flash(
-        'Product restocked successfully. '
-        f'New available quantity: {new_quantity:g}',
+        f'Product restocked successfully. New available quantity: {new_quantity:g}',
         'success',
     )
-
     return redirect(url_for('admin.product_list'))
 
 
+
+# ---------------------------------------------------------------------------
+# Stage 2 — AVPL Supplier Master and Purchase Orders
+# ---------------------------------------------------------------------------
+
+
+def _stage2_entity_or_redirect():
+    entity = _active_avpl_accounting_entity()
+    if not entity:
+        flash('The active AVPL Accounting entity is unavailable.', 'danger')
+    return entity
+
+
+def _supplier_page_context(edit_supplier=None, form_data=None):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return None
+    overview = get_supplier_master_overview(
+        entity['_id'],
+        session.get('user_id'),
+    )
+    return {
+        'overview': overview,
+        'suppliers': overview.get('rows') or [],
+        'options': overview.get('options') or {},
+        'form_defaults': overview.get('form_defaults') or {},
+        'edit_supplier': edit_supplier,
+        'form_data': form_data,
+    }
+
+
+@admin_bp.route('/suppliers', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def supplier_master():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    if request.method == 'POST':
+        try:
+            result = create_supplier_from_operational_master(
+                entity['_id'],
+                session.get('user_id'),
+                request.form,
+            )
+            flash(result.get('message') or 'Supplier saved.', 'success')
+            return redirect(url_for('admin.supplier_master'))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
+            context = _supplier_page_context(form_data=request.form)
+            return render_template('admin/supplier_master.html', **context), 400
+
+    context = _supplier_page_context()
+    return render_template('admin/supplier_master.html', **context)
+
+
+@admin_bp.route('/suppliers/<supplier_id>/edit', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def edit_supplier_master(supplier_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    overview = get_supplier_master_overview(entity['_id'], session.get('user_id'))
+    supplier = next(
+        (row for row in overview.get('rows') or [] if row.get('id') == supplier_id),
+        None,
+    )
+    if not supplier:
+        flash('Supplier not found.', 'danger')
+        return redirect(url_for('admin.supplier_master'))
+
+    if request.method == 'POST':
+        try:
+            result = update_supplier_from_operational_master(
+                supplier_id,
+                session.get('user_id'),
+                request.form,
+                request.form.get('expected_version'),
+            )
+            flash(result.get('message') or 'Supplier updated.', 'success')
+            return redirect(url_for('admin.supplier_master'))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
+            context = _supplier_page_context(
+                edit_supplier=supplier,
+                form_data=request.form,
+            )
+            return render_template('admin/supplier_master.html', **context), 400
+
+    context = _supplier_page_context(edit_supplier=supplier)
+    return render_template('admin/supplier_master.html', **context)
+
+
+def _supplier_action(service_function, supplier_id, success_redirect='admin.supplier_master', **kwargs):
+    try:
+        result = service_function(
+            supplier_id,
+            session.get('user_id'),
+            request.form.get('expected_version'),
+            **kwargs,
+        )
+        flash(result.get('message') or 'Supplier workflow updated.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for(success_redirect))
+
+
+@admin_bp.route('/suppliers/<supplier_id>/submit', methods=['POST'])
+@login_required
+@roles_required('accounts')
+def submit_supplier_master(supplier_id):
+    return _supplier_action(submit_party_ledger, supplier_id)
+
+
+@admin_bp.route('/suppliers/<supplier_id>/approve', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def approve_supplier_master(supplier_id):
+    return _supplier_action(
+        approve_party_ledger,
+        supplier_id,
+        approval_note=request.form.get('approval_note', ''),
+    )
+
+
+@admin_bp.route('/suppliers/<supplier_id>/return', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def return_supplier_master(supplier_id):
+    return _supplier_action(
+        return_party_ledger,
+        supplier_id,
+        return_reason=request.form.get('reason', ''),
+    )
+
+
+@admin_bp.route('/suppliers/<supplier_id>/withdraw', methods=['POST'])
+@login_required
+@roles_required('accounts')
+def withdraw_supplier_master(supplier_id):
+    return _supplier_action(
+        withdraw_party_ledger,
+        supplier_id,
+        reason=request.form.get('reason', ''),
+    )
+
+
+@admin_bp.route('/suppliers/<supplier_id>/cancel', methods=['POST'])
+@login_required
+@roles_required('accounts')
+def cancel_supplier_master(supplier_id):
+    return _supplier_action(
+        cancel_party_ledger,
+        supplier_id,
+        reason=request.form.get('reason', ''),
+    )
+
+
+@admin_bp.route('/suppliers/<supplier_id>/deactivate', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def deactivate_supplier_master(supplier_id):
+    return _supplier_action(
+        deactivate_party_ledger,
+        supplier_id,
+        reason=request.form.get('reason', ''),
+    )
+
+
+@admin_bp.route('/suppliers/<supplier_id>/reactivate', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def reactivate_supplier_master(supplier_id):
+    return _supplier_action(
+        reactivate_party_ledger,
+        supplier_id,
+        reason=request.form.get('reason', ''),
+    )
+
+
+def _purchase_order_form_context(order=None, form_data=None):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return None
+    catalog = get_purchase_order_form_catalog(
+        entity['_id'],
+        session.get('user_id'),
+    )
+    return {
+        'catalog': catalog,
+        'suppliers': catalog.get('suppliers') or [],
+        'products': catalog.get('products') or [],
+        'order': order,
+        'form_data': form_data,
+    }
+
+
+@admin_bp.route('/purchase-orders')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def purchase_orders():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    overview = get_purchase_order_overview(
+        entity['_id'],
+        session.get('user_id'),
+        status=request.args.get('status', '').strip(),
+        query_text=request.args.get('q', '').strip(),
+    )
+    return render_template('admin/purchase_orders.html', overview=overview)
+
+
+@admin_bp.route('/purchase-orders/create', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def create_purchase_order_view():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    if request.method == 'POST':
+        try:
+            result = create_purchase_order(
+                entity['_id'],
+                session.get('user_id'),
+                {
+                    **request.form.to_dict(),
+                    'items_json': request.form.get('items_json', '[]'),
+                },
+                auto_approve=(
+                    request.form.get('save_action') == 'approve'
+                    and session.get('role') in ['avpl_admin', 'super_admin']
+                ),
+            )
+            flash(result.get('message') or 'Purchase order saved.', 'success')
+            return redirect(
+                url_for(
+                    'admin.purchase_order_detail',
+                    order_id=result['order']['id'],
+                )
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
+            context = _purchase_order_form_context(form_data=request.form)
+            return render_template('admin/purchase_order_form.html', **context), 400
+
+    context = _purchase_order_form_context()
+    return render_template('admin/purchase_order_form.html', **context)
+
+
+@admin_bp.route('/purchase-orders/<order_id>')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def purchase_order_detail(order_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        order = get_purchase_order(
+            entity['_id'],
+            session.get('user_id'),
+            order_id,
+        )
+        goods_receipts = get_goods_receipts_for_purchase_order(
+            entity['_id'],
+            session.get('user_id'),
+            order_id,
+        )
+        supplier_invoices = get_supplier_invoices_for_purchase_order(
+            entity['_id'],
+            session.get('user_id'),
+            order_id,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.purchase_orders'))
+    return render_template(
+        'admin/purchase_order_detail.html',
+        order=order,
+        goods_receipts=goods_receipts,
+        supplier_invoices=supplier_invoices,
+    )
+
+
+@admin_bp.route('/purchase-orders/<order_id>/edit', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def edit_purchase_order_view(order_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        order = get_purchase_order(
+            entity['_id'],
+            session.get('user_id'),
+            order_id,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.purchase_orders'))
+
+    if request.method == 'POST':
+        try:
+            result = update_purchase_order(
+                order_id,
+                session.get('user_id'),
+                {
+                    **request.form.to_dict(),
+                    'items_json': request.form.get('items_json', '[]'),
+                },
+                request.form.get('expected_version'),
+                auto_approve=(
+                    request.form.get('save_action') == 'approve'
+                    and session.get('role') in ['avpl_admin', 'super_admin']
+                ),
+            )
+            flash(result.get('message') or 'Purchase order updated.', 'success')
+            return redirect(url_for('admin.purchase_order_detail', order_id=order_id))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
+            context = _purchase_order_form_context(
+                order=order,
+                form_data=request.form,
+            )
+            return render_template('admin/purchase_order_form.html', **context), 400
+
+    context = _purchase_order_form_context(order=order)
+    return render_template('admin/purchase_order_form.html', **context)
+
+
+def _purchase_order_action(service_function, order_id, **kwargs):
+    try:
+        result = service_function(
+            order_id,
+            session.get('user_id'),
+            request.form.get('expected_version'),
+            **kwargs,
+        )
+        flash(result.get('message') or 'Purchase-order workflow updated.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.purchase_order_detail', order_id=order_id))
+
+
+@admin_bp.route('/purchase-orders/<order_id>/submit', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def submit_purchase_order_view(order_id):
+    return _purchase_order_action(submit_purchase_order, order_id)
+
+
+@admin_bp.route('/purchase-orders/<order_id>/approve', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def approve_purchase_order_view(order_id):
+    return _purchase_order_action(
+        approve_purchase_order,
+        order_id,
+        approval_note=request.form.get('approval_note', ''),
+    )
+
+
+@admin_bp.route('/purchase-orders/<order_id>/return', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def return_purchase_order_view(order_id):
+    return _purchase_order_action(
+        return_purchase_order,
+        order_id,
+        reason=request.form.get('reason', ''),
+    )
+
+
+@admin_bp.route('/purchase-orders/<order_id>/withdraw', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def withdraw_purchase_order_view(order_id):
+    return _purchase_order_action(
+        withdraw_purchase_order,
+        order_id,
+        reason=request.form.get('reason', ''),
+    )
+
+
+@admin_bp.route('/purchase-orders/<order_id>/cancel', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def cancel_purchase_order_view(order_id):
+    return _purchase_order_action(
+        cancel_purchase_order,
+        order_id,
+        reason=request.form.get('reason', ''),
+    )
+
+
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 · Batch 2.3 — Goods Receipt Notes
+# ---------------------------------------------------------------------------
+
+
+def _goods_receipt_form_context(receipt=None, form_data=None):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return None
+
+    selected_po_id = ''
+    if form_data:
+        selected_po_id = form_data.get('purchase_order_id', '')
+    elif receipt:
+        selected_po_id = receipt.get('purchase_order_id', '')
+    else:
+        selected_po_id = request.args.get('po_id', '').strip()
+
+    catalog = get_goods_receipt_form_catalog(
+        entity['_id'],
+        session.get('user_id'),
+        selected_po_id,
+    )
+    return {
+        'catalog': catalog,
+        'purchase_orders': catalog.get('purchase_orders') or [],
+        'receipt': receipt,
+        'form_data': form_data,
+        'selected_purchase_order_id': selected_po_id,
+    }
+
+
+@admin_bp.route('/goods-receipts')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def goods_receipts():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    overview = get_goods_receipt_overview(
+        entity['_id'],
+        session.get('user_id'),
+        status=request.args.get('status', '').strip(),
+        query_text=request.args.get('q', '').strip(),
+    )
+    return render_template(
+        'admin/goods_receipts.html',
+        overview=overview,
+    )
+
+
+@admin_bp.route('/goods-receipts/create', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def create_goods_receipt_view():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    if request.method == 'POST':
+        try:
+            result = create_goods_receipt(
+                entity['_id'],
+                session.get('user_id'),
+                {
+                    **request.form.to_dict(),
+                    'items_json': request.form.get('items_json', '[]'),
+                },
+                auto_post=(
+                    request.form.get('save_action') == 'post'
+                    and session.get('role') in ['avpl_admin', 'super_admin']
+                ),
+            )
+            flash(
+                result.get('message') or 'Goods Receipt saved.',
+                'success',
+            )
+            return redirect(
+                url_for(
+                    'admin.goods_receipt_detail',
+                    receipt_id=result['receipt']['id'],
+                )
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
+            context = _goods_receipt_form_context(form_data=request.form)
+            return render_template(
+                'admin/goods_receipt_form.html',
+                **context,
+            ), 400
+
+    context = _goods_receipt_form_context()
+    return render_template('admin/goods_receipt_form.html', **context)
+
+
+@admin_bp.route('/goods-receipts/<receipt_id>')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def goods_receipt_detail(receipt_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        receipt = get_goods_receipt(
+            entity['_id'],
+            session.get('user_id'),
+            receipt_id,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.goods_receipts'))
+    return render_template(
+        'admin/goods_receipt_detail.html',
+        receipt=receipt,
+    )
+
+
+@admin_bp.route('/goods-receipts/<receipt_id>/edit', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def edit_goods_receipt_view(receipt_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        receipt = get_goods_receipt(
+            entity['_id'],
+            session.get('user_id'),
+            receipt_id,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.goods_receipts'))
+
+    if request.method == 'POST':
+        try:
+            result = update_goods_receipt(
+                receipt_id,
+                session.get('user_id'),
+                {
+                    **request.form.to_dict(),
+                    'items_json': request.form.get('items_json', '[]'),
+                },
+                request.form.get('expected_version'),
+                auto_post=(
+                    request.form.get('save_action') == 'post'
+                    and session.get('role') in ['avpl_admin', 'super_admin']
+                ),
+            )
+            flash(
+                result.get('message') or 'Goods Receipt updated.',
+                'success',
+            )
+            return redirect(
+                url_for(
+                    'admin.goods_receipt_detail',
+                    receipt_id=receipt_id,
+                )
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
+            context = _goods_receipt_form_context(
+                receipt=receipt,
+                form_data=request.form,
+            )
+            return render_template(
+                'admin/goods_receipt_form.html',
+                **context,
+            ), 400
+
+    context = _goods_receipt_form_context(receipt=receipt)
+    return render_template('admin/goods_receipt_form.html', **context)
+
+
+def _goods_receipt_action(service_function, receipt_id, **kwargs):
+    try:
+        result = service_function(
+            receipt_id,
+            session.get('user_id'),
+            request.form.get('expected_version'),
+            **kwargs,
+        )
+        flash(
+            result.get('message') or 'Goods Receipt workflow updated.',
+            'success',
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(
+        url_for('admin.goods_receipt_detail', receipt_id=receipt_id)
+    )
+
+
+@admin_bp.route('/goods-receipts/<receipt_id>/submit', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def submit_goods_receipt_view(receipt_id):
+    return _goods_receipt_action(submit_goods_receipt, receipt_id)
+
+
+@admin_bp.route('/goods-receipts/<receipt_id>/post', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def post_goods_receipt_view(receipt_id):
+    return _goods_receipt_action(
+        post_goods_receipt,
+        receipt_id,
+        posting_note=request.form.get('posting_note', ''),
+    )
+
+
+@admin_bp.route('/goods-receipts/<receipt_id>/return', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def return_goods_receipt_view(receipt_id):
+    return _goods_receipt_action(
+        return_goods_receipt,
+        receipt_id,
+        reason=request.form.get('reason', ''),
+    )
+
+
+@admin_bp.route('/goods-receipts/<receipt_id>/cancel', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def cancel_goods_receipt_view(receipt_id):
+    return _goods_receipt_action(
+        cancel_goods_receipt,
+        receipt_id,
+        reason=request.form.get('reason', ''),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 · Batch 2.4 — Supplier Invoice and Three-Way Match
+# ---------------------------------------------------------------------------
+
+
+def _supplier_invoice_form_context(invoice=None, form_data=None):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return None
+
+    selected_po_id = ''
+    if form_data:
+        selected_po_id = form_data.get('purchase_order_id', '')
+    elif invoice:
+        selected_po_id = invoice.get('purchase_order_id', '')
+    else:
+        selected_po_id = request.args.get('po_id', '').strip()
+
+    catalog = get_supplier_invoice_form_catalog(
+        entity['_id'],
+        session.get('user_id'),
+        selected_po_id,
+    )
+    return {
+        'catalog': catalog,
+        'purchase_orders': catalog.get('purchase_orders') or [],
+        'invoice': invoice,
+        'form_data': form_data,
+        'selected_purchase_order_id': selected_po_id,
+    }
+
+
+@admin_bp.route('/supplier-invoices')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def supplier_invoices():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    overview = get_supplier_invoice_overview(
+        entity['_id'],
+        session.get('user_id'),
+        status=request.args.get('status', '').strip(),
+        query_text=request.args.get('q', '').strip(),
+    )
+    return render_template(
+        'admin/supplier_invoices.html',
+        overview=overview,
+    )
+
+
+@admin_bp.route('/supplier-invoices/create', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def create_supplier_invoice_view():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    if request.method == 'POST':
+        try:
+            result = create_supplier_invoice(
+                entity['_id'],
+                session.get('user_id'),
+                {
+                    **request.form.to_dict(),
+                    'items_json': request.form.get('items_json', '[]'),
+                },
+            )
+            category = (
+                'success'
+                if result['invoice']['status'] in [
+                    'matched',
+                    'matched_with_warnings',
+                ]
+                else 'warning'
+            )
+            flash(
+                result.get('message') or 'Supplier Invoice recorded.',
+                category,
+            )
+            return redirect(
+                url_for(
+                    'admin.supplier_invoice_detail',
+                    invoice_id=result['invoice']['id'],
+                )
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
+            context = _supplier_invoice_form_context(
+                form_data=request.form,
+            )
+            return render_template(
+                'admin/supplier_invoice_form.html',
+                **context,
+            ), 400
+
+    context = _supplier_invoice_form_context()
+    return render_template('admin/supplier_invoice_form.html', **context)
+
+
+@admin_bp.route('/supplier-invoices/<invoice_id>')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def supplier_invoice_detail(invoice_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        invoice = get_supplier_invoice(
+            entity['_id'],
+            session.get('user_id'),
+            invoice_id,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.supplier_invoices'))
+    return render_template(
+        'admin/supplier_invoice_detail.html',
+        invoice=invoice,
+    )
+
+
+@admin_bp.route('/supplier-invoices/<invoice_id>/edit', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def edit_supplier_invoice_view(invoice_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        invoice = get_supplier_invoice(
+            entity['_id'],
+            session.get('user_id'),
+            invoice_id,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.supplier_invoices'))
+
+    if request.method == 'POST':
+        try:
+            result = update_supplier_invoice(
+                invoice_id,
+                session.get('user_id'),
+                {
+                    **request.form.to_dict(),
+                    'items_json': request.form.get('items_json', '[]'),
+                },
+                request.form.get('expected_version'),
+            )
+            category = (
+                'success'
+                if result['invoice']['status'] in [
+                    'matched',
+                    'matched_with_warnings',
+                ]
+                else 'warning'
+            )
+            flash(
+                result.get('message') or 'Supplier Invoice updated.',
+                category,
+            )
+            return redirect(
+                url_for(
+                    'admin.supplier_invoice_detail',
+                    invoice_id=invoice_id,
+                )
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
+            context = _supplier_invoice_form_context(
+                invoice=invoice,
+                form_data=request.form,
+            )
+            return render_template(
+                'admin/supplier_invoice_form.html',
+                **context,
+            ), 400
+
+    context = _supplier_invoice_form_context(invoice=invoice)
+    return render_template('admin/supplier_invoice_form.html', **context)
+
+
+@admin_bp.route('/supplier-invoices/<invoice_id>/cancel', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def cancel_supplier_invoice_view(invoice_id):
+    try:
+        result = cancel_supplier_invoice(
+            invoice_id,
+            session.get('user_id'),
+            request.form.get('expected_version'),
+            request.form.get('reason', ''),
+        )
+        flash(
+            result.get('message') or 'Supplier Invoice cancelled.',
+            'success',
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(
+        url_for('admin.supplier_invoice_detail', invoice_id=invoice_id)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 · Batch 2.5 — Purchase Posting, Supplier Payable and Print
+# ---------------------------------------------------------------------------
+
+
+@admin_bp.route(
+    '/supplier-invoices/<invoice_id>/prepare-posting',
+    methods=['POST'],
+)
+@login_required
+@roles_required('super_admin', 'accounts')
+def prepare_supplier_invoice_posting_view(invoice_id):
+    try:
+        result = prepare_supplier_invoice_posting(
+            invoice_id,
+            session.get('user_id'),
+            request.form.get('expected_version'),
+        )
+        flash(
+            result.get('message')
+            or 'Purchase posting prepared successfully.',
+            'success',
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+
+    return redirect(
+        url_for('admin.supplier_invoice_detail', invoice_id=invoice_id)
+    )
+
+
+@admin_bp.route(
+    '/supplier-invoices/<invoice_id>/post-purchase',
+    methods=['POST'],
+)
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def post_supplier_invoice_purchase_view(invoice_id):
+    try:
+        result = post_supplier_invoice_purchase(
+            invoice_id,
+            session.get('user_id'),
+            request.form.get('expected_version'),
+        )
+        flash(
+            result.get('message')
+            or 'Purchase Invoice posted successfully.',
+            'success',
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+
+    return redirect(
+        url_for('admin.supplier_invoice_detail', invoice_id=invoice_id)
+    )
+
+
+@admin_bp.route('/supplier-invoices/<invoice_id>/print')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def print_supplier_invoice_view(invoice_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    try:
+        context = get_purchase_invoice_print_context(
+            entity['_id'],
+            session.get('user_id'),
+            invoice_id,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(
+            url_for('admin.supplier_invoice_detail', invoice_id=invoice_id)
+        )
+
+    return render_template(
+        'admin/supplier_invoice_print.html',
+        **context,
+    )
 
 
 @admin_bp.route('/traders/onboard', methods=['GET', 'POST'])

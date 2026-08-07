@@ -54,11 +54,7 @@ INVENTORY_GROUP_KEY = "stock_in_hand"
 
 TRACKING_PROFILE_COLLECTION = "accounting_product_tracking_profiles"
 
-PRODUCT_MASTER_ROLES = {
-    "input",
-    "output",
-    "both",
-}
+PRODUCT_MASTER_ROLES = {"input", "output", "both"}
 
 PRODUCT_READINESS_LABELS = {
     "disabled": "Disabled",
@@ -1419,6 +1415,8 @@ def assert_product_ready_for_accounting(
         operation=operation,
     )
 
+
+
 def _readiness_decimal(value):
     try:
         return Decimal(str(value or 0))
@@ -1428,34 +1426,24 @@ def _readiness_decimal(value):
 
 def _product_master_missing_fields(product):
     missing = []
-
     if not str(product.get("name") or "").strip():
         missing.append("Product name")
-
     if not str(product.get("product_code") or "").strip():
         missing.append("Product code")
-
     if not str(product.get("category") or "").strip():
         missing.append("Category")
 
     product_role = str(
-        product.get("product_role")
-        or product.get("type")
-        or ""
+        product.get("product_role") or product.get("type") or ""
     ).strip().lower()
-
     if product_role not in PRODUCT_MASTER_ROLES:
         missing.append("Product role")
-
     if not str(product.get("metadata_source") or "").strip():
         missing.append("Metadata source")
-
     if not product.get("base_unit_id"):
         missing.append("Base unit")
-
     if _readiness_decimal(product.get("pack_size")) <= 0:
         missing.append("Pack size")
-
     return missing
 
 
@@ -1467,31 +1455,16 @@ def get_product_readiness_snapshot(
     mapping_document=None,
     transaction_date=None,
 ):
-    """
-    Return a non-posting readiness summary for an AVPL product.
-
-    This function does not create stock, invoices, vouchers or ledger lines.
-    Stage 2 purchase and later sale services can use the assertion helpers
-    below before accepting a transaction.
-    """
     entity = _assert_active_avpl_entity(accounting_entity_id)
-
     product = product_document or _get_source_product(
         source_product_id,
         include_inactive=True,
     )
 
-    product_status = str(
-        product.get("status") or "active"
-    ).strip().lower()
-
+    product_status = str(product.get("status") or "active").strip().lower()
     product_is_active = (
         product.get("is_active", True) is not False
-        and product_status not in {
-            "inactive",
-            "disabled",
-            "deleted",
-        }
+        and product_status not in {"inactive", "disabled", "deleted"}
         and product.get("is_deleted") is not True
     )
 
@@ -1499,7 +1472,6 @@ def get_product_readiness_snapshot(
     product_master_ready = not master_missing_fields
 
     mapping = mapping_document
-
     if mapping is None:
         mapping = mongo.db[MAPPING_COLLECTION].find_one(
             {
@@ -1511,15 +1483,9 @@ def get_product_readiness_snapshot(
             sort=[("updated_at", DESCENDING)],
         )
 
-    mapping_status = (
-        str(mapping.get("status") or STATUS_DRAFT)
-        if mapping
-        else "unmapped"
-    )
-
+    mapping_status = str(mapping.get("status") or STATUS_DRAFT) if mapping else "unmapped"
     accounting_ready = False
     accounting_error = ""
-
     if product_is_active and mapping:
         try:
             get_product_accounting_mapping_for_posting(
@@ -1531,9 +1497,7 @@ def get_product_readiness_snapshot(
         except Exception as exc:
             accounting_error = str(exc)
     elif not mapping:
-        accounting_error = (
-            "Create and activate the Product Accounting mapping."
-        )
+        accounting_error = "Create and activate the Product Accounting mapping."
     elif mapping_status != STATUS_ACTIVE:
         accounting_error = (
             "The Product Accounting mapping is "
@@ -1541,20 +1505,13 @@ def get_product_readiness_snapshot(
         )
 
     purchase_enabled = bool(
-        mapping
-        and mapping_status == STATUS_ACTIVE
-        and mapping.get("purchase_enabled") is not False
+        mapping and mapping_status == STATUS_ACTIVE and mapping.get("purchase_enabled") is not False
     )
-
     sales_enabled = bool(
-        mapping
-        and mapping_status == STATUS_ACTIVE
-        and mapping.get("sales_enabled") is not False
+        mapping and mapping_status == STATUS_ACTIVE and mapping.get("sales_enabled") is not False
     )
 
-    tracking_profile = mongo.db[
-        TRACKING_PROFILE_COLLECTION
-    ].find_one(
+    tracking_profile = mongo.db[TRACKING_PROFILE_COLLECTION].find_one(
         {
             "accounting_entity_id": entity["_id"],
             "source_product_id": product["_id"],
@@ -1567,65 +1524,27 @@ def get_product_readiness_snapshot(
     tracking_ready = True
     tracking_status = "optional_not_configured"
     tracking_issues = []
-
     if tracking_profile:
-        tracking_status = str(
-            tracking_profile.get("status") or STATUS_DRAFT
-        )
-
-        if (
-            tracking_status != STATUS_ACTIVE
-            or tracking_profile.get("is_active") is not True
-        ):
+        tracking_status = str(tracking_profile.get("status") or STATUS_DRAFT)
+        if tracking_status != STATUS_ACTIVE or tracking_profile.get("is_active") is not True:
             tracking_ready = False
-            tracking_issues.append(
-                "Complete and activate the product tracking profile."
-            )
+            tracking_issues.append("Complete and activate the product tracking profile.")
         else:
-            if (
-                tracking_profile.get(
-                    "barcode_required_on_transaction"
-                )
-                and not (
-                    tracking_profile.get("primary_barcode")
-                    or product.get("barcode")
-                )
+            if tracking_profile.get("barcode_required_on_transaction") and not (
+                tracking_profile.get("primary_barcode") or product.get("barcode")
             ):
                 tracking_ready = False
-                tracking_issues.append(
-                    "A barcode is required by the active tracking profile."
-                )
-
-            if (
-                tracking_profile.get("batch_number_required")
-                and not tracking_profile.get(
-                    "batch_tracking_enabled"
-                )
-            ):
+                tracking_issues.append("A barcode is required by the active tracking profile.")
+            if tracking_profile.get("batch_number_required") and not tracking_profile.get("batch_tracking_enabled"):
                 tracking_ready = False
-                tracking_issues.append(
-                    "Batch-number tracking is required but not enabled."
-                )
-
-            if (
-                tracking_profile.get("expiry_date_required")
-                and not tracking_profile.get(
-                    "expiry_tracking_enabled"
-                )
-            ):
+                tracking_issues.append("Batch-number tracking is required but not enabled.")
+            if tracking_profile.get("expiry_date_required") and not tracking_profile.get("expiry_tracking_enabled"):
                 tracking_ready = False
-                tracking_issues.append(
-                    "Expiry-date tracking is required but not enabled."
-                )
+                tracking_issues.append("Expiry-date tracking is required but not enabled.")
 
     selected_centres = product.get("available_centres") or []
-
     if isinstance(selected_centres, str):
-        selected_centres = (
-            [selected_centres]
-            if selected_centres.strip()
-            else []
-        )
+        selected_centres = [selected_centres] if selected_centres.strip() else []
 
     selling_price = _readiness_decimal(product.get("price"))
     available_quantity = _readiness_decimal(
@@ -1637,38 +1556,19 @@ def get_product_readiness_snapshot(
     )
 
     commercial_configured = bool(
-        product.get("commercial_setup_status") == "configured"
-        or selected_centres
+        product.get("commercial_setup_status") == "configured" or selected_centres
     )
-
     commercial_issues = []
-
     if not commercial_configured:
-        commercial_issues.append(
-            "Complete the Commercial Setup."
-        )
-
+        commercial_issues.append("Complete the Commercial Setup.")
     if selling_price <= 0:
-        commercial_issues.append(
-            "Set a selling price greater than zero."
-        )
-
+        commercial_issues.append("Set a selling price greater than zero.")
     if not selected_centres:
-        commercial_issues.append(
-            "Select at least one Centre."
-        )
+        commercial_issues.append("Select at least one Centre.")
 
-    commercial_ready = (
-        commercial_configured
-        and selling_price > 0
-        and bool(selected_centres)
-    )
-
+    commercial_ready = commercial_configured and selling_price > 0 and bool(selected_centres)
     stock_ready = available_quantity > 0
-
-    unnatfarm_eligible = (
-        product.get("unnatfarm_eligible", True) is not False
-    )
+    unnatfarm_eligible = product.get("unnatfarm_eligible", True) is not False
 
     purchase_ready = bool(
         product_is_active
@@ -1677,7 +1577,6 @@ def get_product_readiness_snapshot(
         and purchase_enabled
         and tracking_ready
     )
-
     listing_ready = bool(
         product_is_active
         and product_master_ready
@@ -1687,40 +1586,20 @@ def get_product_readiness_snapshot(
         and sales_enabled
         and commercial_ready
     )
-
-    sale_ready = bool(
-        listing_ready
-        and stock_ready
-    )
+    sale_ready = bool(listing_ready and stock_ready)
 
     issues = []
-
     if not product_is_active:
         issues.append("Enable the product.")
-
     if master_missing_fields:
-        issues.append(
-            "Complete: " + ", ".join(master_missing_fields) + "."
-        )
-
+        issues.append("Complete: " + ", ".join(master_missing_fields) + ".")
     if accounting_error:
         issues.append(accounting_error)
-
     issues.extend(tracking_issues)
-
-    if (
-        unnatfarm_eligible
-        and sales_enabled
-    ):
+    if unnatfarm_eligible and sales_enabled:
         issues.extend(commercial_issues)
-
-    if (
-        listing_ready
-        and not stock_ready
-    ):
-        issues.append(
-            "Receive or add stock before selling the product."
-        )
+    if listing_ready and not stock_ready:
+        issues.append("Receive or add stock before selling the product.")
 
     if not product_is_active:
         status = "disabled"
@@ -1761,10 +1640,7 @@ def get_product_readiness_snapshot(
 
     return {
         "status": status,
-        "label": PRODUCT_READINESS_LABELS.get(
-            status,
-            status.replace("_", " ").title(),
-        ),
+        "label": PRODUCT_READINESS_LABELS.get(status, status.replace("_", " ").title()),
         "tone": tone_by_status.get(status, "pending"),
         "product_master_ready": product_master_ready,
         "master_missing_fields": master_missing_fields,
@@ -1781,10 +1657,7 @@ def get_product_readiness_snapshot(
         "listing_ready": listing_ready,
         "sale_ready": sale_ready,
         "selling_price": format(selling_price, "f"),
-        "available_quantity": format(
-            available_quantity,
-            "f",
-        ),
+        "available_quantity": format(available_quantity, "f"),
         "issues": issues,
         "primary_issue": issues[0] if issues else "",
     }
@@ -1801,26 +1674,18 @@ def assert_product_ready_for_avpl_purchase(
         source_product_id,
         transaction_date=transaction_date,
     )
-
     if not readiness.get("purchase_ready"):
         raise ValueError(
             readiness.get("primary_issue")
             or "This product is not ready for an AVPL purchase."
         )
-
-    accounting_context = (
-        get_product_accounting_mapping_for_posting(
-            accounting_entity_id,
-            source_product_id,
-            transaction_date=transaction_date,
-            operation="purchase",
-        )
+    accounting_context = get_product_accounting_mapping_for_posting(
+        accounting_entity_id,
+        source_product_id,
+        transaction_date=transaction_date,
+        operation="purchase",
     )
-
-    return {
-        "readiness": readiness,
-        "accounting": accounting_context,
-    }
+    return {"readiness": readiness, "accounting": accounting_context}
 
 
 def assert_product_ready_for_avpl_sale(
@@ -1834,26 +1699,19 @@ def assert_product_ready_for_avpl_sale(
         source_product_id,
         transaction_date=transaction_date,
     )
-
     if not readiness.get("sale_ready"):
         raise ValueError(
             readiness.get("primary_issue")
             or "This product is not ready for an AVPL sale."
         )
-
-    accounting_context = (
-        get_product_accounting_mapping_for_posting(
-            accounting_entity_id,
-            source_product_id,
-            transaction_date=transaction_date,
-            operation="sales",
-        )
+    accounting_context = get_product_accounting_mapping_for_posting(
+        accounting_entity_id,
+        source_product_id,
+        transaction_date=transaction_date,
+        operation="sales",
     )
+    return {"readiness": readiness, "accounting": accounting_context}
 
-    return {
-        "readiness": readiness,
-        "accounting": accounting_context,
-    }
 
 
 

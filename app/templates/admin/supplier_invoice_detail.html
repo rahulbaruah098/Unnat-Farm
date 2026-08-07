@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% block title %}{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}{% endblock %}
+{% block content %}
+<style>
+.invoice-detail{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B}.links{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;border-radius:999px;border:1px solid #CFE2D5;background:#fff;color:#425466;text-decoration:none;font:inherit;font-weight:800;cursor:pointer}.btn.primary{background:#5FA878;border-color:#5FA878;color:#fff}.btn.dark{background:#2F7A4C;border-color:#2F7A4C;color:#fff}.btn.warning{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.btn.danger{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.btn:disabled{opacity:.55;cursor:not-allowed}.notice{margin:17px 0;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.notice.warning{border-color:#F4D38A;background:#FFF8E8;color:#6B5316}.notice.error{border-color:#FECACA;background:#FEF2F2;color:#991B1B}.notice.info{border-color:#BFDBFE;background:#EFF6FF;color:#1D4ED8}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}.card{padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC}.card small{display:block;color:#64748B;margin-bottom:4px}.card strong{color:#17252A;overflow-wrap:anywhere}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:900;border:1px solid}.status.matched,.status.posted,.status.paid{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.matched_with_warnings,.status.prepared,.status.partially_paid{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.mismatch,.status.recovery_required{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.status.cancelled,.status.not_posted,.status.unpaid{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.status.posting{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}.section{margin-top:15px;padding:17px;border:1px solid #E2EFE6;border-radius:18px;background:#FCFEFC}.section h3{margin:0 0 13px;color:#17252A}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}.section-head h3{margin:0}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:1450px}.table.compact{min-width:850px}.table th,.table td{padding:10px;border-bottom:1px solid #E2EFE6;text-align:left;vertical-align:top}.table th{color:#64748B;font-size:.84rem;background:#F6FAF7}.severity{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:900}.severity.blocking{background:#FEF2F2;color:#B91C1C}.severity.warning{background:#FFF7E6;color:#8A5B00}.total-box{margin-left:auto;width:min(500px,100%);display:grid;gap:7px}.total-row{display:flex;justify-content:space-between;gap:20px;padding:7px 0;border-bottom:1px solid #E2EFE6}.total-row.grand{border:0;font-size:1.15rem;font-weight:900}.workflow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.workflow form{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.reason{height:38px;min-width:220px;border:1px solid #D6E5DA;border-radius:999px;padding:0 12px;font:inherit}.history{display:grid;gap:8px}.history-item{padding:10px 12px;border-left:3px solid #5FA878;background:#fff;border-radius:0 12px 12px 0;color:#52635A}.history-item strong{color:#263B31}.posting-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.posting-step{padding:14px;border:1px solid #E2EFE6;border-radius:15px;background:#fff}.posting-step span{display:block;color:#64748B;font-size:.82rem;margin-bottom:4px}.posting-step strong{color:#263B31}.posting-step.done{border-color:#B7E4C7;background:#F3FBF6}.posting-step.current{border-color:#F4D38A;background:#FFF8E8}.posting-step.blocked{border-color:#FECACA;background:#FEF2F2}.posting-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}.posting-meta div{padding:11px;border-radius:12px;background:#fff;border:1px solid #E2EFE6}.posting-meta small{display:block;color:#64748B;margin-bottom:3px}
+@media(max-width:1050px){.summary{grid-template-columns:repeat(3,1fr)}.posting-flow,.posting-meta{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.invoice-detail{padding:15px;border-radius:18px}.summary,.posting-flow,.posting-meta{grid-template-columns:1fr}.links,.links .btn,.workflow form,.workflow .btn,.reason{width:100%}.total-row{align-items:flex-start}}
+</style>
+<div class="invoice-detail">
+    <div class="head">
+        <div>
+            <h2>{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}</h2>
+            <p>
+                {% if invoice.official_purchase_invoice_number %}Supplier Invoice {{ invoice.supplier_invoice_number }} · {% endif %}
+                {{ invoice.supplier_name }} · {{ invoice.po_number }} · Internal {{ invoice.internal_reference }}
+            </p>
+        </div>
+        <div class="links">
+            <a class="btn" href="{{ url_for('admin.supplier_invoices') }}">Back</a>
+            <a class="btn" href="{{ url_for('admin.purchase_order_detail', order_id=invoice.purchase_order_id) }}">View Purchase Order</a>
+            <a class="btn" href="{{ url_for('admin.goods_receipts', q=invoice.po_number) }}">View GRNs</a>
+            <a class="btn dark" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print / Save PDF</a>
+            {% if invoice.status != 'cancelled' and invoice.posting_status == 'not_posted' %}
+                <a class="btn primary" href="{{ url_for('admin.edit_supplier_invoice_view', invoice_id=invoice.id) }}">Edit & Re-match</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if invoice.status == 'matched' %}
+        <div class="notice"><strong>Three-way match passed:</strong> Supplier Invoice values match the approved Purchase Order and posted accepted GRN quantities.</div>
+    {% elif invoice.status == 'matched_with_warnings' %}
+        <div class="notice warning"><strong>Matched with warnings:</strong> No blocking difference was found, but {{ invoice.warning_count }} warning{{ '' if invoice.warning_count == 1 else 's' }} should be reviewed before final posting.</div>
+    {% elif invoice.status == 'mismatch' %}
+        <div class="notice error"><strong>Posting blocked:</strong> {{ invoice.blocking_mismatch_count }} blocking mismatch{{ '' if invoice.blocking_mismatch_count == 1 else 'es' }} must be corrected.</div>
+    {% endif %}
+
+    {% if invoice.posting_status == 'posted' %}
+        <div class="notice"><strong>Purchase posted:</strong> Official Purchase Invoice <strong>{{ invoice.official_purchase_invoice_number }}</strong> and Accounting Voucher <strong>{{ invoice.accounting_voucher_number }}</strong> were posted. The supplier payable is open for ₹{{ invoice.outstanding_amount }}. Stock was not increased again.</div>
+    {% elif invoice.posting_status == 'prepared' %}
+        <div class="notice warning"><strong>Prepared for checker posting:</strong> Voucher draft {{ invoice.accounting_voucher_reference }} passed Accounting validation. A different AVPL Admin or Super Admin must perform the final posting.</div>
+    {% elif invoice.posting_status == 'posting' %}
+        <div class="notice info"><strong>Posting in progress:</strong> Do not submit another request. Refresh after the current posting finishes.</div>
+    {% elif invoice.posting_status == 'recovery_required' %}
+        <div class="notice error"><strong>Safe recovery required:</strong> {{ invoice.posting_error or 'A posting step was completed but the document header needs a safe retry.' }}</div>
+    {% endif %}
+
+    {% if invoice.reverse_charge_declared %}<div class="notice warning"><strong>Reverse-charge review declared:</strong> No input GST is assumed automatically. The flag remains attached to the posted purchase document.</div>{% endif %}
+    {% if invoice.cancel_reason %}<div class="notice warning"><strong>Cancellation reason:</strong> {{ invoice.cancel_reason }}</div>{% endif %}
+
+    <div class="summary">
+        <div class="card"><small>Match Status</small><span class="status {{ invoice.status }}">{{ invoice.status_display }}</span></div>
+        <div class="card"><small>Posting Status</small><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></div>
+        <div class="card"><small>Invoice Date</small><strong>{{ invoice.invoice_date }}</strong></div>
+        <div class="card"><small>Due Date</small><strong>{{ invoice.due_date or '-' }}</strong></div>
+        <div class="card"><small>Declared Total</small><strong>₹{{ invoice.declared_total }}</strong></div>
+        <div class="card"><small>Payment Status</small><span class="status {{ invoice.payment_status }}">{{ invoice.payment_status_display }}</span></div>
+    </div>
+
+    <section class="section">
+        <div class="section-head"><h3>Stage 2 · Batch 2.5 Posting Control</h3><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></div>
+        <div class="posting-flow">
+            <div class="posting-step {{ 'done' if invoice.status in ['matched','matched_with_warnings'] else 'blocked' }}"><span>1. Three-Way Match</span><strong>{{ invoice.status_display }}</strong></div>
+            <div class="posting-step {{ 'done' if invoice.posting_status in ['prepared','posting','posted','recovery_required'] else 'current' }}"><span>2. Accounts Preparation</span><strong>{{ 'Completed' if invoice.posting_status in ['prepared','posting','posted','recovery_required'] else 'Pending' }}</strong></div>
+            <div class="posting-step {{ 'done' if invoice.posting_status == 'posted' else ('current' if invoice.posting_status in ['prepared','recovery_required'] else '') }}"><span>3. AVPL Checker Posting</span><strong>{{ 'Completed' if invoice.posting_status == 'posted' else 'Pending' }}</strong></div>
+            <div class="posting-step {{ 'done' if invoice.payable_posted else '' }}"><span>4. Supplier Payable</span><strong>{{ 'Open · ₹' ~ invoice.outstanding_amount if invoice.payable_posted else 'Not Posted' }}</strong></div>
+        </div>
+
+        <div class="posting-meta">
+            <div><small>Official Purchase Invoice</small><strong>{{ invoice.official_purchase_invoice_number or 'Generated only on final posting' }}</strong></div>
+            <div><small>Accounting Voucher</small><strong>{{ invoice.accounting_voucher_number or invoice.accounting_voucher_reference or 'Not prepared' }}</strong></div>
+            <div><small>Financial Year</small><strong>{{ invoice.financial_year_code or 'Resolved during preparation' }}</strong></div>
+            <div><small>Stock Effect</small><strong>No second stock increase</strong></div>
+        </div>
+
+        {% if invoice.status in ['matched','matched_with_warnings'] and invoice.blocking_mismatch_count == 0 %}
+            <div class="workflow" style="margin-top:15px">
+                {% if invoice.posting_status == 'not_posted' %}
+                    {% if session.get('role') in ['accounts','super_admin'] %}
+                        <form method="post" action="{{ url_for('admin.prepare_supplier_invoice_posting_view', invoice_id=invoice.id) }}">
+                            <input type="hidden" name="expected_version" value="{{ invoice.version }}">
+                            <button class="btn primary" type="submit">Prepare & Validate Posting</button>
+                        </form>
+                    {% else %}
+                        <div class="notice info" style="margin:0"><strong>Next action:</strong> An Accounts user must prepare the validated voucher draft. AVPL Admin performs the final checker posting.</div>
+                    {% endif %}
+                {% elif invoice.posting_status in ['prepared','recovery_required'] %}
+                    {% if session.get('role') in ['avpl_admin','super_admin'] %}
+                        {% if invoice.posting_prepared_by and invoice.posting_prepared_by == session.get('user_id')|string %}
+                            <div class="notice warning" style="margin:0"><strong>Maker-checker:</strong> The preparer cannot post the same purchase. Sign in as a different authorized checker.</div>
+                        {% else %}
+                            <form method="post" action="{{ url_for('admin.post_supplier_invoice_purchase_view', invoice_id=invoice.id) }}" onsubmit="return confirm('Post the official Purchase Invoice, Accounting voucher and supplier payable? Stock will not be increased again.');">
+                                <input type="hidden" name="expected_version" value="{{ invoice.version }}">
+                                <button class="btn dark" type="submit">{{ 'Retry Safe Posting' if invoice.posting_status == 'recovery_required' else 'Post Purchase Invoice & Payable' }}</button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <div class="notice info" style="margin:0"><strong>Next action:</strong> AVPL Admin must perform the final posting.</div>
+                    {% endif %}
+                {% elif invoice.posting_status == 'posted' %}
+                    <a class="btn dark" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print Official Purchase Invoice</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="section">
+        <h3>Supplier Invoice Header</h3>
+        <div class="summary" style="margin:0">
+            <div class="card"><small>Supplier</small><strong>{{ invoice.supplier_name }} · {{ invoice.supplier_code }}</strong></div>
+            <div class="card"><small>GST Profile</small><strong>{{ invoice.supplier_gst_registration_status|replace('_',' ')|title or 'Unregistered' }}</strong></div>
+            <div class="card"><small>GSTIN</small><strong>{{ invoice.supplier_gstin or 'Not applicable' }}</strong></div>
+            <div class="card"><small>Document Reference</small><strong>{{ invoice.document_reference or '-' }}</strong></div>
+            <div class="card"><small>Payment Terms</small><strong>{{ invoice.payment_terms or '-' }}</strong></div>
+            <div class="card"><small>Posting Evidence</small><strong>Voucher {{ 'Posted' if invoice.voucher_posted else 'Not posted' }} · Payable {{ 'Posted' if invoice.payable_posted else 'Not posted' }}</strong></div>
+        </div>
+        {% if invoice.remarks %}<div class="notice" style="margin-bottom:0"><strong>Remarks:</strong> {{ invoice.remarks }}</div>{% endif %}
+    </section>
+
+    <section class="section">
+        <h3>Product Comparison</h3>
+        <div class="table-wrap"><table class="table">
+            <thead><tr><th>#</th><th>Product</th><th>Accepted GRN</th><th>Previously Invoiced</th><th>Invoice Qty</th><th>PO / Invoice Rate</th><th>PO / Invoice Discount</th><th>PO / Invoice HSN</th><th>PO / Invoice GST</th><th>Taxable</th><th>Tax</th><th>Total</th></tr></thead>
+            <tbody>
+            {% for item in invoice.get('items', []) %}
+                <tr>
+                    <td>{{ item.line_no }}</td>
+                    <td><strong>{{ item.product_name }}</strong><br><small>{{ item.product_code }} · {{ item.unit_code }}</small></td>
+                    <td>{{ item.accepted_grn_quantity }}</td>
+                    <td>{{ item.previously_invoiced_quantity }}</td>
+                    <td><strong>{{ item.invoice_quantity }}</strong></td>
+                    <td>₹{{ item.po_rate }} / <strong>₹{{ item.rate }}</strong></td>
+                    <td>{{ item.po_discount_percent }}% / <strong>{{ item.discount_percent }}%</strong></td>
+                    <td>{{ item.po_hsn_code }} / <strong>{{ item.hsn_code }}</strong></td>
+                    <td>{{ item.po_gst_rate }}% / <strong>{{ item.gst_rate }}%</strong></td>
+                    <td>₹{{ item.taxable_value }}</td>
+                    <td>₹{{ item.tax_amount }}<br><small>CGST {{ item.cgst_rate }}% · SGST {{ item.sgst_rate }}% · IGST {{ item.igst_rate }}%</small></td>
+                    <td><strong>₹{{ item.line_total }}</strong></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    </section>
+
+    <section class="section">
+        <h3>Three-Way Match Findings</h3>
+        {% if invoice.get('match_results', []) %}
+        <div class="table-wrap"><table class="table compact">
+            <thead><tr><th>Severity</th><th>Code</th><th>Line</th><th>Finding</th><th>Expected</th><th>Actual</th></tr></thead>
+            <tbody>
+            {% for finding in invoice.get('match_results', []) %}
+                <tr>
+                    <td><span class="severity {{ finding.severity }}">{{ finding.severity|title }}</span></td>
+                    <td><strong>{{ finding.code }}</strong></td>
+                    <td>{{ finding.line_no or '-' }}</td>
+                    <td>{{ finding.message }}</td>
+                    <td>{{ finding.expected if finding.expected is not none else '-' }}</td>
+                    <td>{{ finding.actual if finding.actual is not none else '-' }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+        {% else %}
+            <div class="notice" style="margin-bottom:0"><strong>No exceptions:</strong> PO, posted GRN and Supplier Invoice values matched.</div>
+        {% endif %}
+    </section>
+
+    <section class="section">
+        <h3>Posted GRN Evidence</h3>
+        <div class="table-wrap"><table class="table compact">
+            <thead><tr><th>GRN</th><th>Receipt Date</th><th>Accepted Quantity</th><th>Warehouse</th></tr></thead>
+            <tbody>
+            {% for grn in invoice.get('posted_grn_snapshots', []) %}
+                <tr><td><strong>{{ grn.grn_number }}</strong></td><td>{{ grn.receipt_date }}</td><td>{{ grn.accepted_quantity_total }}</td><td>{{ grn.warehouse_code }}{% if grn.warehouse_name %} · {{ grn.warehouse_name }}{% endif %}</td></tr>
+            {% else %}<tr><td colspan="4">No posted GRN evidence was available when this match was calculated.</td></tr>{% endfor %}
+            </tbody>
+        </table></div>
+    </section>
+
+    <section class="section"><h3>Totals</h3><div class="total-box">
+        <div class="total-row"><span>Subtotal</span><strong>₹{{ invoice.subtotal }}</strong></div>
+        <div class="total-row"><span>Discount</span><strong>₹{{ invoice.discount_total }}</strong></div>
+        <div class="total-row"><span>Taxable Value</span><strong>₹{{ invoice.taxable_total }}</strong></div>
+        <div class="total-row"><span>CGST / SGST / IGST</span><strong>₹{{ invoice.cgst_total }} / ₹{{ invoice.sgst_total }} / ₹{{ invoice.igst_total }}</strong></div>
+        <div class="total-row"><span>Freight / Other / Round-off</span><strong>₹{{ invoice.freight_amount }} / ₹{{ invoice.other_charges }} / ₹{{ invoice.round_off }}</strong></div>
+        <div class="total-row"><span>Calculated Total</span><strong>₹{{ invoice.computed_total }}</strong></div>
+        <div class="total-row grand"><span>Supplier Declared Total</span><strong>₹{{ invoice.declared_total }}</strong></div>
+        {% if invoice.payable_posted %}<div class="total-row grand"><span>Outstanding Payable</span><strong>₹{{ invoice.outstanding_amount }}</strong></div>{% endif %}
+    </div></section>
+
+    {% if invoice.status != 'cancelled' and invoice.posting_status == 'not_posted' %}
+    <section class="section"><h3>Document Action</h3><div class="workflow">
+        <form method="post" action="{{ url_for('admin.cancel_supplier_invoice_view', invoice_id=invoice.id) }}">
+            <input type="hidden" name="expected_version" value="{{ invoice.version }}">
+            <input class="reason" name="reason" placeholder="Cancellation reason" required>
+            <button class="btn danger">Cancel Supplier Invoice</button>
+        </form>
+    </div></section>
+    {% endif %}
+
+    <section class="section"><h3>Audit History</h3><div class="history">{% for event in invoice.change_history|reverse %}<div class="history-item"><strong>{{ event.action|replace('_',' ')|title }}</strong> · {{ event.actor_name }} ({{ event.actor_role|replace('_',' ')|title }}){% if event.reason %}<br>{{ event.reason }}{% endif %}</div>{% else %}<div class="history-item">No history available.</div>{% endfor %}</div></section>
+</div>
+{% endblock %}

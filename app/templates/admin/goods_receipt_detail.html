@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Goods Receipt {{ receipt.grn_number }}{% endblock %}
+{% block content %}
+<style>
+.detail{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B}.links{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;border-radius:999px;border:1px solid #CFE2D5;background:#fff;color:#425466;text-decoration:none;font:inherit;font-weight:800;cursor:pointer}.btn.primary{background:#5FA878;border-color:#5FA878;color:#fff}.btn.post{background:#2F7A4C;border-color:#2F7A4C;color:#fff}.btn.warning{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.btn.danger{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.notice{margin:17px 0;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.notice.warning{border-color:#F4D38A;background:#FFF8E8;color:#6B5316}.notice.error{border-color:#FECACA;background:#FEF2F2;color:#991B1B}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}.card{padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC}.card small{display:block;color:#64748B;margin-bottom:4px}.card strong{color:#17252A}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:900;border:1px solid}.status.posted{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.pending_approval,.status.returned_for_correction{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.draft{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}.status.cancelled{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.section{margin-top:15px;padding:17px;border:1px solid #E2EFE6;border-radius:18px;background:#FCFEFC}.section h3{margin:0 0 13px;color:#17252A}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:1350px}.table th,.table td{padding:10px;border-bottom:1px solid #E2EFE6;text-align:left;vertical-align:top}.table th{color:#64748B;font-size:.84rem}.good{color:#237A43;font-weight:900}.bad{color:#B91C1C;font-weight:900}.workflow{display:flex;gap:8px;flex-wrap:wrap}.workflow form{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.reason{height:38px;min-width:210px;border:1px solid #D6E5DA;border-radius:999px;padding:0 12px;font:inherit}.history{display:grid;gap:8px}.history-item{padding:10px 12px;border-left:3px solid #5FA878;background:#fff;border-radius:0 12px 12px 0;color:#52635A}.history-item strong{color:#263B31}
+@media(max-width:1000px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:650px){.detail{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr}.links,.links .btn,.workflow form,.workflow .btn,.reason{width:100%}}
+</style>
+<div class="detail">
+    <div class="head">
+        <div><h2>{{ receipt.grn_number }}</h2><p>{{ receipt.supplier_name }} · {{ receipt.po_number }}</p></div>
+        <div class="links">
+            <a class="btn" href="{{ url_for('admin.goods_receipts') }}">Back</a>
+            <a class="btn" href="{{ url_for('admin.purchase_order_detail', order_id=receipt.purchase_order_id) }}">View Purchase Order</a>
+            {% if receipt.status in ['draft','returned_for_correction'] %}<a class="btn primary" href="{{ url_for('admin.edit_goods_receipt_view', receipt_id=receipt.id) }}">Edit</a>{% endif %}
+            {% if receipt.status == 'posted' %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=receipt.purchase_order_id) }}">Record Supplier Invoice</a>{% endif %}
+        </div>
+    </div>
+
+    <div class="notice"><strong>Stock control:</strong> {{ receipt.accepted_quantity_total }} accepted units were eligible for stock posting. Rejected and damaged quantities remain outside available AVPL stock.</div>
+    {% if receipt.posting_error %}<div class="notice error"><strong>Posting recovery required:</strong> {{ receipt.posting_error }}. Retry posting after resolving the displayed cause; source-line idempotency prevents accepted stock from being added twice.</div>{% endif %}
+    {% if receipt.return_reason %}<div class="notice warning"><strong>Returned for correction:</strong> {{ receipt.return_reason }}</div>{% endif %}
+    {% if receipt.cancel_reason %}<div class="notice warning"><strong>Cancellation reason:</strong> {{ receipt.cancel_reason }}</div>{% endif %}
+
+    <div class="summary">
+        <div class="card"><small>Status</small><span class="status {{ receipt.status }}">{{ receipt.status_display }}</span></div>
+        <div class="card"><small>Receipt Date</small><strong>{{ receipt.receipt_date }}</strong></div>
+        <div class="card"><small>Physical Received</small><strong>{{ receipt.received_quantity_total }}</strong></div>
+        <div class="card"><small>Accepted</small><strong>{{ receipt.accepted_quantity_total }}</strong></div>
+        <div class="card"><small>Rejected</small><strong>{{ receipt.rejected_quantity_total }}</strong></div>
+        <div class="card"><small>Damaged</small><strong>{{ receipt.damaged_quantity_total }}</strong></div>
+    </div>
+
+    <section class="section">
+        <h3>Delivery and Warehouse</h3>
+        <div class="summary" style="margin:0">
+            <div class="card"><small>Supplier Delivery Note</small><strong>{{ receipt.supplier_delivery_note or '-' }}</strong></div>
+            <div class="card"><small>Transporter</small><strong>{{ receipt.transporter_name or '-' }}</strong></div>
+            <div class="card"><small>Vehicle</small><strong>{{ receipt.vehicle_number or '-' }}</strong></div>
+            <div class="card"><small>Warehouse</small><strong>{{ receipt.warehouse_code }} · {{ receipt.warehouse_name }}</strong></div>
+            <div class="card"><small>Bin / Rack</small><strong>{{ receipt.warehouse_bin or '-' }}</strong></div>
+            <div class="card"><small>Stock Posted</small><strong>{{ 'Yes' if receipt.stock_posted else 'No' }}</strong></div>
+        </div>
+        {% if receipt.inspection_note %}<div class="notice" style="margin-bottom:0"><strong>Inspection note:</strong> {{ receipt.inspection_note }}</div>{% endif %}
+    </section>
+
+    <section class="section">
+        <h3>Product Receipt Lines</h3>
+        <div class="table-wrap"><table class="table">
+            <thead><tr><th>#</th><th>Product</th><th>PO Ordered</th><th>Previously Accepted</th><th>Physical Received</th><th>Accepted</th><th>Rejected</th><th>Damaged</th><th>Pending After</th><th>Batch / Barcode</th><th>Manufacturing / Expiry</th><th>Stock</th></tr></thead>
+            <tbody>
+            {% for item in receipt.get('items', []) %}
+                <tr>
+                    <td>{{ item.line_no }}</td>
+                    <td><strong>{{ item.product_name }}</strong><br><small>{{ item.product_code }} · HSN {{ item.hsn_code }} · {{ item.unit_code }}</small></td>
+                    <td>{{ item.ordered_quantity }}</td>
+                    <td>{{ item.previous_accepted_quantity }}</td>
+                    <td>{{ item.received_quantity }}</td>
+                    <td class="good">{{ item.accepted_quantity }}</td>
+                    <td class="bad">{{ item.rejected_quantity }}</td>
+                    <td class="bad">{{ item.damaged_quantity }}</td>
+                    <td>{{ item.pending_quantity_after }}</td>
+                    <td>{{ item.batch_number or '-' }}<br><small>{{ item.barcode or 'No barcode' }}</small></td>
+                    <td>{{ item.manufacturing_date or '-' }}<br><small>Expiry: {{ item.expiry_date or '-' }}</small></td>
+                    <td>{% if receipt.stock_posted and item.accepted_quantity|float > 0 %}<span class="good">Posted</span>{% elif item.accepted_quantity|float > 0 %}Pending{% else %}Not applicable{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    </section>
+
+    <section class="section"><h3>Workflow Actions</h3><div class="workflow">
+        {% if receipt.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('admin.submit_goods_receipt_view', receipt_id=receipt.id) }}"><input type="hidden" name="expected_version" value="{{ receipt.version }}"><button class="btn primary">Submit for Posting</button></form>{% endif %}
+        {% if receipt.status in ['draft','pending_approval','returned_for_correction'] and session.get('role') in ['avpl_admin','super_admin'] %}<form method="post" action="{{ url_for('admin.post_goods_receipt_view', receipt_id=receipt.id) }}"><input type="hidden" name="expected_version" value="{{ receipt.version }}"><input class="reason" name="posting_note" placeholder="Posting note (optional)"><button class="btn post">Post Accepted Stock</button></form>{% endif %}
+        {% if receipt.status == 'pending_approval' and session.get('role') in ['avpl_admin','super_admin'] %}<form method="post" action="{{ url_for('admin.return_goods_receipt_view', receipt_id=receipt.id) }}"><input type="hidden" name="expected_version" value="{{ receipt.version }}"><input class="reason" name="reason" placeholder="Correction reason" required><button class="btn warning">Return</button></form>{% endif %}
+        {% if receipt.status not in ['posted','cancelled'] %}<form method="post" action="{{ url_for('admin.cancel_goods_receipt_view', receipt_id=receipt.id) }}"><input type="hidden" name="expected_version" value="{{ receipt.version }}"><input class="reason" name="reason" placeholder="Cancellation reason" required><button class="btn danger">Cancel</button></form>{% endif %}
+    </div></section>
+
+    <section class="section"><h3>Audit History</h3><div class="history">{% for event in receipt.change_history|reverse %}<div class="history-item"><strong>{{ event.action|replace('_',' ')|title }}</strong> · {{ event.actor_name }} ({{ event.actor_role|replace('_',' ')|title }}){% if event.reason %}<br>{{ event.reason }}{% endif %}</div>{% else %}<div class="history-item">No history available.</div>{% endfor %}</div></section>
+</div>
+{% endblock %}

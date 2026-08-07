@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }} · Print</title>
+    <style>
+        *{box-sizing:border-box}body{margin:0;background:#eef6f0;color:#17252A;font-family:"Times New Roman",Georgia,serif}.print-toolbar{position:sticky;top:0;z-index:5;display:flex;justify-content:center;gap:10px;padding:12px;background:#173c27}.print-toolbar button,.print-toolbar a{min-height:40px;padding:8px 18px;border-radius:999px;border:1px solid #d3e8da;background:#fff;color:#234c34;text-decoration:none;font:inherit;font-weight:800;cursor:pointer}.print-toolbar button{background:#5FA878;border-color:#5FA878;color:#fff}.sheet{width:210mm;min-height:297mm;margin:16px auto;padding:13mm;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.14)}.header{display:grid;grid-template-columns:1fr auto;gap:18px;padding-bottom:12px;border-bottom:2px solid #2f7a4c}.brand{display:flex;gap:13px;align-items:flex-start}.brand img{width:90px;height:54px;object-fit:contain}.brand h1{margin:0 0 4px;font-size:22px}.brand p,.doc-head p{margin:2px 0;color:#52635A;font-size:12px;line-height:1.35}.doc-head{text-align:right}.doc-head h2{margin:0 0 5px;font-size:24px;color:#2F7A4C}.badge{display:inline-block;padding:4px 9px;border:1px solid #b7e4c7;border-radius:999px;background:#f3fbf6;color:#237a43;font-size:11px;font-weight:800}.badge.unposted{border-color:#f4d38a;background:#fff8e8;color:#8a5b00}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.meta div{padding:8px;border:1px solid #dceee2;border-radius:9px}.meta small{display:block;color:#64748B;margin-bottom:3px;font-size:10px}.meta strong{font-size:12px;overflow-wrap:anywhere}.parties{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.party{padding:10px;border:1px solid #dceee2;border-radius:10px;min-height:115px}.party h3{margin:0 0 7px;font-size:13px;color:#2F7A4C;text-transform:uppercase;letter-spacing:.04em}.party p{margin:2px 0;font-size:11px;line-height:1.35}.table{width:100%;border-collapse:collapse;font-size:10.5px}.table th,.table td{border:1px solid #cedfd3;padding:6px 5px;vertical-align:top}.table th{background:#f1f8f3;color:#2d5139;text-align:left}.num{text-align:right;white-space:nowrap}.totals-wrap{display:grid;grid-template-columns:1fr 78mm;gap:14px;margin-top:10px}.notes{font-size:10.5px;line-height:1.45}.notes h3{margin:0 0 5px;font-size:12px}.totals{width:100%;border-collapse:collapse;font-size:11px}.totals td{padding:5px 0;border-bottom:1px solid #e2efe6}.totals td:last-child{text-align:right;font-weight:700}.totals .grand td{padding-top:8px;border-top:2px solid #2F7A4C;border-bottom:0;font-size:14px;color:#173c27}.posting{margin-top:12px;padding:10px;border:1px solid #dceee2;border-radius:10px;background:#f9fcfa}.posting-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.posting small{display:block;color:#64748B;margin-bottom:2px;font-size:9px}.posting strong{font-size:10.5px}.footer{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:28px}.signature{padding-top:32px;border-top:1px solid #74877a;text-align:center;font-size:11px}.legal{margin-top:16px;padding-top:8px;border-top:1px solid #dceee2;text-align:center;color:#64748B;font-size:9.5px}.watermark{position:fixed;inset:45% 0 auto;text-align:center;font-size:52px;font-weight:900;color:rgba(138,91,0,.06);transform:rotate(-18deg);pointer-events:none}.unposted-note{margin:10px 0;padding:8px;border:1px solid #f4d38a;background:#fff8e8;color:#6b5316;font-size:10.5px;text-align:center}
+        @page{size:A4;margin:8mm}@media print{body{background:#fff}.print-toolbar{display:none}.sheet{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}.watermark{position:fixed}.unposted-note{break-inside:avoid}a{color:inherit;text-decoration:none}}
+        @media(max-width:900px){.sheet{width:100%;min-height:auto;margin:0;padding:16px}.meta{grid-template-columns:repeat(2,1fr)}.parties,.totals-wrap{grid-template-columns:1fr}.posting-grid{grid-template-columns:repeat(2,1fr)}}
+    </style>
+</head>
+<body>
+    <div class="print-toolbar">
+        <a href="{{ url_for('admin.supplier_invoice_detail', invoice_id=invoice.id) }}">Back to Invoice</a>
+        <button type="button" onclick="window.print()">Print / Save as PDF</button>
+    </div>
+
+    {% if not is_posted %}<div class="watermark">UNPOSTED MATCHING COPY</div>{% endif %}
+
+    <main class="sheet">
+        <header class="header">
+            <div class="brand">
+                <img src="{{ url_for('static', filename='images/unnatfarmlogo.png') }}" alt="UnnatFarm">
+                <div>
+                    <h1>{{ entity.trade_name or entity.legal_name }}</h1>
+                    <p>{{ entity.legal_name }}</p>
+                    <p>{{ entity.address_line_1 }}{% if entity.address_line_2 %}, {{ entity.address_line_2 }}{% endif %}</p>
+                    <p>{{ entity.city }}{% if entity.district %}, {{ entity.district }}{% endif %}{% if entity.state %}, {{ entity.state }}{% endif %} {{ entity.postal_code }}</p>
+                    <p>GSTIN: {{ entity.gstin or 'Not applicable' }} · PAN: {{ entity.pan or '-' }}</p>
+                </div>
+            </div>
+            <div class="doc-head">
+                <h2>{{ document_title }}</h2>
+                <span class="badge {{ 'unposted' if not is_posted else '' }}">{{ 'POSTED' if is_posted else 'UNPOSTED REVIEW COPY' }}</span>
+                <p><strong>{{ invoice.official_purchase_invoice_number or invoice.internal_reference }}</strong></p>
+                <p>Generated: {{ generated_at }}</p>
+            </div>
+        </header>
+
+        {% if not is_posted %}<div class="unposted-note"><strong>Control notice:</strong> This is a printable three-way-match copy. It is not an official posted Purchase Invoice until checker posting is completed.</div>{% endif %}
+
+        <section class="meta">
+            <div><small>Supplier Invoice No.</small><strong>{{ invoice.supplier_invoice_number }}</strong></div>
+            <div><small>Supplier Invoice Date</small><strong>{{ invoice.invoice_date }}</strong></div>
+            <div><small>Purchase Order</small><strong>{{ invoice.po_number }}</strong></div>
+            <div><small>Due Date</small><strong>{{ invoice.due_date or '-' }}</strong></div>
+            <div><small>Internal Reference</small><strong>{{ invoice.internal_reference }}</strong></div>
+            <div><small>Match Status</small><strong>{{ invoice.status_display }}</strong></div>
+            <div><small>Posting Status</small><strong>{{ invoice.posting_status_display }}</strong></div>
+            <div><small>Payment Status</small><strong>{{ invoice.payment_status_display }}</strong></div>
+        </section>
+
+        <section class="parties">
+            <div class="party">
+                <h3>Supplier</h3>
+                <p><strong>{{ supplier.legal_name }}</strong></p>
+                <p>{{ supplier.address_line_1 }}{% if supplier.address_line_2 %}, {{ supplier.address_line_2 }}{% endif %}</p>
+                <p>{{ supplier.city }}{% if supplier.district %}, {{ supplier.district }}{% endif %}{% if supplier.state_name %}, {{ supplier.state_name }}{% endif %} {{ supplier.postal_code }}</p>
+                <p>GST Profile: {{ supplier.gst_registration_status|replace('_',' ')|title }}</p>
+                <p>GSTIN: {{ supplier.gstin or 'Not applicable' }} · PAN: {{ supplier.pan or '-' }}</p>
+                <p>{{ supplier.phone }}{% if supplier.email %} · {{ supplier.email }}{% endif %}</p>
+            </div>
+            <div class="party">
+                <h3>Bill To / Recipient</h3>
+                <p><strong>{{ entity.legal_name }}</strong></p>
+                <p>{{ entity.address_line_1 }}{% if entity.address_line_2 %}, {{ entity.address_line_2 }}{% endif %}</p>
+                <p>{{ entity.city }}{% if entity.district %}, {{ entity.district }}{% endif %}{% if entity.state %}, {{ entity.state }}{% endif %} {{ entity.postal_code }}</p>
+                <p>State Code: {{ entity.state_code or '-' }}</p>
+                <p>GSTIN: {{ entity.gstin or 'Not applicable' }}</p>
+                <p>Payment Terms: {{ invoice.payment_terms or '-' }}</p>
+            </div>
+        </section>
+
+        <table class="table">
+            <thead>
+                <tr><th>#</th><th>Product / Description</th><th>HSN</th><th>Qty</th><th>Unit</th><th class="num">Rate</th><th class="num">Discount</th><th class="num">Taxable</th><th class="num">GST</th><th class="num">Line Total</th></tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.get('items', []) %}
+                <tr>
+                    <td>{{ item.line_no }}</td>
+                    <td><strong>{{ item.product_name }}</strong><br>{{ item.product_code }}</td>
+                    <td>{{ item.hsn_code }}<br>{{ item.taxability_code }}</td>
+                    <td class="num">{{ item.invoice_quantity }}</td>
+                    <td>{{ item.unit_code }}</td>
+                    <td class="num">₹{{ item.rate }}</td>
+                    <td class="num">{{ item.discount_percent }}%<br>₹{{ item.discount_amount }}</td>
+                    <td class="num">₹{{ item.taxable_value }}</td>
+                    <td class="num">₹{{ item.tax_amount }}<br>{% if item.igst_amount|float > 0 %}IGST {{ item.igst_rate }}%{% elif item.tax_amount|float > 0 %}CGST {{ item.cgst_rate }}% + SGST {{ item.sgst_rate }}%{% else %}No GST{% endif %}</td>
+                    <td class="num"><strong>₹{{ item.line_total }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <section class="totals-wrap">
+            <div class="notes">
+                <h3>Document Notes</h3>
+                <div>Posted GRNs: {% for grn in invoice.get('posted_grn_snapshots', []) %}{{ grn.grn_number }}{% if not loop.last %}, {% endif %}{% else %}None{% endfor %}</div>
+                <div>Reverse charge review: {{ 'Declared for review' if invoice.reverse_charge_declared else 'Not declared' }}</div>
+                <div>Stock control: Accepted stock was added only through posted GRN(s). Purchase posting does not increase stock again.</div>
+                {% if invoice.remarks %}<div>Remarks: {{ invoice.remarks }}</div>{% endif %}
+            </div>
+            <table class="totals">
+                <tr><td>Subtotal</td><td>₹{{ invoice.subtotal }}</td></tr>
+                <tr><td>Discount</td><td>₹{{ invoice.discount_total }}</td></tr>
+                <tr><td>Taxable Value</td><td>₹{{ invoice.taxable_total }}</td></tr>
+                <tr><td>CGST</td><td>₹{{ invoice.cgst_total }}</td></tr>
+                <tr><td>SGST</td><td>₹{{ invoice.sgst_total }}</td></tr>
+                <tr><td>IGST</td><td>₹{{ invoice.igst_total }}</td></tr>
+                <tr><td>Freight</td><td>₹{{ invoice.freight_amount }}</td></tr>
+                <tr><td>Other Charges</td><td>₹{{ invoice.other_charges }}</td></tr>
+                <tr><td>Round-off</td><td>₹{{ invoice.round_off }}</td></tr>
+                <tr class="grand"><td>Grand Total</td><td>₹{{ invoice.grand_total }}</td></tr>
+                {% if invoice.payable_posted %}<tr><td>Outstanding</td><td>₹{{ invoice.outstanding_amount }}</td></tr>{% endif %}
+            </table>
+        </section>
+
+        <section class="posting">
+            <div class="posting-grid">
+                <div><small>Official Purchase Invoice</small><strong>{{ invoice.official_purchase_invoice_number or 'Not posted' }}</strong></div>
+                <div><small>Accounting Voucher</small><strong>{{ invoice.accounting_voucher_number or invoice.accounting_voucher_reference or 'Not prepared' }}</strong></div>
+                <div><small>Financial Year</small><strong>{{ invoice.financial_year_code or '-' }}</strong></div>
+                <div><small>Supplier Payable</small><strong>{{ '₹' ~ invoice.outstanding_amount ~ ' open' if invoice.payable_posted else 'Not posted' }}</strong></div>
+            </div>
+        </section>
+
+        <section class="footer">
+            <div class="signature">Prepared / Verified By</div>
+            <div class="signature">Authorized Signatory — {{ entity.trade_name or entity.legal_name }}</div>
+        </section>
+        <div class="legal">Computer-generated procurement document from UnnatFarm MIS. The supplier's original legal tax invoice remains the source document; this copy records AVPL's purchase and Accounting posting.</div>
+    </main>
+</body>
+</html>

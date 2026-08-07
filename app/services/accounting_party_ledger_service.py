@@ -1589,3 +1589,273 @@ def get_active_party_ledger_for_posting(accounting_entity_id, ledger_id, party_r
     if not ledger:
         raise ValueError("The selected party ledger is not active for posting.")
     return ledger
+
+
+# ---------------------------------------------------------------------------
+# Stage 2 AVPL Supplier Master integration
+# ---------------------------------------------------------------------------
+
+
+def create_supplier_from_operational_master(
+    accounting_entity_id,
+    actor_user_id,
+    raw_payload,
+):
+    """
+    Create a supplier in the existing Accounting party-ledger master.
+
+    Accounts users create a normal maker draft. AVPL Admin and Super Admin
+    create an immediately active supplier because they are the authorized
+    checker for the AVPL supplier master.
+    """
+    actor = _get_actor(
+        actor_user_id,
+        allowed_roles={"accounts", "avpl_admin", "super_admin"},
+    )
+    payload = dict(raw_payload or {})
+    payload["party_role"] = PARTY_ROLE_SUPPLIER
+
+    if actor.get("resolved_role") == "accounts":
+        return create_party_ledger(
+            accounting_entity_id,
+            actor_user_id,
+            payload,
+        )
+
+    entity = _assert_active_avpl_entity(accounting_entity_id)
+    _require_permission(actor, entity["_id"], APPROVE_PERMISSION)
+    ensure_party_ledger_indexes()
+    ensure_account_group_indexes()
+
+    canonical = _validate_party_payload(payload, entity)
+    timestamp = now_utc()
+    canonical.update(
+        {
+            "requires_approval": False,
+            "approval_policy": "avpl_admin_auto_approval",
+        }
+    )
+    document = {
+        **canonical,
+        "party_master_id": uuid4().hex,
+        "status": STATUS_ACTIVE,
+        "is_active": True,
+        "version": 1,
+        "revision_number": 1,
+        "created_by": actor["_id"],
+        "created_by_str": str(actor["_id"]),
+        "created_by_name": actor.get("resolved_name") or "",
+        "created_at": timestamp,
+        "updated_by": actor["_id"],
+        "updated_by_str": str(actor["_id"]),
+        "updated_by_name": actor.get("resolved_name") or "",
+        "updated_at": timestamp,
+        "approved_by": actor["_id"],
+        "approved_by_str": str(actor["_id"]),
+        "approved_by_name": actor.get("resolved_name") or "",
+        "approved_at": timestamp,
+        "approval_note": "Auto-approved from AVPL Supplier Master.",
+        "change_history": [
+            _change_event(
+                "create_and_activate_supplier",
+                actor,
+                previous_status=None,
+                new_status=STATUS_ACTIVE,
+                changed_fields=sorted(canonical.keys()),
+                remarks="Supplier created and activated by AVPL Admin.",
+            )
+        ],
+        "audit_sync_required": False,
+    }
+
+    try:
+        result = mongo.db[LEDGER_COLLECTION].insert_one(document)
+        document["_id"] = result.inserted_id
+    except DuplicateKeyError as exc:
+        raise RuntimeError(
+            "A supplier with the same code, name or GST identity already exists."
+        ) from exc
+
+    _record_audit(
+        document,
+        actor,
+        "create_and_activate_supplier",
+        previous_status=None,
+        changed_fields=sorted(canonical.keys()),
+        remarks="Supplier created and activated from AVPL Supplier Master.",
+    )
+    return {
+        "ledger": serialize_party_ledger(document),
+        "message": "Supplier created and activated successfully.",
+    }
+
+
+def update_supplier_from_operational_master(
+    ledger_id,
+    actor_user_id,
+    raw_payload,
+    expected_version,
+):
+    """Update a supplier without creating a duplicate operational master."""
+    actor = _get_actor(
+        actor_user_id,
+        allowed_roles={"accounts", "avpl_admin", "super_admin"},
+    )
+    payload = dict(raw_payload or {})
+    payload["party_role"] = PARTY_ROLE_SUPPLIER
+
+    if actor.get("resolved_role") == "accounts":
+        return update_party_ledger(
+            ledger_id,
+            actor_user_id,
+            payload,
+            expected_version,
+        )
+
+    ledger = _get_party_ledger(ledger_id)
+    if ledger.get("party_role") != PARTY_ROLE_SUPPLIER:
+        raise ValueError("The selected ledger is not a supplier.")
+
+    entity = _assert_party_ledger_entity_access(
+        actor,
+        ledger,
+        APPROVE_PERMISSION,
+    )
+    if ledger.get("status") not in {STATUS_ACTIVE, STATUS_INACTIVE}:
+        raise ValueError(
+            "Pending supplier requests must be approved or returned before editing."
+        )
+
+    try:
+        version = int(expected_version)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid supplier version. Refresh and try again.") from exc
+    if version != int(ledger.get("version") or 1):
+        raise RuntimeError("This supplier changed. Refresh before saving.")
+
+    canonical = _validate_party_payload(payload, entity, existing=ledger)
+    canonical.update(
+        {
+            "requires_approval": False,
+            "approval_policy": "avpl_admin_auto_approval",
+        }
+    )
+    changed_fields = [
+        key for key, value in canonical.items() if ledger.get(key) != value
+    ]
+    if not changed_fields:
+        return {
+            "ledger": serialize_party_ledger(ledger),
+            "message": "No supplier changes were detected.",
+        }
+
+    timestamp = now_utc()
+    updates = {key: canonical[key] for key in changed_fields}
+    updates.update(
+        {
+            "version": version + 1,
+            "revision_number": int(ledger.get("revision_number") or 1) + 1,
+            "updated_by": actor["_id"],
+            "updated_by_str": str(actor["_id"]),
+            "updated_by_name": actor.get("resolved_name") or "",
+            "updated_at": timestamp,
+        }
+    )
+
+    try:
+        result = mongo.db[LEDGER_COLLECTION].update_one(
+            {
+                "_id": ledger["_id"],
+                "version": version,
+                "status": ledger.get("status"),
+            },
+            {
+                "$set": updates,
+                "$push": {
+                    "change_history": _change_event(
+                        "update_active_supplier",
+                        actor,
+                        previous_status=ledger.get("status"),
+                        new_status=ledger.get("status"),
+                        changed_fields=changed_fields,
+                        remarks="Supplier master updated by AVPL Admin.",
+                    )
+                },
+            },
+        )
+    except DuplicateKeyError as exc:
+        raise RuntimeError(
+            "A supplier with the same code, name or GST identity already exists."
+        ) from exc
+
+    if result.matched_count != 1:
+        raise RuntimeError("This supplier changed. Refresh before saving.")
+
+    updated = _get_party_ledger(ledger_id)
+    _record_audit(
+        updated,
+        actor,
+        "update_active_supplier",
+        previous_status=ledger.get("status"),
+        changed_fields=changed_fields,
+        remarks="Supplier master updated from the AVPL operational screen.",
+    )
+    return {
+        "ledger": serialize_party_ledger(updated),
+        "message": "Supplier updated successfully.",
+    }
+
+
+def get_supplier_master_overview(accounting_entity_id, actor_user_id):
+    """Return only supplier party ledgers for the AVPL Supplier Master page."""
+    actor = _get_actor(
+        actor_user_id,
+        allowed_roles={"accounts", "avpl_admin", "super_admin"},
+    )
+    entity = _assert_active_avpl_entity(accounting_entity_id)
+    _require_permission(actor, entity["_id"], VIEW_PERMISSION)
+    ensure_party_ledger_indexes()
+
+    rows = list(
+        mongo.db[LEDGER_COLLECTION].find(
+            {
+                "accounting_entity_id": entity["_id"],
+                "is_party_ledger": True,
+                "party_role": PARTY_ROLE_SUPPLIER,
+                "is_deleted": False,
+            }
+        ).sort([("updated_at", DESCENDING), ("name", ASCENDING)])
+    )
+    serialized = [serialize_party_ledger(row) for row in rows]
+    counts = {status: 0 for status in STATUS_LABELS}
+    for row in rows:
+        status = row.get("status") or STATUS_DRAFT
+        counts[status] = counts.get(status, 0) + 1
+
+    return {
+        "entity_id": str(entity["_id"]),
+        "entity_code": entity.get("entity_code") or AVPL_ENTITY_CODE,
+        "entity_name": entity.get("name") or entity.get("legal_name") or "AVPL",
+        "rows": serialized,
+        "active_rows": [row for row in serialized if row["status"] == STATUS_ACTIVE],
+        "pending_rows": [
+            row for row in serialized if row["status"] == STATUS_PENDING_APPROVAL
+        ],
+        "working_rows": [
+            row for row in serialized if row["status"] in EDITABLE_STATUSES
+        ],
+        "inactive_rows": [
+            row for row in serialized if row["status"] == STATUS_INACTIVE
+        ],
+        "counts": counts,
+        "total_count": len(serialized),
+        "options": get_party_ledger_option_catalog(entity["_id"]),
+        "form_defaults": {
+            "party_role": PARTY_ROLE_SUPPLIER,
+            "gst_registration_status": "unregistered",
+            "state_name": "Assam",
+            "state_code": INDIA_STATE_CODES.get("Assam", "18"),
+            "credit_period_days": _default_credit_days(entity["_id"]),
+            "credit_limit": "0.00",
+        },
+    }
