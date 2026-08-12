@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Stock Movements{% endblock %}
+{% block content %}
+<style>
+.mov-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B;max-width:760px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:999px;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C;text-decoration:none;font-weight:900}.summary{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.summary span{padding:7px 11px;border-radius:999px;background:#F8FCF9;border:1px solid #E2EFE6;color:#475569;font-weight:800}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin-bottom:14px}.toolbar input,.toolbar select{height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 13px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 17px;background:#5FA878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.note{padding:11px 13px;margin-bottom:14px;border:1px solid #B9DCCA;border-radius:14px;background:#F3FBF6;color:#3E6850}.table-wrap{overflow:auto;border:1px solid #E2EFE6;border-radius:16px}.table{width:100%;min-width:1180px;border-collapse:collapse}.table th{padding:10px;background:#EFF7F1;color:#4B6255;text-align:left;font-size:.8rem;white-space:nowrap}.table td{padding:11px 10px;border-top:1px solid #EDF3EF;color:#334155;vertical-align:top}.product strong{display:block;color:#17252A}.product small{color:#64748B}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:900;border:1px solid #DCEEE2;background:#F8FCF9;color:#486252}.qty{font-weight:900}.qty.in{color:#047857}.qty.out{color:#B91C1C}.qty.reserve,.qty.release,.qty.block,.qty.reclass{color:#B45309}.source small{display:block;color:#64748B;margin-top:2px}.reason{max-width:260px;color:#64748B;line-height:1.35}.empty{padding:30px;text-align:center;color:#64748B}.pager{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}.page-link{display:inline-flex;min-width:38px;height:38px;align-items:center;justify-content:center;padding:0 10px;border-radius:10px;border:1px solid #DCEEE2;background:#fff;color:#3B7D55;text-decoration:none;font-weight:900}.page-link.current{background:#5FA878;color:#fff}.page-link.disabled{opacity:.4;pointer-events:none}
+@media(max-width:900px){.toolbar{grid-template-columns:1fr}}@media(max-width:600px){.mov-page{padding:15px;border-radius:18px}.actions,.actions .btn{width:100%}}
+</style>
+<div class="mov-page">
+    <div class="head">
+        <div>
+            <h2>Stock Movement Ledger</h2>
+            <p>Every real inventory change is recorded here. Product quantity should never change without a movement record.</p>
+        </div>
+        <div class="actions">
+            <a class="btn" href="{{ url_for('admin.current_stock') }}">Current Stock</a>
+            <a class="btn" href="{{ url_for('admin.batch_expiry') }}">Batch & Expiry</a>
+            <a class="btn" href="{{ url_for('admin.stock_adjustments') }}">Adjustments</a>
+        </div>
+    </div>
+
+    <div class="summary"><span>{{ overview.pagination.total }} movement(s)</span><span>Page {{ overview.pagination.page }} of {{ overview.pagination.total_pages }}</span></div>
+
+    <form class="toolbar" method="get">
+        <input name="q" value="{{ overview.query }}" placeholder="Search product, SKU, batch, warehouse or document number">
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <select name="type">
+                <option value="">All movement types</option>
+                {% for item in overview.movement_types %}<option value="{{ item.code }}" {% if overview.selected_type == item.code %}selected{% endif %}>{{ item.label }}</option>{% endfor %}
+            </select>
+            <button type="submit">Filter</button>
+        </div>
+    </form>
+
+    <div class="note"><strong>Audit rule:</strong> Purchase Receipt adds stock. Publishing to UFC does not create a movement. Future reservations will reduce saleable stock without reducing physical stock until dispatch.</div>
+
+    <div class="table-wrap">
+        <table class="table">
+            <thead><tr><th>Date</th><th>Movement</th><th>Product</th><th>Quantity Effect</th><th>Warehouse / Batch</th><th>Source</th><th>By</th><th>Reason</th></tr></thead>
+            <tbody>
+            {% for row in overview.rows %}
+                <tr>
+                    <td>{{ row.date }}</td>
+                    <td><span class="pill">{{ row.movement_label }}</span></td>
+                    <td class="product"><strong>{{ row.product_name }}</strong><small>{{ row.product_code }}</small></td>
+                    <td class="qty {{ row.direction }}">{{ row.quantity_effect }} {{ row.unit_code }}</td>
+                    <td><strong>{{ row.warehouse_code }}</strong><br><small>Batch: {{ row.batch_number }}{% if row.warehouse_bin != '-' %} · Bin: {{ row.warehouse_bin }}{% endif %}</small></td>
+                    <td class="source"><strong>{{ row.source_document_number }}</strong><small>{{ row.source_document_type }}</small></td>
+                    <td>{{ row.posted_by_name }}</td>
+                    <td class="reason">{{ row.reason or '—' }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="8" class="empty">No stock movements match this filter.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% set p = overview.pagination %}
+    {% if p.total_pages > 1 %}
+    <div class="pager">
+        <a class="page-link {% if not p.has_prev %}disabled{% endif %}" href="{{ url_for('admin.stock_movements', q=overview.query, type=overview.selected_type, page=p.page-1) }}">Prev</a>
+        {% for n in range(1, p.total_pages + 1) %}
+            {% if n == 1 or n == p.total_pages or (n >= p.page-2 and n <= p.page+2) %}
+                <a class="page-link {% if n == p.page %}current{% endif %}" href="{{ url_for('admin.stock_movements', q=overview.query, type=overview.selected_type, page=n) }}">{{ n }}</a>
+            {% endif %}
+        {% endfor %}
+        <a class="page-link {% if not p.has_next %}disabled{% endif %}" href="{{ url_for('admin.stock_movements', q=overview.query, type=overview.selected_type, page=p.page+1) }}">Next</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

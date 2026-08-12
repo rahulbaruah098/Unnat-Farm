@@ -1,54 +1,26 @@
 {% extends 'base.html' %}
-{% block title %}AVPL Supplier Invoices{% endblock %}
+{% block title %}Supplier Invoices{% endblock %}
 {% block content %}
 <style>
-.invoice-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.invoice-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.invoice-head h2{margin:0;color:#17252A}.invoice-head p{margin:5px 0 0;color:#64748B}.head-actions{display:flex;gap:9px;flex-wrap:wrap}.btn-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 16px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C}.btn-link.primary{background:#5FA878;color:#fff;border-color:#5FA878}.notice{margin-bottom:17px;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:17px}.summary a{display:block;padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC;text-decoration:none;color:#17252A}.summary small{display:block;color:#64748B;margin-bottom:3px}.summary strong{font-size:1.2rem}.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:15px}.toolbar input,.toolbar select{height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 14px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5FA878;color:#fff;font:inherit;font-weight:800;cursor:pointer}.invoice-list{display:grid;gap:12px}.invoice-card{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(6,minmax(100px,.55fr)) auto;gap:12px;align-items:center;padding:14px;border:1px solid #E2EFE6;border-radius:17px;background:#fff}.invoice-card h3{margin:0 0 4px;color:#17252A;font-size:1.03rem}.muted{color:#64748B;font-size:.86rem}.cell small{display:block;color:#64748B;margin-bottom:3px}.cell strong{color:#263B31}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.78rem;font-weight:900;border:1px solid}.status.matched,.status.posted,.status.paid{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.matched_with_warnings,.status.prepared,.status.partially_paid{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.mismatch,.status.recovery_required{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.status.cancelled,.status.not_posted,.status.unpaid{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.status.posting{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}.actions{display:flex;gap:7px;flex-wrap:wrap}.view-btn{display:inline-flex;justify-content:center;padding:8px 13px;border-radius:999px;background:#F3FBF6;border:1px solid #CFE6D8;color:#2F7A4C;text-decoration:none;font-weight:800}.view-btn.print{background:#fff;color:#425466}.empty{padding:28px;text-align:center;border:1px dashed #BFDCC8;border-radius:16px;background:#F6FCF8;color:#64748B}
-@media(max-width:1350px){.summary{grid-template-columns:repeat(2,1fr)}.invoice-card{grid-template-columns:1fr 1fr 1fr}.invoice-main{grid-column:1/-1}.actions{grid-column:1/-1}}@media(max-width:680px){.invoice-page{padding:15px;border-radius:18px}.summary,.toolbar,.invoice-card{grid-template-columns:1fr}.head-actions,.head-actions a,.actions,.actions a{width:100%}.invoice-main,.actions{grid-column:auto}.view-btn{width:100%}}
+.invoice-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.invoice-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.invoice-head h2{margin:0;color:#17252A}.invoice-head p{margin:5px 0 0;color:#64748B}.head-actions{display:flex;gap:9px;flex-wrap:wrap}.btn-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 16px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C}.btn-link.primary{background:#5FA878;color:#fff;border-color:#5FA878}.tip{margin-bottom:17px;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:17px}.summary a{display:block;padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC;text-decoration:none;color:#17252A}.summary small{display:block;color:#64748B;margin-bottom:3px}.summary strong{font-size:1.2rem}.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:15px}.toolbar input,.toolbar select{height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 14px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5FA878;color:#fff;font:inherit;font-weight:800;cursor:pointer}.invoice-list{display:grid;gap:12px}.invoice-card{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(4,minmax(110px,.65fr)) auto;gap:12px;align-items:center;padding:15px;border:1px solid #E2EFE6;border-radius:17px;background:#fff}.invoice-card h3{margin:0 0 4px;color:#17252A;font-size:1.03rem}.muted{color:#64748B;font-size:.86rem}.cell small{display:block;color:#64748B;margin-bottom:3px}.cell strong{color:#263B31}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.78rem;font-weight:900;border:1px solid}.status.matched,.status.posted,.status.paid{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.matched_with_warnings,.status.prepared,.status.partially_paid{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.mismatch,.status.recovery_required{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.status.cancelled,.status.not_posted,.status.unpaid,.status.na{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.actions{display:flex;gap:7px;flex-wrap:wrap}.view-btn{display:inline-flex;justify-content:center;padding:8px 13px;border-radius:999px;background:#F3FBF6;border:1px solid #CFE6D8;color:#2F7A4C;text-decoration:none;font-weight:800}.view-btn.print{background:#fff;color:#425466}.empty{padding:28px;text-align:center;border:1px dashed #BFDCC8;border-radius:16px;background:#F6FCF8;color:#64748B}
+@media(max-width:1150px){.summary{grid-template-columns:repeat(2,1fr)}.invoice-card{grid-template-columns:1fr 1fr 1fr}.invoice-main{grid-column:1/-1}.actions{grid-column:1/-1}}@media(max-width:680px){.invoice-page{padding:15px;border-radius:18px}.summary,.toolbar,.invoice-card{grid-template-columns:1fr}.head-actions,.head-actions a,.actions,.actions a{width:100%}.invoice-main,.actions{grid-column:auto}.view-btn{width:100%}}
 </style>
 <div class="invoice-page">
-    <div class="invoice-head">
-        <div>
-            <h2>AVPL Supplier Invoices & Purchase Posting</h2>
-            <p>Three-way match, controlled Accounting posting, supplier payable and printable Purchase Invoice copies.</p>
-        </div>
-        <div class="head-actions">
-            <a class="btn-link" href="{{ url_for('admin.purchase_orders') }}">Purchase Orders</a>
-            <a class="btn-link" href="{{ url_for('admin.goods_receipts') }}">Goods Receipts</a>
-            <a class="btn-link primary" href="{{ url_for('admin.create_supplier_invoice_view') }}">Record Supplier Invoice</a>
-        </div>
-    </div>
-    <div class="notice"><strong>Stage 2 · Batch 2.5:</strong> A matched Supplier Invoice is prepared by Accounts, posted by an authorized checker, assigned an official Purchase Invoice number, linked to a posted Purchase Voucher and opened as a supplier payable. Stock is not increased again because accepted stock already entered through the GRN.</div>
-    <div class="summary">
-        {% for key, label in overview.get('status_labels', {}).items() %}
-            <a href="{{ url_for('admin.supplier_invoices', status=key) }}"><small>{{ label }}</small><strong>{{ overview.get('counts', {}).get(key, 0) }}</strong></a>
-        {% endfor %}
-    </div>
-    <form class="toolbar" method="get">
-        <input name="q" value="{{ overview.get('query', '') }}" placeholder="Search Purchase Invoice, supplier invoice, PO, supplier or product">
-        <div style="display:flex;gap:8px">
-            <select name="status"><option value="">All match statuses</option>{% for key, label in overview.get('status_labels', {}).items() %}<option value="{{ key }}" {% if overview.get('selected_status') == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-            <button>Filter</button>
-        </div>
-    </form>
+    <div class="invoice-head"><div><h2>Supplier Invoices</h2><p>Record supplier bills and let the system check them against the Purchase Order and received goods.</p></div><div class="head-actions"><a class="btn-link" href="{{ url_for('admin.procurement_home') }}">AVPL Purchases</a><a class="btn-link" href="{{ url_for('admin.goods_receipts') }}">Receive Goods</a><a class="btn-link primary" href="{{ url_for('admin.create_supplier_invoice_view') }}">+ Record Invoice</a></div></div>
+    <div class="tip"><strong>Matched</strong> means the important PO, received quantity and supplier-invoice values agree. Final Accounting posting still follows the existing authorized workflow.</div>
+    <div class="summary">{% for key, label in overview.get('status_labels', {}).items() %}<a href="{{ url_for('admin.supplier_invoices', status=key) }}"><small>{{ label }}</small><strong>{{ overview.get('counts', {}).get(key, 0) }}</strong></a>{% endfor %}</div>
+    <form class="toolbar" method="get"><input name="q" value="{{ overview.get('query', '') }}" placeholder="Search invoice, PO, supplier or product"><div style="display:flex;gap:8px"><select name="status"><option value="">All match statuses</option>{% for key, label in overview.get('status_labels', {}).items() %}<option value="{{ key }}" {% if overview.get('selected_status') == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button>Filter</button></div></form>
     <div class="invoice-list">
         {% for invoice in overview.get('rows', []) %}
         <article class="invoice-card">
-            <div class="invoice-main">
-                <h3>{{ invoice.official_purchase_invoice_number or invoice.internal_reference }}</h3>
-                <div class="muted">Supplier Invoice: {{ invoice.supplier_invoice_number }} · {{ invoice.supplier_name }} · {{ invoice.po_number }}</div>
-            </div>
+            <div class="invoice-main"><h3>{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}</h3><div class="muted">{{ invoice.supplier_name }} · PO {{ invoice.po_number }}{% if invoice.official_purchase_invoice_number %} · Supplier Invoice {{ invoice.supplier_invoice_number }}{% endif %}</div></div>
             <div class="cell"><small>Invoice Date</small><strong>{{ invoice.invoice_date }}</strong></div>
             <div class="cell"><small>Total</small><strong>₹{{ invoice.grand_total }}</strong></div>
-            <div class="cell"><small>Outstanding</small><strong>₹{{ invoice.outstanding_amount }}</strong></div>
-            <div class="cell"><small>Match</small><span class="status {{ invoice.status }}">{{ invoice.status_display }}</span></div>
-            <div class="cell"><small>Posting</small><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></div>
-            <div class="cell"><small>Payment</small><span class="status {{ invoice.payment_status }}">{{ invoice.payment_status_display }}</span></div>
-            <div class="actions">
-                <a class="view-btn" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=invoice.id) }}">View</a>
-                <a class="view-btn print" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print</a>
-            </div>
+            <div class="cell"><small>Check</small><span class="status {{ invoice.status }}">{{ invoice.status_display }}</span></div>
+            <div class="cell"><small>Payment</small>{% if invoice.payable_posted %}<span class="status {{ invoice.payment_status }}">{{ invoice.payment_status_display }}</span><div class="muted" style="margin-top:4px">Due ₹{{ invoice.outstanding_amount }}</div>{% else %}<span class="status na">Not Applicable</span><div class="muted" style="margin-top:4px">Posting not completed</div>{% endif %}</div>
+            <div class="actions"><a class="view-btn" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=invoice.id) }}">View</a>{% if invoice.posting_status == 'posted' %}<a class="view-btn print" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print</a>{% endif %}</div>
         </article>
-        {% else %}<div class="empty">No Supplier Invoices match the selected filter.</div>{% endfor %}
+        {% else %}<div class="empty">No Supplier Invoices match this filter.</div>{% endfor %}
     </div>
 </div>
 {% endblock %}

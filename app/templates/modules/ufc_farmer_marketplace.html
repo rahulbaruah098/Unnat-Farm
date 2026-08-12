@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}Farmer Marketplace Setup{% endblock %}
+{% block content %}
+<style>
+.fm{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.fm-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.fm-head h2{margin:0;color:#17252a}.fm-head p{margin:5px 0 0;color:#64748b;line-height:1.45}.fm-actions{display:flex;gap:8px;flex-wrap:wrap}.fm-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 14px;border:1px solid #cfe6d8;border-radius:999px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.fm-btn.primary{border-color:#5fa878;background:#5fa878;color:#fff}.fm-btn.danger{border-color:#fecaca;background:#fff5f5;color:#b91c1c}.fm-note{margin:15px 0;padding:12px 14px;border:1px solid #b9dcca;border-radius:14px;background:#f3fbf6;color:#3e6850;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:15px 0}.sum{padding:13px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.sum small{display:block;color:#64748b}.sum strong{display:block;margin-top:3px;font-size:1.22rem;color:#17252a}.filters{display:grid;grid-template-columns:minmax(220px,1fr) 180px auto;gap:8px;margin-bottom:14px}.filters input,.filters select{height:42px;border:1px solid #d6e5da;border-radius:999px;padding:0 14px;font:inherit;background:#fff}.bulk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0;padding:11px 12px;border:1px solid #e2efe6;border-radius:14px;background:#fbfefc}.bulk .count{margin-right:auto;color:#64748b;font-weight:700}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}.card{position:relative;border:1px solid #e2efe6;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 10px 26px rgba(15,23,42,.05)}.card-top{display:flex;gap:12px;padding:14px;border-bottom:1px solid #edf3ef;background:#fbfefc}.pick{width:20px;height:20px;margin-top:3px;accent-color:#4f9a6a}.product{min-width:0;flex:1}.product h3{margin:0;color:#17252a;font-size:1.08rem}.product p{margin:3px 0 0;color:#64748b;font-size:.88rem}.status{display:inline-flex;align-items:center;height:27px;padding:0 9px;border-radius:999px;font-size:.76rem;font-weight:900;white-space:nowrap}.status.published{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}.status.draft,.status.unpublished,.status.not_configured{background:#f8fafc;color:#64748b;border:1px solid #e2e8f0}.stock-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 14px}.stock-box{padding:9px;border:1px solid #edf3ef;border-radius:11px;background:#fcfefc}.stock-box small{display:block;color:#64748b}.stock-box strong{display:block;margin-top:2px;color:#17252a}.stock-box .good{color:#16803c}.setup{padding:0 14px 14px}.setup-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.field label{display:block;margin:0 0 5px;color:#52625b;font-size:.8rem;font-weight:800}.field input,.field textarea{width:100%;border:1px solid #d6e5da;border-radius:11px;padding:9px 10px;font:inherit;color:#334155;background:#fff}.field input{height:40px}.field textarea{min-height:68px;resize:vertical}.field.full{grid-column:1/-1}.setup-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;flex-wrap:wrap}.margin{font-size:.82rem;color:#64748b}.margin strong{color:#2f7a4c}.empty{padding:34px;text-align:center;color:#64748b;border:1px dashed #cfe6d8;border-radius:16px}.out{color:#b45309!important}@media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr}.setup-grid{grid-template-columns:1fr 1fr}.field.full{grid-column:1/-1}}@media(max-width:580px){.fm{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr 1fr}.cards{grid-template-columns:1fr}.setup-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.fm-actions,.fm-actions a{width:100%}.bulk .fm-btn{flex:1 1 100%}}
+</style>
+
+<div class="fm">
+  <div class="fm-head">
+    <div>
+      <h2>Farmer Marketplace Setup</h2>
+      <p>{{ overview.get('centre_name') }} · Set your Farmer selling price, then publish selected UFC-stock products.</p>
+    </div>
+    <div class="fm-actions">
+      <a class="fm-btn" href="{{ url_for('modules.ufc_stock') }}">My UFC Stock</a>
+      <a class="fm-btn" href="{{ url_for('modules.ufc_purchases') }}">Purchase Entries</a>
+    </div>
+  </div>
+
+  <div class="fm-note"><strong>Simple rule:</strong> Publishing only controls Farmer visibility. It never adds, removes or reserves UFC stock. Farmers mapped to another UFC cannot see these listings.</div>
+
+  <div class="summary">
+    <div class="sum"><small>UFC Stock Products</small><strong>{{ overview.get('summary',{}).get('stock_products',0) }}</strong></div>
+    <div class="sum"><small>Published to Farmers</small><strong>{{ overview.get('summary',{}).get('published',0) }}</strong></div>
+    <div class="sum"><small>Need Selling Price</small><strong>{{ overview.get('summary',{}).get('needs_price',0) }}</strong></div>
+    <div class="sum"><small>Out of Stock</small><strong>{{ overview.get('summary',{}).get('out_of_stock',0) }}</strong></div>
+  </div>
+
+  <form class="filters" method="get">
+    <input name="q" value="{{ overview.get('query','') }}" placeholder="Search product, SKU or category">
+    <select name="status">
+      {% set selected = overview.get('selected_status','all') %}
+      <option value="all" {% if selected == 'all' %}selected{% endif %}>All products</option>
+      <option value="published" {% if selected == 'published' %}selected{% endif %}>Published</option>
+      <option value="not_published" {% if selected == 'not_published' %}selected{% endif %}>Not published</option>
+      <option value="needs_price" {% if selected == 'needs_price' %}selected{% endif %}>Need selling price</option>
+      <option value="out_of_stock" {% if selected == 'out_of_stock' %}selected{% endif %}>Out of stock</option>
+    </select>
+    <button class="fm-btn primary" type="submit">Filter</button>
+  </form>
+
+  {% if overview.get('rows') %}
+  <form method="post" action="{{ url_for('modules.update_ufc_farmer_marketplace_publication') }}" id="bulkForm">
+    <div class="bulk">
+      <label><input type="checkbox" id="selectAll"> Select all visible</label>
+      <span class="count"><span id="selectedCount">0</span> selected</span>
+      <button class="fm-btn primary" type="submit" name="action" value="publish" onclick="return confirmBulk('publish')">Publish Selected</button>
+      <button class="fm-btn danger" type="submit" name="action" value="unpublish" onclick="return confirmBulk('remove')">Remove Selected</button>
+    </div>
+  </form>
+
+  <div class="cards">
+    {% for r in overview.get('rows',[]) %}
+      <div class="card">
+        <div class="card-top">
+          <input class="pick rowPick" type="checkbox" name="product_ids" value="{{ r.product_id }}" form="bulkForm">
+          <div class="product">
+            <h3>{{ r.product_name }}</h3>
+            <p>{{ r.product_code }} · {{ r.category }} · {{ r.unit_code }}</p>
+          </div>
+          <span class="status {{ r.listing_status }}">{% if r.is_published %}Published{% elif r.listing_status == 'draft' %}Ready to Publish{% else %}Not Published{% endif %}</span>
+        </div>
+
+        <div class="stock-grid">
+          <div class="stock-box"><small>Physical</small><strong>{{ r.physical_quantity }}</strong></div>
+          <div class="stock-box"><small>Reserved</small><strong>{{ r.reserved_quantity }}</strong></div>
+          <div class="stock-box"><small>Saleable</small><strong class="{% if r.availability_status == 'out_of_stock' %}out{% else %}good{% endif %}">{{ r.saleable_quantity }}</strong></div>
+          <div class="stock-box"><small>Avg Purchase Cost</small><strong>₹{{ r.weighted_average_cost }}</strong></div>
+          <div class="stock-box"><small>Batches</small><strong>{{ r.batch_count }}</strong></div>
+          <div class="stock-box"><small>Availability</small><strong class="{% if r.availability_status == 'out_of_stock' %}out{% else %}good{% endif %}">{{ 'Out of Stock' if r.availability_status == 'out_of_stock' else 'In Stock' }}</strong></div>
+        </div>
+
+        <form class="setup" method="post" action="{{ url_for('modules.save_ufc_farmer_marketplace_setup', product_id=r.product_id) }}">
+          <div class="setup-grid">
+            <div class="field">
+              <label>Farmer Selling Price *</label>
+              <input type="number" name="selling_price" min="0.01" step="0.01" value="{{ r.selling_price }}" placeholder="₹ Price" required>
+            </div>
+            <div class="field">
+              <label>Minimum Qty *</label>
+              <input type="number" name="min_order_quantity" min="0.0001" step="0.0001" value="{{ r.min_order_quantity }}" required>
+            </div>
+            <div class="field">
+              <label>Maximum Qty</label>
+              <input type="number" name="max_order_quantity" min="0" step="0.0001" value="{{ r.max_order_quantity }}" title="0 means no additional maximum beyond saleable stock">
+            </div>
+            <div class="field full">
+              <label>Marketplace Note (optional)</label>
+              <textarea name="notes" maxlength="500" placeholder="Short note for Farmers">{{ r.notes }}</textarea>
+            </div>
+          </div>
+          <div class="setup-foot">
+            <div class="margin">Current estimated margin: <strong>₹{{ r.margin_amount }} · {{ r.margin_percent }}%</strong></div>
+            <button class="fm-btn" type="submit">Save Selling Setup</button>
+          </div>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <div class="empty">No UFC stock products match this view. Receive AVPL goods first, then set the Farmer selling price here.</div>
+  {% endif %}
+</div>
+
+<script>
+(function(){
+  const picks=[...document.querySelectorAll('.rowPick')];
+  const selectAll=document.getElementById('selectAll');
+  const count=document.getElementById('selectedCount');
+  function refresh(){
+    const n=picks.filter(x=>x.checked).length;
+    if(count) count.textContent=n;
+    if(selectAll){selectAll.checked=picks.length>0 && n===picks.length; selectAll.indeterminate=n>0 && n<picks.length;}
+  }
+  picks.forEach(x=>x.addEventListener('change',refresh));
+  if(selectAll) selectAll.addEventListener('change',()=>{picks.forEach(x=>x.checked=selectAll.checked);refresh();});
+  window.confirmBulk=function(action){
+    const n=picks.filter(x=>x.checked).length;
+    if(!n){alert('Select at least one product.');return false;}
+    return confirm(action==='publish' ? 'Publish the selected products to Farmers mapped to this UFC?' : 'Remove the selected products from the Farmer Marketplace?');
+  };
+  refresh();
+})();
+</script>
+{% endblock %}

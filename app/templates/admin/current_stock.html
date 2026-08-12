@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}AVPL Current Stock{% endblock %}
+{% block content %}
+<style>
+.stock-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.stock-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}.stock-head h2{margin:0;color:#17252A}.stock-head p{margin:5px 0 0;color:#64748B;max-width:760px;line-height:1.45}.head-actions{display:flex;gap:8px;flex-wrap:wrap}.btn-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:999px;text-decoration:none;font-weight:900;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C}.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-bottom:15px}.summary-card{padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC}.summary-card small{display:block;color:#64748B}.summary-card strong{display:block;margin-top:3px;font-size:1.2rem;color:#17252A}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin-bottom:14px}.toolbar input,.toolbar select{height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 13px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 17px;background:#5FA878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.note{margin-bottom:14px;padding:11px 13px;border:1px solid #B9DCCA;border-radius:14px;background:#F3FBF6;color:#3E6850;line-height:1.45}.table-wrap{overflow:auto;border:1px solid #E2EFE6;border-radius:16px}.stock-table{width:100%;border-collapse:collapse;min-width:1430px}.stock-table th{background:#EFF7F1;color:#4B6255;text-align:left;font-size:.8rem;padding:10px;white-space:nowrap}.stock-table td{padding:11px 10px;border-top:1px solid #EDF3EF;color:#334155;vertical-align:middle}.product strong{display:block;color:#17252A}.product small{display:block;color:#64748B;margin-top:2px}.qty{font-weight:900;color:#263B31}.saleable{color:#237A43}.warn{color:#B45309}.danger{color:#B91C1C}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:900;border:1px solid #DCECE1;background:#F8FCF9;color:#3F5F4B}.badge.low{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.badge.published{background:#ECFDF5;border-color:#A7F3D0;color:#047857}.badge.private{background:#F1F5F9;border-color:#CBD5E1;color:#475569}.empty{padding:30px;text-align:center;color:#64748B}.mobile-hint{display:none;color:#64748B;font-size:.84rem;margin-bottom:8px}
+@media(max-width:1000px){.summary{grid-template-columns:repeat(2,1fr)}.mobile-hint{display:block}.toolbar{grid-template-columns:1fr}}@media(max-width:650px){.stock-page{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr 1fr}.head-actions,.head-actions a{width:100%}}
+</style>
+<div class="stock-page">
+    <div class="stock-head">
+        <div>
+            <h2>Current AVPL Stock</h2>
+            <p>One simple source of truth: accepted Goods Receipts and approved stock adjustments. Manual Product Master quantities are not used for this page.</p>
+        </div>
+        <div class="head-actions">
+            <a class="btn-link" href="{{ url_for('admin.batch_expiry') }}">Batch & Expiry</a>
+            <a class="btn-link" href="{{ url_for('admin.stock_movements') }}">Movements</a>
+            <a class="btn-link" href="{{ url_for('admin.stock_adjustments') }}">Adjust Stock</a>
+            <a class="btn-link" href="{{ url_for('admin.product_list') }}">Publish Products</a>
+            <a class="btn-link" href="{{ url_for('admin.ufc_order_requests') }}">UFC Order Requests</a>
+        </div>
+    </div>
+
+    <div class="summary">
+        <div class="summary-card"><small>Stock Rows</small><strong>{{ overview.get('summary', {}).get('product_rows', 0) }}</strong></div>
+        <div class="summary-card"><small>Warehouses</small><strong>{{ overview.get('summary', {}).get('warehouse_count', 0) }}</strong></div>
+        <div class="summary-card"><small>Low Stock</small><strong>{{ overview.get('summary', {}).get('low_stock_count', 0) }}</strong></div>
+        <div class="summary-card"><small>Expired Lots</small><strong>{{ overview.get('summary', {}).get('expired_lot_count', 0) }}</strong></div>
+        <div class="summary-card"><small>Stock Value</small><strong>₹{{ overview.get('summary', {}).get('stock_value', '0.00') }}</strong></div>
+    </div>
+
+    <form class="toolbar" method="get">
+        <input name="q" value="{{ overview.get('query', '') }}" placeholder="Search product, SKU, category or warehouse">
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <select name="warehouse">
+                <option value="">All warehouses</option>
+                {% for code in overview.get('warehouses', []) %}<option value="{{ code }}" {% if overview.get('selected_warehouse') == code %}selected{% endif %}>{{ code }}</option>{% endfor %}
+            </select>
+            <button type="submit">Filter</button>
+        </div>
+    </form>
+
+    <div class="note"><strong>Saleable = Physical − Reserved − Damaged − Expired/Blocked.</strong> Publishing a product to UFC never changes these quantities. {{ overview.get('cost_basis_note', '') }}</div>
+    <div class="mobile-hint">Swipe horizontally to view all stock columns.</div>
+
+    <div class="table-wrap">
+        <table class="stock-table">
+            <thead><tr><th>Product</th><th>Category</th><th>Role</th><th>Unit</th><th>Physical</th><th>Reserved</th><th>Saleable</th><th>Damaged</th><th>Expired</th><th>Warehouse</th><th>Avg Cost</th><th>Stock Value</th><th>Reorder</th><th>UFC Marketplace</th></tr></thead>
+            <tbody>
+            {% for row in overview.get('rows', []) %}
+                <tr>
+                    <td class="product"><strong>{{ row.product_name }}</strong><small>{{ row.sku }} · {{ row.batch_count }} batch{{ '' if row.batch_count == 1 else 'es' }}</small></td>
+                    <td>{{ row.category }}</td>
+                    <td><span class="badge">{{ row.product_role }}</span></td>
+                    <td>{{ row.unit }}</td>
+                    <td class="qty">{{ row.total_quantity }}</td>
+                    <td class="qty">{{ row.reserved_quantity }}</td>
+                    <td class="qty saleable">{{ row.saleable_quantity }}</td>
+                    <td class="qty {% if row.damaged_quantity != '0' %}warn{% endif %}">{{ row.damaged_quantity }}</td>
+                    <td class="qty {% if row.expired_quantity != '0' %}danger{% endif %}">{{ row.expired_quantity }}</td>
+                    <td><strong>{{ row.warehouse_code }}</strong><br><small>{{ row.warehouse_name }}</small></td>
+                    <td>₹{{ row.weighted_average_cost }}</td>
+                    <td><strong>₹{{ row.stock_value }}</strong></td>
+                    <td>{% if row.is_low_stock %}<span class="badge low">{{ row.reorder_level }} · Low</span>{% else %}{{ row.reorder_level }}{% endif %}</td>
+                    <td><span class="badge {{ 'published' if row.marketplace_published else 'private' }}">{{ 'Published' if row.marketplace_published else 'Private' }}</span></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="14" class="empty">No posted AVPL stock is available. Receive and post an approved Goods Receipt first.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

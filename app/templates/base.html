@@ -1102,7 +1102,68 @@ body.sidebar-collapsed .sidebar-logout{
     }
 }
 
-    </style>
+    
+
+        /* =====================================================
+           CONTEXT DROPDOWN SIDEBAR (CURRENT UI)
+        ===================================================== */
+        .sidebar{
+            display:flex !important;
+            flex-direction:column;
+            padding:10px 0 0 !important;
+            overflow:hidden !important;
+        }
+        .sidebar-header{
+            flex:0 0 auto;
+            padding:8px 12px 12px;
+            border-bottom:1px solid rgba(79,154,106,.18);
+        }
+        .sidebar-brand{display:flex;align-items:center;gap:9px;min-height:44px;}
+        .sidebar-brand-logo{width:35px;height:35px;object-fit:contain;flex:0 0 auto;}
+        .sidebar-brand-text{min-width:0;}
+        .sidebar-brand-title{color:#17252A !important;font-family:"Times New Roman",Georgia,serif;font-weight:800;font-size:1.08rem;white-space:nowrap;}
+        .role-chip{margin:8px 0 0 !important;padding:6px 10px !important;font-size:.72rem !important;}
+        .sidebar-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:10px 8px 18px;scrollbar-width:thin;scrollbar-color:rgba(79,154,106,.35) transparent;}
+        .sidebar-scroll::-webkit-scrollbar{width:5px}.sidebar-scroll::-webkit-scrollbar-thumb{background:rgba(79,154,106,.30);border-radius:999px}
+        .sidebar-section{margin:4px 0 8px;}
+        .sidebar-section-title{padding:10px 7px 5px;color:#74857B !important;font-size:.65rem;font-weight:900;letter-spacing:.85px;text-transform:uppercase;}
+        .sidebar-link,.nav-group-toggle{
+            width:100%;min-height:42px;margin:2px 0;padding:9px 10px;border:1px solid transparent;border-radius:11px;
+            display:flex;align-items:center;gap:10px;background:transparent;color:#40515A !important;text-decoration:none;
+            font-family:"Times New Roman",Georgia,serif;font-size:.93rem;font-weight:800;text-align:left;cursor:pointer;transition:.18s ease;
+        }
+        .sidebar-link:hover,.nav-group-toggle:hover,.nav-group.open>.nav-group-toggle{background:rgba(255,255,255,.76);color:#245C39 !important;}
+        .sidebar-link.active{background:#fff;border-color:rgba(79,154,106,.23);color:#245C39 !important;box-shadow:0 7px 18px rgba(23,37,42,.05)}
+        .nav-icon{position:static !important;width:20px !important;height:20px !important;flex:0 0 20px;display:flex;align-items:center;justify-content:center;color:#347A4E !important;}
+        .nav-icon svg{width:19px !important;height:19px !important;}
+        .nav-label,.nav-group-title{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .nav-group{margin:3px 0;border-radius:12px;}
+        .nav-group-title{flex:1;}
+        .nav-chevron{width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:#718077;transition:transform .2s ease;}
+        .nav-chevron svg{width:14px;height:14px}.nav-group.open .nav-chevron{transform:rotate(180deg)}
+        .nav-group-content{display:grid;grid-template-rows:0fr;opacity:.3;transition:grid-template-rows .22s ease,opacity .18s ease;}
+        .nav-group.open .nav-group-content{grid-template-rows:1fr;opacity:1;}
+        .nav-group-inner{min-height:0;overflow:hidden;padding:0 3px 3px;}
+        .sidebar .nav-sub-link,.sidebar .nav-sub-link:visited{
+            display:flex;align-items:center;gap:9px;min-height:35px;margin:1px 0 1px 25px;padding:7px 8px;border-radius:9px;
+            color:#52625B !important;text-decoration:none;font-family:"Times New Roman",Georgia,serif;font-size:.86rem;font-weight:700;transition:.16s ease;
+        }
+        .sidebar .nav-sub-link::before{content:"";width:5px;height:5px;border-radius:50%;background:#8CC79E;flex:0 0 5px;}
+        .sidebar .nav-sub-link:hover{background:rgba(255,255,255,.65);color:#214D31 !important;}
+        .sidebar .nav-sub-link.active{background:#fff;color:#23603A !important;box-shadow:0 5px 13px rgba(23,37,42,.05);}
+        .sidebar .nav-sub-link.active::before{background:#347A4E;box-shadow:0 0 0 3px rgba(79,154,106,.12);}
+        .sidebar-footer{flex:0 0 auto;padding:8px;border-top:1px solid rgba(79,154,106,.15);background:rgba(232,246,237,.95);}
+        .sidebar-logout-link{display:flex;align-items:center;justify-content:center;gap:9px;min-height:43px;padding:9px 12px;border-radius:11px;background:linear-gradient(135deg,var(--uf-red),var(--uf-redDark));color:#fff !important;text-decoration:none;font-family:"Times New Roman",Georgia,serif;font-weight:800;box-shadow:0 9px 20px rgba(220,38,38,.20)}
+        .sidebar-logout-link .nav-icon{color:#fff !important}.sidebar-logout-link:hover{color:#fff !important;transform:translateY(-1px)}
+        body.sidebar-collapsed .sidebar-header{padding-left:8px;padding-right:8px} body.sidebar-collapsed .sidebar-brand{justify-content:center}
+        body.sidebar-collapsed .sidebar-brand-logo{width:42px;height:42px} body.sidebar-collapsed .sidebar-brand-text,body.sidebar-collapsed .role-chip,body.sidebar-collapsed .sidebar-section-title,body.sidebar-collapsed .nav-label,body.sidebar-collapsed .nav-group-title,body.sidebar-collapsed .nav-chevron,body.sidebar-collapsed .sidebar-logout-text{display:none}
+        body.sidebar-collapsed .sidebar-scroll{padding-left:7px;padding-right:7px} body.sidebar-collapsed .sidebar-link,body.sidebar-collapsed .nav-group-toggle{justify-content:center;padding-left:9px;padding-right:9px} body.sidebar-collapsed .nav-group-content{display:none}
+        @media(max-width:860px){
+            .sidebar{padding:10px 12px 0 !important}.sidebar-header{padding-left:4px;padding-right:4px}.sidebar-brand-logo{width:40px;height:40px}.sidebar-brand-title{font-size:1.12rem}
+            body.sidebar-collapsed .sidebar-brand-text,body.sidebar-collapsed .role-chip,body.sidebar-collapsed .sidebar-section-title,body.sidebar-collapsed .nav-label,body.sidebar-collapsed .nav-group-title,body.sidebar-collapsed .nav-chevron,body.sidebar-collapsed .sidebar-logout-text{display:initial}
+            body.sidebar-collapsed .sidebar-brand{justify-content:flex-start} body.sidebar-collapsed .sidebar-link,body.sidebar-collapsed .nav-group-toggle{justify-content:flex-start} body.sidebar-collapsed .nav-group-content{display:grid}
+        }
+</style>
 {% block extra_head %}{% endblock %}
 </head>
 
@@ -1123,723 +1184,2539 @@ body.sidebar-collapsed .sidebar-logout{
 <body>
 
 {% block base_flash_popup %}
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-popup-wrap" id="flashPopupWrap">
-                {% for category, message in messages %}
-                    <div class="flash-popup {{ category }}">
-                        <div class="flash-popup-icon">
-                            {% if category == 'success' %}
-                                ✓
-                            {% elif category in ['danger', 'error'] %}
-                                !
-                            {% elif category == 'warning' %}
-                                ⚠
-                            {% else %}
-                                i
-                            {% endif %}
-                        </div>
 
-                        <div class="flash-popup-content">
-                            <h4 class="flash-popup-title">
-                                {% if category == 'success' %}
-                                    Success
-                                {% elif category in ['danger', 'error'] %}
-                                    Error
-                                {% elif category == 'warning' %}
-                                    Warning
-                                {% else %}
-                                    Notice
-                                {% endif %}
-                            </h4>
-                            <p class="flash-popup-message">{{ message }}</p>
-                        </div>
+{% with messages = get_flashed_messages(with_categories=true) %}
 
-                        <button type="button" class="flash-popup-close" onclick="closeFlashPopup(this)" aria-label="Close">×</button>
-                    </div>
-                {% endfor %}
-            </div>
+{% if messages %}
+
+<div
+    class="flash-popup-wrap"
+    id="flashPopupWrap"
+>
+
+{% for category, message in messages %}
+
+<div class="flash-popup {{ category }}">
+
+    <div class="flash-popup-icon">
+
+        {% if category == 'success' %}
+            ✓
+
+        {% elif category in ['danger','error'] %}
+            !
+
+        {% elif category == 'warning' %}
+            ⚠
+
+        {% else %}
+            i
         {% endif %}
-    {% endwith %}
+
+    </div>
+
+    <div class="flash-popup-content">
+
+        <h4 class="flash-popup-title">
+
+            {% if category == 'success' %}
+                Success
+
+            {% elif category in ['danger','error'] %}
+                Error
+
+            {% elif category == 'warning' %}
+                Warning
+
+            {% else %}
+                Notice
+            {% endif %}
+
+        </h4>
+
+        <p class="flash-popup-message">
+            {{ message }}
+        </p>
+
+    </div>
+
+    <button
+        type="button"
+        class="flash-popup-close"
+        onclick="closeFlashPopup(this)"
+        aria-label="Close"
+    >
+        ×
+    </button>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% endif %}
+
+{% endwith %}
+
 {% endblock %}
+
+
+
 {% if session.get('user_id') and request.endpoint not in public_pages %}
 
-    <header class="app-header">
-        <div class="app-header-left">
-            <button type="button" class="mobile-menu-btn" onclick="toggleSidebarMenu()" aria-label="Open menu">⋮</button>
-            <button type="button" class="web-sidebar-toggle" onclick="toggleWebSidebar()" aria-label="Collapse sidebar">☰</button>
-           <a href="{{ url_for('dashboard.home') }}">
-    <img src="{{ url_for('static', filename='images/unnat1.png') }}" alt="UnnatFarm Logo" class="app-logo">
-</a>
+<!-- ==================================================
+     HEADER
+=================================================== -->
+
+<header class="app-header">
+
+    <div class="app-header-left">
+
+        <button
+            type="button"
+            class="mobile-menu-btn"
+            onclick="toggleSidebarMenu()"
+            aria-label="Open menu"
+        >
+            ☰
+        </button>
+
+        <button
+            type="button"
+            class="web-sidebar-toggle"
+            onclick="toggleWebSidebar()"
+            aria-label="Collapse sidebar"
+        >
+            ☰
+        </button>
+
+        <a href="{{ url_for('dashboard.home') }}">
+
+            <img
+                src="{{ url_for('static', filename='images/unnat1.png') }}"
+                alt="UnnatFarm Logo"
+                class="app-logo"
+            >
+
+        </a>
+
+    </div>
+
+    <a
+        href="{{ url_for('auth.logout') }}"
+        class="header-logout-btn"
+        aria-label="Logout"
+    >
+
+        <svg
+            class="logout-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+
+    </a>
+
+</header>
+
+<div
+    class="mobile-overlay"
+    onclick="toggleSidebarMenu(true)"
+></div>
+
+
+<!-- ==================================================
+     SIDEBAR
+=================================================== -->
+
+<aside class="sidebar">
+
+    <!-- BRAND -->
+
+    <div class="sidebar-header">
+
+        <div class="sidebar-brand">
+
+            <img
+                src="{{ url_for('static', filename='images/unnat1.png') }}"
+                class="sidebar-brand-logo"
+                alt="UnnatFarm"
+            >
+
+            <div class="sidebar-brand-text">
+
+                <div class="sidebar-brand-title">
+                    UnnatFarm MIS
+                </div>
+
+            </div>
+
         </div>
 
-       <a href="{{ url_for('auth.logout') }}" class="header-logout-btn" aria-label="Logout">
-    <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-        <polyline points="16 17 21 12 16 7"></polyline>
-        <line x1="21" y1="12" x2="9" y2="12"></line>
-    </svg>
-</a>
-    </header>
+        <div class="role-chip">
+            {{ session.get('role','').replace('_',' ').title() }}
+        </div>
 
-  <div class="mobile-overlay" onclick="toggleSidebarMenu(true)"></div>
-
-    <aside class="sidebar">
-        <div class="brand">UnnatFarm MIS</div>
-        <div class="role-chip">{{ session.get('role','').replace('_',' ').title() }}</div>
-
-       <nav>
-        <a href="{{ url_for('dashboard.home') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-            </span>
-            Dashboard
-        </a>
-
-        <a href="{{ url_for('modules.profile') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1.2-4.3 4-6.5 8-6.5s6.8 2.2 8 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            My Profile
-        </a>
+    </div>
 
 
-        {% if session.get('role') in ['super_admin', 'avpl_admin', 'accounts'] %}
-        <a href="{{ url_for('accounting.dashboard') }}"
-           class="{% if request.blueprint == 'accounting' %}active{% endif %}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M4 5.5h16v13H4v-13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    <path d="M7 9h10M7 13h4M15 13h2M7 16h4M15 16h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-            </span>
-            Accounting
-        </a>
+    <!-- ==================================================
+         SCROLLABLE NAVIGATION
+    =================================================== -->
+
+    <div class="sidebar-scroll">
+
+        <!-- GENERAL -->
+
+        <div class="sidebar-section">
+
+            <div class="sidebar-section-title">
+                General
+            </div>
+
+            <a
+                href="{{ url_for('dashboard.home') }}"
+                class="sidebar-link {% if request.endpoint == 'dashboard.home' %}active{% endif %}"
+            >
+
+                <span class="nav-icon">
+
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M3 10.5L12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+
+                </span>
+
+                <span class="nav-label">
+                    Dashboard
+                </span>
+
+            </a>
+
+
+            <a
+                href="{{ url_for('modules.profile') }}"
+                class="sidebar-link {% if request.endpoint == 'modules.profile' %}active{% endif %}"
+            >
+
+                <span class="nav-icon">
+
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <circle
+                            cx="12"
+                            cy="8"
+                            r="4"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        />
+                        <path
+                            d="M4 21c1.2-4.3 4-6.5 8-6.5s6.8 2.2 8 6.5"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linecap="round"
+                        />
+                    </svg>
+
+                </span>
+
+                <span class="nav-label">
+                    My Profile
+                </span>
+
+            </a>
+
+        </div>
+
+
+        <!-- ==================================================
+             AVPL / SUPER ADMIN / ACCOUNTS
+        =================================================== -->
+
+        {% if session.get('role') in ['super_admin','avpl_admin','accounts'] %}
+
+        <div class="sidebar-section">
+
+            <div class="sidebar-section-title">
+                AVPL Operations
+            </div>
+
+
+            <!-- ACCOUNTING -->
+
+            <a
+                href="{{ url_for('accounting.dashboard') }}"
+                class="sidebar-link {% if request.blueprint == 'accounting' %}active{% endif %}"
+            >
+
+                <span class="nav-icon">
+
+                    <svg viewBox="0 0 24 24" fill="none">
+
+                        <path
+                            d="M4 5.5h16v13H4v-13Z"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        />
+
+                        <path
+                            d="M7 9h10M7 13h4M15 13h2M7 16h4M15 16h2"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linecap="round"
+                        />
+
+                    </svg>
+
+                </span>
+
+                <span class="nav-label">
+                    Accounting
+                </span>
+
+            </a>
+
+
+            <!-- ==================================================
+                 PROCUREMENT DROPDOWN
+            =================================================== -->
+
+            <div
+                class="nav-group"
+                data-group="procurement"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M4 7h16M6 3h12l2 4v14H4V7l2-4Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M8 11h8M8 15h5"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            />
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Procurement
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('admin.procurement_home') }}"
+                            class="nav-sub-link {% if request.endpoint == 'admin.procurement_home' %}active{% endif %}"
+                        >
+                            Purchase Overview
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.supplier_master') }}"
+                            class="nav-sub-link {% if request.endpoint in ['admin.supplier_master','admin.edit_supplier_master'] %}active{% endif %}"
+                        >
+                            Suppliers
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.purchase_orders') }}"
+                            class="nav-sub-link {% if request.endpoint and (request.endpoint.startswith('admin.purchase_order') or request.endpoint in ['admin.create_purchase_order_view','admin.edit_purchase_order_view']) %}active{% endif %}"
+                        >
+                            Purchase Orders
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.goods_receipts') }}"
+                            class="nav-sub-link {% if request.endpoint and (request.endpoint.startswith('admin.goods_receipt') or request.endpoint in ['admin.create_goods_receipt_view','admin.edit_goods_receipt_view']) %}active{% endif %}"
+                        >
+                            Receive Goods
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.supplier_invoices') }}"
+                            class="nav-sub-link {% if request.endpoint and (request.endpoint.startswith('admin.supplier_invoice') or request.endpoint in ['admin.create_supplier_invoice_view','admin.edit_supplier_invoice_view']) %}active{% endif %}"
+                        >
+                            Supplier Invoices
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 INVENTORY DROPDOWN
+            =================================================== -->
+
+            <div
+                class="nav-group"
+                data-group="inventory"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <path
+                                d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            />
+
+                            <path
+                                d="m4 7.5 8 4.5 8-4.5M12 12v9"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Inventory
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('admin.current_stock') }}"
+                            class="nav-sub-link {% if request.endpoint == 'admin.current_stock' %}active{% endif %}"
+                        >
+                            Current Stock
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.batch_expiry') }}"
+                            class="nav-sub-link {% if request.endpoint == 'admin.batch_expiry' %}active{% endif %}"
+                        >
+                            Batch & Expiry
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.stock_movements') }}"
+                            class="nav-sub-link {% if request.endpoint == 'admin.stock_movements' %}active{% endif %}"
+                        >
+                            Stock Movements
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.stock_adjustments') }}"
+                            class="nav-sub-link {% if (request.endpoint and request.endpoint.startswith('admin.stock_adjustment')) or request.endpoint in ['admin.approve_stock_adjustment_view','admin.reject_stock_adjustment_view'] %}active{% endif %}"
+                        >
+                            Stock Adjustments
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
         {% endif %}
 
-        {% if session.get('role') in ['super_admin', 'avpl_admin', 'accounts'] %}
-        <a href="{{ url_for('admin.supplier_master') }}"
-           class="{% if request.endpoint in ['admin.supplier_master', 'admin.edit_supplier_master'] %}active{% endif %}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M4 8h16v11H4V8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    <path d="M8 8V5h8v3M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-            </span>
-            Supplier Master
-        </a>
 
-        <a href="{{ url_for('admin.purchase_orders') }}"
-           class="{% if request.endpoint and (request.endpoint.startswith('admin.purchase_order') or request.endpoint == 'admin.create_purchase_order_view' or request.endpoint == 'admin.edit_purchase_order_view') %}active{% endif %}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    <path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-            </span>
-            Purchase Orders
-        </a>
+        <!-- ==================================================
+             AVPL ADMIN
+        =================================================== -->
 
-        <a href="{{ url_for('admin.goods_receipts') }}"
-           class="{% if request.endpoint and (request.endpoint.startswith('admin.goods_receipt') or request.endpoint in ['admin.create_goods_receipt_view','admin.edit_goods_receipt_view']) %}active{% endif %}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M5 4h14v16H5V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    <path d="m15.5 16.5 1.4 1.4 2.8-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </span>
-            Goods Receipts
-        </a>
+        {% if session.get('role') == 'avpl_admin' %}
 
-        <a href="{{ url_for('admin.supplier_invoices') }}"
-           class="{% if request.endpoint and (request.endpoint.startswith('admin.supplier_invoice') or request.endpoint in ['admin.create_supplier_invoice_view','admin.edit_supplier_invoice_view']) %}active{% endif %}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M6 3h10l3 3v15H6V3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    <path d="M16 3v4h4M9 11h6M9 15h6M9 19h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-            </span>
-            Supplier Invoices
-        </a>
+        <div class="sidebar-section">
+
+            <div class="sidebar-section-title">
+                Marketplace & Management
+            </div>
+
+
+            <!-- PRODUCTS DROPDOWN -->
+
+            <div
+                class="nav-group"
+                data-group="products"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <path
+                                d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            />
+
+                            <path
+                                d="M4.5 8L12 12.2 19.5 8M12 21v-8.8"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Products & Marketplace
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('admin.product_list') }}"
+                            class="nav-sub-link {% if request.endpoint in ['admin.product_list','admin.add_product','admin.edit_product','admin.update_ufc_marketplace_publication'] %}active{% endif %}"
+                        >
+                            All Products
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.product_categories') }}"
+                            class="nav-sub-link {% if request.endpoint == 'admin.product_categories' %}active{% endif %}"
+                        >
+                            Product Categories
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="nav-group" data-group="ufc_distribution">
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M5 4h14v16H5V4Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"/>
+                            <path d="M8 8h8M8 12h8M8 16h5"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"/>
+                        </svg>
+                    </span>
+
+                    <span class="nav-group-title">
+                        UFC Sales & Distribution
+                    </span>
+
+                    <span class="nav-chevron">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </button>
+
+                <div class="nav-group-content">
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('admin.ufc_order_requests') }}"
+                            class="nav-sub-link {% if request.endpoint in ['admin.ufc_order_requests','admin.ufc_order_request_detail'] %}active{% endif %}"
+                        >
+                            UFC Order Requests
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.ufc_sales') }}"
+                            class="nav-sub-link {% if request.endpoint in ['admin.ufc_sales','admin.ufc_sale_detail','admin.ufc_sales_invoice_print'] %}active{% endif %}"
+                        >
+                            Sales to UFC
+                        </a>
+
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- PEOPLE -->
+
+            <div
+                class="nav-group"
+                data-group="people"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <circle
+                                cx="9"
+                                cy="8"
+                                r="3"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                            <circle
+                                cx="17"
+                                cy="9"
+                                r="2.5"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                            <path
+                                d="M3 21c.8-4 3-6 6-6s5.2 2 6 6"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        People & Validation
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('admin.users') }}"
+                            class="nav-sub-link {% if request.endpoint == 'admin.users' %}active{% endif %}"
+                        >
+                            Users / IDs
+                        </a>
+
+                        <a
+                            href="{{ url_for('validation.queue') }}"
+                            class="nav-sub-link {% if request.blueprint == 'validation' %}active{% endif %}"
+                        >
+                            Validations
+                        </a>
+
+                        <a
+                            href="{{ url_for('master.farmers') }}"
+                            class="nav-sub-link {% if request.endpoint == 'master.farmers' %}active{% endif %}"
+                        >
+                            Farmer Master
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- OPERATIONS -->
+
+            <div
+                class="nav-group"
+                data-group="avpl_operations"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M5 4h14v16H5V4Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+                            <path
+                                d="M8 8h8M8 12h8M8 16h5"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            />
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Other Operations
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('admin.lms_upload') }}"
+                            class="nav-sub-link"
+                        >
+                            LMS Upload
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.mitra_bonus_settings') }}"
+                            class="nav-sub-link"
+                        >
+                            Mitra Bonus Settings
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.ufc_mitra_earnings') }}"
+                            class="nav-sub-link"
+                        >
+                            UFC Mitra Earnings
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.finance_leads') }}"
+                            class="nav-sub-link"
+                        >
+                            Finance Leads
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.all_orders') }}"
+                            class="nav-sub-link"
+                        >
+                            All Orders
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.sales_details') }}"
+                            class="nav-sub-link"
+                        >
+                            Sales Details
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.support') }}"
+                            class="nav-sub-link"
+                        >
+                            Support
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
         {% endif %}
 
 
-
-    {% if session.get('role') in ['super_admin','avpl_admin'] %}
-        <a href="{{ url_for('admin.users') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 21c.8-4 3-6 6-6s5.2 2 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 16c2.8.2 4.8 1.9 5.6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Users / IDs
-        </a>
-
-        <a href="{{ url_for('validation.queue') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="1.5"/></svg>
-            </span>
-            Validations
-        </a>
-
-        <a href="{{ url_for('modules.support') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-            <path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            <path d="M8 13v-2M16 13v-2M11 19h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-    </span>
-    Support
-</a>
-
-        <a href="{{ url_for('master.farmers') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 21V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 13C7.8 12.5 5.8 10 5.5 5.5C10 6 12 8.6 12 13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 16c4.2-.5 6.2-3 6.5-7.5C14 9 12 11.6 12 16Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-            </span>
-            Farmer Master
-        </a>
+        <!-- ==================================================
+             SUPER ADMIN
+        =================================================== -->
 
         {% if session.get('role') == 'super_admin' %}
-    <a href="{{ url_for('master.ufc_admins') }}">
-        <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M4 21V8l8-4 8 4v13" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 21v-7h6v7M8 10h.01M12 10h.01M16 10h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        </span>
-        UFC Admin Master
-    </a>
 
-    <a href="{{ url_for('master.ufc_mitras') }}">
-        <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13l4-4 4 4M20 11l-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
-        UFC Mitra Master
-    </a>
-{% endif %}
-    {% endif %}
+        <div class="sidebar-section">
 
-    {% if session.get('role') == 'avpl_admin' %}
-        <a href="{{ url_for('admin.add_product') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4.5 8L12 12.2 19.5 8M12 21v-8.8" stroke="currentColor" stroke-width="1.8"/></svg>
-            </span>
-            Products
-        </a>
-
-        <a href="{{ url_for('admin.product_categories') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
-            </span>
-            Product Categories
-        </a>
-
-        <a href="{{ url_for('admin.lms_upload') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            LMS Upload
-        </a>
-
-        <a href="{{ url_for('admin.mitra_bonus_settings') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.4 5 5.6.8-4 3.9.9 5.5L12 15.6 7.1 18.2l.9-5.5-4-3.9 5.6-.8L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-            </span>
-            Mitra Bonus Settings
-        </a>
-
-        <a href="{{ url_for('admin.ufc_mitra_earnings') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </span>
-            UFC Mitra Earnings
-        </a>
-
-        <a href="{{ url_for('modules.finance_leads') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Finance Leads
-        </a>
-           <a href="{{ url_for('modules.all_orders') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-            <path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-    </span>
-    All Orders
-</a>
-        <a href="{{ url_for('modules.sales_details') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Sales Details
-        </a>
-    {% endif %}
-
-    {% if session.get('role') == 'accounts' %}
-        <a href="{{ url_for('admin.product_list') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4.5 8L12 12.2 19.5 8M12 21v-8.8" stroke="currentColor" stroke-width="1.8"/></svg>
-            </span>
-            Product Addition
-        </a>
-
-        <a href="{{ url_for('modules.transactions') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 15l3 3-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Transactions
-        </a>
-
-        <a href="{{ url_for('modules.orders') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Procurements / Orders
-        </a>
-
-        <a href="{{ url_for('admin.mitra_bonus_settings') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.4 5 5.6.8-4 3.9.9 5.5L12 15.6 7.1 18.2l.9-5.5-4-3.9 5.6-.8L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-            </span>
-            Mitra Bonus Settings
-        </a>
-
-        <a href="{{ url_for('admin.ufc_mitra_earnings') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </span>
-            UFC Mitra Earnings
-        </a>
-
-        <a href="{{ url_for('modules.finance_leads') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Finance Leads
-        </a>
-
-        <a href="{{ url_for('modules.sales_details') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Sales Details
-        </a>
-    {% endif %}
-
-    {% if session.get('role') in ['sales_nelocals', 'sales_unnatfarm'] %}
-        <a href="{{ url_for('modules.transactions') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 15l3 3-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Transactions
-        </a>
-
-        <a href="{{ url_for('modules.finance_leads') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Finance Leads
-        </a>
-    {% endif %}
-
-    {% if session.get('role') == 'sales_nelocals' %}
-        <a href="{{ url_for('modules.products') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
-            </span>
-            Products Table
-        </a>
-
-        <a href="{{ url_for('admin.onboard_trader') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 21c.8-4 3-6 6-6s5.2 2 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 16c2.8.2 4.8 1.9 5.6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Onboard B2B Traders
-        </a>
-    {% endif %}
-
-    {% if session.get('role') == 'sales_unnatfarm' %}
-        <a href="{{ url_for('modules.transactions') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Sales Analytics
-        </a>
-
-        <a href="{{ url_for('modules.sales_details') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Sales Details
-        </a>
-    {% endif %}
-
-    {% if session.get('role') == 'ufc_admin' %}
-        <a href="{{ url_for('admin.users') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 21c.8-4 3-6 6-6s5.2 2 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 16c2.8.2 4.8 1.9 5.6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Create UFC Mitra
-        </a>
-
-
-<a href="{{ url_for('modules.buy') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-            <path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z"
-                  stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M4.5 8L12 12.2 19.5 8M12 21v-8.8"
-                  stroke="currentColor" stroke-width="1.8"/>
-        </svg>
-    </span>
-    All Products
-</a>
-
-<a href="{{ url_for('modules.lms') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5v-12Z"
-                  stroke="currentColor" stroke-width="1.8"/>
-            <path d="M8 7h8M8 11h8"
-                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-    </span>
-    LMS
-</a>
-
-            <a href="{{ url_for('modules.centre_orders') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-            <path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-    </span>
-    Orders
-</a>
-
-        <a href="{{ url_for('modules.pos') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 13h5M17 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </span>
-            POS / Sales
-        </a>
-
-        <a href="{{ url_for('modules.support') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 13v-2M16 13v-2M11 19h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Support
-        </a>
-    {% endif %}
-
-    {% if session.get('role') == 'ufc_mitra' %}
-
-        <a href="{{ url_for('validation.queue') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="1.5"/></svg>
-            </span>
-            Validations
-        </a>
-
-
-<a href="{{ url_for('modules.buy', view='all') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-            <path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z"
-                  stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M4.5 8L12 12.2 19.5 8M12 21v-8.8"
-                  stroke="currentColor" stroke-width="1.8"/>
-        </svg>
-    </span>
-    All Products
-</a>
-
-
-      <a href="{{ url_for('modules.mitra_stock') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-            <path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M4.5 8L12 12.2 19.5 8M12 21v-8.8" stroke="currentColor" stroke-width="1.8"/>
-        </svg>
-    </span>
-    My Stock
-</a>
-
-        <a href="{{ url_for('modules.mitra_earnings') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </span>
-            My Earnings
-        </a>
-
-       {# HIDDEN FOR UFC MITRA LOGIN
-<a href="{{ url_for('modules.finance') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </span>
-    Financial Assistance
-</a>
-#}
-
-       <a href="{{ url_for('modules.insurance_leads') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-            <path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    </span>
-    Insurance Support
-</a>
-
-        <a href="{{ url_for('modules.transactions') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 15l3 3-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Transactions
-        </a>
-
-        <a href="{{ url_for('modules.lms') }}">
-    <span class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="4" width="18" height="16" rx="2"
-                  stroke="currentColor" stroke-width="1.8"/>
-            <path d="M7 8h10M7 12h10M7 16h6"
-                  stroke="currentColor" stroke-width="1.8"
-                  stroke-linecap="round"/>
-        </svg>
-    </span>
-    LMS
-</a>
-
-        <a href="{{ url_for('modules.support') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 13v-2M16 13v-2M11 19h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Support
-        </a>
-    {% endif %}
-
-    {% if session.get('role') == 'farmer' %}
-        
-
-        <a href="{{ url_for('modules.buy') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M6 6h15l-2 8H8L6 6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 6L5 3H3M9 20h.01M18 20h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-            </span>
-            Buy
-        </a>
-
-        <a href="{{ url_for('modules.sell') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M20 12H6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 6v12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Sell
-        </a>
-
-        <!--changes by atlanta-->
-        <a href="{{ url_for('modules.farmer_my_orders') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    <path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-            </span>
-            My Orders
-        </a>
-
-        <a href="{{ url_for('modules.finance') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h.01M17 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </span>
-            Finance
-        </a>
-
-        <a href="{{ url_for('modules.insurance') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Insurance
-        </a>
-
-        <a href="{{ url_for('modules.lms') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5v-12Z" stroke="currentColor" stroke-width="1.8"/><path d="M8 7h8M8 11h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            LMS
-        </a>
-
-        <a href="{{ url_for('modules.notifications') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                    <path d="M10 21h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-            </span>
-            Notifications
-        </a>
-
-        <a href="{{ url_for('modules.support') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 13v-2M16 13v-2M11 19h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            Support
-        </a>
-
-        <a href="{{ url_for('modules.purchases') }}">
-            <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h12l1 18H5L6 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </span>
-            My Purchases
-        </a>
-    {% endif %}
-</nav>
-
-<div class="sidebar-logout">
-    <a href="{{ url_for('auth.logout') }}">
-        <span class="nav-icon logout-nav-icon">
-            <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-        </span>
-        Logout
-    </a>
-</div>
-    </aside>
-    {% endif %}
-
-    <main class="main{% if not session.get('user_id') or request.endpoint in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer', 'auth.login_support'] %} full{% endif %}">
-        {% block content %}{% endblock %}
-    </main>
-
-    {% if session.get('user_id') and request.endpoint not in ['auth.login', 'auth.login_select', 'auth.login_authority', 'auth.login_centre', 'auth.login_mitra', 'auth.login_farmer', 'auth.login_support'] %}
-    <footer class="footer">
-        <div class="footer-content footer-2line">
-            <div class="footer-row">
-                <span>© 2026 UnnatFarm™ All rights reserved.</span>
+            <div class="sidebar-section-title">
+                Administration
             </div>
-            <div class="footer-row">
-                <span>Powered by —</span>
-                <a href="https://sayanant.com/" target="_blank" rel="noopener noreferrer" class="footer-link">
-                    Sayanant Group, Guwahati Assam
-                </a>
+
+            <div
+                class="nav-group"
+                data-group="administration"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <path
+                                d="M4 21V8l8-4 8 4v13"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                            <path
+                                d="M9 21v-7h6v7"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        User Management
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('admin.users') }}"
+                            class="nav-sub-link"
+                        >
+                            Users / IDs
+                        </a>
+
+                        <a
+                            href="{{ url_for('validation.queue') }}"
+                            class="nav-sub-link"
+                        >
+                            Validations
+                        </a>
+
+                        <a
+                            href="{{ url_for('master.farmers') }}"
+                            class="nav-sub-link"
+                        >
+                            Farmer Master
+                        </a>
+
+                        <a
+                            href="{{ url_for('master.ufc_admins') }}"
+                            class="nav-sub-link"
+                        >
+                            UFC Admin Master
+                        </a>
+
+                        <a
+                            href="{{ url_for('master.ufc_mitras') }}"
+                            class="nav-sub-link"
+                        >
+                            UFC Mitra Master
+                        </a>
+
+                    </div>
+
+                </div>
+
             </div>
+
         </div>
-    </footer>
-    {% endif %}
 
-  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+        {% endif %}
+
+
+        <!-- ==================================================
+             ACCOUNTS
+        =================================================== -->
+
+        {% if session.get('role') == 'accounts' %}
+
+        <div class="sidebar-section">
+
+            <div class="sidebar-section-title">
+                Accounts Operations
+            </div>
+
+            <div
+                class="nav-group"
+                data-group="accounts_operations"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <path
+                                d="M4 7h16M4 12h16M4 17h10"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Transactions & Sales
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('admin.product_list') }}"
+                            class="nav-sub-link"
+                        >
+                            Products
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.transactions') }}"
+                            class="nav-sub-link"
+                        >
+                            Transactions
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.orders') }}"
+                            class="nav-sub-link"
+                        >
+                            Procurements / Orders
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.sales_details') }}"
+                            class="nav-sub-link"
+                        >
+                            Sales Details
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.finance_leads') }}"
+                            class="nav-sub-link"
+                        >
+                            Finance Leads
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.mitra_bonus_settings') }}"
+                            class="nav-sub-link"
+                        >
+                            Mitra Bonus Settings
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.ufc_mitra_earnings') }}"
+                            class="nav-sub-link"
+                        >
+                            UFC Mitra Earnings
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- ==================================================
+             SALES USERS
+        =================================================== -->
+
+        {% if session.get('role') in ['sales_nelocals','sales_unnatfarm'] %}
+
+        <div class="sidebar-section">
+
+            <div class="sidebar-section-title">
+                Sales
+            </div>
+
+            <a
+                href="{{ url_for('modules.transactions') }}"
+                class="sidebar-link"
+            >
+
+                <span class="nav-icon">
+
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M4 7h16M4 12h16M4 17h10"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linecap="round"
+                        />
+                    </svg>
+
+                </span>
+
+                <span class="nav-label">
+                    Transactions
+                </span>
+
+            </a>
+
+            <a
+                href="{{ url_for('modules.finance_leads') }}"
+                class="sidebar-link"
+            >
+
+                <span class="nav-icon">
+
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        />
+                    </svg>
+
+                </span>
+
+                <span class="nav-label">
+                    Finance Leads
+                </span>
+
+            </a>
+
+        </div>
+
+        {% endif %}
+
+
+        {% if session.get('role') == 'sales_nelocals' %}
+
+        <div class="sidebar-section">
+
+            <a
+                href="{{ url_for('modules.products') }}"
+                class="sidebar-link"
+            >
+                <span class="nav-icon">
+
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect
+                            x="4"
+                            y="4"
+                            width="6"
+                            height="6"
+                            rx="1.5"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        />
+                        <rect
+                            x="14"
+                            y="4"
+                            width="6"
+                            height="6"
+                            rx="1.5"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        />
+                        <rect
+                            x="4"
+                            y="14"
+                            width="6"
+                            height="6"
+                            rx="1.5"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        />
+                        <rect
+                            x="14"
+                            y="14"
+                            width="6"
+                            height="6"
+                            rx="1.5"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        />
+                    </svg>
+
+                </span>
+
+                <span class="nav-label">
+                    Products Table
+                </span>
+
+            </a>
+
+            <a
+                href="{{ url_for('admin.onboard_trader') }}"
+                class="sidebar-link"
+            >
+
+                <span class="nav-icon">
+
+                    <svg viewBox="0 0 24 24" fill="none">
+
+                        <circle
+                            cx="9"
+                            cy="8"
+                            r="3"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        />
+
+                        <path
+                            d="M3 21c.8-4 3-6 6-6"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        />
+
+                    </svg>
+
+                </span>
+
+                <span class="nav-label">
+                    Onboard B2B Traders
+                </span>
+
+            </a>
+
+        </div>
+
+        {% endif %}
+
+
+        {% if session.get('role') == 'sales_unnatfarm' %}
+
+        <div class="sidebar-section">
+
+            <a
+                href="{{ url_for('modules.sales_details') }}"
+                class="sidebar-link"
+            >
+
+                <span class="nav-icon">
+
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M4 19V5M4 19h16M8 15l3-3 3 2 5-7"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+
+                </span>
+
+                <span class="nav-label">
+                    Sales Details
+                </span>
+
+            </a>
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- ==================================================
+             UFC ADMIN
+        =================================================== -->
+
+        {% if session.get('role') == 'ufc_admin' %}
+
+        <div class="sidebar-section">
+
+            <div class="sidebar-section-title">
+                UFC Centre
+            </div>
+
+
+            <!-- AVPL PROCUREMENT -->
+
+            <div
+                class="nav-group"
+                data-group="ufc_avpl"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <path
+                                d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5v-9Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            />
+
+                            <path
+                                d="M4.5 8L12 12.2 19.5 8"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        AVPL Procurement
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('modules.buy') }}"
+                            class="nav-sub-link {% if request.endpoint == 'modules.buy' %}active{% endif %}"
+                        >
+                            AVPL Marketplace
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.ufc_avpl_orders') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.ufc_avpl_orders','modules.ufc_avpl_order_detail'] %}active{% endif %}"
+                        >
+                            My AVPL Orders
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.ufc_purchases') }}"
+                            class="nav-sub-link {% if request.endpoint == 'modules.ufc_purchases' %}active{% endif %}"
+                        >
+                            Purchase Entries
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.ufc_stock') }}"
+                            class="nav-sub-link {% if request.endpoint == 'modules.ufc_stock' %}active{% endif %}"
+                        >
+                            My UFC Stock
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- FARMER OPERATIONS -->
+
+            <div
+                class="nav-group"
+                data-group="ufc_farmer_sales"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <path
+                                d="M6 3h12l1 18H5L6 3Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            />
+
+                            <path
+                                d="M9 7h6M9 11h6M9 15h4"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Farmer Sales
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('modules.ufc_farmer_marketplace') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.ufc_farmer_marketplace','modules.save_ufc_farmer_marketplace_setup','modules.update_ufc_farmer_marketplace_publication'] %}active{% endif %}"
+                        >
+                            Farmer Marketplace Setup
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.centre_orders') }}"
+                            class="nav-sub-link"
+                        >
+                            Farmer Orders
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.pos') }}"
+                            class="nav-sub-link"
+                        >
+                            POS / Sales
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- CENTRE MANAGEMENT -->
+
+            <div
+                class="nav-group"
+                data-group="ufc_management"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <circle
+                                cx="9"
+                                cy="8"
+                                r="3"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                            <path
+                                d="M3 21c.8-4 3-6 6-6s5.2 2 6 6"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Centre Management
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('admin.users') }}"
+                            class="nav-sub-link"
+                        >
+                            Create UFC Mitra
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.lms') }}"
+                            class="nav-sub-link"
+                        >
+                            LMS
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.support') }}"
+                            class="nav-sub-link"
+                        >
+                            Support
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- ==================================================
+             UFC MITRA
+        =================================================== -->
+
+        {% if session.get('role') == 'ufc_mitra' %}
+
+        <div class="sidebar-section">
+
+            <div class="sidebar-section-title">
+                UFC Mitra
+            </div>
+
+            <div
+                class="nav-group"
+                data-group="mitra_operations"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M20 6L9 17l-5-5"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Operations
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('validation.queue') }}"
+                            class="nav-sub-link"
+                        >
+                            Validations
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.buy', view='all') }}"
+                            class="nav-sub-link"
+                        >
+                            AVPL Marketplace
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.mitra_stock') }}"
+                            class="nav-sub-link"
+                        >
+                            My Stock
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.mitra_earnings') }}"
+                            class="nav-sub-link"
+                        >
+                            My Earnings
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.transactions') }}"
+                            class="nav-sub-link"
+                        >
+                            Transactions
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div
+                class="nav-group"
+                data-group="mitra_support"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Learning & Support
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('modules.insurance_leads') }}"
+                            class="nav-sub-link"
+                        >
+                            Insurance Support
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.lms') }}"
+                            class="nav-sub-link"
+                        >
+                            LMS
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.support') }}"
+                            class="nav-sub-link"
+                        >
+                            Support
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- ==================================================
+             FARMER
+        =================================================== -->
+
+        {% if session.get('role') == 'farmer' %}
+
+        <div class="sidebar-section">
+
+            <div class="sidebar-section-title">
+                My Farm
+            </div>
+
+
+            <!-- MARKETPLACE -->
+
+            <div
+                class="nav-group"
+                data-group="farmer_marketplace"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <path
+                                d="M6 6h15l-2 8H8L6 6Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            />
+
+                            <path
+                                d="M6 6L5 3H3"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Marketplace
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('modules.farmer_marketplace') }}"
+                            class="nav-sub-link {% if request.endpoint == 'modules.farmer_marketplace' %}active{% endif %}"
+                        >
+                            Buy Inputs
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.farmer_my_orders') }}"
+                            class="nav-sub-link"
+                        >
+                            My Orders
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.purchases') }}"
+                            class="nav-sub-link"
+                        >
+                            My Purchases
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- OUTPUT -->
+
+            <div
+                class="nav-group"
+                data-group="farmer_output"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+
+                            <path
+                                d="M20 12H6"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                            <path
+                                d="M14 6l6 6-6 6"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Produce & Sell
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('modules.sell') }}"
+                            class="nav-sub-link"
+                        >
+                            Sell Produce
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SERVICES -->
+
+            <div
+                class="nav-group"
+                data-group="farmer_services"
+            >
+
+                <button
+                    type="button"
+                    class="nav-group-toggle"
+                    onclick="toggleNavGroup(this)"
+                >
+
+                    <span class="nav-icon">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            />
+                        </svg>
+
+                    </span>
+
+                    <span class="nav-group-title">
+                        Services
+                    </span>
+
+                    <span class="nav-chevron">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="m6 9 6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            />
+                        </svg>
+
+                    </span>
+
+                </button>
+
+                <div class="nav-group-content">
+
+                    <div class="nav-group-inner">
+
+                        <a
+                            href="{{ url_for('modules.finance') }}"
+                            class="nav-sub-link"
+                        >
+                            Finance
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.insurance') }}"
+                            class="nav-sub-link"
+                        >
+                            Insurance
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.lms') }}"
+                            class="nav-sub-link"
+                        >
+                            LMS
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.notifications') }}"
+                            class="nav-sub-link"
+                        >
+                            Notifications
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.support') }}"
+                            class="nav-sub-link"
+                        >
+                            Support
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- ==================================================
+         LOGOUT
+    =================================================== -->
+
+    <div class="sidebar-footer">
+
+        <a
+            href="{{ url_for('auth.logout') }}"
+            class="sidebar-logout-link"
+        >
+
+            <span class="nav-icon">
+
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+
+            </span>
+
+            <span class="sidebar-logout-text">
+                Logout
+            </span>
+
+        </a>
+
+    </div>
+
+</aside>
+
+{% endif %}
+
+
+<!-- ==================================================
+     MAIN CONTENT
+=================================================== -->
+
+<main
+    class="main{% if not session.get('user_id') or request.endpoint in [
+        'auth.login',
+        'auth.login_select',
+        'auth.login_authority',
+        'auth.login_centre',
+        'auth.login_mitra',
+        'auth.login_farmer',
+        'auth.login_support'
+    ] %} full{% endif %}"
+>
+
+    {% block content %}{% endblock %}
+
+</main>
+
+
+<!-- ==================================================
+     FOOTER
+=================================================== -->
+
+{% if session.get('user_id') and request.endpoint not in [
+    'auth.login',
+    'auth.login_select',
+    'auth.login_authority',
+    'auth.login_centre',
+    'auth.login_mitra',
+    'auth.login_farmer',
+    'auth.login_support'
+] %}
+
+<footer class="footer">
+
+    <div class="footer-content">
+
+        <div class="footer-row">
+            <span>
+                © 2026 UnnatFarm™ All rights reserved.
+            </span>
+        </div>
+
+        <div class="footer-row">
+
+            <span>
+                Powered by —
+            </span>
+
+            <a
+                href="https://sayanant.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer-link"
+            >
+                Sayanant Group, Guwahati Assam
+            </a>
+
+        </div>
+
+    </div>
+
+</footer>
+
+{% endif %}
+
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
 
 <script>
+/* ============================================================
+   MOBILE SIDEBAR
+============================================================ */
+
 function toggleSidebarMenu(forceClose = false){
-    const btn = document.querySelector('.mobile-menu-btn');
+
+    const body = document.body;
 
     if(forceClose){
-        document.body.classList.remove('menu-open');
-    } else {
-        document.body.classList.toggle('menu-open');
-    }
-
-    if(!document.body.classList.contains('menu-open') && btn){
-        btn.blur();
+        body.classList.remove('menu-open');
+    }else{
+        body.classList.toggle('menu-open');
     }
 }
 
-/* keep active menu item + sidebar scroll position */
-document.addEventListener('DOMContentLoaded', function(){
-    const sidebarNav = document.querySelector('.sidebar nav');
-    const navLinks = document.querySelectorAll('.sidebar nav a');
-    const currentPath = window.location.pathname;
 
-    if(!sidebarNav) return;
-
-    const savedScroll = sessionStorage.getItem('uf_sidebar_scroll');
-
-    if(savedScroll !== null){
-        sidebarNav.scrollTop = parseInt(savedScroll, 10) || 0;
-    }
-
-    navLinks.forEach(function(link){
-        const linkPath = new URL(link.href, window.location.origin).pathname;
-
-        if(linkPath === currentPath){
-            link.classList.add('active');
-
-            requestAnimationFrame(function(){
-                link.scrollIntoView({
-                    block: 'center',
-                    inline: 'nearest'
-                });
-            });
-        }
-
-        link.addEventListener('click', function(){
-            sessionStorage.setItem('uf_sidebar_scroll', sidebarNav.scrollTop);
-        });
-    });
-});
-
+/* ============================================================
+   DESKTOP SIDEBAR COLLAPSE
+============================================================ */
 
 function toggleWebSidebar(){
-    document.body.classList.toggle('sidebar-collapsed');
+
+    if(window.innerWidth <= 860){
+        return;
+    }
+
+    document.body.classList.toggle(
+        'sidebar-collapsed'
+    );
+
     localStorage.setItem(
         'uf_sidebar_collapsed',
-        document.body.classList.contains('sidebar-collapsed') ? '1' : '0'
+        document.body.classList.contains(
+            'sidebar-collapsed'
+        )
+            ? '1'
+            : '0'
     );
 }
 
-document.addEventListener('DOMContentLoaded', function(){
-    if(localStorage.getItem('uf_sidebar_collapsed') === '1'){
-        document.body.classList.add('sidebar-collapsed');
+
+/* ============================================================
+   SIDEBAR ACCORDIONS
+============================================================ */
+
+function toggleNavGroup(button){
+
+    const group = button.closest(
+        '.nav-group'
+    );
+
+    if(!group){
+        return;
     }
-});
+
+    /*
+     * If desktop sidebar is collapsed,
+     * expand sidebar first.
+     */
+
+    if(
+        document.body.classList.contains(
+            'sidebar-collapsed'
+        )
+        &&
+        window.innerWidth > 860
+    ){
+        document.body.classList.remove(
+            'sidebar-collapsed'
+        );
+
+        localStorage.setItem(
+            'uf_sidebar_collapsed',
+            '0'
+        );
+    }
+
+    const groupName =
+        group.dataset.group || '';
+
+    const willOpen =
+        !group.classList.contains('open');
+
+    group.classList.toggle(
+        'open',
+        willOpen
+    );
+
+    if(groupName){
+
+        localStorage.setItem(
+            'uf_nav_group_' + groupName,
+            willOpen ? '1' : '0'
+        );
+    }
+}
 
 
-/* global flash popup close + auto hide */
+/* ============================================================
+   RESTORE SIDEBAR STATE
+============================================================ */
+
+document.addEventListener(
+    'DOMContentLoaded',
+    function(){
+
+        /*
+         * Desktop collapsed state
+         */
+
+        if(
+            window.innerWidth > 860
+            &&
+            localStorage.getItem(
+                'uf_sidebar_collapsed'
+            ) === '1'
+        ){
+            document.body.classList.add(
+                'sidebar-collapsed'
+            );
+        }
+
+
+        /*
+         * Restore accordion state
+         */
+
+        document
+            .querySelectorAll('.nav-group')
+            .forEach(function(group){
+
+                const groupName =
+                    group.dataset.group;
+
+                if(!groupName){
+                    return;
+                }
+
+                const stored =
+                    localStorage.getItem(
+                        'uf_nav_group_' + groupName
+                    );
+
+                if(stored === '1'){
+                    group.classList.add('open');
+                }
+
+            });
+
+
+        /*
+         * Automatically open group containing
+         * currently active route.
+         */
+
+        document
+            .querySelectorAll(
+                '.nav-sub-link.active'
+            )
+            .forEach(function(activeLink){
+
+                const group =
+                    activeLink.closest(
+                        '.nav-group'
+                    );
+
+                if(!group){
+                    return;
+                }
+
+                group.classList.add('open');
+
+                const groupName =
+                    group.dataset.group;
+
+                if(groupName){
+                    localStorage.setItem(
+                        'uf_nav_group_' + groupName,
+                        '1'
+                    );
+                }
+            });
+
+
+        /*
+         * Sidebar scroll persistence
+         */
+
+        const sidebarScroll =
+            document.querySelector(
+                '.sidebar-scroll'
+            );
+
+        if(sidebarScroll){
+
+            const savedScroll =
+                sessionStorage.getItem(
+                    'uf_sidebar_scroll'
+                );
+
+            if(savedScroll !== null){
+
+                sidebarScroll.scrollTop =
+                    parseInt(savedScroll,10)
+                    || 0;
+            }
+
+            document
+                .querySelectorAll(
+                    '.sidebar a'
+                )
+                .forEach(function(link){
+
+                    link.addEventListener(
+                        'click',
+                        function(){
+
+                            sessionStorage.setItem(
+                                'uf_sidebar_scroll',
+                                sidebarScroll.scrollTop
+                            );
+                        }
+                    );
+                });
+        }
+
+
+        /*
+         * Close mobile sidebar when any link
+         * is selected.
+         */
+
+        document
+            .querySelectorAll(
+                '.sidebar a'
+            )
+            .forEach(function(link){
+
+                link.addEventListener(
+                    'click',
+                    function(){
+
+                        if(
+                            window.innerWidth <= 860
+                        ){
+                            document.body.classList.remove(
+                                'menu-open'
+                            );
+                        }
+                    }
+                );
+            });
+    }
+);
+
+
+/* ============================================================
+   RESIZE SAFETY
+============================================================ */
+
+window.addEventListener(
+    'resize',
+    function(){
+
+        if(window.innerWidth > 860){
+
+            document.body.classList.remove(
+                'menu-open'
+            );
+
+        }else{
+
+            /*
+             * Never retain desktop collapsed UI
+             * on mobile.
+             */
+
+            document.body.classList.remove(
+                'sidebar-collapsed'
+            );
+        }
+    }
+);
+
+
+/* ============================================================
+   FLASH POPUP
+============================================================ */
+
 function closeFlashPopup(button){
-    const popup = button.closest('.flash-popup');
-    if(!popup) return;
+
+    const popup =
+        button.closest('.flash-popup');
+
+    if(!popup){
+        return;
+    }
 
     popup.classList.add('hide');
 
     setTimeout(function(){
+
         popup.remove();
 
-        const wrap = document.getElementById('flashPopupWrap');
-        if(wrap && !wrap.querySelector('.flash-popup')){
+        const wrap =
+            document.getElementById(
+                'flashPopupWrap'
+            );
+
+        if(
+            wrap
+            &&
+            !wrap.querySelector(
+                '.flash-popup'
+            )
+        ){
             wrap.remove();
         }
-    }, 240);
+
+    },240);
 }
 
-document.addEventListener('DOMContentLoaded', function(){
-    document.querySelectorAll('.flash-popup').forEach(function(popup){
-        setTimeout(function(){
-            if(!popup || !popup.parentNode) return;
 
-            popup.classList.add('hide');
+document.addEventListener(
+    'DOMContentLoaded',
+    function(){
 
-            setTimeout(function(){
-                popup.remove();
+        document
+            .querySelectorAll(
+                '.flash-popup'
+            )
+            .forEach(function(popup){
 
-                const wrap = document.getElementById('flashPopupWrap');
-                if(wrap && !wrap.querySelector('.flash-popup')){
-                    wrap.remove();
-                }
-            }, 240);
-        }, 5000);
-    });
-});
+                setTimeout(
+                    function(){
+
+                        if(
+                            !popup
+                            ||
+                            !popup.parentNode
+                        ){
+                            return;
+                        }
+
+                        popup.classList.add(
+                            'hide'
+                        );
+
+                        setTimeout(
+                            function(){
+
+                                popup.remove();
+
+                                const wrap =
+                                    document.getElementById(
+                                        'flashPopupWrap'
+                                    );
+
+                                if(
+                                    wrap
+                                    &&
+                                    !wrap.querySelector(
+                                        '.flash-popup'
+                                    )
+                                ){
+                                    wrap.remove();
+                                }
+
+                            },
+                            240
+                        );
+
+                    },
+                    5000
+                );
+            });
+    }
+);
 </script>
-{% if session.get('role') in ['ufc_admin', 'ufc_mitra', 'farmer'] %}
-<div class="uf-global-lang-switch" aria-label="Language Switcher">
-    <button type="button" id="ufLangEnglish">EN</button>
-    <button type="button" id="ufLangAssamese">অসমীয়া</button>
+
+
+<!-- ==================================================
+     LANGUAGE SWITCH
+=================================================== -->
+
+{% if session.get('role') in [
+    'ufc_admin',
+    'ufc_mitra',
+    'farmer'
+] %}
+
+<div
+    class="uf-global-lang-switch"
+    aria-label="Language Switcher"
+>
+
+    <button
+        type="button"
+        id="ufLangEnglish"
+    >
+        EN
+    </button>
+
+    <button
+        type="button"
+        id="ufLangAssamese"
+    >
+        অসমীয়া
+    </button>
+
 </div>
+
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/uf-language.js') }}"></script>
+
 </body>
 </html>

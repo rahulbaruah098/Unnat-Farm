@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}{{ order.order_number }}{% endblock %}
+{% block content %}
+<style>
+.od-page{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.od-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.od-head h2{margin:0;color:#17252a}.od-head p{margin:5px 0 0;color:#64748b}.back{display:inline-flex;padding:8px 14px;border:1px solid #cfe6d8;border-radius:999px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-weight:900;border:1px solid #dcece1}.requested{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.approved{background:#ecfdf5;border-color:#a7f3d0;color:#047857}.rejected,.cancelled{background:#fef2f2;border-color:#fecaca;color:#b91c1c}.dispatched{background:#fff7ed;border-color:#fed7aa;color:#c2410c}.received{background:#f0fdf4;border-color:#86efac;color:#166534}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:18px 0}.info{padding:12px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.info small{display:block;color:#64748b}.info strong{display:block;margin-top:4px;color:#17252a}.section{margin-top:16px;padding:16px;border:1px solid #e2efe6;border-radius:17px;background:#fbfefc}.section h3{margin:0 0 12px;color:#17252a}.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-card{padding:14px;border:1px solid #dceee2;border-radius:15px;background:#fff}.form-card h4{margin:0 0 10px;color:#17252a}.field{margin-bottom:10px}.field label{display:block;margin-bottom:5px;color:#425466;font-weight:800}.field input,.field textarea{width:100%;border:1px solid #d6e5da;border-radius:12px;padding:10px 12px;font:inherit}.field textarea{min-height:78px;resize:vertical}.btn{border:0;border-radius:999px;padding:10px 16px;font:inherit;font-weight:900;cursor:pointer}.green{background:#5fa878;color:#fff}.red{background:#fee2e2;color:#b91c1c}.orange{background:#f59e0b;color:#fff}.allocation{overflow:auto}.allocation table{width:100%;border-collapse:collapse;min-width:720px}.allocation th{background:#eff7f1;color:#4b6255;text-align:left;padding:9px}.allocation td{padding:9px;border-top:1px solid #edf3ef}.timeline{display:grid;gap:8px}.event{padding:10px 12px;border-left:3px solid #8cc79e;background:#f8fcf9;border-radius:0 12px 12px 0}.event strong{color:#17252a}.event small{display:block;color:#64748b;margin-top:3px}@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.action-grid{grid-template-columns:1fr}}@media(max-width:560px){.od-page{padding:15px;border-radius:18px}.grid{grid-template-columns:1fr}}
+</style>
+<div class="od-page">
+  <div class="od-head">
+    <div><h2>{{ order.order_number }}</h2><p>{{ order.centre_name }} · {{ order.centre_uid }}</p></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="status {{ order.status }}">{{ order.status_label }}</span><a class="back" href="{{ url_for('admin.ufc_order_requests') }}">← All UFC Orders</a></div>
+  </div>
+
+  <div class="grid">
+    <div class="info"><small>Product</small><strong>{{ order.product_name }}</strong><small>{{ order.product_code or '-' }}</small></div>
+    <div class="info"><small>Requested</small><strong>{{ order.requested_quantity_display }} {{ order.unit_code }}</strong></div>
+    <div class="info"><small>Approved</small><strong>{{ order.approved_quantity_display if order.approved_quantity else '-' }}</strong></div>
+    <div class="info"><small>Dispatched</small><strong>{{ order.dispatched_quantity_display if order.dispatched_quantity else '-' }}</strong></div>
+    <div class="info"><small>Sale Price / Unit</small><strong>{% if order.status != 'requested' and order.status != 'rejected' %}₹{{ order.unit_price_display }}{% else %}-{% endif %}</strong></div>
+    <div class="info"><small>Order Total</small><strong>{% if order.status != 'requested' and order.status != 'rejected' %}₹{{ order.total_amount_display }}{% else %}-{% endif %}</strong></div>
+    <div class="info"><small>Requested By</small><strong>{{ order.requested_by_name or order.centre_name }}</strong></div>
+    <div class="info"><small>Requested On</small><strong>{{ order.created_at.strftime('%d %b %Y %I:%M %p') if order.created_at else '-' }}</strong></div>
+  </div>
+
+  {% if order.request_note %}<div class="section"><h3>UFC Request Note</h3><div>{{ order.request_note }}</div></div>{% endif %}
+
+  {% if order.status == 'requested' and session.get('role') in ['super_admin','avpl_admin'] %}
+  <div class="section">
+    <h3>Review Request</h3>
+    <div class="action-grid">
+      <form class="form-card" method="post" action="{{ url_for('admin.approve_ufc_order_view', order_id=order.id) }}">
+        <h4>Approve & Reserve Stock</h4>
+        <div class="field"><label>Approved Quantity</label><input type="number" step="0.0001" min="0.0001" max="{{ order.requested_quantity }}" name="approved_quantity" value="{{ order.requested_quantity_display }}" required></div>
+        <div class="field"><label>AVPL Sale Price / Unit (₹, before GST)</label><input type="number" step="0.01" min="0.01" name="unit_price" placeholder="Enter sale price" required></div>
+        <div class="field"><label>Credit Days</label><input type="number" step="1" min="0" max="365" name="credit_period_days" value="0"><small style="display:block;margin-top:4px;color:#64748b">0 = payment due immediately. Payment recording comes in the later financial stage.</small></div>
+        <div class="field"><label>Approval Note (optional)</label><textarea name="approval_note" placeholder="Any delivery or commercial note"></textarea></div>
+        <button class="btn green" type="submit">Approve & Reserve</button>
+      </form>
+      <form class="form-card" method="post" action="{{ url_for('admin.reject_ufc_order_view', order_id=order.id) }}" onsubmit="return confirm('Reject this UFC order request?');">
+        <h4>Reject Request</h4>
+        <div class="field"><label>Reason (optional)</label><textarea name="reason" placeholder="Why is this request being rejected?"></textarea></div>
+        <button class="btn red" type="submit">Reject Request</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if order.status == 'approved' %}
+  <div class="section">
+    <h3>Reserved Stock</h3>
+    <p style="margin-top:0;color:#64748b">Physical stock has not reduced yet. The approved quantity is protected from other orders.</p>
+    <div class="allocation"><table><thead><tr><th>Warehouse</th><th>Batch</th><th>Expiry</th><th>Reserved Qty</th></tr></thead><tbody>{% for a in order.reservation_allocations or [] %}<tr><td>{{ a.warehouse_code }}</td><td>{{ a.batch_number or 'Not tracked' }}</td><td>{{ a.expiry_date or '-' }}</td><td><strong>{{ a.quantity_display }} {{ a.unit_code }}</strong></td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  {% if session.get('role') in ['super_admin','avpl_admin'] %}
+  <div class="section"><h3>Physical Dispatch</h3><div class="action-grid">
+    <form class="form-card" method="post" action="{{ url_for('admin.dispatch_ufc_order_view', order_id=order.id) }}" onsubmit="return confirm('Confirm physical dispatch? AVPL physical stock will reduce now.');">
+      <h4>Mark Dispatched</h4>
+      <div class="field"><label>Transporter (optional)</label><input name="transporter_name"></div>
+      <div class="field"><label>Vehicle Number (optional)</label><input name="vehicle_number"></div>
+      <div class="field"><label>Dispatch Note (optional)</label><textarea name="dispatch_note"></textarea></div>
+      <button class="btn green" type="submit">Mark Dispatched</button>
+    </form>
+    <form class="form-card" method="post" action="{{ url_for('admin.cancel_ufc_order_view', order_id=order.id) }}" onsubmit="return confirm('Cancel this approved order and release all reserved stock?');">
+      <h4>Cancel Before Dispatch</h4>
+      <div class="field"><label>Reason</label><textarea name="reason" placeholder="Optional cancellation reason"></textarea></div>
+      <button class="btn red" type="submit">Cancel & Release Stock</button>
+    </form>
+  </div></div>
+  {% endif %}
+  {% endif %}
+
+  {% if order.status in ['dispatched','received'] %}
+  <div class="section"><h3>Dispatch Details</h3><div class="grid" style="margin:0"><div class="info"><small>Quantity</small><strong>{{ order.dispatched_quantity_display }} {{ order.unit_code }}</strong></div><div class="info"><small>Transporter</small><strong>{{ order.transporter_name or '-' }}</strong></div><div class="info"><small>Vehicle</small><strong>{{ order.vehicle_number or '-' }}</strong></div><div class="info"><small>Dispatched On</small><strong>{{ order.dispatched_at.strftime('%d %b %Y %I:%M %p') if order.dispatched_at else '-' }}</strong></div></div></div>
+  {% endif %}
+
+  {% if order.status == 'received' %}
+  <div class="section"><h3>UFC Receipt Completed</h3><p style="margin:0;color:#3e6850"><strong>{{ order.centre_name }}</strong> confirmed receipt. UFC Purchase Entry <strong>{{ order.ufc_purchase_number or '-' }}</strong> was created and UFC stock increased by {{ order.received_quantity_display }} {{ order.unit_code }}.</p></div>
+  {% endif %}
+
+  {% if order.status in ['dispatched','received'] %}
+  <div class="section">
+    <h3>Sales & Invoice</h3>
+    {% if order.avpl_sales_invoice_id_str %}
+      <p style="margin:0 0 10px;color:#3e6850"><strong>Automatic seller-side records created.</strong> AVPL Sale <strong>{{ order.avpl_sale_number or '-' }}</strong> · Sales Invoice <strong>{{ order.avpl_sales_invoice_number or '-' }}</strong>{% if order.invoice_grand_total %} · ₹{{ order.invoice_grand_total_display }}{% endif %}.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        {% if order.avpl_sale_id_str %}<a class="back" href="{{ url_for('admin.ufc_sale_detail', sale_id=order.avpl_sale_id_str) }}">View AVPL Sale</a>{% endif %}
+        <a class="back" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=order.avpl_sales_invoice_id_str) }}" target="_blank">Print Sales Invoice</a>
+      </div>
+    {% else %}
+      <p style="margin:0 0 10px;color:#8a5b15"><strong>Financial sync pending.</strong> Physical dispatch remains valid; use the safe repair action below to generate the seller-side Sale Entry, Sales Invoice and receivable.</p>
+      {% if session.get('role') in ['super_admin','avpl_admin'] %}
+      <form method="post" action="{{ url_for('admin.sync_ufc_order_financials', order_id=order.id) }}">
+        <button class="btn green" type="submit">Create / Repair Sales Documents</button>
+      </form>
+      {% endif %}
+      {% if order.financial_sync_error %}<p style="margin:10px 0 0;color:#b45309">{{ order.financial_sync_error }}</p>{% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="section"><h3>Audit Timeline</h3><div class="timeline">{% for e in (order.history or [])|reverse %}<div class="event"><strong>{{ (e.action or 'Update')|replace('_',' ')|title }}</strong>{% if e.note %} — {{ e.note }}{% endif %}<small>{{ e.actor_name or 'System' }} · {{ e.at.strftime('%d %b %Y %I:%M %p') if e.at else '-' }}</small></div>{% else %}<div class="event">No history recorded.</div>{% endfor %}</div></div>
+</div>
+{% endblock %}

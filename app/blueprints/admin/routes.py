@@ -63,6 +63,33 @@ from app.services.avpl_purchase_posting_service import (
     post_supplier_invoice_purchase,
     prepare_supplier_invoice_posting,
 )
+from app.services.avpl_inventory_service import (
+    approve_stock_adjustment,
+    create_stock_adjustment,
+    get_batch_expiry_overview,
+    get_current_stock_overview,
+    get_marketplace_publication_map,
+    get_product_inventory_snapshot_map,
+    get_stock_adjustment_overview,
+    get_stock_movement_overview,
+    publish_products_to_ufc,
+    reject_stock_adjustment,
+)
+from app.services.avpl_ufc_order_service import (
+    approve_ufc_order,
+    cancel_approved_ufc_order,
+    dispatch_ufc_order,
+    get_avpl_order_overview,
+    get_order as get_avpl_ufc_order,
+    reject_ufc_order,
+)
+from app.services.avpl_ufc_sales_service import (
+    bulk_sync_existing_orders,
+    ensure_sales_documents_for_order,
+    get_avpl_sale,
+    get_avpl_sales_overview,
+    get_sales_invoice_print_context,
+)
 from datetime import datetime
 from math import isfinite
 
@@ -1173,6 +1200,10 @@ def _build_product_master_payload(existing_product=None):
         request.form.get('pack_size') or 1,
         'Pack size',
     )
+    reorder_level = _parse_non_negative_number(
+        request.form.get('reorder_level') or 0,
+        'Reorder level',
+    )
 
     unnatfarm_eligible = request.form.get('unnatfarm_eligible') == 'on'
 
@@ -1249,6 +1280,7 @@ def _build_product_master_payload(existing_product=None):
         'base_unit_name': unit.get('name') or unit.get('unit_code') or '',
         'base_unit_symbol': unit.get('symbol') or '',
         'pack_size': pack_size,
+        'reorder_level': reorder_level,
         'unnatfarm_eligible': unnatfarm_eligible,
         'product_master_version': 3,
         'product_master_updated_by': session.get('user_id'),
@@ -1347,17 +1379,10 @@ def add_product():
                 mapping_result.get('message')
                 or 'Product master and Accounting mapping saved successfully.'
             )
-            + ' Complete the separate commercial setup before using this '
-            'product in the current catalogue.',
+            + ' The product is not visible to UFC Centres until you publish it from View All Products.',
             'success',
         )
-
-        return redirect(
-            url_for(
-                'admin.product_commercial_setup',
-                product_id=product_id,
-            )
-        )
+        return redirect(url_for('admin.product_list'))
 
     context = _product_master_form_context()
     return render_template('admin/add_product.html', **context)
@@ -1463,159 +1488,14 @@ def edit_product(product_id):
 @login_required
 @roles_required('avpl_admin', 'accounts')
 def product_commercial_setup(product_id):
-    try:
-        product_object_id = ObjectId(product_id)
-    except Exception:
-        flash('Invalid product reference.', 'danger')
-        return redirect(url_for('admin.product_list'))
-
-    product = mongo.db.products.find_one({
-        '_id': product_object_id,
-        'is_deleted': {'$ne': True},
-    })
-
-    if not product:
-        flash('Product not found.', 'danger')
-        return redirect(url_for('admin.product_list'))
-
-    accounting_catalog = _product_accounting_form_catalog(product=product)
-    _attach_product_readiness(product, accounting_catalog.get('mapping'))
-
-    centres = list(mongo.db.ufc_admin_master.find({
-        'centre_uid': {
-            '$exists': True,
-            '$ne': '',
-        },
-    }).sort('centre_uid', 1))
-
-    if request.method == 'POST':
-        try:
-            selling_price = _parse_non_negative_number(
-                request.form.get('price'),
-                'Selling price',
-            )
-
-            available_quantity = _parse_non_negative_number(
-                request.form.get('available_quantity'),
-                'Legacy available quantity',
-            )
-        except ValueError as exc:
-            flash(str(exc), 'danger')
-
-            return render_template(
-                'admin/product_commercial_compatibility.html',
-                product=product,
-                centres=centres,
-                selected_centres=request.form.getlist(
-                    'available_centres'
-                ),
-                form_data=request.form,
-            ), 400
-
-        available_centres = [
-            _clean_product_field(value, 80)
-            for value in request.form.getlist('available_centres')
-            if _clean_product_field(value, 80)
-        ]
-
-        if not available_centres:
-            flash(
-                'Select at least one Centre for the current '
-                'legacy catalogue.',
-                'danger',
-            )
-
-            return render_template(
-                'admin/product_commercial_compatibility.html',
-                product=product,
-                centres=centres,
-                selected_centres=[],
-                form_data=request.form,
-            ), 400
-
-        if 'all' in available_centres:
-            available_centres = ['all']
-        else:
-            valid_centre_uids = {
-                str(row.get('centre_uid'))
-                for row in centres
-                if row.get('centre_uid')
-            }
-
-            available_centres = list(
-                dict.fromkeys(available_centres)
-            )
-
-            invalid_centres = [
-                value
-                for value in available_centres
-                if value not in valid_centre_uids
-            ]
-
-            if invalid_centres:
-                flash(
-                    'One or more selected Centres are invalid.',
-                    'danger',
-                )
-
-                return render_template(
-                    'admin/product_commercial_compatibility.html',
-                    product=product,
-                    centres=centres,
-                    selected_centres=available_centres,
-                    form_data=request.form,
-                ), 400
-
-        update = {
-            'price': f'{selling_price:g}',
-            'available_quantity': available_quantity,
-            'available_centres': available_centres,
-            'commercial_setup_status': 'configured',
-            'commercial_setup_version': 1,
-            'commercial_setup_updated_by': session.get('user_id'),
-            'commercial_setup_updated_at': now_utc(),
-            'updated_at': now_utc(),
-        }
-
-        mongo.db.products.update_one(
-            {'_id': product_object_id},
-            {'$set': update},
-        )
-
-        log_action(
-            session['user_id'],
-            'update_product_commercial_compatibility',
-            'product',
-            product_id,
-            metadata={
-                'product_code': product.get('product_code'),
-                'selling_price': update['price'],
-                'available_quantity': available_quantity,
-                'available_centres': available_centres,
-            },
-        )
-
-        flash(
-            'Temporary commercial setup saved separately '
-            'from the Product Master.',
-            'success',
-        )
-
-        return redirect(url_for('admin.product_list'))
-
-    selected_centres = product.get('available_centres') or []
-
-    if isinstance(selected_centres, str):
-        selected_centres = [selected_centres]
-
-    return render_template(
-        'admin/product_commercial_compatibility.html',
-        product=product,
-        centres=centres,
-        selected_centres=selected_centres,
-        form_data=product,
+    # Stage 3 retires the old per-product Centre/quantity commercial screen.
+    # Keep the endpoint as a compatibility redirect so old bookmarks do not
+    # break, but no stock or marketplace data can be edited here anymore.
+    flash(
+        'The old Commercial Setup has been retired. Select products on View All Products and use Publish to UFC Marketplace.',
+        'info',
     )
-
+    return redirect(url_for('admin.product_list'))
 
 
 @admin_bp.route('/products/categories', methods=['GET', 'POST'])
@@ -1755,21 +1635,9 @@ def delete_product_category(category_id):
 @roles_required('super_admin', 'avpl_admin', 'accounts')
 def product_list():
     products = list(
-    mongo.db.products.find({
-        'is_deleted': {'$ne': True}
-    }).sort('created_at', -1)
-)
-
-    farmer_products = list(
-        mongo.db.farmer_products
-        .find({"status": "active"})
-        .sort("created_at", -1)
-    )
-
-    centres = list(
-        mongo.db.ufc_admin_master
-        .find({}, {"centre_uid": 1, "name": 1, "name_of_enterprise": 1})
-        .sort("centre_uid", 1)
+        mongo.db.products.find({
+            'is_deleted': {'$ne': True}
+        }).sort('created_at', -1)
     )
 
     product_ids = [row['_id'] for row in products]
@@ -1781,27 +1649,64 @@ def product_list():
             'status': {'$ne': 'cancelled'},
         })
     } if product_ids else {}
+
+    entity = _active_avpl_accounting_entity()
+    inventory_by_product = {}
+    publication_by_product = {}
+    if entity and product_ids:
+        try:
+            inventory_by_product = get_product_inventory_snapshot_map(
+                entity['_id'], product_ids
+            )
+            publication_by_product = get_marketplace_publication_map(
+                entity['_id'], product_ids
+            )
+        except Exception:
+            # Product Master must remain usable even if inventory is temporarily
+            # unavailable. The page will show zero/unpublished rather than fail.
+            inventory_by_product = {}
+            publication_by_product = {}
+
     for row in products:
-        mapping = mapping_by_product.get(str(row['_id']))
+        product_key = str(row['_id'])
+        mapping = mapping_by_product.get(product_key)
         row['_accounting_mapping'] = mapping
         _attach_product_readiness(row, mapping)
+        row['_inventory'] = inventory_by_product.get(product_key) or {
+            'physical_quantity': '0',
+            'reserved_quantity': '0',
+            'saleable_quantity': '0',
+            'damaged_quantity': '0',
+            'expired_quantity': '0',
+            'lot_count': 0,
+            'warehouse_count': 0,
+            'warehouses': [],
+            'has_stock': False,
+            'has_saleable_stock': False,
+        }
+        publication = publication_by_product.get(product_key) or {}
+        row['_ufc_publication'] = publication
+        row['_ufc_published'] = publication.get('status') == 'published'
 
     return render_template(
         'admin/product_list.html',
         products=products,
-        farmer_products=farmer_products,
-        centres=centres
     )
 
 @admin_bp.route('/products/<product_id>/toggle-status', methods=['POST'])
 @login_required
 @roles_required('avpl_admin', 'accounts')
 def toggle_product_status(product_id):
+    try:
+        product_object_id = ObjectId(product_id)
+    except Exception:
+        flash('Invalid product reference.', 'danger')
+        return redirect(url_for('admin.product_list'))
+
     product = mongo.db.products.find_one({
-        '_id': ObjectId(product_id),
+        '_id': product_object_id,
         'is_deleted': {'$ne': True}
     })
-
     if not product:
         flash('Product not found.', 'danger')
         return redirect(url_for('admin.product_list'))
@@ -1809,33 +1714,40 @@ def toggle_product_status(product_id):
     current_active = product.get('is_active', True)
     new_active = not current_active
     new_status = 'active' if new_active else 'disabled'
-
+    timestamp = now_utc()
     mongo.db.products.update_one(
-        {'_id': ObjectId(product_id)},
-        {
-            '$set': {
-                'is_active': new_active,
-                'status': new_status,
-                'updated_at': now_utc(),
-                'status_updated_at': now_utc(),
-                'status_updated_by': session.get('user_id')
-            }
-        }
+        {'_id': product_object_id},
+        {'$set': {
+            'is_active': new_active,
+            'status': new_status,
+            'updated_at': timestamp,
+            'status_updated_at': timestamp,
+            'status_updated_by': session.get('user_id')
+        }}
     )
+
+    # Disabled products must never remain visible in the UFC Marketplace.
+    if not new_active:
+        entity = _active_avpl_accounting_entity()
+        if entity:
+            try:
+                publish_products_to_ufc(
+                    entity['_id'], session.get('user_id'), [product_object_id], publish=False
+                )
+            except Exception:
+                # The Product status change remains authoritative; future UFC
+                # queries must also require product.is_active=True.
+                pass
 
     log_action(
         session['user_id'],
         'enable_product' if new_active else 'disable_product',
         'product',
         product_id,
-        metadata={
-            'product_name': product.get('name'),
-            'new_status': new_status
-        }
+        metadata={'product_name': product.get('name'), 'new_status': new_status}
     )
-
     flash(
-        'Product enabled successfully.' if new_active else 'Product disabled successfully.',
+        'Product enabled successfully.' if new_active else 'Product disabled and removed from UFC Marketplace.',
         'success'
     )
     return redirect(url_for('admin.product_list'))
@@ -1845,54 +1757,6 @@ def toggle_product_status(product_id):
 @login_required
 @roles_required('avpl_admin', 'accounts')
 def delete_product(product_id):
-    product = mongo.db.products.find_one({
-        '_id': ObjectId(product_id),
-        'is_deleted': {'$ne': True}
-    })
-
-    if not product:
-        flash('Product not found.', 'danger')
-        return redirect(url_for('admin.product_list'))
-
-    mongo.db.products.update_one(
-        {'_id': ObjectId(product_id)},
-        {
-            '$set': {
-                'is_deleted': True,
-                'is_active': False,
-                'status': 'deleted',
-                'deleted_at': now_utc(),
-                'deleted_by': session.get('user_id'),
-                'updated_at': now_utc()
-            }
-        }
-    )
-
-    log_action(
-        session['user_id'],
-        'delete_product',
-        'product',
-        product_id,
-        metadata={
-            'product_name': product.get('name')
-        }
-    )
-
-    flash('Product deleted successfully.', 'success')
-    return redirect(url_for('admin.product_list'))
-
-
-@admin_bp.route('/products/<product_id>/restock', methods=['POST'])
-@login_required
-@roles_required('avpl_admin', 'accounts')
-def restock_product(product_id):
-    if not current_app.config.get('LEGACY_PRODUCT_RESTOCK_ENABLED', True):
-        flash(
-            'Direct product restocking is disabled. Use the approved AVPL purchase or stock-adjustment workflow.',
-            'warning',
-        )
-        return redirect(url_for('admin.product_list'))
-
     try:
         product_object_id = ObjectId(product_id)
     except Exception:
@@ -1901,84 +1765,68 @@ def restock_product(product_id):
 
     product = mongo.db.products.find_one({
         '_id': product_object_id,
-        'is_deleted': {'$ne': True},
+        'is_deleted': {'$ne': True}
     })
     if not product:
         flash('Product not found.', 'danger')
         return redirect(url_for('admin.product_list'))
 
-    commercial_configured = (
-        product.get('commercial_setup_status') == 'configured'
-        or bool(product.get('available_centres'))
-    )
-    if not commercial_configured:
-        flash(
-            'Complete the separate Commercial Setup before using legacy refill.',
-            'warning',
-        )
-        return redirect(
-            url_for('admin.product_commercial_setup', product_id=product_id)
-        )
+    entity = _active_avpl_accounting_entity()
+    if entity:
+        try:
+            stock = get_product_inventory_snapshot_map(entity['_id'], [product_object_id]).get(product_id) or {}
+            physical = float(stock.get('physical_quantity') or 0)
+        except Exception:
+            physical = 0
+        if physical > 0:
+            flash(
+                'This product still has physical AVPL stock. Do not delete it. Disable/unpublish it, or clear stock through an approved transaction first.',
+                'warning',
+            )
+            return redirect(url_for('admin.product_list'))
 
-    restock_quantity_raw = request.form.get('restock_quantity', '').strip()
-    try:
-        restock_quantity = float(restock_quantity_raw or 0)
-    except (TypeError, ValueError):
-        restock_quantity = 0
+    # Remove marketplace visibility before soft-delete. The publication service
+    # intentionally ignores already-deleted Product Masters.
+    if entity:
+        try:
+            publish_products_to_ufc(
+                entity['_id'], session.get('user_id'), [product_object_id], publish=False
+            )
+        except Exception:
+            pass
 
-    if not isfinite(restock_quantity) or restock_quantity <= 0:
-        flash('Please enter a valid restock quantity greater than 0.', 'danger')
-        return redirect(url_for('admin.product_list'))
-
-    try:
-        current_quantity = float(product.get('available_quantity', 0) or 0)
-    except (TypeError, ValueError):
-        current_quantity = 0
-    if not isfinite(current_quantity):
-        current_quantity = 0
-
-    new_quantity = current_quantity + restock_quantity
     timestamp = now_utc()
     mongo.db.products.update_one(
         {'_id': product_object_id},
-        {
-            '$set': {
-                'available_quantity': new_quantity,
-                'updated_at': timestamp,
-                'last_restock_at': timestamp,
-                'last_restock_by': session.get('user_id'),
-            },
-            '$push': {
-                'restock_history': {
-                    'quantity_added': restock_quantity,
-                    'previous_quantity': current_quantity,
-                    'new_quantity': new_quantity,
-                    'restocked_by': session.get('user_id'),
-                    'restocked_at': timestamp,
-                    'source': 'legacy_product_restock',
-                    'stage': 'stage_1_compatibility',
-                }
-            },
-        },
+        {'$set': {
+            'is_deleted': True,
+            'is_active': False,
+            'status': 'deleted',
+            'deleted_at': timestamp,
+            'deleted_by': session.get('user_id'),
+            'updated_at': timestamp
+        }}
     )
+
     log_action(
-        session['user_id'],
-        'restock_product',
-        'product',
-        product_id,
-        metadata={
-            'quantity_added': restock_quantity,
-            'previous_quantity': current_quantity,
-            'new_quantity': new_quantity,
-            'source': 'legacy_product_restock',
-        },
+        session['user_id'], 'delete_product', 'product', product_id,
+        metadata={'product_name': product.get('name')}
     )
-    flash(
-        f'Product restocked successfully. New available quantity: {new_quantity:g}',
-        'success',
-    )
+    flash('Product deleted successfully.', 'success')
     return redirect(url_for('admin.product_list'))
 
+
+@admin_bp.route('/products/<product_id>/restock', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def restock_product(product_id):
+    # Compatibility endpoint only. Stage 3 makes inventory transaction-owned;
+    # direct edits to products.available_quantity are permanently disabled.
+    flash(
+        'Manual refill is disabled. Stock must come from Goods Receipt or an approved Stock Adjustment.',
+        'warning',
+    )
+    return redirect(url_for('admin.current_stock'))
 
 
 # ---------------------------------------------------------------------------
@@ -1992,6 +1840,297 @@ def _stage2_entity_or_redirect():
         flash('The active AVPL Accounting entity is unavailable.', 'danger')
     return entity
 
+
+@admin_bp.route('/procurement')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def procurement_home():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    actor_user_id = session.get('user_id')
+    supplier_overview = get_supplier_master_overview(entity['_id'], actor_user_id)
+    po_overview = get_purchase_order_overview(entity['_id'], actor_user_id)
+    grn_overview = get_goods_receipt_overview(entity['_id'], actor_user_id)
+    invoice_overview = get_supplier_invoice_overview(entity['_id'], actor_user_id)
+
+    return render_template(
+        'admin/procurement_home.html',
+        supplier_overview=supplier_overview,
+        po_overview=po_overview,
+        grn_overview=grn_overview,
+        invoice_overview=invoice_overview,
+    )
+
+
+@admin_bp.route('/inventory/current-stock')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def current_stock():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    try:
+        overview = get_current_stock_overview(
+            entity['_id'],
+            query_text=request.args.get('q', ''),
+            warehouse_code=request.args.get('warehouse', ''),
+        )
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'query': request.args.get('q', ''),
+            'selected_warehouse': request.args.get('warehouse', ''),
+            'warehouses': [],
+            'summary': {
+                'product_rows': 0,
+                'warehouse_count': 0,
+                'low_stock_count': 0,
+                'expired_lot_count': 0,
+                'stock_value': '0.00',
+            },
+            'cost_basis_note': '',
+        }
+
+    return render_template('admin/current_stock.html', overview=overview)
+
+
+
+@admin_bp.route('/inventory/batch-expiry')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def batch_expiry():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        overview = get_batch_expiry_overview(
+            entity['_id'],
+            query_text=request.args.get('q', ''),
+            warehouse_code=request.args.get('warehouse', ''),
+            status_filter=request.args.get('status', 'all'),
+        )
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'summary': {'total_lots': 0, 'expired': 0, 'expiring_soon': 0, 'healthy': 0, 'untracked': 0},
+            'query': request.args.get('q', ''),
+            'selected_warehouse': request.args.get('warehouse', ''),
+            'selected_status': request.args.get('status', 'all'),
+            'warehouses': [],
+            'expiring_days': 30,
+        }
+    return render_template('admin/batch_expiry.html', overview=overview)
+
+
+@admin_bp.route('/inventory/stock-movements')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def stock_movements():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        overview = get_stock_movement_overview(
+            entity['_id'],
+            query_text=request.args.get('q', ''),
+            movement_type=request.args.get('type', ''),
+            page=request.args.get('page', 1, type=int) or 1,
+        )
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'query': request.args.get('q', ''),
+            'selected_type': request.args.get('type', ''),
+            'movement_types': [],
+            'pagination': {'page': 1, 'total': 0, 'total_pages': 1, 'has_prev': False, 'has_next': False},
+        }
+    return render_template('admin/stock_movements.html', overview=overview)
+
+
+@admin_bp.route('/inventory/adjustments', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def stock_adjustments():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    if request.method == 'POST':
+        proof_file = request.files.get('proof')
+        if not proof_file or not proof_file.filename:
+            flash('Attach supporting proof before submitting a stock adjustment.', 'danger')
+            return redirect(url_for('admin.stock_adjustments'))
+
+        adjustment_id = ObjectId()
+        proof_doc = None
+        try:
+            proof_doc = store_document(
+                proof_file,
+                str(adjustment_id),
+                str(adjustment_id),
+                session.get('user_id'),
+                session.get('role'),
+                'Stock Adjustment Proof',
+            )
+            if not proof_doc:
+                raise ValueError('Supporting proof could not be saved.')
+
+            result = create_stock_adjustment(
+                entity['_id'],
+                session.get('user_id'),
+                lot_id=request.form.get('lot_id'),
+                adjustment_type=request.form.get('adjustment_type'),
+                quantity=request.form.get('quantity'),
+                reason_code=request.form.get('reason_code'),
+                reason=request.form.get('reason'),
+                proof_filename=proof_doc.get('filename'),
+                proof_document_id=proof_doc.get('_id'),
+                adjustment_id=adjustment_id,
+            )
+            adjustment = result.get('adjustment') or {}
+            log_action(
+                session.get('user_id'),
+                'submit_stock_adjustment',
+                'stock_adjustment',
+                str(adjustment.get('_id') or adjustment_id),
+                metadata={
+                    'adjustment_number': adjustment.get('adjustment_number'),
+                    'product_name': adjustment.get('product_name'),
+                    'adjustment_type': adjustment.get('adjustment_type'),
+                    'quantity': adjustment.get('quantity_display'),
+                },
+            )
+            flash(result.get('message') or 'Stock adjustment submitted for approval.', 'success')
+            return redirect(url_for('admin.stock_adjustments'))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if proof_doc and proof_doc.get('_id'):
+                mongo.db.documents.update_one(
+                    {'_id': proof_doc['_id']},
+                    {'$set': {'status': 'orphaned', 'updated_at': now_utc()}},
+                )
+            flash(str(exc), 'danger')
+            return redirect(url_for('admin.stock_adjustments'))
+
+    try:
+        overview = get_stock_adjustment_overview(
+            entity['_id'],
+            session.get('user_id'),
+            status_filter=request.args.get('status', 'all'),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [], 'lots': [], 'adjustment_types': {}, 'reason_codes': {},
+            'selected_status': 'all', 'counts': {'submitted': 0, 'approved': 0, 'rejected': 0},
+            'actor_role': session.get('role'),
+        }
+    return render_template('admin/stock_adjustments.html', overview=overview)
+
+
+@admin_bp.route('/inventory/adjustments/<adjustment_id>/approve', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def approve_stock_adjustment_view(adjustment_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        result = approve_stock_adjustment(
+            entity['_id'], session.get('user_id'), adjustment_id
+        )
+        adjustment = result.get('adjustment') or {}
+        log_action(
+            session.get('user_id'),
+            'approve_stock_adjustment',
+            'stock_adjustment',
+            adjustment_id,
+            metadata={
+                'adjustment_number': adjustment.get('adjustment_number'),
+                'product_name': adjustment.get('product_name'),
+                'quantity': adjustment.get('quantity_display'),
+            },
+        )
+        flash(result.get('message') or 'Stock adjustment approved.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.stock_adjustments'))
+
+
+@admin_bp.route('/inventory/adjustments/<adjustment_id>/reject', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def reject_stock_adjustment_view(adjustment_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        result = reject_stock_adjustment(
+            entity['_id'],
+            session.get('user_id'),
+            adjustment_id,
+            request.form.get('rejection_reason'),
+        )
+        adjustment = result.get('adjustment') or {}
+        log_action(
+            session.get('user_id'),
+            'reject_stock_adjustment',
+            'stock_adjustment',
+            adjustment_id,
+            metadata={
+                'adjustment_number': adjustment.get('adjustment_number'),
+                'reason': adjustment.get('rejection_reason'),
+            },
+        )
+        flash(result.get('message') or 'Stock adjustment rejected.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.stock_adjustments'))
+
+
+@admin_bp.route('/products/ufc-marketplace', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def update_ufc_marketplace_publication():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    action = str(request.form.get('action') or 'publish').strip().lower()
+    publish = action != 'unpublish'
+    try:
+        result = publish_products_to_ufc(
+            entity['_id'],
+            session.get('user_id'),
+            request.form.getlist('product_ids'),
+            publish=publish,
+        )
+        log_action(
+            session.get('user_id'),
+            'publish_products_to_ufc' if publish else 'unpublish_products_from_ufc',
+            'product_marketplace',
+            'bulk',
+            metadata={
+                'changed': result.get('changed', 0),
+                'skipped': len(result.get('skipped') or []),
+            },
+        )
+        flash(result.get('message') or 'Marketplace visibility updated.', 'success')
+        skipped = result.get('skipped') or []
+        if skipped:
+            sample = '; '.join(
+                f"{row.get('product_name') or row.get('product_id')}: {row.get('reason')}"
+                for row in skipped[:3]
+            )
+            suffix = f" (+{len(skipped) - 3} more)" if len(skipped) > 3 else ''
+            flash(f"Skipped: {sample}{suffix}", 'warning')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.product_list'))
 
 def _supplier_page_context(edit_supplier=None, form_data=None):
     entity = _stage2_entity_or_redirect()
@@ -3146,3 +3285,276 @@ def view_mitra_profile(mitra_uid):
         readonly_profile=True,
         profile_title='UFC Mitra Profile'
     )
+
+# ---------------------------------------------------------------------------
+# Stage 4 — AVPL -> UFC Order Requests, Reservation and Dispatch
+# ---------------------------------------------------------------------------
+
+
+@admin_bp.route('/ufc-orders')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def ufc_order_requests():
+    try:
+        overview = get_avpl_order_overview(
+            session.get('user_id'),
+            status_filter=request.args.get('status', 'all'),
+            search=request.args.get('q', ''),
+            page=request.args.get('page', 1, type=int) or 1,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'selected_status': request.args.get('status', 'all'),
+            'query': request.args.get('q', ''),
+            'statuses': {},
+            'counts': {},
+            'pagination': {
+                'page': 1,
+                'total': 0,
+                'total_pages': 1,
+                'has_prev': False,
+                'has_next': False,
+            },
+        }
+    return render_template('admin/ufc_order_requests.html', overview=overview)
+
+
+@admin_bp.route('/ufc-orders/<order_id>')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def ufc_order_request_detail(order_id):
+    try:
+        # Read access is already protected by route roles. The service detail
+        # keeps this page independent from legacy `orders` records.
+        order = get_avpl_ufc_order(order_id)
+    except ValueError as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.ufc_order_requests'))
+    return render_template('admin/ufc_order_request_detail.html', order=order)
+
+
+@admin_bp.route('/ufc-orders/<order_id>/approve', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def approve_ufc_order_view(order_id):
+    try:
+        result = approve_ufc_order(
+            session.get('user_id'),
+            order_id,
+            request.form.get('approved_quantity'),
+            request.form.get('unit_price'),
+            note=request.form.get('approval_note', ''),
+            credit_period_days=request.form.get('credit_period_days', 0),
+        )
+        order = result.get('order') or {}
+        log_action(
+            session.get('user_id'),
+            'approve_ufc_order',
+            'avpl_ufc_order',
+            order_id,
+            metadata={
+                'order_number': order.get('order_number'),
+                'centre_uid': order.get('centre_uid'),
+                'product_name': order.get('product_name'),
+                'approved_quantity': order.get('approved_quantity_display'),
+            },
+        )
+        flash(result.get('message') or 'UFC order approved.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.ufc_order_request_detail', order_id=order_id))
+
+
+@admin_bp.route('/ufc-orders/<order_id>/reject', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def reject_ufc_order_view(order_id):
+    try:
+        result = reject_ufc_order(
+            session.get('user_id'),
+            order_id,
+            reason=request.form.get('reason', ''),
+        )
+        order = result.get('order') or {}
+        log_action(
+            session.get('user_id'),
+            'reject_ufc_order',
+            'avpl_ufc_order',
+            order_id,
+            metadata={
+                'order_number': order.get('order_number'),
+                'centre_uid': order.get('centre_uid'),
+                'product_name': order.get('product_name'),
+            },
+        )
+        flash(result.get('message') or 'UFC order rejected.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.ufc_order_request_detail', order_id=order_id))
+
+
+@admin_bp.route('/ufc-orders/<order_id>/cancel', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def cancel_ufc_order_view(order_id):
+    try:
+        result = cancel_approved_ufc_order(
+            session.get('user_id'),
+            order_id,
+            reason=request.form.get('reason', ''),
+        )
+        order = result.get('order') or {}
+        log_action(
+            session.get('user_id'),
+            'cancel_ufc_order',
+            'avpl_ufc_order',
+            order_id,
+            metadata={
+                'order_number': order.get('order_number'),
+                'centre_uid': order.get('centre_uid'),
+                'product_name': order.get('product_name'),
+            },
+        )
+        flash(result.get('message') or 'Order cancelled and reservation released.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.ufc_order_request_detail', order_id=order_id))
+
+
+@admin_bp.route('/ufc-orders/<order_id>/dispatch', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def dispatch_ufc_order_view(order_id):
+    try:
+        result = dispatch_ufc_order(
+            session.get('user_id'),
+            order_id,
+            dispatch_note=request.form.get('dispatch_note', ''),
+            transporter=request.form.get('transporter_name', ''),
+            vehicle_number=request.form.get('vehicle_number', ''),
+        )
+        order = result.get('order') or {}
+        log_action(
+            session.get('user_id'),
+            'dispatch_ufc_order',
+            'avpl_ufc_order',
+            order_id,
+            metadata={
+                'order_number': order.get('order_number'),
+                'centre_uid': order.get('centre_uid'),
+                'product_name': order.get('product_name'),
+                'dispatched_quantity': order.get('dispatched_quantity_display'),
+            },
+        )
+        flash(result.get('message') or 'UFC order dispatched.', 'success')
+        if result.get('financial_warning'):
+            flash(
+                'Dispatch is complete, but the Sales Invoice needs financial-sync review: ' + str(result.get('financial_warning')),
+                'warning',
+            )
+        elif result.get('financial'):
+            invoice = (result.get('financial') or {}).get('invoice') or {}
+            if invoice.get('invoice_number'):
+                flash(f"Sales Invoice {invoice.get('invoice_number')} generated automatically.", 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.ufc_order_request_detail', order_id=order_id))
+
+
+# ---------------------------------------------------------------------------
+# Stage 5 — AVPL Sales, Sales Invoice and UFC Financial Link
+# ---------------------------------------------------------------------------
+
+
+@admin_bp.route('/ufc-sales')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def ufc_sales():
+    try:
+        overview = get_avpl_sales_overview(
+            session.get('user_id'),
+            search=request.args.get('q', ''),
+            payment_status=request.args.get('payment', 'all'),
+            page=request.args.get('page', 1, type=int) or 1,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'query': request.args.get('q', ''),
+            'selected_payment': request.args.get('payment', 'all'),
+            'payment_statuses': {},
+            'summary': {'sale_count': 0, 'invoice_count': 0, 'total_sales': '0.00', 'outstanding': '0.00'},
+            'pagination': {'page': 1, 'total': 0, 'total_pages': 1, 'has_prev': False, 'has_next': False},
+        }
+    return render_template('admin/ufc_sales.html', overview=overview)
+
+
+@admin_bp.route('/ufc-sales/<sale_id>')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def ufc_sale_detail(sale_id):
+    try:
+        sale = get_avpl_sale(session.get('user_id'), sale_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.ufc_sales'))
+    return render_template('admin/ufc_sale_detail.html', sale=sale)
+
+
+@admin_bp.route('/ufc-sales-invoices/<invoice_id>/print')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def ufc_sales_invoice_print(invoice_id):
+    try:
+        context = get_sales_invoice_print_context(
+            invoice_id,
+            actor_user_id=session.get('user_id'),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.ufc_sales'))
+    return render_template('admin/ufc_sales_invoice_print.html', **context, viewer='avpl')
+
+
+@admin_bp.route('/ufc-orders/<order_id>/financial-sync', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def sync_ufc_order_financials(order_id):
+    try:
+        result = ensure_sales_documents_for_order(session.get('user_id'), order_id)
+        invoice = result.get('invoice') or {}
+        flash(
+            f"Financial documents synchronized. Sales Invoice {invoice.get('invoice_number') or ''} is ready.",
+            'success',
+        )
+        log_action(
+            session.get('user_id'),
+            'sync_ufc_order_sales_financials',
+            'avpl_ufc_order',
+            order_id,
+            metadata={'invoice_number': invoice.get('invoice_number') or ''},
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.ufc_order_request_detail', order_id=order_id))
+
+
+@admin_bp.route('/ufc-sales/sync-existing', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def sync_existing_ufc_sales():
+    try:
+        result = bulk_sync_existing_orders(session.get('user_id'), limit=100)
+        if result.get('failed'):
+            flash(
+                f"Sales sync completed: {result.get('synced', 0)} created/repaired, {result.get('failed', 0)} need review.",
+                'warning',
+            )
+        else:
+            flash(f"Sales sync completed successfully for {result.get('synced', 0)} order(s).", 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.ufc_sales'))

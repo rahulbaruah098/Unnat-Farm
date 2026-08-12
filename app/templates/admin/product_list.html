@@ -1,1831 +1,213 @@
 {% extends 'base.html' %}
+{% block title %}AVPL Products{% endblock %}
 {% block content %}
-
+{% set can_publish = session.get('role') in ['super_admin','avpl_admin'] %}
 <style>
-.products-page{
-    width:100%;
-    border:1px solid rgba(220,238,226,.95);
-    border-radius:26px;
-    padding:24px;
-    background:rgba(255,255,255,.94);
-    box-shadow:0 22px 55px rgba(23,37,42,.10);
-    font-family:"Times New Roman", Georgia, serif;
-}
-
-.products-title-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    flex-wrap:wrap;
-    margin-bottom:18px;
-}
-
-.products-title-row h2{
-    margin:0;
-    color:#17252A;
-    font-size:1.8rem;
-    font-weight:700;
-}
-
-
-.products-heading-left{
-    display:flex;
-    align-items:center;
-    gap:12px;
-}
-
-.mobile-back-btn{
-    display:none;
-    width:42px;
-    height:42px;
-    border:none;
-    border-radius:14px;
-    background:#E4F7EA;
-    color:#3B7D55;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:1.35rem;
-    font-weight:900;
-    cursor:pointer;
-    box-shadow:0 8px 18px rgba(95,168,120,.12);
-    transition:.2s ease;
-}
-
-.mobile-back-btn:hover{
-    background:#5FA878;
-    color:#fff;
-    transform:translateY(-1px);
-}
-.products-actions{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-}
-
-.product-action-btn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:40px;
-    padding:9px 17px;
-    border-radius:999px;
-    text-decoration:none;
-    font-weight:700;
-    border:1px solid rgba(95,168,120,.25);
-    transition:.2s ease;
-}
-
-.product-action-btn.primary{
-    background:#5FA878;
-    color:#fff;
-    box-shadow:0 12px 26px rgba(95,168,120,.18);
-}
-
-.product-action-btn.secondary{
-    background:rgba(228,247,234,.82);
-    color:#3B7D55;
-}
-
-.product-action-btn:hover{
-    transform:translateY(-1px);
-    background:#3B7D55;
-    color:#fff;
-}
-
-.products-toolbar{
-    display:grid;
-    grid-template-columns:1fr auto;
-    gap:14px;
-    align-items:center;
-    margin-bottom:16px;
-}
-
-.product-search input{
-    width:100%;
-    min-height:44px;
-    border:1px solid rgba(95,168,120,.25);
-    border-radius:999px;
-    padding:10px 16px;
-    outline:none;
-    color:#334155;
-    background:#fff;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:1rem;
-    box-shadow:0 8px 18px rgba(23,37,42,.04);
-}
-
-.product-search input:focus{
-    border-color:rgba(95,168,120,.6);
-    box-shadow:0 0 0 4px rgba(95,168,120,.12);
-}
-
-.view-toggle{
-    display:flex;
-    gap:8px;
-    padding:5px;
-    border-radius:999px;
-    background:#F1F8F3;
-    border:1px solid rgba(220,238,226,.95);
-}
-
-.view-btn{
-    border:none;
-    border-radius:999px;
-    padding:8px 14px;
-    background:transparent;
-    color:#3B7D55;
-    font-family:"Times New Roman", Georgia, serif;
-    font-weight:800;
-    cursor:pointer;
-}
-
-.view-btn.active{
-    background:#5FA878;
-    color:#fff;
-    box-shadow:0 8px 18px rgba(95,168,120,.18);
-}
-
-.product-filter-strip{
-    position:relative;
-    display:flex;
-    align-items:center;
-    gap:9px;
-    flex-wrap:wrap;
-    overflow:visible;
-    padding-bottom:6px;
-    margin-bottom:12px;
-}
-
-.product-chip{
-    flex:0 0 auto;
-    min-height:38px;
-    padding:8px 15px;
-    border-radius:999px;
-    border:1px solid rgba(220,238,226,.95);
-    background:#fff;
-    color:#425466;
-    font-size:.94rem;
-    font-weight:700;
-    box-shadow:0 6px 14px rgba(23,37,42,.04);
-    cursor:pointer;
-    transition:.2s ease;
-}
-
-.product-chip.active,
-.product-chip:hover{
-    background:#5FA878;
-    color:#fff;
-    border-color:#5FA878;
-}
-
-.product-grid{
-    display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
-    gap:18px;
-    margin-top:14px;
-}
-
-.product-card{
-    overflow:hidden;
-    border:1px solid rgba(220,238,226,.95);
-    border-radius:20px;
-    background:#fff;
-    box-shadow:0 12px 28px rgba(23,37,42,.07);
-    transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
-    animation:cardIn .28s ease both;
-}
-
-.product-card:hover{
-    transform:translateY(-4px);
-    border-color:rgba(95,168,120,.45);
-    box-shadow:0 20px 42px rgba(23,37,42,.12);
-}
-
-.product-image-wrap{
-    height:150px;
-    overflow:hidden;
-    background:#EEF8F1;
-}
-
-.product-image-wrap img{
-    width:100%;
-    height:100%;
-    object-fit:contain;   /* ✅ shows full image */
-    background:#EEF8F1;   /* optional clean background */
-}
-
-.product-card:hover .product-image-wrap img{
-    transform:scale(1.045);
-}
-
-.product-no-image{
-    height:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#3B7D55;
-    font-size:1.45rem;
-    font-weight:800;
-    background:linear-gradient(135deg,#EEF8F1,#F8FAFC);
-}
-
-.product-content{
-    padding:14px;
-}
-
-.product-name-row{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:10px;
-    margin-bottom:8px;
-}
-
-.product-name{
-    margin:0;
-    color:#17252A;
-    font-size:1.05rem;
-    font-weight:800;
-    line-height:1.22;
-    min-height:40px;
-    display:-webkit-box;
-    -webkit-line-clamp:2;
-    -webkit-box-orient:vertical;
-    overflow:hidden;
-}
-
-.product-price{
-    flex:0 0 auto;
-    color:#17252A;
-    font-size:1.05rem;
-    font-weight:900;
-    white-space:nowrap;
-}
-
-.product-qty{
-    display:inline-flex;
-    align-items:center;
-    width:max-content;
-    max-width:100%;
-    margin:0 0 10px;
-    padding:6px 12px;
-    border-radius:999px;
-    background:rgba(228,247,234,.72);
-    color:#3B7D55;
-    border:1px solid rgba(95,168,120,.18);
-    font-size:.84rem;
-    font-weight:900;
-}
-
-.restock-form{
-    display:grid;
-    grid-template-columns:minmax(92px, 1fr) auto;
-    gap:8px;
-    margin:0 0 10px;
-    align-items:center;
-}
-
-.restock-form input{
-    width:100%;
-    min-height:36px;
-    border:1px solid rgba(95,168,120,.25);
-    border-radius:12px;
-    padding:7px 10px;
-    color:#334155;
-    background:#fff;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:.88rem;
-    font-weight:700;
-    outline:none;
-}
-
-.restock-form input:focus{
-    border-color:rgba(95,168,120,.65);
-    box-shadow:0 0 0 4px rgba(95,168,120,.12);
-}
-
-.restock-form button{
-    min-height:36px;
-    border:none;
-    border-radius:999px;
-    padding:7px 13px;
-    background:#5FA878;
-    color:#fff;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:.86rem;
-    font-weight:900;
-    cursor:pointer;
-    box-shadow:0 8px 18px rgba(95,168,120,.18);
-    transition:.2s ease;
-}
-
-.restock-form button:hover{
-    background:#3B7D55;
-    transform:translateY(-1px);
-}
-
-.product-qty{
-    display:inline-flex;
-    align-items:center;
-    width:max-content;
-    max-width:100%;
-    margin:0 0 10px;
-    padding:6px 12px;
-    border-radius:999px;
-    background:rgba(228,247,234,.72);
-    color:#3B7D55;
-    border:1px solid rgba(95,168,120,.18);
-    font-size:.84rem;
-    font-weight:900;
-}
-
-.product-meta{
-    display:flex;
-    gap:6px;
-    flex-wrap:wrap;
-    margin-bottom:10px;
-}
-
-.product-meta span{
-    display:inline-flex;
-    align-items:center;
-    gap:5px;
-    min-height:24px;
-    padding:5px 10px;
-    border-radius:999px;
-    background:rgba(228,247,234,.72);
-    color:#3B7D55;
-    font-size:.78rem;
-    font-weight:800;
-    line-height:1.2;
-    text-transform:capitalize;
-}
-
-.product-meta span strong{
-    color:#17252A;
-    font-weight:900;
-}
-
-.product-centres{
-    padding-top:10px;
-    border-top:1px solid rgba(220,238,226,.75);
-    color:#64748B;
-    font-size:.84rem;
-    line-height:1.45;
-    min-height:48px;
-    overflow:visible;
-}
-
-/* LIST VIEW */
-.product-grid.list-view{
-    grid-template-columns:1fr;
-}
-
-.product-grid.list-view .product-card{
-    display:grid;
-    grid-template-columns:180px 1fr;
-    align-items:stretch;
-}
-
-.product-grid.list-view .product-image-wrap{
-    height:100%;
-    min-height:150px;
-}
-
-.product-grid.list-view .product-content{
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-}
-
-.product-grid.list-view .product-name{
-    min-height:unset;
-    font-size:1.18rem;
-}
-
-.product-grid.list-view .product-centres{
-    min-height:unset;
-    -webkit-line-clamp:3;
-}
-
-.product-pagination{
-    display:flex;
-    justify-content:flex-end;
-    align-items:center;
-    gap:8px;
-    margin-top:20px;
-    flex-wrap:wrap;
-}
-
-.product-page-btn{
-    min-width:38px;
-    height:38px;
-    border:1px solid rgba(95,168,120,.25);
-    border-radius:12px;
-    background:rgba(228,247,234,.58);
-    color:#3B7D55;
-    font-family:"Times New Roman", Georgia, serif;
-    font-weight:800;
-    cursor:pointer;
-}
-
-.product-page-btn.active,
-.product-page-btn:hover{
-    background:#5FA878;
-    color:#fff;
-}
-
-.product-page-btn:disabled{
-    opacity:.45;
-    cursor:not-allowed;
-}
-
-.empty-products{
-    grid-column:1 / -1;
-    padding:24px;
-    text-align:center;
-    border:1px dashed rgba(95,168,120,.35);
-    border-radius:18px;
-    background:rgba(228,247,234,.38);
-    color:#64748B;
-    font-weight:700;
-}
-
-@keyframes cardIn{
-    from{opacity:0; transform:translateY(8px);}
-    to{opacity:1; transform:translateY(0);}
-}
-
-@media(max-width:1280px){
-    .product-grid{
-        grid-template-columns:repeat(3, minmax(0, 1fr));
-    }
-}
-
-@media(max-width:900px){
-    .products-page{
-        padding:20px;
-    }
-
-    .products-toolbar{
-        grid-template-columns:1fr;
-    }
-
-    .view-toggle{
-        width:max-content;
-    }
-
-    .product-grid,
-    .product-grid.list-view{
-        display:flex;
-        gap:14px;
-        overflow-x:auto;
-        scroll-snap-type:x mandatory;
-        padding:4px 2px 12px;
-        -webkit-overflow-scrolling:touch;
-    }
-
-    .product-card,
-    .product-grid.list-view .product-card{
-        flex:0 0 280px;
-        display:block;
-        scroll-snap-align:start;
-    }
-
-    .product-image-wrap,
-    .product-grid.list-view .product-image-wrap{
-        height:140px;
-        min-height:140px;
-    }
-
-    .product-content{
-        padding:12px;
-    }
-
-    .product-pagination{
-        justify-content:center;
-    }
-    .mobile-back-btn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.products-heading-left{
-    width:100%;
-}
-}
-
-@media(max-width:560px){
-    .products-page{
-        padding:16px;
-        border-radius:20px;
-    }
-
-    .products-title-row{
-        align-items:stretch;
-        flex-direction:column;
-    }
-
-    .products-actions,
-    .product-action-btn{
-        width:100%;
-    }
-
-    .product-card,
-    .product-grid.list-view .product-card{
-        flex-basis:250px;
-    }
-
-    .product-image-wrap,
-    .product-grid.list-view .product-image-wrap{
-        height:128px;
-        min-height:128px;
-    }
-
-    .product-name{
-        font-size:.96rem;
-        min-height:36px;
-    }
-
-    .product-price{
-        font-size:.98rem;
-    }
-
-    .product-centres{
-        font-size:.78rem;
-    }
-}
-
-@media(max-width:390px){
-    .product-card,
-    .product-grid.list-view .product-card{
-        flex-basis:235px;
-    }
-}
-
-/* Hide Grid/List toggle in mobile & tablet */
-@media(max-width:900px){
-    .view-toggle{
-        display:none !important;
-    }
-}
-
-.farmer-products-section{
-    margin-top:34px;
-    padding-top:26px;
-    border-top:1px solid rgba(220,238,226,.95);
-}
-
-.farmer-title-row{
-    margin-top:0;
-}
-
-.farmer-product-card .product-no-image{
-    color:#059669;
-    background:linear-gradient(135deg,#ECFDF5,#F8FAFC);
-}
-
-
-.centre-filter-wrap{
-    position:relative;
-    flex:0 0 auto;
-    z-index:80;
-}
-
-.centre-filter-btn{
-    min-height:38px;
-    padding:8px 15px;
-    border-radius:999px;
-    border:1px solid rgba(220,238,226,.95);
-    background:#fff;
-    color:#425466;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:.94rem;
-    font-weight:700;
-    box-shadow:0 6px 14px rgba(23,37,42,.04);
-    cursor:pointer;
-    transition:.2s ease;
-    white-space:nowrap;
-}
-
-.centre-filter-btn.active,
-.centre-filter-btn:hover{
-    background:#5FA878;
-    color:#fff;
-    border-color:#5FA878;
-}
-
-.centre-filter-menu{
-    display:none;
-    position:absolute;
-    top:calc(100% + 10px);
-    left:0;
-    z-index:99999;
-    width:min(390px, calc(100vw - 36px));
-    max-height:min(420px, 70vh);
-    padding:12px;
-    border:1px solid #DCEEE2;
-    border-radius:16px;
-    background:#fff;
-    box-shadow:0 18px 40px rgba(15,23,42,.14);
-}
-
-.centre-filter-wrap.drop-up .centre-filter-menu{
-    top:auto;
-    bottom:calc(100% + 10px);
-}
-
-.centre-filter-wrap.open .centre-filter-menu{
-    display:block;
-}
-
-.centre-filter-search{
-    width:100%;
-    height:40px;
-    margin-bottom:10px;
-    border-radius:12px;
-    border:1px solid #E2E8F0;
-    padding:0 12px;
-    font-family:"Times New Roman", Georgia, serif;
-}
-
-.centre-filter-search:focus{
-    outline:none;
-    border-color:rgba(95,168,120,.65);
-    box-shadow:0 0 0 4px rgba(95,168,120,.12);
-}
-
-.centre-filter-options{
-    max-height:260px;
-    overflow-y:auto;
-    overflow-x:hidden;
-    display:grid;
-    gap:8px;
-    padding-right:4px;
-    overscroll-behavior:contain;
-}
-
-.centre-filter-options::-webkit-scrollbar{
-    width:6px;
-}
-
-.centre-filter-options::-webkit-scrollbar-thumb{
-    background:#CFE6D8;
-    border-radius:10px;
-}
-
-.centre-filter-option{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:9px 10px;
-    border:1px solid #E2E8F0;
-    border-radius:12px;
-    background:#F8FAFC;
-    cursor:pointer;
-    color:#334155;
-    font-weight:700;
-    transition:.18s ease;
-}
-
-.centre-filter-option:hover{
-    background:#E4F7EA;
-    border-color:rgba(95,168,120,.35);
-}
-
-.centre-filter-option input{
-    width:17px;
-    height:17px;
-    flex:0 0 17px;
-    accent-color:#5FA878;
-}
-
-.centre-filter-footer{
-    display:flex;
-    justify-content:flex-end;
-    gap:10px;
-    margin-top:12px;
-    padding-top:10px;
-    border-top:1px solid #E2E8F0;
-}
-
-.centre-filter-clear,
-.centre-filter-ok{
-    border:none;
-    border-radius:999px;
-    padding:8px 15px;
-    font-family:"Times New Roman", Georgia, serif;
-    font-weight:800;
-    cursor:pointer;
-}
-
-.centre-filter-clear{
-    background:#E4F7EA;
-    color:#3B7D55;
-}
-
-.centre-filter-ok{
-    background:#5FA878;
-    color:#fff;
-}
-
-@media(max-width:560px){
-    .centre-filter-wrap{
-        width:100%;
-        position:static;
-    }
-
-    .centre-filter-btn{
-        width:100%;
-    }
-
-    .centre-filter-menu{
-        position:fixed;
-        left:16px;
-        right:16px;
-        top:96px;
-        bottom:auto;
-        width:auto;
-        max-height:calc(100vh - 140px);
-        padding:14px;
-    }
-
-    .centre-filter-wrap.drop-up .centre-filter-menu{
-        top:96px;
-        bottom:auto;
-    }
-
-    .centre-filter-options{
-        max-height:calc(100vh - 260px);
-    }
-}
-
-
-.product-card.is-disabled{
-    opacity:.72;
-}
-
-.product-status-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-    flex-wrap:wrap;
-    margin:0 0 10px;
-}
-
-.product-status-pill{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:28px;
-    padding:6px 12px;
-    border-radius:999px;
-    font-size:.8rem;
-    font-weight:900;
-    border:1px solid rgba(95,168,120,.22);
-}
-
-.product-status-pill.active{
-    color:#047857;
-    background:#ECFDF5;
-    border-color:#A7F3D0;
-}
-
-.product-status-pill.disabled{
-    color:#B45309;
-    background:#FFFBEB;
-    border-color:#FDE68A;
-}
-
-.product-status-pill.pending{
-    background:#FFF7E6;
-    color:#8A5B00;
-    border-color:#F4D38A;
-}
-
-.product-status-pill.info{
-    color:#1D4ED8;
-    background:#EFF6FF;
-    border-color:#BFDBFE;
-}
-
-.product-status-pill.error{
-    color:#B91C1C;
-    background:#FEF2F2;
-    border-color:#FECACA;
-}
-
-.product-readiness-note{
-    margin:0 0 10px;
-    padding:9px 11px;
-    border:1px solid #E2EFE6;
-    border-radius:12px;
-    background:#F8FBF9;
-    color:#586B61;
-    font-size:.82rem;
-    line-height:1.4;
-}
-
-.product-readiness-note strong{
-    color:#2F5F43;
-}
-
-
-.product-admin-actions{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px solid rgba(220,238,226,.75);
-}
-
-.inline-action-form{
-    margin:0;
-}
-
-.product-admin-btn{
-    min-height:34px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    border:none;
-    border-radius:999px;
-    padding:7px 13px;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:.84rem;
-    font-weight:900;
-    cursor:pointer;
-    transition:.2s ease;
-    text-decoration:none;
-}
-
-.product-admin-btn.edit{
-    background:#EFF6FF;
-    color:#1D4ED8;
-    border:1px solid #BFDBFE;
-}
-
-.product-admin-btn.commercial{
-    background:#F3FBF6;
-    color:#2F7A4C;
-    border:1px solid #BFE2CB;
-}
-
-.product-admin-btn.enable{
-    background:#ECFDF5;
-    color:#047857;
-    border:1px solid #A7F3D0;
-}
-
-.product-admin-btn.disable{
-    background:#FFFBEB;
-    color:#B45309;
-    border:1px solid #FDE68A;
-}
-
-.product-admin-btn.delete{
-    background:#FEE2E2;
-    color:#B91C1C;
-    border:1px solid #FECACA;
-}
-
-.product-admin-btn:hover{
-    transform:translateY(-1px);
-    filter:brightness(.96);
-}
-
-@media(max-width:560px){
-    .product-admin-actions,
-    .inline-action-form,
-    .product-admin-btn{
-        width:100%;
-    }
-}
-
-.product-confirm-overlay{
-    position:fixed;
-    top:0;
-    left:0;
-    width:100vw;
-    height:100vh;
-    height:100dvh;
-    z-index:999999;
-    display:none;
-    background:rgba(15,23,42,.38);
-    backdrop-filter:blur(6px);
-}
-
-.product-confirm-overlay.show{
-    display:block;
-}
-
-.product-confirm-modal{
-    position:fixed;
-    top:50%;
-    left:50%;
-    width:min(440px, calc(100vw - 34px));
-    max-height:calc(100vh - 40px);
-    overflow-y:auto;
-    transform:translate(-50%, -50%);
-    border:1px solid rgba(220,238,226,.95);
-    border-radius:24px;
-    background:#fff;
-    box-shadow:0 30px 80px rgba(15,23,42,.22);
-    padding:24px;
-    font-family:"Times New Roman", Georgia, serif;
-    animation:confirmPop .18s ease both;
-}
-
-.product-confirm-badge{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:32px;
-    padding:6px 13px;
-    border-radius:999px;
-    background:#E4F7EA;
-    color:#3B7D55;
-    font-weight:900;
-    border:1px solid rgba(95,168,120,.25);
-    margin-bottom:12px;
-}
-
-.product-confirm-title{
-    margin:0 0 8px;
-    color:#17252A;
-    font-size:1.45rem;
-    font-weight:900;
-}
-
-.product-confirm-text{
-    margin:0;
-    color:#64748B;
-    font-size:1rem;
-    line-height:1.5;
-    font-weight:700;
-}
-
-.product-confirm-actions{
-    display:flex;
-    justify-content:flex-end;
-    gap:10px;
-    margin-top:22px;
-    flex-wrap:wrap;
-}
-
-.product-confirm-btn{
-    min-height:42px;
-    border:none;
-    border-radius:999px;
-    padding:9px 18px;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:1rem;
-    font-weight:900;
-    cursor:pointer;
-    transition:.2s ease;
-}
-
-.product-confirm-btn.cancel{
-    background:#E4F7EA;
-    color:#3B7D55;
-    border:1px solid rgba(95,168,120,.25);
-}
-
-.product-confirm-btn.confirm{
-    background:#5FA878;
-    color:#fff;
-    box-shadow:0 12px 26px rgba(95,168,120,.20);
-}
-
-.product-confirm-btn.danger{
-    background:#B91C1C;
-    color:#fff;
-    box-shadow:0 12px 26px rgba(185,28,28,.18);
-}
-
-.product-confirm-btn:hover{
-    transform:translateY(-1px);
-}
-
-@keyframes confirmPop{
-    from{
-        opacity:0;
-        transform:translate(-50%, -46%) scale(.98);
-    }
-    to{
-        opacity:1;
-        transform:translate(-50%, -50%) scale(1);
-    }
-}
-
-@media(max-width:560px){
-    .product-confirm-actions,
-    .product-confirm-btn{
-        width:100%;
-    }
-}
+.products-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.page-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}.page-head h2{margin:0;color:#17252A;font-size:1.75rem}.page-head p{margin:5px 0 0;color:#64748B;max-width:760px;line-height:1.45}.head-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 16px;border-radius:999px;border:1px solid #CFE6D8;text-decoration:none;font:inherit;font-weight:800;cursor:pointer}.btn.primary{background:#5FA878;color:#fff;border-color:#5FA878}.btn.soft{background:#F3FBF6;color:#2F7A4C}.btn.outline{background:#fff;color:#2F7A4C}.btn:disabled{opacity:.45;cursor:not-allowed}.flow-note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;margin-bottom:15px;border:1px solid #B9DCCA;border-radius:15px;background:#F3FBF6;color:#3E6850;line-height:1.45}.flow-note strong{color:#24583A}.bulk-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;border:1px solid #DCEEE2;border-radius:16px;background:#FBFEFC}.bulk-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.select-all{display:flex;align-items:center;gap:8px;font-weight:800;color:#334155}.select-all input,.card-check input{width:18px;height:18px;accent-color:#5FA878}.selection-count{padding:5px 10px;border-radius:999px;background:#E4F7EA;color:#2F7A4C;font-weight:900;font-size:.82rem}.bulk-actions{display:flex;gap:8px;flex-wrap:wrap}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;margin-bottom:12px}.search input{width:100%;height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 15px;font:inherit;outline:none}.search input:focus{border-color:#7AB88E;box-shadow:0 0 0 4px rgba(95,168,120,.12)}.view-toggle{display:flex;gap:5px;padding:4px;border:1px solid #E2EFE6;border-radius:999px;background:#F5FAF6}.view-btn{border:0;border-radius:999px;padding:7px 13px;background:transparent;color:#3B7D55;font:inherit;font-weight:800;cursor:pointer}.view-btn.active{background:#5FA878;color:#fff}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.chip{border:1px solid #DCEEE2;border-radius:999px;padding:7px 13px;background:#fff;color:#425466;font:inherit;font-weight:800;cursor:pointer}.chip.active,.chip:hover{background:#5FA878;color:#fff;border-color:#5FA878}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.card{position:relative;overflow:hidden;border:1px solid #E2EFE6;border-radius:19px;background:#fff;box-shadow:0 10px 24px rgba(15,23,42,.06);transition:.2s ease}.card:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(15,23,42,.1)}.card.disabled{opacity:.7}.card-check{position:absolute;z-index:5;top:10px;left:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:rgba(255,255,255,.96);box-shadow:0 5px 14px rgba(15,23,42,.14)}.image{height:145px;background:#EEF8F1;display:flex;align-items:center;justify-content:center;overflow:hidden}.image img{width:100%;height:100%;object-fit:contain}.no-image{font-weight:900;font-size:1.3rem;color:#3B7D55}.body{padding:14px}.name-row{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.name{margin:0;color:#17252A;font-size:1.05rem;font-weight:900;line-height:1.25}.sku{font-size:.75rem;color:#64748B;white-space:nowrap}.meta{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.pill{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:900;border:1px solid #DCECE1;background:#F8FCF9;color:#486252}.pill.green{background:#ECFDF5;border-color:#A7F3D0;color:#047857}.pill.blue{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}.pill.amber{background:#FFFBEB;border-color:#FDE68A;color:#B45309}.pill.red{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.stock-box{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:11px 0}.stock-cell{padding:8px;border:1px solid #E6F0E9;border-radius:11px;background:#FAFDFC;text-align:center}.stock-cell small{display:block;color:#64748B;font-size:.68rem}.stock-cell strong{display:block;margin-top:2px;color:#17252A;font-size:.95rem}.stock-cell.saleable strong{color:#237A43}.marketplace{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:12px;border:1px solid #E2EFE6;background:#F8FBF9;margin-bottom:10px}.marketplace small{color:#64748B}.marketplace strong{font-size:.84rem}.actions{display:flex;gap:7px;flex-wrap:wrap;padding-top:10px;border-top:1px solid #EDF3EF}.action{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:6px 11px;border-radius:999px;border:1px solid #DCEEE2;background:#fff;color:#3B7D55;text-decoration:none;font:inherit;font-size:.8rem;font-weight:900;cursor:pointer}.action.edit{background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE}.action.warn{background:#FFFBEB;color:#B45309;border-color:#FDE68A}.action.danger{background:#FEF2F2;color:#B91C1C;border-color:#FECACA}.note{margin-top:8px;font-size:.78rem;color:#64748B;line-height:1.35}.grid.list{grid-template-columns:1fr}.grid.list .card{display:grid;grid-template-columns:180px 1fr}.grid.list .image{height:100%;min-height:160px}.empty{grid-column:1/-1;padding:32px;border:1px dashed #BFDCC8;border-radius:18px;background:#F8FCF9;text-align:center;color:#64748B}.pagination{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-top:18px}.page-btn{min-width:36px;height:36px;border:1px solid #DCEEE2;border-radius:10px;background:#fff;color:#3B7D55;font:inherit;font-weight:900;cursor:pointer}.page-btn.active{background:#5FA878;color:#fff}.page-btn:disabled{opacity:.4}.confirm-overlay{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.4);backdrop-filter:blur(5px)}.confirm-overlay.show{display:flex}.confirm-box{width:min(430px,100%);padding:22px;border-radius:22px;background:#fff;box-shadow:0 30px 80px rgba(15,23,42,.25)}.confirm-box h3{margin:0 0 8px;color:#17252A}.confirm-box p{margin:0;color:#64748B;line-height:1.5}.confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.modal-btn{border:0;border-radius:999px;padding:9px 15px;font:inherit;font-weight:900;cursor:pointer}.modal-btn.cancel{background:#E4F7EA;color:#3B7D55}.modal-btn.ok{background:#B91C1C;color:#fff}
+@media(max-width:1250px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.view-toggle{display:none}.toolbar{grid-template-columns:1fr}}@media(max-width:620px){.products-page{padding:15px;border-radius:18px}.grid{grid-template-columns:1fr}.head-actions,.head-actions .btn,.bulk-actions,.bulk-actions .btn{width:100%}.bulk-bar{align-items:stretch}.grid.list .card{display:block}.stock-box{grid-template-columns:repeat(3,1fr)}}
 </style>
 
-<div class="page-card products-page">
-
-  <div class="products-title-row">
-    <div class="products-heading-left">
-        <button type="button" class="mobile-back-btn" onclick="history.back()" aria-label="Back">
-            ←
-        </button>
-        <h2>Products</h2>
-    </div>
-
-    <div class="products-actions">
-        <a href="{{ url_for('admin.add_product') }}" class="product-action-btn primary">
-            + Add Product
-        </a>
-
-        <a href="{{ url_for('admin.product_categories') }}" class="product-action-btn secondary">
-            Manage Categories
-        </a>
-    </div>
-</div>
-
-    <div class="products-toolbar">
-        <div class="product-search">
-            <input type="text" id="productSearchInput" placeholder="Search by product code, name, brand, manufacturer, category, role, unit, barcode, centre or price">
+<div class="products-page">
+    <div class="page-head">
+        <div>
+            <h2>AVPL Products</h2>
+            <p>Create products once, receive real stock through Goods Receipt, then select the products you want to show to every active UFC Centre.</p>
         </div>
+        <div class="head-actions">
+            <a class="btn soft" href="{{ url_for('admin.current_stock') }}">Current Stock</a>
+            <a class="btn soft" href="{{ url_for('admin.ufc_order_requests') }}">UFC Order Requests</a>
+            {% if session.get('role') in ['avpl_admin','accounts'] %}
+            <a class="btn primary" href="{{ url_for('admin.add_product') }}">+ Add Product</a>
+            {% endif %}
+            <a class="btn outline" href="{{ url_for('admin.product_categories') }}">Categories</a>
+        </div>
+    </div>
 
+    <div class="flow-note">
+        <div>✓</div>
+        <div><strong>AVPL Admin:</strong> Select one or more products below, then click <strong>Publish to UFC Marketplace</strong>. Only published products will appear in UFC Admin. Publishing never changes stock.</div>
+    </div>
+
+    {% if can_publish %}
+    <form id="marketplaceBulkForm" method="post" action="{{ url_for('admin.update_ufc_marketplace_publication') }}"></form>
+    <div class="bulk-bar">
+        <div class="bulk-left">
+            <label class="select-all"><input type="checkbox" id="selectVisible"> Select all visible</label>
+            <span class="selection-count" id="selectionCount">0 selected</span>
+        </div>
+        <div class="bulk-actions">
+            <button class="btn soft bulk-submit" form="marketplaceBulkForm" name="action" value="unpublish" type="submit" disabled>Remove from UFC Marketplace</button>
+            <button class="btn primary bulk-submit" form="marketplaceBulkForm" name="action" value="publish" type="submit" disabled>Publish to UFC Marketplace</button>
+        </div>
+    </div>
+    {% else %}
+    <div class="bulk-bar"><div><strong>Marketplace publishing is controlled by AVPL Admin.</strong> Accounts can review Product Master and stock here.</div></div>
+    {% endif %}
+
+    <div class="toolbar">
+        <div class="search"><input id="searchInput" type="text" placeholder="Search product, SKU, category, brand or batch stock"></div>
         <div class="view-toggle">
             <button type="button" class="view-btn active" data-view="grid">Grid</button>
             <button type="button" class="view-btn" data-view="list">List</button>
         </div>
     </div>
 
-    <div class="product-filter-strip">
-        <button type="button" class="product-chip active" data-filter="all">All Products</button>
-        <button type="button" class="product-chip" data-filter="input">Input</button>
-        <button type="button" class="product-chip" data-filter="output">Output</button>
-        <button type="button" class="product-chip" data-filter="both">Both</button>
-<div class="centre-filter-wrap" id="centreFilterWrap">
-    <button type="button" class="centre-filter-btn" id="centreFilterBtn">
-        Centre-wise Availability
-    </button>
-
-    <div class="centre-filter-menu" id="centreFilterMenu">
-        <input
-            type="text"
-            class="centre-filter-search"
-            id="centreFilterSearch"
-            placeholder="Search centres..."
-        >
-
-        <div class="centre-filter-options" id="centreFilterOptions">
-            <label class="centre-filter-option">
-                <input type="radio" name="centre_filter" value="all" checked>
-                <span>All Centres</span>
-            </label>
-
-            {% for centre in centres %}
-                <label class="centre-filter-option">
-                    <input type="radio" name="centre_filter" value="{{ centre.centre_uid }}">
-                    <span>
-                        {{ centre.centre_uid }}
-                        {% if centre.name %}
-                            - {{ centre.name }}
-                        {% elif centre.name_of_enterprise %}
-                            - {{ centre.name_of_enterprise }}
-                        {% endif %}
-                    </span>
-                </label>
-            {% endfor %}
-        </div>
-
-        <div class="centre-filter-footer">
-            <button type="button" class="centre-filter-clear" id="centreFilterClear">Clear</button>
-            <button type="button" class="centre-filter-ok" id="centreFilterOk">OK</button>
-        </div>
-    </div>
-</div>
+    <div class="chips">
+        <button type="button" class="chip active" data-filter="all">All</button>
+        <button type="button" class="chip" data-filter="input">Input</button>
+        <button type="button" class="chip" data-filter="output">Output</button>
+        <button type="button" class="chip" data-filter="both">Both</button>
+        <button type="button" class="chip" data-filter="published">Published to UFC</button>
+        <button type="button" class="chip" data-filter="unpublished">Not Published</button>
+        <button type="button" class="chip" data-filter="stock">In Stock</button>
     </div>
 
-    <div class="product-grid" id="productGrid">
+    <div class="grid" id="productGrid">
         {% for p in products %}
-    {% set product_is_active = p.get('is_active', True) %}
-    {% set product_role = p.product_role or p.type or '' %}
-    {% set accounting_mapping = p.get('_accounting_mapping') or {} %}
-    {% set readiness = p.get('_readiness') or {} %}
-    {% set commercial_configured = p.get('commercial_setup_status') == 'configured' or p.get('available_centres') %}
-    <article class="product-card {% if not product_is_active %}is-disabled{% endif %}"
-         data-type="{{ product_role|lower }}"
-         data-status="{{ 'active' if product_is_active else 'disabled' }}"
-         data-centres="{% if p.available_centres is iterable and p.available_centres is not string %}{{ p.available_centres|join('|') }}{% else %}{{ p.available_centres }}{% endif %}"
-         data-search="{{ p.product_code }} {{ p.name }} {{ p.brand }} {{ p.manufacturer }} {{ p.supplier_product_code }} {{ p.barcode }} {{ p.category }} {{ product_role }} {{ p.base_unit_code }} {{ p.base_unit_name }} {{ accounting_mapping.get('hsn_code', '') }} {{ accounting_mapping.get('gst_rate_code', '') }} {{ accounting_mapping.get('taxability_name', '') }} {{ accounting_mapping.get('mapping_code', '') }} {% if p.available_centres is iterable and p.available_centres is not string %}{{ p.available_centres|join(' ') }}{% else %}{{ p.available_centres }}{% endif %} {{ p.price }} {{ readiness.get('label', '') }}">
-                <div class="product-image-wrap">
-                    {% if p.image_name %}
-                        <img src="{{ url_for('documents.serve', filename=p.image_name) }}" alt="{{ p.name }}">
-                    {% else %}
-                        <div class="product-no-image">UF</div>
-                    {% endif %}
-                </div>
-
-                <div class="product-content">
-                    <div class="product-name-row">
-                        <h3 class="product-name">{{ p.name }}</h3>
-                        <div class="product-price">
-                            {% if commercial_configured %}
-                                ₹{{ p.get('price', 0) }}
-                            {% else %}
-                                Not set
-                            {% endif %}
-                        </div>
-                    </div>
-
-        <div class="product-meta">
-    <span><strong>Code:</strong> {{ p.product_code or 'Legacy' }}</span>
-    <span><strong>Category:</strong> {{ p.category or '-' }}</span>
-    <span><strong>Role:</strong> {{ product_role|title if product_role else '-' }}</span>
-    {% if p.brand %}<span><strong>Brand:</strong> {{ p.brand }}</span>{% endif %}
-    {% if p.base_unit_code %}
-        <span><strong>Pack:</strong> {{ p.pack_size or 1 }} {{ p.base_unit_code }}</span>
-    {% endif %}
-    {% if accounting_mapping %}
-        <span><strong>HSN:</strong> {{ accounting_mapping.get('hsn_code') or '-' }}</span>
-        <span><strong>Tax:</strong> {{ accounting_mapping.get('taxability_name') or accounting_mapping.get('taxability_code') or '-' }}{% if accounting_mapping.get('gst_rate_code') %} · {{ accounting_mapping.get('gst_rate_code') }}{% endif %}</span>
-    {% endif %}
-</div>
-
-<div class="product-status-row">
-    {% if product_is_active %}
-        <span class="product-status-pill active">Active</span>
-    {% else %}
-        <span class="product-status-pill disabled">Disabled</span>
-    {% endif %}
-    {% if p.unnatfarm_eligible is sameas false %}
-        <span class="product-status-pill disabled">Not UnnatFarm Eligible</span>
-    {% else %}
-        <span class="product-status-pill active">UnnatFarm Eligible</span>
-    {% endif %}
-   
-    <span
-    class="product-status-pill {{ readiness.get('tone', 'pending') }}"
-    title="{{ readiness.get('issues', [])|join(' • ') }}"
-    >
-        Readiness:
-        {{ readiness.get('label', 'Not Checked') }}
-    </span>
-
-    {% if readiness.get('purchase_ready') %}
-        <span class="product-status-pill active">
-            Purchase Ready
-        </span>
-    {% else %}
-        <span class="product-status-pill pending">
-            Purchase Not Ready
-        </span>
-    {% endif %}
-</div>
-
-{% if readiness.get('primary_issue') %}
-    <div class="product-readiness-note">
-        <strong>Next action:</strong>
-        {{ readiness.get('primary_issue') }}
-    </div>
-{% endif %}
-
-<span class="product-qty">
-    Legacy available:
-    {% if p.available_quantity is defined and p.available_quantity is not none %}
-        {{ p.available_quantity }}
-    {% elif p.quantity is defined and p.quantity is not none %}
-        {{ p.quantity }}
-    {% elif p.stock_quantity is defined and p.stock_quantity is not none %}
-        {{ p.stock_quantity }}
-    {% elif p.stock is defined and p.stock is not none %}
-        {{ p.stock }}
-    {% else %}
-        0
-    {% endif %}
-</span>
-
-{% if commercial_configured %}
-<form method="POST"
-      action="{{ url_for('admin.restock_product', product_id=p._id) }}"
-      class="restock-form"
-      title="Temporary legacy refill. This will be replaced by the AVPL purchase and inventory workflow.">
-    <input
-        type="number"
-        name="restock_quantity"
-        min="0.01"
-        step="0.01"
-        placeholder="Legacy refill qty"
-        required
-    >
-    <button type="submit">Legacy Refill</button>
-</form>
-{% endif %}
-
-{% if session.get('role') in ['avpl_admin', 'accounts'] %}
-<div class="product-admin-actions">
-    <a href="{{ url_for('admin.edit_product', product_id=p._id) }}" class="product-admin-btn edit">Edit Master</a>
-    <a href="{{ url_for('admin.product_commercial_setup', product_id=p._id) }}" class="product-admin-btn commercial">Commercial Setup</a>
-
-    <form method="POST"
-          action="{{ url_for('admin.toggle_product_status', product_id=p._id) }}"
-          class="inline-action-form product-confirm-form"
-          data-confirm-type="{{ 'enable' if not product_is_active else 'disable' }}"
-          data-confirm-title="{{ 'Enable Product' if not product_is_active else 'Disable Product' }}"
-          data-confirm-message="{{ 'Are you sure you want to enable this product?' if not product_is_active else 'Are you sure you want to disable this product?' }}">
-        <button type="submit"
-                class="product-admin-btn {{ 'enable' if not product_is_active else 'disable' }}">
-            {{ 'Enable' if not product_is_active else 'Disable' }}
-        </button>
-    </form>
-
-    <form method="POST"
-          action="{{ url_for('admin.delete_product', product_id=p._id) }}"
-          class="inline-action-form product-confirm-form"
-          data-confirm-type="delete"
-          data-confirm-title="Delete Product"
-          data-confirm-message="Are you sure you want to delete this product? This will remove it from the product list.">
-        <button type="submit" class="product-admin-btn delete">
-            Delete
-        </button>
-    </form>
-</div>
-{% endif %}
-
-<div class="product-centres">
-    <strong>Current Centre visibility:</strong>
-    {% if not commercial_configured %}
-        Pending commercial setup
-    {% elif p.available_centres is iterable and p.available_centres is not string %}
-        {{ p.available_centres|join(', ') }}
-    {% else %}
-        {{ p.available_centres or '-' }}
-    {% endif %}
-</div>
-                </div>
-            </article>
-        {% else %}
-            <div class="empty-products">
-                No products found.
+        {% set role = (p.product_role or p.type or '')|lower %}
+        {% set mapping = p.get('_accounting_mapping') or {} %}
+        {% set readiness = p.get('_readiness') or {} %}
+        {% set inv = p.get('_inventory') or {} %}
+        {% set published = p.get('_ufc_published', False) %}
+        {% set active = p.get('is_active', True) %}
+        <article class="card {% if not active %}disabled{% endif %}"
+                 data-role="{{ role }}"
+                 data-published="{{ 'yes' if published else 'no' }}"
+                 data-stock="{{ 'yes' if inv.get('has_saleable_stock') else 'no' }}"
+                 data-search="{{ p.product_code }} {{ p.name }} {{ p.category }} {{ p.brand }} {{ p.manufacturer }} {{ role }} {{ inv.get('warehouses', [])|join(' ') }}">
+            {% if can_publish %}
+            <label class="card-check" title="Select product">
+                <input class="product-select" form="marketplaceBulkForm" type="checkbox" name="product_ids" value="{{ p._id }}">
+            </label>
+            {% endif %}
+            <div class="image">
+                {% if p.image_name %}<img src="{{ url_for('documents.serve', filename=p.image_name) }}" alt="{{ p.name }}">{% else %}<div class="no-image">UF</div>{% endif %}
             </div>
+            <div class="body">
+                <div class="name-row">
+                    <h3 class="name">{{ p.name }}</h3>
+                    <span class="sku">{{ p.product_code or 'Legacy' }}</span>
+                </div>
+
+                <div class="meta">
+                    <span class="pill">{{ p.category or '-' }}</span>
+                    <span class="pill blue">{{ role|title if role else '-' }}</span>
+                    {% if active %}<span class="pill green">Active</span>{% else %}<span class="pill amber">Disabled</span>{% endif %}
+                    {% if p.unnatfarm_eligible is sameas false %}<span class="pill red">Not UFC Eligible</span>{% endif %}
+                </div>
+
+                <div class="stock-box">
+                    <div class="stock-cell"><small>Physical</small><strong>{{ inv.get('physical_quantity','0') }}</strong></div>
+                    <div class="stock-cell"><small>Reserved</small><strong>{{ inv.get('reserved_quantity','0') }}</strong></div>
+                    <div class="stock-cell saleable"><small>Saleable</small><strong>{{ inv.get('saleable_quantity','0') }}</strong></div>
+                </div>
+
+                <div class="marketplace">
+                    <div><small>UFC Marketplace</small><br><strong>{{ 'Visible to all active UFC Centres' if published else 'Not published' }}</strong></div>
+                    <span class="pill {{ 'green' if published else 'amber' }}">{{ 'Published' if published else 'Private' }}</span>
+                </div>
+
+                {% if readiness.get('purchase_ready') %}
+                    <div class="note">✓ Purchase ready. Stock will come only from posted Goods Receipts or approved adjustments.</div>
+                {% else %}
+                    <div class="note"><strong>Purchase setup:</strong> {{ readiness.get('primary_issue') or 'Complete Product Accounting setup.' }}</div>
+                {% endif %}
+
+                {% if session.get('role') in ['avpl_admin','accounts'] %}
+                <div class="actions">
+                    <a class="action edit" href="{{ url_for('admin.edit_product', product_id=p._id) }}">Edit Master</a>
+                    <form method="post" action="{{ url_for('admin.toggle_product_status', product_id=p._id) }}" class="confirm-form" data-message="{{ 'Enable this product?' if not active else 'Disable this product? Published products should normally be unpublished first.' }}">
+                        <button class="action {{ 'edit' if not active else 'warn' }}" type="submit">{{ 'Enable' if not active else 'Disable' }}</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin.delete_product', product_id=p._id) }}" class="confirm-form" data-message="Delete this Product Master? Existing historical transactions will remain, but the product will leave the active list.">
+                        <button class="action danger" type="submit">Delete</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </article>
+        {% else %}
+        <div class="empty">No AVPL products found. Add your first Product Master to begin.</div>
         {% endfor %}
     </div>
-
-    <div class="product-pagination" id="productPagination"></div>
-
-    <div class="farmer-products-section">
-    <div class="products-title-row farmer-title-row">
-        <h2>Farmer Products</h2>
-    </div>
-
-    <div class="products-toolbar">
-        <div class="product-search">
-            <input
-                type="text"
-                id="farmerProductSearchInput"
-                placeholder="Search farmer products by name, farmer, centre, village or price"
-            >
-        </div>
-    </div>
-
-    <div class="product-grid" id="farmerProductGrid">
-        {% for p in farmer_products %}
-            <article class="product-card farmer-product-card"
-                     data-search="{{ p.product_name }} {{ p.variety }} {{ p.farmer_name }} {{ p.farmer_contact }} {{ p.centre_uid }} {{ p.mitra_uid }} {{ p.village }} {{ p.block }} {{ p.district }} {{ p.unit_price }} {{ p.available_quantity }}">
-                <div class="product-image-wrap">
-                    {% if p.picture %}
-                        <img src="{{ url_for('documents.serve', filename=p.picture) }}" alt="{{ p.product_name }}">
-                    {% elif p.file_path %}
-                        <img src="{{ url_for('documents.serve', filename=p.file_path) }}" alt="{{ p.product_name }}">
-                    {% elif p.image %}
-                        <img src="{{ url_for('documents.serve', filename=p.image) }}" alt="{{ p.product_name }}">
-                    {% else %}
-                        <div class="product-no-image">FP</div>
-                    {% endif %}
-                </div>
-
-                <div class="product-content">
-                    <div class="product-name-row">
-                        <h3 class="product-name">{{ p.product_name or '-' }}</h3>
-                        <div class="product-price">₹{{ p.unit_price or '-' }}</div>
-                    </div>
-
-                    <div class="product-meta">
-                        <span>{{ p.variety or 'Farmer Product' }}</span>
-                        <span>{{ p.status or 'active' }}</span>
-                    </div>
-
-                    <div class="product-centres">
-                        <strong>Farmer:</strong> {{ p.farmer_name or '-' }}<br>
-                        <strong>Contact:</strong> {{ p.farmer_contact or '-' }}<br>
-                      <strong>Available:</strong>
-{% if p.available_quantity is defined and p.available_quantity is not none %}
-    {{ p.available_quantity }}
-{% elif p.quantity is defined and p.quantity is not none %}
-    {{ p.quantity }}
-{% else %}
-    -
-{% endif %}
-<br>
-                        <strong>Centre UID:</strong> {{ p.centre_uid or '-' }}<br>
-                        <strong>Area:</strong>
-                        {{ p.village or '-' }}{% if p.block %}, {{ p.block }}{% endif %}{% if p.district %}, {{ p.district }}{% endif %}
-                    </div>
-                </div>
-            </article>
-        {% else %}
-            <div class="empty-products">
-                No farmer products found.
-            </div>
-        {% endfor %}
-    </div>
-
-    <div class="product-pagination" id="farmerProductPagination"></div>
+    <div class="pagination" id="pagination"></div>
 </div>
 
-</div>
-
-<div class="product-confirm-overlay" id="productConfirmOverlay">
-    <div class="product-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="productConfirmTitle">
-        <div class="product-confirm-badge" id="productConfirmBadge">Product Action</div>
-        <h3 class="product-confirm-title" id="productConfirmTitle">Confirm Action</h3>
-        <p class="product-confirm-text" id="productConfirmText">Are you sure?</p>
-
-        <div class="product-confirm-actions">
-            <button type="button" class="product-confirm-btn cancel" id="productConfirmCancel">
-                Cancel
-            </button>
-            <button type="button" class="product-confirm-btn confirm" id="productConfirmSubmit">
-                Confirm
-            </button>
+<div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+        <h3>Confirm action</h3>
+        <p id="confirmText">Are you sure?</p>
+        <div class="confirm-actions">
+            <button class="modal-btn cancel" type="button" id="confirmCancel">Cancel</button>
+            <button class="modal-btn ok" type="button" id="confirmOk">Confirm</button>
         </div>
     </div>
 </div>
 
 <script>
 (function(){
-    const grid = document.getElementById('productGrid');
-    const farmerGrid = document.getElementById('farmerProductGrid');
+    const grid=document.getElementById('productGrid');
+    const cards=Array.from(grid.querySelectorAll('.card'));
+    const search=document.getElementById('searchInput');
+    const chips=Array.from(document.querySelectorAll('.chip'));
+    const viewBtns=Array.from(document.querySelectorAll('.view-btn'));
+    const pagination=document.getElementById('pagination');
+    const selections=Array.from(document.querySelectorAll('.product-select'));
+    const selectVisible=document.getElementById('selectVisible');
+    const countEl=document.getElementById('selectionCount');
+    const bulkButtons=Array.from(document.querySelectorAll('.bulk-submit'));
+    let filter='all', page=1; const perPage=12;
 
-    const cards = Array.from(document.querySelectorAll('#productGrid .product-card'));
-    const searchInput = document.getElementById('productSearchInput');
-    const chips = Array.from(document.querySelectorAll('.product-chip'));
-    const viewBtns = Array.from(document.querySelectorAll('.view-btn'));
-    const pagination = document.getElementById('productPagination');
-
-    const centreFilterWrap = document.getElementById('centreFilterWrap');
-    const centreFilterBtn = document.getElementById('centreFilterBtn');
-    const centreFilterSearch = document.getElementById('centreFilterSearch');
-    const centreFilterOptions = Array.from(document.querySelectorAll('.centre-filter-option'));
-    const centreFilterClear = document.getElementById('centreFilterClear');
-    const centreFilterOk = document.getElementById('centreFilterOk');
-    const centreRadios = Array.from(document.querySelectorAll('input[name="centre_filter"]'));
-
-    let activeFilter = 'all';
-    let selectedCentre = 'all';
-    let currentPage = 1;
-    let activeView = 'grid';
-    const perPage = 10;
-
-
-
-    const confirmOverlay = document.getElementById('productConfirmOverlay');
-    if(confirmOverlay && confirmOverlay.parentElement !== document.body){
-    document.body.appendChild(confirmOverlay);
-}
-const confirmBadge = document.getElementById('productConfirmBadge');
-const confirmTitle = document.getElementById('productConfirmTitle');
-const confirmText = document.getElementById('productConfirmText');
-const confirmCancel = document.getElementById('productConfirmCancel');
-const confirmSubmit = document.getElementById('productConfirmSubmit');
-let pendingConfirmForm = null;
-
-function openProductConfirm(form){
-    if(!confirmOverlay || !confirmTitle || !confirmText || !confirmSubmit) return true;
-
-    const type = form.dataset.confirmType || 'action';
-    const title = form.dataset.confirmTitle || 'Confirm Action';
-    const message = form.dataset.confirmMessage || 'Are you sure you want to continue?';
-
-    pendingConfirmForm = form;
-
-    confirmTitle.textContent = title;
-    confirmText.textContent = message;
-
-    if(confirmBadge){
-        confirmBadge.textContent =
-            type === 'delete' ? 'Delete Product' :
-            type === 'disable' ? 'Disable Product' :
-            type === 'enable' ? 'Enable Product' :
-            'Product Action';
+    function filtered(){
+        const q=(search.value||'').trim().toLowerCase();
+        return cards.filter(card=>{
+            const role=(card.dataset.role||'').toLowerCase();
+            const published=card.dataset.published==='yes';
+            const inStock=card.dataset.stock==='yes';
+            const text=(card.dataset.search||card.textContent||'').toLowerCase();
+            let ok=true;
+            if(filter==='input') ok=role==='input'||role==='both';
+            else if(filter==='output') ok=role==='output'||role==='both';
+            else if(filter==='both') ok=role==='both';
+            else if(filter==='published') ok=published;
+            else if(filter==='unpublished') ok=!published;
+            else if(filter==='stock') ok=inStock;
+            return ok && (!q || text.includes(q));
+        });
     }
-
-    confirmSubmit.textContent =
-        type === 'delete' ? 'Delete' :
-        type === 'disable' ? 'Disable' :
-        type === 'enable' ? 'Enable' :
-        'Confirm';
-
-    confirmSubmit.classList.toggle('danger', type === 'delete');
-    confirmSubmit.classList.toggle('confirm', type !== 'delete');
-
-    confirmOverlay.classList.add('show');
-    return false;
-}
-
-function closeProductConfirm(){
-    if(confirmOverlay){
-        confirmOverlay.classList.remove('show');
+    function render(){
+        const list=filtered(); const pages=Math.max(1,Math.ceil(list.length/perPage)); page=Math.min(page,pages);
+        cards.forEach(c=>c.style.display='none');
+        list.slice((page-1)*perPage,page*perPage).forEach(c=>c.style.display='');
+        pagination.innerHTML='';
+        if(list.length<=perPage) return;
+        const add=(label,target,disabled=false,active=false)=>{const b=document.createElement('button');b.type='button';b.className='page-btn'+(active?' active':'');b.textContent=label;b.disabled=disabled;b.onclick=()=>{page=target;render();};pagination.appendChild(b);};
+        add('Prev',page-1,page===1);
+        for(let i=1;i<=pages;i++) add(String(i),i,false,i===page);
+        add('Next',page+1,page===pages);
     }
-    pendingConfirmForm = null;
-}
-
-document.querySelectorAll('.product-confirm-form').forEach(form => {
-    form.addEventListener('submit', function(e){
-        if(form.dataset.confirmed === '1'){
-            return true;
+    function updateSelection(){
+        const count=selections.filter(x=>x.checked).length;
+        countEl.textContent=count+' selected'; bulkButtons.forEach(b=>b.disabled=count===0);
+        const visible=filtered().filter(c=>c.style.display!=='none');
+        const visibleChecks=visible.map(c=>c.querySelector('.product-select')).filter(Boolean);
+        if(selectVisible){
+            selectVisible.checked=visibleChecks.length>0 && visibleChecks.every(x=>x.checked);
+            selectVisible.indeterminate=visibleChecks.some(x=>x.checked)&&!selectVisible.checked;
         }
-
-        e.preventDefault();
-        openProductConfirm(form);
-        return false;
-    });
-});
-
-if(confirmCancel){
-    confirmCancel.addEventListener('click', closeProductConfirm);
-}
-
-if(confirmOverlay){
-    confirmOverlay.addEventListener('click', function(e){
-        if(e.target === confirmOverlay){
-            closeProductConfirm();
-        }
-    });
-}
-
-if(confirmSubmit){
-    confirmSubmit.addEventListener('click', function(){
-        if(!pendingConfirmForm) return;
-
-        pendingConfirmForm.dataset.confirmed = '1';
-        pendingConfirmForm.submit();
-    });
-}
-
-document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape'){
-        closeProductConfirm();
     }
-});
-
-    function normalizeCentreList(value){
-        return String(value || '')
-            .split('|')
-            .map(x => x.trim().toLowerCase())
-            .filter(Boolean);
-    }
-
-    function resetNormalChips(){
-        chips.forEach(c => c.classList.remove('active'));
-    }
-
-    function getFilteredCards(){
-        const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
-
-        return cards.filter(card => {
-            const type = (card.dataset.type || '').toLowerCase();
-            const text = (card.dataset.search || card.textContent || '').toLowerCase();
-            const centreList = normalizeCentreList(card.dataset.centres);
-
-            const matchesSearch = !query || text.includes(query);
-
-            let matchesFilter = true;
-
-            if(activeFilter === 'input'){
-                matchesFilter = type === 'input' || type === 'both';
-            }
-
-            if(activeFilter === 'output'){
-                matchesFilter = type === 'output' || type === 'both';
-            }
-
-            if(activeFilter === 'both'){
-                matchesFilter = type === 'both';
-            }
-
-            const matchesCentre =
-                selectedCentre === 'all' ||
-                centreList.includes('all') ||
-                centreList.includes(selectedCentre.toLowerCase());
-
-            return matchesSearch && matchesFilter && matchesCentre;
-        });
-    }
-
-    function renderProducts(){
-        const filtered = getFilteredCards();
-        const total = filtered.length;
-        const totalPages = Math.max(1, Math.ceil(total / perPage));
-
-        currentPage = Math.min(currentPage, totalPages);
-        cards.forEach(card => card.style.display = 'none');
-
-        const start = (currentPage - 1) * perPage;
-        const end = start + perPage;
-
-        filtered.slice(start, end).forEach(card => {
-            card.style.display = '';
-        });
-
-        pagination.innerHTML = '';
-
-        if(cards.length === 0 || total <= perPage) return;
-
-        const prev = document.createElement('button');
-        prev.type = 'button';
-        prev.className = 'product-page-btn';
-        prev.textContent = 'Prev';
-        prev.disabled = currentPage === 1;
-        prev.onclick = function(){
-            currentPage--;
-            renderProducts();
-        };
-        pagination.appendChild(prev);
-
-        for(let i = 1; i <= totalPages; i++){
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'product-page-btn' + (i === currentPage ? ' active' : '');
-            btn.textContent = i;
-            btn.onclick = function(){
-                currentPage = i;
-                renderProducts();
-            };
-            pagination.appendChild(btn);
-        }
-
-        const next = document.createElement('button');
-        next.type = 'button';
-        next.className = 'product-page-btn';
-        next.textContent = 'Next';
-        next.disabled = currentPage === totalPages;
-        next.onclick = function(){
-            currentPage++;
-            renderProducts();
-        };
-        pagination.appendChild(next);
-    }
-
-    chips.forEach(chip => {
-        chip.addEventListener('click', function(){
-            chips.forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-
-            activeFilter = chip.dataset.filter || 'all';
-            currentPage = 1;
-            renderProducts();
-        });
-    });
-
- function positionCentreFilterMenu(){
-    if(!centreFilterWrap) return;
-
-    const menu = document.getElementById('centreFilterMenu');
-    if(!menu) return;
-
-    centreFilterWrap.classList.remove('drop-up');
-
-    const wrapRect = centreFilterWrap.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    const estimatedMenuHeight = Math.min(360, menu.scrollHeight || 360);
-
-    const spaceBelow = viewportHeight - wrapRect.bottom;
-    const spaceAbove = wrapRect.top;
-
-    if(spaceBelow < estimatedMenuHeight + 20 && spaceAbove > estimatedMenuHeight){
-        centreFilterWrap.classList.add('drop-up');
-    }
-}
-
-if(centreFilterBtn && centreFilterWrap){
-    centreFilterBtn.addEventListener('click', function(){
-        centreFilterWrap.classList.toggle('open');
-
-        if(centreFilterWrap.classList.contains('open')){
-            positionCentreFilterMenu();
-
-            if(centreFilterSearch){
-                setTimeout(() => centreFilterSearch.focus(), 80);
-            }
-        }
-    });
-}
-
-window.addEventListener('resize', function(){
-    if(centreFilterWrap && centreFilterWrap.classList.contains('open')){
-        positionCentreFilterMenu();
-    }
-});
-
-window.addEventListener('scroll', function(){
-    if(centreFilterWrap && centreFilterWrap.classList.contains('open')){
-        positionCentreFilterMenu();
-    }
-}, true);
-
-    if(centreFilterSearch){
-        centreFilterSearch.addEventListener('input', function(){
-            const q = centreFilterSearch.value.trim().toLowerCase();
-
-            centreFilterOptions.forEach(option => {
-                option.style.display = option.innerText.toLowerCase().includes(q) ? 'flex' : 'none';
-            });
-        });
-    }
-
-    if(centreFilterOk){
-        centreFilterOk.addEventListener('click', function(){
-            const checked = centreRadios.find(r => r.checked);
-            selectedCentre = checked ? checked.value : 'all';
-
-            if(selectedCentre === 'all'){
-                centreFilterBtn.textContent = 'Centre-wise Availability';
-                centreFilterBtn.classList.remove('active');
-            }else{
-                centreFilterBtn.textContent = selectedCentre;
-                centreFilterBtn.classList.add('active');
-            }
-
-            if(centreFilterWrap){
-                centreFilterWrap.classList.remove('open');
-            }
-
-            currentPage = 1;
-            renderProducts();
-        });
-    }
-
-    if(centreFilterClear){
-        centreFilterClear.addEventListener('click', function(){
-            selectedCentre = 'all';
-
-            centreRadios.forEach(r => {
-                r.checked = r.value === 'all';
-            });
-
-            if(centreFilterBtn){
-                centreFilterBtn.textContent = 'Centre-wise Availability';
-                centreFilterBtn.classList.remove('active');
-            }
-
-            if(centreFilterSearch){
-                centreFilterSearch.value = '';
-            }
-
-            centreFilterOptions.forEach(option => {
-                option.style.display = 'flex';
-            });
-
-            currentPage = 1;
-            renderProducts();
-        });
-    }
-
-    document.addEventListener('click', function(e){
-        if(centreFilterWrap && !centreFilterWrap.contains(e.target)){
-            centreFilterWrap.classList.remove('open');
-        }
-    });
-
-    viewBtns.forEach(btn => {
-    btn.addEventListener('click', function(){
-        viewBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        activeView = btn.dataset.view || 'grid';
-
-        if(activeView === 'list'){
-            if(grid){
-                grid.classList.add('list-view');
-            }
-
-            if(farmerGrid){
-                farmerGrid.classList.add('list-view');
-            }
-        }else{
-            if(grid){
-                grid.classList.remove('list-view');
-            }
-
-            if(farmerGrid){
-                farmerGrid.classList.remove('list-view');
-            }
-        }
-
-        currentPage = 1;
-        farmerCurrentPage = 1;
-
-        renderProducts();
-        renderFarmerProducts();
-    });
-});
-
-    if(searchInput){
-        searchInput.addEventListener('input', function(){
-            currentPage = 1;
-            renderProducts();
-        });
-    }
-
-    renderProducts();
-
-
-    /* Farmer Products Pagination */
-  
-    const farmerCards = Array.from(document.querySelectorAll('#farmerProductGrid .farmer-product-card'));
-    const farmerSearchInput = document.getElementById('farmerProductSearchInput');
-    const farmerPagination = document.getElementById('farmerProductPagination');
-
-    let farmerCurrentPage = 1;
-    const farmerPerPage = 10;
-
-    function getFilteredFarmerCards(){
-        const query = (farmerSearchInput ? farmerSearchInput.value : '').trim().toLowerCase();
-
-        return farmerCards.filter(card => {
-            const text = (card.dataset.search || card.textContent || '').toLowerCase();
-            return !query || text.includes(query);
-        });
-    }
-
-    function renderFarmerProducts(){
-        if(!farmerGrid || !farmerPagination) return;
-
-        const filtered = getFilteredFarmerCards();
-        const total = filtered.length;
-        const totalPages = Math.max(1, Math.ceil(total / farmerPerPage));
-
-        farmerCurrentPage = Math.min(farmerCurrentPage, totalPages);
-        farmerCards.forEach(card => card.style.display = 'none');
-
-        const start = (farmerCurrentPage - 1) * farmerPerPage;
-        const end = start + farmerPerPage;
-
-        filtered.slice(start, end).forEach(card => {
-            card.style.display = '';
-        });
-
-        farmerPagination.innerHTML = '';
-
-        if(farmerCards.length === 0 || total <= farmerPerPage) return;
-
-        const prev = document.createElement('button');
-        prev.type = 'button';
-        prev.className = 'product-page-btn';
-        prev.textContent = 'Prev';
-        prev.disabled = farmerCurrentPage === 1;
-        prev.onclick = function(){
-            farmerCurrentPage--;
-            renderFarmerProducts();
-        };
-        farmerPagination.appendChild(prev);
-
-        for(let i = 1; i <= totalPages; i++){
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'product-page-btn' + (i === farmerCurrentPage ? ' active' : '');
-            btn.textContent = i;
-            btn.onclick = function(){
-                farmerCurrentPage = i;
-                renderFarmerProducts();
-            };
-            farmerPagination.appendChild(btn);
-        }
-
-        const next = document.createElement('button');
-        next.type = 'button';
-        next.className = 'product-page-btn';
-        next.textContent = 'Next';
-        next.disabled = farmerCurrentPage === totalPages;
-        next.onclick = function(){
-            farmerCurrentPage++;
-            renderFarmerProducts();
-        };
-        farmerPagination.appendChild(next);
-    }
-
-    if(farmerSearchInput){
-        farmerSearchInput.addEventListener('input', function(){
-            farmerCurrentPage = 1;
-            renderFarmerProducts();
-        });
-    }
-
-    renderFarmerProducts();
+    selections.forEach(x=>x.addEventListener('change',updateSelection));
+    if(selectVisible){selectVisible.addEventListener('change',()=>{filtered().filter(c=>c.style.display!=='none').forEach(c=>{const x=c.querySelector('.product-select');if(x)x.checked=selectVisible.checked;});updateSelection();});}
+    search.addEventListener('input',()=>{page=1;render();updateSelection();});
+    chips.forEach(c=>c.addEventListener('click',()=>{chips.forEach(x=>x.classList.remove('active'));c.classList.add('active');filter=c.dataset.filter||'all';page=1;render();updateSelection();}));
+    viewBtns.forEach(b=>b.addEventListener('click',()=>{viewBtns.forEach(x=>x.classList.remove('active'));b.classList.add('active');grid.classList.toggle('list',b.dataset.view==='list');}));
+
+    const overlay=document.getElementById('confirmOverlay'), text=document.getElementById('confirmText'), cancel=document.getElementById('confirmCancel'), ok=document.getElementById('confirmOk'); let pending=null;
+    document.querySelectorAll('.confirm-form').forEach(f=>f.addEventListener('submit',e=>{if(f.dataset.confirmed==='1')return;e.preventDefault();pending=f;text.textContent=f.dataset.message||'Are you sure?';overlay.classList.add('show');}));
+    cancel.addEventListener('click',()=>{overlay.classList.remove('show');pending=null;});
+    overlay.addEventListener('click',e=>{if(e.target===overlay){overlay.classList.remove('show');pending=null;}});
+    ok.addEventListener('click',()=>{if(!pending)return;pending.dataset.confirmed='1';pending.submit();});
+    render();updateSelection();
 })();
 </script>
-
 {% endblock %}

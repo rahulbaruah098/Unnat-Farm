@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}AVPL Purchases{% endblock %}
+{% block content %}
+<style>
+.purchase-home{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.purchase-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}.purchase-head h2{margin:0;color:#17252A}.purchase-head p{margin:6px 0 0;color:#64748B}.primary-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 18px;border-radius:999px;text-decoration:none;font-weight:900;background:#5FA878;color:#fff;border:1px solid #5FA878}.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:22px}.step{position:relative;padding:18px;border:1px solid #DDEDE2;border-radius:18px;background:#FCFEFC}.step-no{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#E8F6ED;color:#2F7A4C;font-weight:900;margin-bottom:10px}.step h3{margin:0 0 5px;color:#17252A}.step p{margin:0;color:#64748B;line-height:1.45;font-size:.9rem}.step a{display:inline-flex;margin-top:12px;color:#2F7A4C;font-weight:900;text-decoration:none}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:18px 0}.card{padding:15px;border:1px solid #E2EFE6;border-radius:16px;background:#fff}.card small{display:block;color:#64748B;margin-bottom:4px}.card strong{font-size:1.3rem;color:#17252A}.help{padding:16px;border:1px solid #B9DCCA;border-radius:17px;background:#F3FBF6;color:#2E6643;line-height:1.55}.help strong{color:#24563B}.quick{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.quick a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:999px;border:1px solid #CFE6D8;background:#fff;color:#2F7A4C;text-decoration:none;font-weight:800}
+@media(max-width:950px){.flow,.summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.purchase-home{padding:15px;border-radius:18px}.flow,.summary{grid-template-columns:1fr}.purchase-head .primary-link,.quick,.quick a{width:100%}}
+</style>
+<div class="purchase-home">
+    <div class="purchase-head">
+        <div>
+            <h2>AVPL Purchases</h2>
+            <p>A simple four-step flow for buying goods from suppliers and bringing accepted goods into AVPL stock.</p>
+        </div>
+        <a class="primary-link" href="{{ url_for('admin.create_purchase_order_view') }}">+ New Purchase Order</a>
+    </div>
+
+    <div class="flow">
+        <div class="step">
+            <div class="step-no">1</div>
+            <h3>Supplier</h3>
+            <p>Add the supplier once. Use the same supplier for every future purchase.</p>
+            <a href="{{ url_for('admin.supplier_master') }}">Manage Suppliers →</a>
+        </div>
+        <div class="step">
+            <div class="step-no">2</div>
+            <h3>Purchase Order</h3>
+            <p>Select the supplier, products, quantity and purchase rate.</p>
+            <a href="{{ url_for('admin.purchase_orders') }}">Open Purchase Orders →</a>
+        </div>
+        <div class="step">
+            <div class="step-no">3</div>
+            <h3>Receive Goods</h3>
+            <p>Enter what physically arrived. Only accepted quantity becomes AVPL stock.</p>
+            <a href="{{ url_for('admin.goods_receipts') }}">Receive Goods →</a>
+        </div>
+        <div class="step">
+            <div class="step-no">4</div>
+            <h3>Supplier Invoice</h3>
+            <p>Record the supplier invoice. The system checks it against the PO and received goods.</p>
+            <a href="{{ url_for('admin.supplier_invoices') }}">Record Invoice →</a>
+        </div>
+    </div>
+
+    <div class="summary">
+        <div class="card"><small>Active Suppliers</small><strong>{{ supplier_overview.get('counts', {}).get('active', 0) }}</strong></div>
+        <div class="card"><small>Purchase Orders</small><strong>{{ po_overview.get('rows', [])|length }}</strong></div>
+        <div class="card"><small>Goods Receipts</small><strong>{{ grn_overview.get('rows', [])|length }}</strong></div>
+        <div class="card"><small>Supplier Invoices</small><strong>{{ invoice_overview.get('rows', [])|length }}</strong></div>
+    </div>
+
+    <div class="help">
+        <strong>Easy rule:</strong> Purchase Order means “we intend to buy.” Receive Goods means “the goods physically arrived.” Supplier Invoice means “the supplier has billed us.” Stock increases only from accepted goods at Goods Receipt.
+    </div>
+
+    <div class="quick">
+        <a href="{{ url_for('admin.current_stock') }}">View Current Stock</a>
+        <a href="{{ url_for('admin.ufc_order_requests') }}">UFC Order Requests</a>
+        <a href="{{ url_for('admin.ufc_sales') }}">Sales to UFC</a>
+        <a href="{{ url_for('admin.purchase_orders') }}">All Purchase Orders</a>
+        <a href="{{ url_for('admin.goods_receipts') }}">All Goods Receipts</a>
+        <a href="{{ url_for('admin.supplier_invoices') }}">All Supplier Invoices</a>
+    </div>
+</div>
+{% endblock %}

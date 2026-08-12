@@ -2,19 +2,34 @@
 {% block content %}
 
 <div class="page-card">
+    {% if session.get('role') in ['ufc_admin','ufc_mitra'] %}
+    <h2>AVPL Marketplace</h2>
+    <div class="marketplace-stage-note">
+        <strong>Simple rule:</strong> You see only products published by AVPL Admin. UFC Admin can request a quantity; AVPL approval reserves stock, and stock moves only when AVPL dispatches.
+    </div>
+    {% if session.get('role') == 'ufc_admin' %}
+    <div class="stage4-top-actions">
+        <a href="{{ url_for('modules.ufc_avpl_orders') }}">My AVPL Orders</a>
+        <a href="{{ url_for('modules.ufc_stock') }}">My UFC Stock</a>
+        <a href="{{ url_for('modules.ufc_purchases') }}">Purchase Entries</a>
+    </div>
+    {% endif %}
+{% else %}
     <h2>Buy Module</h2>
+{% endif %}
 
     <div class="buy-search-wrap">
         <input
             type="text"
             id="buySearchInput"
-            placeholder="Search products, farmer, category, centre UID, village..."
+            placeholder="Search products or category..."
             autocomplete="off"
         >
         <button type="button" id="buySearchBtn">Search</button>
         <button type="button" id="buyClearBtn" class="clear-btn" style="display:none;">Clear</button>
     </div>
 
+    {% if session.get('role') != 'ufc_admin' %}
     <h3>Farmer Marketplace Products</h3>
 
     <div class="marketplace-grid" id="farmerProductGrid">
@@ -97,8 +112,11 @@
     <div class="farmer-product-page-info" id="farmerProductPageInfo"></div>
     <div class="farmer-product-pagination" id="farmerProductPagination"></div>
 </div>
+    {% endif %}
 
-    <h3 style="margin-top:30px;">AVPL Product Catalogue</h3>
+    {% if session.get('role') in ['ufc_admin','ufc_mitra'] %}
+    <h3 style="margin-top:30px;">Products Published by AVPL</h3>
+    <p class="marketplace-help">Choose a product and request the quantity you need. AVPL Admin will approve or reject the request. Price is confirmed by AVPL during approval.</p>
 
     <div class="marketplace-grid" id="catalogueProductGrid">
         {% for p in products %}
@@ -132,79 +150,52 @@
                 <div class="market-body">
                     <h4>{{ p.name }}</h4>
 
+                    <p><strong>SKU:</strong> {{ p.product_code or '-' }}</p>
                     <p><strong>Category:</strong> {{ p.category or '-' }}</p>
-                    <p><strong>Type:</strong> {{ p.type or '-' }}</p>
-                    <p><strong>Available Centres:</strong> {{ p.available_centres or '-' }}</p>
+                    <p><strong>Type:</strong> {{ (p.product_role or p.type or '-')|title }}</p>
 
-                    <div class="market-footer">
-    <div>
-    <span class="price">₹{{ p.price or '-' }}</span>
+                    {% set market_stock = p.get('_marketplace_stock') or {} %}
+                    {% set avpl_stock = market_stock.get('saleable_quantity', 0)|float %}
 
-    {% set avpl_stock = (
-        p.available_quantity
-        if p.available_quantity is defined and p.available_quantity is not none
-        else p.quantity
-        if p.quantity is defined and p.quantity is not none
-        else p.stock_quantity
-        if p.stock_quantity is defined and p.stock_quantity is not none
-        else p.stock
-        if p.stock is defined and p.stock is not none
-        else none
-    ) %}
-
-    {% if avpl_stock is not none and avpl_stock|float <= 0 %}
-        <small class="stock-text stock-out">Out of Stock</small>
-    {% elif avpl_stock is not none %}
-        <small class="stock-text">Available: {{ avpl_stock }}</small>
-    {% else %}
-        <small class="stock-text">Available: -</small>
-    {% endif %}
-</div>
-
-    {% if session.get('role') == 'farmer' %}
-    {% if avpl_stock is not none and avpl_stock|float <= 0 %}
-        <form class="buy-form">
-            <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="Qty"
-                disabled
-            >
-            <button type="button" disabled>Buy</button>
-        </form>
-    {% else %}
-        <form method="POST" action="{{ url_for('modules.place_farmer_order') }}" class="buy-form">
-            <input type="hidden" name="product_id" value="{{ p._id }}">
-            <input type="hidden" name="product_name" value="{{ p.name }}">
-            <input type="hidden" name="unit_price" value="{{ p.price or 0 }}">
-            <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                {% if avpl_stock is not none %}max="{{ avpl_stock }}"{% endif %}
-                name="quantity"
-                placeholder="Qty"
-                required
-            >
-            <button type="submit">Buy</button>
-        </form>
-    {% endif %}
-{% endif %}
-</div>
+                    <div class="market-footer marketplace-readonly">
+                        <div>
+                            <span class="published-badge">Published by AVPL</span>
+                            {% if avpl_stock <= 0 %}
+                                <small class="stock-text stock-out">Currently out of stock</small>
+                            {% else %}
+                                <small class="stock-text">AVPL saleable stock: {{ '%g'|format(avpl_stock) }}</small>
+                            {% endif %}
+                        </div>
+                        {% if session.get('role') == 'ufc_admin' %}
+                            {% if avpl_stock > 0 %}
+                            <form method="post" action="{{ url_for('modules.request_avpl_order') }}" class="avpl-request-form" onsubmit="return confirm('Send this product request to AVPL?');">
+                                <input type="hidden" name="product_id" value="{{ p._id }}">
+                                <input type="number" name="quantity" min="0.0001" max="{{ avpl_stock }}" step="0.0001" placeholder="Required Qty" required>
+                                <input type="text" name="request_note" maxlength="300" placeholder="Note (optional)">
+                                <button type="submit">Request Order</button>
+                            </form>
+                            {% else %}
+                            <div class="stage4-chip">Request unavailable</div>
+                            {% endif %}
+                        {% else %}
+                            <div class="stage4-chip">UFC Admin places orders</div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         {% else %}
-            <div class="empty-market">No catalogue products available.</div>
+            <div class="empty-market">No products have been published by AVPL yet.</div>
         {% endfor %}
     </div>
 
     <div class="empty-market search-empty" id="catalogueSearchEmpty" style="display:none;">
-        No matching AVPL catalogue products found.
+        No matching published AVPL products found.
     </div>
+    {% endif %}
 </div>
 
 <style>
+.marketplace-stage-note{margin:10px 0 18px;padding:12px 14px;border:1px solid #b9dcca;border-radius:14px;background:#f3fbf6;color:#3e6850;line-height:1.45}.marketplace-stage-note strong{color:#24583a}.marketplace-help{margin:-2px 0 16px;color:#64748b;line-height:1.45}.published-badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;font-weight:800;font-size:.78rem}.marketplace-readonly{grid-template-columns:1fr auto}.stage4-chip{align-self:center;padding:6px 10px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:.78rem;font-weight:800;white-space:nowrap}.stage4-top-actions{display:flex;gap:8px;flex-wrap:wrap;margin:-6px 0 18px}.stage4-top-actions a{display:inline-flex;padding:8px 13px;border:1px solid #cfe6d8;border-radius:999px;background:#fff;color:#2f7a4c;text-decoration:none;font-weight:800}.avpl-request-form{grid-column:1/-1;display:grid;grid-template-columns:minmax(100px,.7fr) minmax(130px,1fr) auto;gap:8px;width:100%;margin-top:6px}.avpl-request-form input{min-width:0;height:40px;border:1px solid #cbd5e1;border-radius:11px;padding:0 10px;font:inherit}.avpl-request-form button{height:40px;border:0;border-radius:11px;padding:0 14px;background:#059669;color:#fff;font:inherit;font-weight:800;cursor:pointer}.avpl-request-form button:hover{background:#047857}@media(max-width:650px){.avpl-request-form{grid-template-columns:1fr}.stage4-top-actions a{flex:1 1 100%}}
 .buy-search-wrap{
     display:grid;
     grid-template-columns:minmax(220px, 1fr) auto auto;

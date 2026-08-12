@@ -5,6 +5,23 @@ from app.extensions import mongo
 from app.utils.decorators import login_required, roles_required
 from app.utils.helpers import now_utc
 from app.utils.security import save_file
+from app.services.avpl_ufc_order_service import (
+    create_ufc_order_request,
+    get_order as get_avpl_ufc_order,
+    get_ufc_order_overview,
+    get_ufc_purchase_overview,
+    get_ufc_stock_overview,
+    receive_ufc_order,
+)
+from app.services.avpl_ufc_sales_service import (
+    get_sales_invoice_print_context,
+)
+from app.services.ufc_farmer_marketplace_service import (
+    bulk_update_publication as bulk_update_ufc_farmer_publication,
+    get_farmer_marketplace,
+    get_ufc_marketplace_setup,
+    save_product_selling_setup,
+)
 from datetime import datetime
 from uuid import uuid4
 
@@ -51,6 +68,145 @@ def json_error(message, status=400):
         "ok": False,
         "message": message
     }), status
+
+
+def _active_avpl_marketplace_entity():
+    """Return the active AVPL entity used by Stage 3 marketplace publication."""
+    return mongo.db.accounting_entities.find_one({
+        "entity_code": "AVPL",
+        "entity_type": "avpl",
+        "status": "active",
+        "accounting_enabled": {"$ne": False},
+        "is_deleted": {"$ne": True},
+    })
+
+
+def _published_avpl_products_for_ufc():
+    """Return only AVPL products explicitly published to all active UFCs.
+
+    Stage 3 intentionally ignores legacy `available_centres`. Marketplace
+    publication controls visibility; inventory lots control displayed stock.
+    No stock mutation occurs here.
+    """
+    avpl_entity = _active_avpl_marketplace_entity()
+    if not avpl_entity:
+        return []
+
+    publications = list(
+        mongo.db.avpl_marketplace_publications.find(
+            {
+                "accounting_entity_id": avpl_entity["_id"],
+                "status": "published",
+                "scope": "all_active_ufc",
+            },
+            {"source_product_id": 1, "published_at": 1},
+        ).sort("published_at", -1)
+    )
+
+    published_ids = []
+    seen_ids = set()
+    for publication in publications:
+        product_oid = publication.get("source_product_id")
+        if isinstance(product_oid, ObjectId) and product_oid not in seen_ids:
+            published_ids.append(product_oid)
+            seen_ids.add(product_oid)
+
+    if not published_ids:
+        return []
+
+    product_rows = list(
+        mongo.db.products.find({
+            "_id": {"$in": published_ids},
+            "is_deleted": {"$ne": True},
+            "is_active": {"$ne": False},
+            "status": {"$nin": ["disabled", "deleted"]},
+            "unnatfarm_eligible": {"$ne": False},
+        })
+    )
+    product_by_id = {row["_id"]: row for row in product_rows}
+
+    stock_by_product = {}
+    for lot in mongo.db.avpl_inventory_lots.find({
+        "accounting_entity_id": avpl_entity["_id"],
+        "source_product_id": {"$in": published_ids},
+        "status": {"$ne": "cancelled"},
+    }):
+        product_key = str(lot.get("source_product_id") or "")
+        if not product_key:
+            continue
+        row = stock_by_product.setdefault(product_key, {
+            "physical": 0.0,
+            "reserved": 0.0,
+            "damaged": 0.0,
+            "blocked": 0.0,
+            "expired": 0.0,
+        })
+
+        def number(value):
+            try:
+                return max(float(value or 0), 0.0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        physical = number(lot.get("available_quantity"))
+        row["physical"] += physical
+        row["reserved"] += number(lot.get("reserved_quantity"))
+        row["damaged"] += number(lot.get("damaged_quantity"))
+        row["blocked"] += number(lot.get("blocked_quantity"))
+
+        expiry_value = lot.get("expiry_date")
+        if expiry_value:
+            try:
+                expiry_date = (
+                    expiry_value.date()
+                    if hasattr(expiry_value, "date")
+                    else datetime.strptime(str(expiry_value)[:10], "%Y-%m-%d").date()
+                )
+                if expiry_date < datetime.utcnow().date():
+                    row["expired"] += physical
+            except Exception:
+                pass
+
+    products = []
+    for product_id in published_ids:
+        product = product_by_id.get(product_id)
+        if not product:
+            continue
+        stock = stock_by_product.get(str(product_id), {})
+        physical = max(float(stock.get("physical") or 0), 0.0)
+        reserved = max(float(stock.get("reserved") or 0), 0.0)
+        damaged = max(float(stock.get("damaged") or 0), 0.0)
+        blocked = max(float(stock.get("blocked") or 0), 0.0)
+        expired = max(float(stock.get("expired") or 0), 0.0)
+        saleable = max(physical - reserved - damaged - blocked - expired, 0.0)
+        product["_marketplace_stock"] = {
+            "physical_quantity": physical,
+            "reserved_quantity": reserved,
+            "saleable_quantity": saleable,
+        }
+        product["_ufc_published"] = True
+        products.append(product)
+    return products
+
+
+def _is_avpl_product_published_to_ufc(product_id):
+    if isinstance(product_id, ObjectId):
+        product_oid = product_id
+    else:
+        try:
+            product_oid = ObjectId(str(product_id))
+        except Exception:
+            return False
+    entity = _active_avpl_marketplace_entity()
+    if not entity:
+        return False
+    return mongo.db.avpl_marketplace_publications.find_one({
+        "accounting_entity_id": entity["_id"],
+        "source_product_id": product_oid,
+        "status": "published",
+        "scope": "all_active_ufc",
+    }) is not None
+
 
 def normalize_product_for_app(item):
     item = dict(item or {})
@@ -389,6 +545,27 @@ def _get_farmer_orders_for_web(user, q="", page=1, per_page=10):
 @modules_bp.route("/buy", methods=["GET", "POST"])
 @login_required
 def buy():
+    # Stage 6 retires legacy Farmer visibility/order paths from this mixed Buy
+    # screen. Farmers now see only the Marketplace published by their mapped
+    # UFC. Transactional ordering is intentionally introduced in Stage 7.
+    if str(session.get("role") or "").strip().lower() == "farmer":
+        if request.method == "POST":
+            message = "Farmer ordering from the UFC Marketplace will be enabled in Stage 7."
+            if wants_json_response():
+                return json_error(message, 409)
+            flash(message, "info")
+            return redirect(url_for("modules.farmer_marketplace"))
+        if wants_json_response():
+            try:
+                overview = get_farmer_marketplace(
+                    session.get("user_id"),
+                    search=request.args.get("q", ""),
+                )
+                return jsonify(json_safe({"ok": True, **overview}))
+            except (ValueError, PermissionError, RuntimeError) as exc:
+                return json_error(str(exc), 400)
+        return redirect(url_for("modules.farmer_marketplace"))
+
     if request.method == "POST":
         payload = request.get_json(silent=True) if request.is_json else {}
 
@@ -441,7 +618,7 @@ def buy():
         # Source collection: products
         # ----------------------------------------------------
         if source == "avpl":
-            if not current_app.config.get("LEGACY_DIRECT_AVPL_ORDER_ENABLED", True):
+            if not current_app.config.get("LEGACY_DIRECT_AVPL_ORDER_ENABLED", False):
                 if wants_json_response():
                     return json_error(
                         "Direct AVPL ordering is temporarily disabled during the staged AVPL workflow rollout.",
@@ -814,26 +991,31 @@ def buy():
         return redirect(url_for("modules.buy"))
 
    # ===== GET LOGIC =====
-    products = list(
-    mongo.db.products.find({
-        "is_deleted": {"$ne": True},
-        "is_active": {"$ne": False}
-    }).sort("created_at", -1)
-)
+    # Stage 3 marketplace rule: UFC users see only products explicitly
+    # published by AVPL Admin. Farmers never see AVPL Product Master directly.
+    role = str(session.get("role") or "").strip().lower()
+    products = _published_avpl_products_for_ufc() if role in {"ufc_admin", "ufc_mitra"} else []
+
+    # Farmers must not see AVPL Product Master records directly in the new
+    # workflow. Farmer-facing UFC listings will be implemented in Stage 6.
 
     view_mode = request.args.get("view", "").strip()
 
-    farmer_query = {"status": "active"}
-
-    if view_mode != "all":
-        if session.get("role") == "ufc_mitra":
+    # Keep the UFC Admin marketplace focused on AVPL-published products only.
+    # Farmer-output purchasing is a separate workflow and should not be mixed
+    # into the new AVPL -> UFC marketplace screen.
+    if role == "ufc_admin":
+        farmer_products = []
+    else:
+        farmer_query = {"status": "active"}
+        if view_mode != "all" and role == "ufc_mitra":
             farmer_query["mitra_uid"] = session.get("mitra_uid")
-    elif session.get("role") == "ufc_admin":
-        farmer_query["centre_uid"] = session.get("centre_uid")
+        elif view_mode == "all" and role == "ufc_admin":
+            farmer_query["centre_uid"] = session.get("centre_uid")
 
-    farmer_products = list(
-    mongo.db.farmer_products.find(farmer_query).sort("created_at", -1)
-)
+        farmer_products = list(
+            mongo.db.farmer_products.find(farmer_query).sort("created_at", -1)
+        )
 
     if wants_json_response():
         products = [normalize_product_for_app(item) for item in products]
@@ -1925,12 +2107,29 @@ def orders():
 @modules_bp.route("/products")
 @login_required
 def products():
-    items = list(
-        mongo.db.products.find({
-            "is_deleted": {"$ne": True},
-            "is_active": {"$ne": False}
-        }).sort("created_at", -1)
-    )
+    role = str(session.get("role") or "").strip().lower()
+    if role in {"ufc_admin", "ufc_mitra"}:
+        items = _published_avpl_products_for_ufc()
+    elif role == "farmer":
+        # Stage 6 source of truth: only products published by the Farmer's
+        # mapped UFC are visible. Never expose AVPL Product Master directly.
+        try:
+            marketplace = get_farmer_marketplace(
+                session.get("user_id"),
+                search=request.args.get("q", ""),
+            )
+            items = marketplace.get("rows", [])
+        except (ValueError, PermissionError, RuntimeError):
+            items = []
+        if not wants_json_response():
+            return redirect(url_for("modules.farmer_marketplace"))
+    else:
+        items = list(
+            mongo.db.products.find({
+                "is_deleted": {"$ne": True},
+                "is_active": {"$ne": False}
+            }).sort("created_at", -1)
+        )
     if wants_json_response():
         return jsonify(json_safe({
             "ok": True,
@@ -2611,14 +2810,13 @@ def pos():
         ]
     }).sort('name', 1))
 
-    products = list(mongo.db.products.find({
-    "is_deleted": {"$ne": True},
-    "is_active": {"$ne": False},
-    '$or': [
-        {'available_centres': 'all'},
-        {'available_centres': {'$in': ['all', centre_uid]}}
-    ]
-    }).sort('name', 1))
+    # Stage 3: legacy available_centres no longer controls UFC visibility.
+    # Until UFC-owned stock is introduced, POS can only reference products
+    # explicitly published by AVPL Admin.
+    products = sorted(
+        _published_avpl_products_for_ufc(),
+        key=lambda item: str(item.get('name') or '').lower(),
+    )
 
     if request.method == 'POST':
         sale_type = request.form.get('sale_type', 'registered')
@@ -2654,8 +2852,8 @@ def pos():
             flash("This product is currently unavailable.", "danger")
             return redirect(url_for("modules.pos"))
 
-        if not product:
-            flash("This product is currently unavailable.", "danger")
+        if not _is_avpl_product_published_to_ufc(product.get('_id')):
+            flash("This product is not published to the UFC Marketplace.", "danger")
             return redirect(url_for("modules.pos"))
 
         quantity = float(request.form.get('quantity') or 0)
@@ -3242,6 +3440,16 @@ def centre_orders():
 @login_required
 @roles_required("farmer")
 def place_farmer_order():
+    # Stage 6 is marketplace publication/visibility only. Keep the legacy
+    # direct-order handler from mutating old product quantities before Stage 7
+    # introduces UFC reservation and fulfilment.
+    if not current_app.config.get("STAGE7_FARMER_ORDER_ENABLED", False):
+        message = "Farmer ordering will be enabled in Stage 7. You can currently browse products published by your UFC."
+        if wants_json_response():
+            return json_error(message, 409)
+        flash(message, "info")
+        return redirect(url_for("modules.farmer_marketplace"))
+
     product_id = request.form.get("product_id")
     product_name = request.form.get("product_name")
     quantity = float(request.form.get("quantity") or 0)
@@ -3310,7 +3518,7 @@ def place_farmer_order():
             return redirect(url_for("modules.buy"))
 
     else:
-        if not current_app.config.get("LEGACY_DIRECT_AVPL_ORDER_ENABLED", True):
+        if not current_app.config.get("LEGACY_DIRECT_AVPL_ORDER_ENABLED", False):
             flash(
                 "Direct AVPL ordering is temporarily disabled during the staged AVPL workflow rollout.",
                 "warning",
@@ -3391,3 +3599,276 @@ def place_farmer_order():
 
 
 
+
+
+# ---------------------------------------------------------------------------
+# Stage 4 — UFC -> AVPL Order Requests, Receipt and UFC Stock
+# ---------------------------------------------------------------------------
+
+
+@modules_bp.route('/avpl-orders/request', methods=['POST'])
+@login_required
+@roles_required('ufc_admin')
+def request_avpl_order():
+    try:
+        result = create_ufc_order_request(
+            session.get('user_id'),
+            session.get('centre_uid'),
+            request.form.get('product_id'),
+            request.form.get('quantity'),
+            note=request.form.get('request_note', ''),
+        )
+        order = result.get('order') or {}
+        if wants_json_response():
+            return jsonify(json_safe({
+                'ok': True,
+                'message': result.get('message'),
+                'order': order,
+            })), 201
+        flash(result.get('message') or 'Order request sent to AVPL.', 'success')
+        return redirect(url_for('modules.ufc_avpl_order_detail', order_id=order.get('id')))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        if wants_json_response():
+            return json_error(str(exc), 400)
+        flash(str(exc), 'danger')
+        return redirect(url_for('modules.buy'))
+
+
+@modules_bp.route('/avpl-orders')
+@login_required
+@roles_required('ufc_admin')
+def ufc_avpl_orders():
+    try:
+        overview = get_ufc_order_overview(
+            session.get('user_id'),
+            session.get('centre_uid'),
+            status_filter=request.args.get('status', 'all'),
+            search=request.args.get('q', ''),
+            page=request.args.get('page', 1, type=int) or 1,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'selected_status': request.args.get('status', 'all'),
+            'query': request.args.get('q', ''),
+            'statuses': {},
+            'counts': {},
+            'centre_uid': session.get('centre_uid') or '',
+            'centre_name': session.get('centre_uid') or 'UFC',
+            'pagination': {
+                'page': 1,
+                'total': 0,
+                'total_pages': 1,
+                'has_prev': False,
+                'has_next': False,
+            },
+        }
+    return render_template('modules/ufc_avpl_orders.html', overview=overview)
+
+
+@modules_bp.route('/avpl-orders/<order_id>')
+@login_required
+@roles_required('ufc_admin')
+def ufc_avpl_order_detail(order_id):
+    try:
+        # Resolve Centre UID through the overview helper first so a manipulated
+        # URL can never expose another UFC's order.
+        overview = get_ufc_order_overview(
+            session.get('user_id'), session.get('centre_uid'), page=1
+        )
+        centre_uid = overview.get('centre_uid')
+        order = get_avpl_ufc_order(order_id, centre_uid=centre_uid)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('modules.ufc_avpl_orders'))
+    return render_template('modules/ufc_avpl_order_detail.html', order=order)
+
+
+@modules_bp.route('/avpl-orders/<order_id>/receive', methods=['POST'])
+@login_required
+@roles_required('ufc_admin')
+def receive_avpl_order(order_id):
+    try:
+        result = receive_ufc_order(
+            session.get('user_id'),
+            session.get('centre_uid'),
+            order_id,
+            receipt_note=request.form.get('receipt_note', ''),
+        )
+        if wants_json_response():
+            return jsonify(json_safe({
+                'ok': True,
+                'message': result.get('message'),
+                'order': result.get('order'),
+                'purchase': result.get('purchase'),
+            }))
+        flash(result.get('message') or 'Goods received and added to UFC stock.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        if wants_json_response():
+            return json_error(str(exc), 400)
+        flash(str(exc), 'danger')
+    return redirect(url_for('modules.ufc_avpl_order_detail', order_id=order_id))
+
+
+@modules_bp.route('/ufc-stock')
+@login_required
+@roles_required('ufc_admin')
+def ufc_stock():
+    try:
+        overview = get_ufc_stock_overview(
+            session.get('user_id'),
+            session.get('centre_uid'),
+            search=request.args.get('q', ''),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'centre_uid': session.get('centre_uid') or '',
+            'centre_name': session.get('centre_uid') or 'UFC',
+            'query': request.args.get('q', ''),
+            'summary': {'product_count': 0, 'stock_value': '0.00'},
+        }
+    return render_template('modules/ufc_stock.html', overview=overview)
+
+
+@modules_bp.route('/ufc-purchases')
+@login_required
+@roles_required('ufc_admin')
+def ufc_purchases():
+    try:
+        overview = get_ufc_purchase_overview(
+            session.get('user_id'),
+            session.get('centre_uid'),
+            search=request.args.get('q', ''),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'centre_uid': session.get('centre_uid') or '',
+            'centre_name': session.get('centre_uid') or 'UFC',
+            'query': request.args.get('q', ''),
+            'summary': {'count': 0, 'total_value': '0.00'},
+        }
+    return render_template('modules/ufc_purchases.html', overview=overview)
+
+
+# ---------------------------------------------------------------------------
+# Stage 6 — UFC -> Farmer Marketplace publication and mapped-Farmer visibility
+# ---------------------------------------------------------------------------
+
+
+@modules_bp.route('/ufc-farmer-marketplace')
+@login_required
+@roles_required('ufc_admin')
+def ufc_farmer_marketplace():
+    try:
+        overview = get_ufc_marketplace_setup(
+            session.get('user_id'),
+            session.get('centre_uid'),
+            search=request.args.get('q', ''),
+            status_filter=request.args.get('status', 'all'),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'centre_uid': session.get('centre_uid') or '',
+            'centre_name': session.get('centre_uid') or 'UFC',
+            'query': request.args.get('q', ''),
+            'selected_status': request.args.get('status', 'all'),
+            'summary': {'stock_products': 0, 'published': 0, 'needs_price': 0, 'out_of_stock': 0},
+        }
+    return render_template('modules/ufc_farmer_marketplace.html', overview=overview)
+
+
+@modules_bp.route('/ufc-farmer-marketplace/<product_id>/setup', methods=['POST'])
+@login_required
+@roles_required('ufc_admin')
+def save_ufc_farmer_marketplace_setup(product_id):
+    try:
+        save_product_selling_setup(
+            session.get('user_id'),
+            session.get('centre_uid'),
+            product_id,
+            selling_price=request.form.get('selling_price'),
+            min_order_quantity=request.form.get('min_order_quantity') or 1,
+            max_order_quantity=request.form.get('max_order_quantity') or 0,
+            notes=request.form.get('notes', ''),
+        )
+        flash('Farmer selling setup saved. Publishing does not change UFC stock.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('modules.ufc_farmer_marketplace'))
+
+
+@modules_bp.route('/ufc-farmer-marketplace/publication', methods=['POST'])
+@login_required
+@roles_required('ufc_admin')
+def update_ufc_farmer_marketplace_publication():
+    product_ids = request.form.getlist('product_ids')
+    action = request.form.get('action', '')
+    try:
+        result = bulk_update_ufc_farmer_publication(
+            session.get('user_id'),
+            session.get('centre_uid'),
+            product_ids,
+            action,
+        )
+        flash(result.get('message') or 'Farmer Marketplace updated.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('modules.ufc_farmer_marketplace'))
+
+
+@modules_bp.route('/farmer-marketplace')
+@login_required
+@roles_required('farmer')
+def farmer_marketplace():
+    try:
+        overview = get_farmer_marketplace(
+            session.get('user_id'),
+            search=request.args.get('q', ''),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'rows': [],
+            'centre_uid': '',
+            'centre_name': 'Mapped UFC',
+            'farmer_name': 'Farmer',
+            'query': request.args.get('q', ''),
+            'summary': {'published': 0, 'in_stock': 0, 'out_of_stock': 0},
+        }
+    if wants_json_response():
+        return jsonify(json_safe({'ok': True, **overview}))
+    return render_template('modules/farmer_marketplace.html', overview=overview)
+
+
+# ---------------------------------------------------------------------------
+# Stage 5 — UFC access to the AVPL Sales Invoice linked to its own order
+# ---------------------------------------------------------------------------
+
+
+@modules_bp.route('/avpl-sales-invoices/<invoice_id>/print')
+@login_required
+@roles_required('ufc_admin')
+def ufc_avpl_sales_invoice_print(invoice_id):
+    try:
+        # Resolve the authoritative Centre UID through the Stage 4 service path
+        # before allowing access to the commercial invoice.
+        overview = get_ufc_order_overview(
+            session.get('user_id'), session.get('centre_uid'), page=1
+        )
+        centre_uid = overview.get('centre_uid')
+        context = get_sales_invoice_print_context(
+            invoice_id,
+            actor_user_id=session.get('user_id'),
+            centre_uid=centre_uid,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('modules.ufc_avpl_orders'))
+    return render_template('admin/ufc_sales_invoice_print.html', **context, viewer='ufc')

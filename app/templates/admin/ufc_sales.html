@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Sales to UFC{% endblock %}
+{% block content %}
+<style>
+.sales-page{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.head p{margin:5px 0 0;color:#64748b}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border:1px solid #cfe6d8;border-radius:999px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.btn.primary{border:0;background:#5fa878;color:#fff}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:17px 0}.sum{padding:14px;border:1px solid #e2efe6;border-radius:15px;background:#fcfefc}.sum small{display:block;color:#64748b}.sum strong{display:block;margin-top:4px;color:#17252a;font-size:1.24rem}.note{padding:11px 13px;border:1px solid #b9dcca;border-radius:14px;background:#f3fbf6;color:#3e6850;margin-bottom:14px}.filters{display:grid;grid-template-columns:1fr 190px auto;gap:8px;margin-bottom:14px}.filters input,.filters select{height:42px;border:1px solid #d6e5da;border-radius:999px;padding:0 14px;font:inherit;background:#fff}.filters button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5fa878;color:#fff;font:inherit;font-weight:900}.table{overflow:auto;border:1px solid #e2efe6;border-radius:16px}.table table{width:100%;border-collapse:collapse;min-width:1180px}.table th{padding:10px;background:#eff7f1;color:#4b6255;text-align:left;font-size:.8rem}.table td{padding:11px 10px;border-top:1px solid #edf3ef;vertical-align:top;color:#334155}.table strong{color:#17252a}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:900;background:#f1f5f9;color:#475569}.pill.unpaid{background:#fff7ed;color:#c2410c}.pill.paid{background:#ecfdf5;color:#047857}.link{color:#2f7a4c;font-weight:900;text-decoration:none}.link:hover{text-decoration:underline}.empty{padding:32px!important;text-align:center;color:#64748b}.pager{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.pager a{padding:7px 12px;border:1px solid #cfe6d8;border-radius:999px;color:#2f7a4c;text-decoration:none;font-weight:900}@media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}.filters button{grid-column:1/-1}}@media(max-width:560px){.sales-page{padding:15px;border-radius:18px}.summary,.filters{grid-template-columns:1fr}.filters button{grid-column:auto}.actions,.actions form,.actions a,.actions button{width:100%}}
+</style>
+<div class="sales-page">
+  <div class="head">
+    <div><h2>Sales to UFC</h2><p>Automatic AVPL seller-side records generated from physically dispatched UFC orders.</p></div>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('admin.ufc_order_requests') }}">UFC Order Requests</a>
+      {% if session.get('role') in ['super_admin','avpl_admin'] %}
+      <form method="post" action="{{ url_for('admin.sync_existing_ufc_sales') }}" onsubmit="return confirm('Create/repair Sales documents for dispatched Stage 4 orders that are missing them?');"><button class="btn primary" type="submit">Sync Existing Orders</button></form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="sum"><small>Sales Entries</small><strong>{{ overview.get('summary',{}).get('sale_count',0) }}</strong></div>
+    <div class="sum"><small>Sales Invoices</small><strong>{{ overview.get('summary',{}).get('invoice_count',0) }}</strong></div>
+    <div class="sum"><small>Total Sales</small><strong>₹{{ overview.get('summary',{}).get('total_sales','0.00') }}</strong></div>
+    <div class="sum"><small>UFC Outstanding</small><strong>₹{{ overview.get('summary',{}).get('outstanding','0.00') }}</strong></div>
+  </div>
+
+  <div class="note"><strong>No duplicate sale entry.</strong> Dispatch creates one AVPL Sale Entry + one Sales Invoice + one AVPL receivable. When UFC confirms receipt, its automatic Purchase Entry is linked to the same invoice. Payment recording remains for the later financial stage.</div>
+
+  <form class="filters" method="get">
+    <input name="q" value="{{ overview.get('query','') }}" placeholder="Search sale, invoice, UFC, order or product">
+    <select name="payment"><option value="all">All payments</option>{% for code,label in overview.get('payment_statuses',{}).items() %}<option value="{{ code }}" {% if overview.get('selected_payment') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <button type="submit">Filter</button>
+  </form>
+
+  <div class="table"><table>
+    <thead><tr><th>Sale</th><th>Invoice</th><th>UFC</th><th>Product</th><th>Qty</th><th>Taxable</th><th>Invoice Total</th><th>Est. COGS</th><th>Gross Margin</th><th>Payment</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for r in overview.get('rows',[]) %}
+      <tr>
+        <td><strong>{{ r.sale_number }}</strong><br><small>{{ r.avpl_order_number }}</small></td>
+        <td><strong>{{ r.invoice_number or 'Pending' }}</strong></td>
+        <td><strong>{{ r.centre_name }}</strong><br><small>{{ r.centre_uid }}</small></td>
+        <td><strong>{{ r.product_name }}</strong><br><small>{{ r.product_code or '-' }}</small></td>
+        <td>{{ r.quantity_display }} {{ r.unit_code }}</td>
+        <td>₹{{ r.taxable_value_display }}</td>
+        <td><strong>₹{{ r.grand_total_display }}</strong></td>
+        <td>₹{{ r.estimated_cogs_display }}</td>
+        <td>₹{{ r.gross_margin_display }}<br><small>{{ r.gross_margin_percent_display }}%</small></td>
+        <td><span class="pill {{ r.payment_status }}">{{ r.payment_status_label }}</span><br><small>Due ₹{{ r.outstanding_amount_display }}</small></td>
+        <td><a class="link" href="{{ url_for('admin.ufc_sale_detail', sale_id=r.id) }}">View Sale</a></td>
+      </tr>
+      {% else %}<tr><td colspan="11" class="empty">No AVPL → UFC sales yet. Sales are created automatically at dispatch.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+
+  {% set pg = overview.get('pagination',{}) %}
+  {% if pg.get('total_pages',1) > 1 %}<div class="pager">{% if pg.get('has_prev') %}<a href="{{ url_for('admin.ufc_sales', page=pg.get('page',1)-1, q=overview.get('query',''), payment=overview.get('selected_payment','all')) }}">Previous</a>{% endif %}{% if pg.get('has_next') %}<a href="{{ url_for('admin.ufc_sales', page=pg.get('page',1)+1, q=overview.get('query',''), payment=overview.get('selected_payment','all')) }}">Next</a>{% endif %}</div>{% endif %}
+</div>
+{% endblock %}

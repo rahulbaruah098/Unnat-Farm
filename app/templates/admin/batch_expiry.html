@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Batch & Expiry{% endblock %}
+{% block content %}
+<style>
+.inv-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B;max-width:760px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:999px;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C;text-decoration:none;font-weight:900}.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-bottom:15px}.card{padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC}.card small{display:block;color:#64748B}.card strong{display:block;margin-top:3px;color:#17252A;font-size:1.15rem}.card.expired strong{color:#B91C1C}.card.warn strong{color:#B45309}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin-bottom:15px}.toolbar input,.toolbar select{height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 13px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 17px;background:#5FA878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.note{padding:11px 13px;margin-bottom:14px;border:1px solid #B9DCCA;border-radius:14px;background:#F3FBF6;color:#3E6850}.table-wrap{overflow:auto;border:1px solid #E2EFE6;border-radius:16px}.table{width:100%;min-width:1250px;border-collapse:collapse}.table th{padding:10px;background:#EFF7F1;color:#4B6255;text-align:left;font-size:.8rem;white-space:nowrap}.table td{padding:11px 10px;border-top:1px solid #EDF3EF;color:#334155;vertical-align:middle}.product strong{display:block;color:#17252A}.product small{color:#64748B}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:900}.pill.healthy{background:#ECFDF5;color:#047857;border:1px solid #A7F3D0}.pill.expiring_soon{background:#FFFBEB;color:#B45309;border:1px solid #FDE68A}.pill.expired{background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA}.pill.untracked{background:#F1F5F9;color:#475569;border:1px solid #CBD5E1}.qty{font-weight:900}.saleable{color:#237A43}.danger{color:#B91C1C}.empty{padding:30px;text-align:center;color:#64748B}.adjust{display:inline-flex;padding:6px 10px;border-radius:999px;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C;text-decoration:none;font-size:.78rem;font-weight:900}
+@media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.toolbar{grid-template-columns:1fr}}@media(max-width:600px){.inv-page{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr 1fr}.actions,.actions .btn{width:100%}}
+</style>
+<div class="inv-page">
+    <div class="head">
+        <div>
+            <h2>Batch & Expiry</h2>
+            <p>See exactly which batch is usable, which is expiring soon and which has been automatically blocked because it expired.</p>
+        </div>
+        <div class="actions">
+            <a class="btn" href="{{ url_for('admin.current_stock') }}">Current Stock</a>
+            <a class="btn" href="{{ url_for('admin.stock_adjustments') }}">Stock Adjustments</a>
+        </div>
+    </div>
+
+    <div class="summary">
+        <div class="card"><small>Total Lots</small><strong>{{ overview.summary.total_lots }}</strong></div>
+        <div class="card warn"><small>Expiring Soon</small><strong>{{ overview.summary.expiring_soon }}</strong></div>
+        <div class="card expired"><small>Expired / Blocked</small><strong>{{ overview.summary.expired }}</strong></div>
+        <div class="card"><small>Healthy</small><strong>{{ overview.summary.healthy }}</strong></div>
+        <div class="card"><small>No Expiry Tracking</small><strong>{{ overview.summary.untracked }}</strong></div>
+    </div>
+
+    <form class="toolbar" method="get">
+        <input name="q" value="{{ overview.query }}" placeholder="Search product, SKU, batch, barcode or warehouse">
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <select name="warehouse">
+                <option value="">All warehouses</option>
+                {% for code in overview.warehouses %}<option value="{{ code }}" {% if overview.selected_warehouse == code %}selected{% endif %}>{{ code }}</option>{% endfor %}
+            </select>
+            <select name="status">
+                <option value="all" {% if overview.selected_status == 'all' %}selected{% endif %}>All status</option>
+                <option value="healthy" {% if overview.selected_status == 'healthy' %}selected{% endif %}>Healthy</option>
+                <option value="expiring_soon" {% if overview.selected_status == 'expiring_soon' %}selected{% endif %}>Expiring soon</option>
+                <option value="expired" {% if overview.selected_status == 'expired' %}selected{% endif %}>Expired</option>
+                <option value="untracked" {% if overview.selected_status == 'untracked' %}selected{% endif %}>No expiry</option>
+            </select>
+            <button type="submit">Filter</button>
+        </div>
+    </form>
+
+    <div class="note"><strong>Automatic protection:</strong> expired lots stay visible for audit and physical counting, but their saleable quantity becomes zero. They cannot be sold until handled through an approved adjustment/return workflow.</div>
+
+    <div class="table-wrap">
+        <table class="table">
+            <thead><tr><th>Product</th><th>Batch</th><th>MFG Date</th><th>Expiry Date</th><th>Days Left</th><th>Status</th><th>Physical</th><th>Reserved</th><th>Damaged</th><th>Saleable</th><th>Warehouse</th><th>GRN</th><th></th></tr></thead>
+            <tbody>
+            {% for row in overview.rows %}
+                <tr>
+                    <td class="product"><strong>{{ row.product_name }}</strong><small>{{ row.sku }} · {{ row.category }}</small></td>
+                    <td><strong>{{ row.batch_number }}</strong><br><small>{{ row.barcode }}</small></td>
+                    <td>{{ row.manufacturing_date }}</td>
+                    <td>{{ row.expiry_date }}</td>
+                    <td>{% if row.days_remaining is none %}—{% elif row.days_remaining < 0 %}<span class="danger">Expired {{ row.days_remaining|abs }} day(s) ago</span>{% elif row.days_remaining == 0 %}<strong>Today</strong>{% else %}{{ row.days_remaining }} day(s){% endif %}</td>
+                    <td><span class="pill {{ row.expiry_status }}">{{ row.status_label }}</span></td>
+                    <td class="qty">{{ row.physical_quantity }} {{ row.unit_code }}</td>
+                    <td class="qty">{{ row.reserved_quantity }}</td>
+                    <td class="qty {% if row.damaged_quantity != '0' %}danger{% endif %}">{{ row.damaged_quantity }}</td>
+                    <td class="qty saleable">{{ row.saleable_quantity }}</td>
+                    <td><strong>{{ row.warehouse_code }}</strong><br><small>{{ row.warehouse_bin }}</small></td>
+                    <td>{{ row.first_receipt_number }}</td>
+                    <td><a class="adjust" href="{{ url_for('admin.stock_adjustments', lot=row.lot_id) }}">Adjust</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="13" class="empty">No inventory batches match this filter.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

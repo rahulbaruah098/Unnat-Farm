@@ -11,6 +11,7 @@ from app.services.dashboard_service import (
     get_mitra_dashboard,
     get_farmer_dashboard,
 )
+from app.services.ufc_farmer_marketplace_service import get_farmer_marketplace
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -129,32 +130,19 @@ def _normalize_product_for_app(item):
     return item
 
 def _get_app_farmer_products(user, limit=30):
-    user_id = str(user.get("_id"))
+    """Stage 6 app read-model: products published by the Farmer's mapped UFC.
 
-    exclude_ids = [user_id]
-
+    This replaces the legacy cross-farmer product feed for the Farmer dashboard.
+    The app and web therefore share the same visibility boundary.
+    """
+    user_id = str(user.get("_id") or "").strip()
+    if not user_id:
+        return []
     try:
-        exclude_ids.append(ObjectId(user_id))
+        overview = get_farmer_marketplace(user_id)
     except Exception:
-        pass
-
-    query = {
-        "status": "active",
-        "farmer_user_id": {"$nin": exclude_ids},
-        "$or": [
-            {"available_quantity": {"$gt": 0}},
-            {"quantity": {"$gt": 0}},
-            {"available_quantity": {"$exists": False}},
-        ],
-    }
-
-    items = list(
-        mongo.db.farmer_products
-        .find(query)
-        .sort("created_at", -1)
-        .limit(limit)
-    )
-
+        return []
+    items = list(overview.get("rows", []))[:max(int(limit or 30), 1)]
     return [_normalize_product_for_app(item) for item in items]
 
 def _get_app_farmer_orders(user, limit=20):

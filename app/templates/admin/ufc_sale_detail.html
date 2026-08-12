@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}{{ sale.sale_number }}{% endblock %}
+{% block content %}
+<style>
+.sd{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.head p{margin:5px 0 0;color:#64748b}.btn{display:inline-flex;padding:8px 14px;border:1px solid #cfe6d8;border-radius:999px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:18px 0}.info{padding:12px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.info small{display:block;color:#64748b}.info strong{display:block;margin-top:4px;color:#17252a}.section{margin-top:15px;padding:15px;border:1px solid #e2efe6;border-radius:16px;background:#fbfefc}.section h3{margin:0 0 10px;color:#17252a}.money{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.good{color:#166534}.warn{color:#c2410c}@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.money{grid-template-columns:1fr}}@media(max-width:560px){.sd{padding:15px;border-radius:18px}.grid{grid-template-columns:1fr}}
+</style>
+<div class="sd">
+  <div class="head"><div><h2>{{ sale.sale_number }}</h2><p>{{ sale.centre_name }} · {{ sale.centre_uid }} · {{ sale.avpl_order_number }}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="{{ url_for('admin.ufc_sales') }}">← Sales to UFC</a>{% if sale.invoice %}<a class="btn" target="_blank" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=sale.invoice.id) }}">Print Invoice</a>{% endif %}</div></div>
+
+  <div class="grid">
+    <div class="info"><small>Product</small><strong>{{ sale.product_name }}</strong><small>{{ sale.product_code or '-' }}</small></div>
+    <div class="info"><small>Quantity</small><strong>{{ sale.quantity_display }} {{ sale.unit_code }}</strong></div>
+    <div class="info"><small>Sale Price</small><strong>₹{{ sale.unit_price_display }} / {{ sale.unit_code }}</strong></div>
+    <div class="info"><small>Invoice</small><strong>{{ sale.invoice_number or '-' }}</strong></div>
+    <div class="info"><small>Taxable Value</small><strong>₹{{ sale.taxable_value_display }}</strong></div>
+    <div class="info"><small>Invoice Total</small><strong>₹{{ sale.grand_total_display }}</strong></div>
+    <div class="info"><small>Payment</small><strong>{{ sale.payment_status_label }}</strong></div>
+    <div class="info"><small>Outstanding</small><strong>₹{{ sale.outstanding_amount_display }}</strong></div>
+  </div>
+
+  {% if sale.invoice %}
+  <div class="section"><h3>Tax & Invoice</h3><div class="money"><div class="info"><small>HSN / GST</small><strong>{{ sale.invoice.hsn_code or '-' }} · {{ sale.invoice.gst_rate_display }}%</strong></div><div class="info"><small>CGST + SGST</small><strong>₹{{ sale.invoice.cgst_amount_display }} + ₹{{ sale.invoice.sgst_amount_display }}</strong></div><div class="info"><small>IGST</small><strong>₹{{ sale.invoice.igst_amount_display }}</strong></div></div></div>
+  {% endif %}
+
+  <div class="section"><h3>Profit Snapshot</h3><div class="money"><div class="info"><small>Estimated WAC</small><strong>₹{{ sale.invoice.estimated_unit_cost_display if sale.invoice else '0.00' }}</strong></div><div class="info"><small>Estimated Cost of Goods</small><strong>₹{{ sale.estimated_cogs_display }}</strong></div><div class="info"><small>Estimated Gross Margin</small><strong class="good">₹{{ sale.gross_margin_display }} · {{ sale.gross_margin_percent_display }}%</strong></div></div><p style="margin:10px 0 0;color:#64748b">Margin uses the current safe weighted purchase cost derived from posted GRNs. Payment expenses and other overheads are not included here.</p></div>
+
+  <div class="section"><h3>Financial Link</h3><p style="margin:0;color:#475569">AVPL Receivable: <strong>₹{{ sale.outstanding_amount_display }}</strong> · Accounting: <strong>Ready for later controlled posting</strong>.{% if sale.ufc_payable %} UFC Payable record is also linked to the same invoice.{% endif %} Payment entry/allocation is intentionally handled in the later financial stage.</p></div>
+
+  {% if sale.order %}<div class="section"><h3>Source Order</h3><p style="margin:0"><a class="btn" href="{{ url_for('admin.ufc_order_request_detail', order_id=sale.avpl_ufc_order_id_str) }}">Open {{ sale.avpl_order_number }}</a></p></div>{% endif %}
+</div>
+{% endblock %}

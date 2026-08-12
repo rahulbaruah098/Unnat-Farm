@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}UFC Order Requests{% endblock %}
+{% block content %}
+<style>
+.s4-page{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.s4-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}.s4-head h2{margin:0;color:#17252a;font-size:1.75rem}.s4-head p{margin:5px 0 0;color:#64748b;max-width:760px;line-height:1.45}.head-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:999px;border:1px solid #cfe6d8;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.flow{margin-bottom:15px;padding:12px 14px;border:1px solid #b9dcca;border-radius:14px;background:#f3fbf6;color:#3e6850;line-height:1.45}.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:14px}.stat{padding:11px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.stat small{display:block;color:#64748b}.stat strong{display:block;margin-top:3px;color:#17252a;font-size:1.15rem}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;margin-bottom:14px}.toolbar input,.toolbar select{height:42px;border:1px solid #d6e5da;border-radius:999px;padding:0 13px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5fa878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.table-wrap{overflow:auto;border:1px solid #e2efe6;border-radius:16px}.tbl{width:100%;border-collapse:collapse;min-width:1050px}.tbl th{padding:10px;background:#eff7f1;color:#4b6255;text-align:left;font-size:.8rem;white-space:nowrap}.tbl td{padding:11px 10px;border-top:1px solid #edf3ef;color:#334155}.tbl strong{color:#17252a}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.76rem;font-weight:900;border:1px solid #dcece1;background:#f8fcf9}.requested{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.approved{background:#ecfdf5;border-color:#a7f3d0;color:#047857}.rejected,.cancelled{background:#fef2f2;border-color:#fecaca;color:#b91c1c}.dispatched{background:#fff7ed;border-color:#fed7aa;color:#c2410c}.received{background:#f0fdf4;border-color:#86efac;color:#166534}.view{display:inline-flex;padding:6px 11px;border-radius:999px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.empty{padding:30px;text-align:center;color:#64748b}.pagination{display:flex;justify-content:center;gap:8px;margin-top:16px}.pagination a{padding:7px 12px;border:1px solid #dceee2;border-radius:999px;color:#2f7a4c;text-decoration:none;font-weight:900}@media(max-width:950px){.stats{grid-template-columns:repeat(3,1fr)}.toolbar{grid-template-columns:1fr}}@media(max-width:620px){.s4-page{padding:15px;border-radius:18px}.stats{grid-template-columns:repeat(2,1fr)}.head-actions,.head-actions a{width:100%}}
+</style>
+<div class="s4-page">
+  <div class="s4-head">
+    <div>
+      <h2>UFC Order Requests</h2>
+      <p>One simple queue for products requested by UFC Centres. Approving reserves stock; dispatching reduces physical AVPL stock.</p>
+    </div>
+    <div class="head-actions">
+      <a class="btn" href="{{ url_for('admin.product_list') }}">Published Products</a>
+      <a class="btn" href="{{ url_for('admin.current_stock') }}">Current Stock</a>
+      <a class="btn" href="{{ url_for('admin.stock_movements') }}">Stock Movements</a>
+      <a class="btn" href="{{ url_for('admin.ufc_sales') }}">Sales to UFC</a>
+    </div>
+  </div>
+
+  <div class="flow"><strong>Workflow:</strong> UFC Request → AVPL Approve/Reject → Approved stock is reserved → Dispatch → UFC confirms receipt. Approval alone never reduces physical stock.</div>
+
+  <div class="stats">
+    {% for code,label in overview.get('statuses', {}).items() %}
+      <div class="stat"><small>{{ label }}</small><strong>{{ overview.get('counts', {}).get(code, 0) }}</strong></div>
+    {% endfor %}
+  </div>
+
+  <form class="toolbar" method="get">
+    <input name="q" value="{{ overview.get('query','') }}" placeholder="Search order, UFC, product or SKU">
+    <select name="status">
+      <option value="all">All statuses</option>
+      {% for code,label in overview.get('statuses', {}).items() %}<option value="{{ code }}" {% if overview.get('selected_status') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button type="submit">Filter</button>
+  </form>
+
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead><tr><th>Order</th><th>UFC Centre</th><th>Product</th><th>Requested</th><th>Approved</th><th>Price</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for row in overview.get('rows', []) %}
+        <tr>
+          <td><strong>{{ row.order_number }}</strong><br><small>{{ row.created_at.strftime('%d %b %Y %I:%M %p') if row.created_at else '-' }}</small></td>
+          <td><strong>{{ row.centre_name }}</strong><br><small>{{ row.centre_uid }}</small></td>
+          <td><strong>{{ row.product_name }}</strong><br><small>{{ row.product_code or '-' }}</small></td>
+          <td>{{ row.requested_quantity_display }} {{ row.unit_code }}</td>
+          <td>{{ row.approved_quantity_display if row.approved_quantity else '-' }}</td>
+          <td>{% if row.status in ['approved','dispatched','received','cancelled'] %}₹{{ row.unit_price_display }}{% else %}-{% endif %}</td>
+          <td>{% if row.status in ['approved','dispatched','received','cancelled'] %}<strong>₹{{ row.total_amount_display }}</strong>{% else %}-{% endif %}</td>
+          <td><span class="badge {{ row.status }}">{{ row.status_label }}</span></td>
+          <td><a class="view" href="{{ url_for('admin.ufc_order_request_detail', order_id=row.id) }}">View</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9" class="empty">No UFC order requests found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% set pg = overview.get('pagination', {}) %}
+  {% if pg.get('total_pages',1) > 1 %}
+    <div class="pagination">
+      {% if pg.get('has_prev') %}<a href="?page={{ pg.page-1 }}&status={{ overview.get('selected_status','all') }}&q={{ overview.get('query','') }}">Previous</a>{% endif %}
+      <span style="padding:8px 10px;color:#64748b">Page {{ pg.page }} of {{ pg.total_pages }}</span>
+      {% if pg.get('has_next') %}<a href="?page={{ pg.page+1 }}&status={{ overview.get('selected_status','all') }}&q={{ overview.get('query','') }}">Next</a>{% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

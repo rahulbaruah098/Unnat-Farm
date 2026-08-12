@@ -16,8 +16,8 @@
         </div>
     </div>
 
-    <div class="notice"><strong>Stock control:</strong> {{ receipt.accepted_quantity_total }} accepted units were eligible for stock posting. Rejected and damaged quantities remain outside available AVPL stock.</div>
-    {% if receipt.posting_error %}<div class="notice error"><strong>Posting recovery required:</strong> {{ receipt.posting_error }}. Retry posting after resolving the displayed cause; source-line idempotency prevents accepted stock from being added twice.</div>{% endif %}
+    <div class="notice"><strong>Stock result:</strong> {{ receipt.accepted_quantity_total }} accepted units are eligible for AVPL stock. Rejected and damaged quantities are recorded but do not enter saleable stock.</div>
+    {% if receipt.posting_error %}<div class="notice error"><strong>Stock update needs attention:</strong> {{ receipt.posting_error }}. Retry posting after resolving the displayed cause; the system protects against adding the same accepted stock twice.</div>{% endif %}
     {% if receipt.return_reason %}<div class="notice warning"><strong>Returned for correction:</strong> {{ receipt.return_reason }}</div>{% endif %}
     {% if receipt.cancel_reason %}<div class="notice warning"><strong>Cancellation reason:</strong> {{ receipt.cancel_reason }}</div>{% endif %}
 
@@ -70,7 +70,7 @@
 
     <section class="section"><h3>Workflow Actions</h3><div class="workflow">
         {% if receipt.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('admin.submit_goods_receipt_view', receipt_id=receipt.id) }}"><input type="hidden" name="expected_version" value="{{ receipt.version }}"><button class="btn primary">Submit for Posting</button></form>{% endif %}
-        {% if receipt.status in ['draft','pending_approval','returned_for_correction'] and session.get('role') in ['avpl_admin','super_admin'] %}<form method="post" action="{{ url_for('admin.post_goods_receipt_view', receipt_id=receipt.id) }}"><input type="hidden" name="expected_version" value="{{ receipt.version }}"><input class="reason" name="posting_note" placeholder="Posting note (optional)"><button class="btn post">Post Accepted Stock</button></form>{% endif %}
+        {% if receipt.status in ['draft','pending_approval','returned_for_correction'] and session.get('role') in ['avpl_admin','super_admin'] %}<form method="post" action="{{ url_for('admin.post_goods_receipt_view', receipt_id=receipt.id) }}"><input type="hidden" name="expected_version" value="{{ receipt.version }}"><input class="reason" name="posting_note" placeholder="Posting note (optional)"><button class="btn post">Receive & Add Accepted Stock</button></form>{% endif %}
         {% if receipt.status == 'pending_approval' and session.get('role') in ['avpl_admin','super_admin'] %}<form method="post" action="{{ url_for('admin.return_goods_receipt_view', receipt_id=receipt.id) }}"><input type="hidden" name="expected_version" value="{{ receipt.version }}"><input class="reason" name="reason" placeholder="Correction reason" required><button class="btn warning">Return</button></form>{% endif %}
         {% if receipt.status not in ['posted','cancelled'] %}<form method="post" action="{{ url_for('admin.cancel_goods_receipt_view', receipt_id=receipt.id) }}"><input type="hidden" name="expected_version" value="{{ receipt.version }}"><input class="reason" name="reason" placeholder="Cancellation reason" required><button class="btn danger">Cancel</button></form>{% endif %}
     </div></section>

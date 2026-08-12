@@ -1,50 +1,26 @@
 {% extends 'base.html' %}
-{% block title %}AVPL Goods Receipts{% endblock %}
+{% block title %}Receive Goods{% endblock %}
 {% block content %}
 <style>
-.grn-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.grn-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.grn-head h2{margin:0;color:#17252A}.grn-head p{margin:5px 0 0;color:#64748B}.head-actions{display:flex;gap:9px;flex-wrap:wrap}.btn-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 16px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C}.btn-link.primary{background:#5FA878;color:#fff;border-color:#5FA878}.notice{margin-bottom:17px;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:17px}.summary a{display:block;padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC;text-decoration:none;color:#17252A}.summary small{display:block;color:#64748B;margin-bottom:3px}.summary strong{font-size:1.2rem}.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:15px}.toolbar input,.toolbar select{height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 14px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5FA878;color:#fff;font:inherit;font-weight:800;cursor:pointer}.receipt-list{display:grid;gap:12px}.receipt-card{display:grid;grid-template-columns:minmax(0,1.45fr) repeat(5,minmax(100px,.55fr)) auto;gap:12px;align-items:center;padding:14px;border:1px solid #E2EFE6;border-radius:17px;background:#fff}.receipt-card h3{margin:0 0 4px;color:#17252A;font-size:1.03rem}.muted{color:#64748B;font-size:.86rem}.cell small{display:block;color:#64748B;margin-bottom:3px}.cell strong{color:#263B31}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.78rem;font-weight:900;border:1px solid}.status.posted{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.pending_approval,.status.returned_for_correction{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.draft{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}.status.cancelled{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.view-btn{display:inline-flex;justify-content:center;padding:8px 13px;border-radius:999px;background:#F3FBF6;border:1px solid #CFE6D8;color:#2F7A4C;text-decoration:none;font-weight:800}.empty{padding:28px;text-align:center;border:1px dashed #BFDCC8;border-radius:16px;background:#F6FCF8;color:#64748B}
-@media(max-width:1250px){.summary{grid-template-columns:repeat(3,1fr)}.receipt-card{grid-template-columns:1fr 1fr 1fr}.receipt-main{grid-column:1/-1}}@media(max-width:680px){.grn-page{padding:15px;border-radius:18px}.summary,.toolbar,.receipt-card{grid-template-columns:1fr}.head-actions,.head-actions a{width:100%}.receipt-main{grid-column:auto}.view-btn{width:100%}}
+.grn-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B}.head-actions{display:flex;gap:9px;flex-wrap:wrap}.btn-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 16px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C}.btn-link.primary{background:#5FA878;color:#fff;border-color:#5FA878}.tip{margin-bottom:17px;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:17px}.summary a{display:block;padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC;text-decoration:none;color:#17252A}.summary small{display:block;color:#64748B;margin-bottom:3px}.summary strong{font-size:1.2rem}.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:15px}.toolbar input,.toolbar select{height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 14px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5FA878;color:#fff;font:inherit;font-weight:800;cursor:pointer}.receipt-list{display:grid;gap:12px}.receipt-card{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(105px,.65fr)) auto;gap:12px;align-items:center;padding:15px;border:1px solid #E2EFE6;border-radius:17px;background:#fff}.receipt-card h3{margin:0 0 4px;color:#17252A;font-size:1.03rem}.muted{color:#64748B;font-size:.86rem}.cell small{display:block;color:#64748B;margin-bottom:3px}.cell strong{color:#263B31}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.76rem;font-weight:900;border:1px solid}.status.posted{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.pending_approval,.status.returned_for_correction{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.draft{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}.status.cancelled{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.view-btn{display:inline-flex;justify-content:center;padding:8px 13px;border-radius:999px;background:#F3FBF6;border:1px solid #CFE6D8;color:#2F7A4C;text-decoration:none;font-weight:800}.view-btn.next{background:#5FA878;border-color:#5FA878;color:#fff}.empty{padding:28px;text-align:center;border:1px dashed #BFDCC8;border-radius:16px;background:#F6FCF8;color:#64748B}
+@media(max-width:1150px){.summary{grid-template-columns:repeat(3,1fr)}.receipt-card{grid-template-columns:1fr 1fr 1fr}.receipt-main{grid-column:1/-1}}@media(max-width:680px){.grn-page{padding:15px;border-radius:18px}.summary,.toolbar,.receipt-card{grid-template-columns:1fr}.head-actions,.head-actions a{width:100%}.receipt-main{grid-column:auto}.view-btn{width:100%}}
 </style>
 <div class="grn-page">
-    <div class="grn-head">
-        <div>
-            <h2>AVPL Goods Receipt Notes</h2>
-            <p>Receive approved Purchase Orders, inspect quantities and add only accepted stock to AVPL inventory.</p>
-        </div>
-        <div class="head-actions">
-            <a class="btn-link" href="{{ url_for('admin.purchase_orders') }}">Purchase Orders</a>
-            <a class="btn-link" href="{{ url_for('admin.supplier_invoices') }}">Supplier Invoices</a>
-            <a class="btn-link primary" href="{{ url_for('admin.create_goods_receipt_view') }}">Create Goods Receipt</a>
-        </div>
-    </div>
-    <div class="notice"><strong>Stage 2 · Batch 2.3:</strong> Received, accepted, rejected and damaged quantities are stored separately. Product stock and lot balances increase only when an authorised user posts the GRN, and only by the accepted quantity.</div>
-    <div class="summary">
-        {% for key, label in overview.get('status_labels', {}).items() %}
-            <a href="{{ url_for('admin.goods_receipts', status=key) }}"><small>{{ label }}</small><strong>{{ overview.get('counts', {}).get(key, 0) }}</strong></a>
-        {% endfor %}
-    </div>
-    <form class="toolbar" method="get">
-        <input name="q" value="{{ overview.get('query', '') }}" placeholder="Search GRN, PO, supplier, delivery note or product">
-        <div style="display:flex;gap:8px">
-            <select name="status"><option value="">All statuses</option>{% for key, label in overview.get('status_labels', {}).items() %}<option value="{{ key }}" {% if overview.get('selected_status') == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-            <button>Filter</button>
-        </div>
-    </form>
+    <div class="head"><div><h2>Receive Goods</h2><p>Record what arrived against an approved Purchase Order.</p></div><div class="head-actions"><a class="btn-link" href="{{ url_for('admin.procurement_home') }}">AVPL Purchases</a><a class="btn-link" href="{{ url_for('admin.purchase_orders') }}">Purchase Orders</a><a class="btn-link primary" href="{{ url_for('admin.create_goods_receipt_view') }}">+ Receive Goods</a></div></div>
+    <div class="tip"><strong>Only accepted quantity becomes stock.</strong> Rejected and damaged quantities are recorded for traceability but are not added to saleable AVPL inventory.</div>
+    <div class="summary">{% for key, label in overview.get('status_labels', {}).items() %}<a href="{{ url_for('admin.goods_receipts', status=key) }}"><small>{{ label }}</small><strong>{{ overview.get('counts', {}).get(key, 0) }}</strong></a>{% endfor %}</div>
+    <form class="toolbar" method="get"><input name="q" value="{{ overview.get('query', '') }}" placeholder="Search receipt, PO, supplier or product"><div style="display:flex;gap:8px"><select name="status"><option value="">All statuses</option>{% for key, label in overview.get('status_labels', {}).items() %}<option value="{{ key }}" {% if overview.get('selected_status') == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button>Filter</button></div></form>
     <div class="receipt-list">
         {% for receipt in overview.get('rows', []) %}
         <article class="receipt-card">
-            <div class="receipt-main">
-                <h3>{{ receipt.grn_number }}</h3>
-                <div class="muted">{{ receipt.supplier_name }} · {{ receipt.po_number }}{% if receipt.supplier_delivery_note %} · Delivery Note: {{ receipt.supplier_delivery_note }}{% endif %}</div>
-            </div>
-            <div class="cell"><small>Receipt Date</small><strong>{{ receipt.receipt_date }}</strong></div>
-            <div class="cell"><small>Accepted</small><strong>{{ receipt.accepted_quantity_total }}</strong></div>
-            <div class="cell"><small>Rejected</small><strong>{{ receipt.rejected_quantity_total }}</strong></div>
-            <div class="cell"><small>Damaged</small><strong>{{ receipt.damaged_quantity_total }}</strong></div>
+            <div class="receipt-main"><h3>{{ receipt.grn_number }}</h3><div class="muted">{{ receipt.supplier_name }} · {{ receipt.po_number }}</div></div>
+            <div class="cell"><small>Received Date</small><strong>{{ receipt.receipt_date }}</strong></div>
+            <div class="cell"><small>Accepted to Stock</small><strong>{{ receipt.accepted_quantity_total }}</strong></div>
+            <div class="cell"><small>Rejected / Damaged</small><strong>{{ receipt.rejected_quantity_total }} / {{ receipt.damaged_quantity_total }}</strong></div>
             <div class="cell"><small>Status</small><span class="status {{ receipt.status }}">{{ receipt.status_display }}</span></div>
-            <a class="view-btn" href="{{ url_for('admin.goods_receipt_detail', receipt_id=receipt.id) }}">View</a>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">{% if receipt.status == 'posted' %}<a class="view-btn next" href="{{ url_for('admin.create_supplier_invoice_view', po_id=receipt.purchase_order_id) }}">Record Invoice</a>{% endif %}<a class="view-btn" href="{{ url_for('admin.goods_receipt_detail', receipt_id=receipt.id) }}">View</a></div>
         </article>
-        {% else %}<div class="empty">No Goods Receipts match the selected filter.</div>{% endfor %}
+        {% else %}<div class="empty">No Goods Receipts match this filter.</div>{% endfor %}
     </div>
 </div>
 {% endblock %}

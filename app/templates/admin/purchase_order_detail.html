@@ -11,13 +11,13 @@
         <div class="links">
             <a class="btn" href="{{ url_for('admin.purchase_orders') }}">Back</a>
             {% if order.status in ['draft','returned_for_correction'] %}<a class="btn primary" href="{{ url_for('admin.edit_purchase_order_view', order_id=order.id) }}">Edit</a>{% endif %}
-            {% if order.status in ['approved','partially_received'] %}<a class="btn dark" href="{{ url_for('admin.create_goods_receipt_view', po_id=order.id) }}">Create GRN</a>{% endif %}
+            {% if order.status in ['approved','partially_received'] %}<a class="btn dark" href="{{ url_for('admin.create_goods_receipt_view', po_id=order.id) }}">Receive Goods</a>{% endif %}
             {% if order.status in ['approved','partially_received','fully_received'] %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=order.id) }}">Record Supplier Invoice</a>{% endif %}
         </div>
     </div>
 
-    <div class="notice"><strong>Controlled procurement:</strong> Purchase Order approval records commercial intent. Posted GRNs add only accepted quantities to stock. Matched Supplier Invoices can now be prepared and checker-posted as official Purchase Invoices with an Accounting voucher and supplier payable. Purchase posting never increases stock a second time.</div>
-    {% if order.reverse_charge_review_required %}<div class="notice"><strong>Unregistered supplier tax treatment:</strong> Supplier GST is not included in this Purchase Order and input-tax credit is not assumed. Reverse-charge applicability, if any, is reviewed during Supplier Invoice matching and final purchase posting.</div>{% endif %}
+    <div class="notice green"><strong>What happens next?</strong> When the goods arrive, choose <strong>Receive Goods</strong>. Only accepted goods become stock. After that, record the supplier invoice.</div>
+    {% if order.reverse_charge_review_required %}<div class="notice"><strong>Supplier is not a regular GST supplier:</strong> GST is not being added automatically on this PO. Any special tax review will happen during final purchase processing.</div>{% endif %}
 
     <div class="summary">
         <div class="card"><small>PO Status</small><span class="status {{ order.status }}">{{ order.status_display }}</span></div>
@@ -58,7 +58,7 @@
     <section class="section"><h3>Totals</h3><div class="total-box"><div class="total-row"><span>Subtotal</span><strong>₹{{ order.subtotal }}</strong></div><div class="total-row"><span>Discount</span><strong>₹{{ order.discount_total }}</strong></div><div class="total-row"><span>Taxable Value</span><strong>₹{{ order.taxable_total }}</strong></div><div class="total-row"><span>CGST / SGST / IGST</span><strong>₹{{ order.cgst_total }} / ₹{{ order.sgst_total }} / ₹{{ order.igst_total }}</strong></div><div class="total-row"><span>Freight + Other</span><strong>₹{{ order.freight_amount }} + ₹{{ order.other_charges }}</strong></div><div class="total-row grand"><span>Grand Total</span><strong>₹{{ order.grand_total }}</strong></div></div></section>
 
     <section class="section">
-        <div class="section-head"><h3>Related Goods Receipts</h3>{% if order.status in ['approved','partially_received'] %}<a class="btn dark" href="{{ url_for('admin.create_goods_receipt_view', po_id=order.id) }}">Create GRN</a>{% endif %}</div>
+        <div class="section-head"><h3>Related Goods Receipts</h3>{% if order.status in ['approved','partially_received'] %}<a class="btn dark" href="{{ url_for('admin.create_goods_receipt_view', po_id=order.id) }}">Receive Goods</a>{% endif %}</div>
         {% if goods_receipts %}<div class="table-wrap"><table class="table related"><thead><tr><th>GRN</th><th>Date</th><th>Accepted</th><th>Rejected</th><th>Damaged</th><th>Warehouse</th><th>Status</th><th></th></tr></thead><tbody>{% for grn in goods_receipts %}<tr><td><strong>{{ grn.grn_number }}</strong></td><td>{{ grn.receipt_date }}</td><td>{{ grn.accepted_quantity_total }}</td><td>{{ grn.rejected_quantity_total }}</td><td>{{ grn.damaged_quantity_total }}</td><td>{{ grn.warehouse_code }}{% if grn.warehouse_name %} · {{ grn.warehouse_name }}{% endif %}</td><td><span class="status {{ grn.status }}">{{ grn.status_display }}</span></td><td><a class="btn" href="{{ url_for('admin.goods_receipt_detail', receipt_id=grn.id) }}">View</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty">No Goods Receipt has been created for this Purchase Order.</div>{% endif %}
     </section>
 

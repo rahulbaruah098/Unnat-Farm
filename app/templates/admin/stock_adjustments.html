@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Stock Adjustments{% endblock %}
+{% block content %}
+<style>
+.adj-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B;max-width:760px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:999px;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.btn.primary{background:#5FA878;color:#fff;border-color:#5FA878}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px}.sum{padding:12px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC}.sum small{display:block;color:#64748B}.sum strong{display:block;margin-top:3px;color:#17252A;font-size:1.15rem}.layout{display:grid;grid-template-columns:minmax(330px,.8fr) minmax(0,1.5fr);gap:16px}.panel{border:1px solid #E2EFE6;border-radius:18px;background:#fff;overflow:hidden}.panel-head{padding:14px 16px;background:#F3FBF6;border-bottom:1px solid #E2EFE6}.panel-head h3{margin:0;color:#17252A}.panel-head p{margin:4px 0 0;color:#64748B;font-size:.87rem;line-height:1.4}.form{padding:16px}.field{margin-bottom:12px}.field label{display:block;margin-bottom:5px;color:#334155;font-weight:900}.field small{display:block;margin-top:4px;color:#64748B;line-height:1.35}.field input,.field select,.field textarea{width:100%;border:1px solid #D6E5DA;border-radius:12px;padding:10px 12px;background:#fff;font:inherit;color:#334155}.field select,.field input{min-height:42px}.field textarea{min-height:90px;resize:vertical}.lot-help{padding:10px 11px;margin:-2px 0 12px;border:1px solid #E2EFE6;border-radius:12px;background:#F8FCF9;color:#475569;font-size:.85rem;line-height:1.4}.submit{width:100%;min-height:43px;border:0;border-radius:999px;background:#5FA878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.approval-note{margin-top:10px;padding:10px;border-radius:12px;background:#FFFBEA;border:1px solid #F5E3A5;color:#7C5A12;font-size:.84rem;line-height:1.4}.filter-row{display:flex;gap:7px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid #E2EFE6}.filter{padding:6px 10px;border-radius:999px;border:1px solid #DCEEE2;background:#fff;color:#3B7D55;text-decoration:none;font-weight:900;font-size:.8rem}.filter.active{background:#5FA878;color:#fff}.list{padding:0}.row{padding:14px 15px;border-bottom:1px solid #EDF3EF}.row:last-child{border-bottom:0}.row-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.row h4{margin:0;color:#17252A;font-size:1rem}.row-meta{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:900;border:1px solid #DCEEE2;background:#F8FCF9;color:#486252}.pill.submitted{background:#FFFBEB;color:#B45309;border-color:#FDE68A}.pill.approved{background:#ECFDF5;color:#047857;border-color:#A7F3D0}.pill.rejected{background:#FEF2F2;color:#B91C1C;border-color:#FECACA}.detail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;color:#475569;font-size:.86rem;line-height:1.4}.detail strong{color:#334155}.proof{display:inline-flex;margin-top:8px;color:#1D4ED8;text-decoration:none;font-weight:900;font-size:.82rem}.approve-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #EDF3EF}.approve-btn{border:0;border-radius:999px;padding:7px 12px;background:#5FA878;color:#fff;font:inherit;font-size:.8rem;font-weight:900;cursor:pointer}.reject-form{display:flex;gap:6px;flex:1;min-width:240px}.reject-form input{flex:1;min-width:120px;border:1px solid #FECACA;border-radius:999px;padding:7px 10px;font:inherit}.reject-form button{border:0;border-radius:999px;padding:7px 11px;background:#FEE2E2;color:#B91C1C;font:inherit;font-size:.8rem;font-weight:900;cursor:pointer}.empty{padding:28px;text-align:center;color:#64748B}.maker-note{margin-top:8px;color:#B45309;font-size:.82rem;font-weight:800}
+@media(max-width:1050px){.layout{grid-template-columns:1fr}}@media(max-width:620px){.adj-page{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr}.actions,.actions .btn{width:100%}.detail{grid-template-columns:1fr}.row-top{display:block}.reject-form{min-width:100%}}
+</style>
+<div class="adj-page">
+    <div class="head">
+        <div>
+            <h2>Stock Adjustments</h2>
+            <p>No one edits stock quantities directly. Corrections are submitted with a reason and proof, then approved before stock changes.</p>
+        </div>
+        <div class="actions">
+            <a class="btn" href="{{ url_for('admin.current_stock') }}">Current Stock</a>
+            <a class="btn" href="{{ url_for('admin.batch_expiry') }}">Batch & Expiry</a>
+            <a class="btn" href="{{ url_for('admin.stock_movements') }}">Movements</a>
+        </div>
+    </div>
+
+    <div class="summary">
+        <div class="sum"><small>Waiting Approval</small><strong>{{ overview.counts.submitted }}</strong></div>
+        <div class="sum"><small>Approved</small><strong>{{ overview.counts.approved }}</strong></div>
+        <div class="sum"><small>Rejected</small><strong>{{ overview.counts.rejected }}</strong></div>
+    </div>
+
+    <div class="layout">
+        <section class="panel">
+            <div class="panel-head"><h3>Create Adjustment</h3><p>Select the exact stock batch, explain the correction and attach proof.</p></div>
+            <form class="form" method="post" enctype="multipart/form-data">
+                <div class="field">
+                    <label>Stock Batch *</label>
+                    <select name="lot_id" id="lotSelect" required>
+                        <option value="">Select product / batch</option>
+                        {% for lot in overview.lots %}
+                        <option value="{{ lot.id }}"
+                                data-physical="{{ lot.physical_quantity }}"
+                                data-saleable="{{ lot.saleable_quantity }}"
+                                data-damaged="{{ lot.damaged_quantity }}"
+                                data-expired="{{ 'yes' if lot.expired else 'no' }}"
+                                data-unit="{{ lot.unit_code }}"
+                                {% if request.args.get('lot') == lot.id %}selected{% endif %}>
+                            {{ lot.product_name }} · {{ lot.warehouse_code }} · {{ lot.batch_number }} · {{ lot.expiry_date }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="lot-help" id="lotHelp">Choose a batch to see its current quantities.</div>
+
+                <div class="field">
+                    <label>What needs to change? *</label>
+                    <select name="adjustment_type" required>
+                        <option value="">Select adjustment</option>
+                        {% for code, label in overview.adjustment_types.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+                    </select>
+                    <small>“Mark Damaged” keeps the quantity physically present but removes it from saleable stock.</small>
+                </div>
+                <div class="field"><label>Quantity *</label><input type="number" name="quantity" min="0.0001" step="0.0001" required placeholder="0"></div>
+                <div class="field">
+                    <label>Reason Type *</label>
+                    <select name="reason_code" required>{% for code, label in overview.reason_codes.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select>
+                </div>
+                <div class="field"><label>Reason / Explanation *</label><textarea name="reason" required placeholder="Example: Physical count found 2 damaged bags during warehouse inspection."></textarea></div>
+                <div class="field"><label>Supporting Proof *</label><input type="file" name="proof" required><small>Upload an approved image/PDF/document according to the system file policy.</small></div>
+                <button class="submit" type="submit">Submit for Approval</button>
+                <div class="approval-note"><strong>Maker-checker:</strong> the person who submits an adjustment cannot approve the same request. Accounts can submit; AVPL Admin/Super Admin approves.</div>
+            </form>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head"><h3>Adjustment Requests</h3><p>Stock changes only when an authorized approver clicks Approve.</p></div>
+            <div class="filter-row">
+                <a class="filter {% if overview.selected_status == 'all' %}active{% endif %}" href="{{ url_for('admin.stock_adjustments', status='all') }}">All</a>
+                <a class="filter {% if overview.selected_status == 'submitted' %}active{% endif %}" href="{{ url_for('admin.stock_adjustments', status='submitted') }}">Waiting</a>
+                <a class="filter {% if overview.selected_status == 'approved' %}active{% endif %}" href="{{ url_for('admin.stock_adjustments', status='approved') }}">Approved</a>
+                <a class="filter {% if overview.selected_status == 'rejected' %}active{% endif %}" href="{{ url_for('admin.stock_adjustments', status='rejected') }}">Rejected</a>
+            </div>
+            <div class="list">
+                {% for row in overview.rows %}
+                <div class="row">
+                    <div class="row-top">
+                        <div><h4>{{ row.adjustment_number }} · {{ row.product_name }}</h4><small>{{ row.created_display }}</small></div>
+                        <span class="pill {{ row.status }}">{{ row.status_label }}</span>
+                    </div>
+                    <div class="row-meta">
+                        <span class="pill">{{ row.adjustment_type_label }}</span>
+                        <span class="pill">{{ row.quantity_display }} {{ row.unit_code }}</span>
+                        <span class="pill">{{ row.reason_label }}</span>
+                    </div>
+                    <div class="detail">
+                        <div><strong>Batch:</strong> {{ row.batch_number or 'No batch' }}</div>
+                        <div><strong>Warehouse:</strong> {{ row.warehouse_code }}</div>
+                        <div><strong>Requested by:</strong> {{ row.requested_by_name }}</div>
+                        <div><strong>Reason:</strong> {{ row.reason }}</div>
+                        {% if row.status == 'approved' %}<div><strong>Approved by:</strong> {{ row.approved_by_name }}</div>{% endif %}
+                        {% if row.status == 'rejected' %}<div><strong>Rejected:</strong> {{ row.rejection_reason }}</div>{% endif %}
+                    </div>
+                    {% if row.proof_filename %}<a class="proof" href="{{ url_for('documents.serve', filename=row.proof_filename) }}" target="_blank">View supporting proof</a>{% endif %}
+
+                    {% if row.status == 'submitted' and row.can_approve %}
+                    <div class="approve-actions">
+                        <form method="post" action="{{ url_for('admin.approve_stock_adjustment_view', adjustment_id=row.id) }}"><button class="approve-btn" type="submit">Approve & Update Stock</button></form>
+                        <form class="reject-form" method="post" action="{{ url_for('admin.reject_stock_adjustment_view', adjustment_id=row.id) }}">
+                            <input name="rejection_reason" required placeholder="Reason to reject">
+                            <button type="submit">Reject</button>
+                        </form>
+                    </div>
+                    {% elif row.status == 'submitted' and overview.actor_role in ['avpl_admin','super_admin'] %}
+                    <div class="maker-note">This request needs a different authorized approver.</div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="empty">No stock adjustment requests for this filter.</div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+<script>
+(function(){
+    const select=document.getElementById('lotSelect'), help=document.getElementById('lotHelp');
+    function refresh(){const o=select.options[select.selectedIndex];if(!o||!o.value){help.textContent='Choose a batch to see its current quantities.';return;}help.innerHTML='<strong>Physical:</strong> '+o.dataset.physical+' '+o.dataset.unit+' · <strong>Saleable:</strong> '+o.dataset.saleable+' · <strong>Damaged:</strong> '+o.dataset.damaged+(o.dataset.expired==='yes'?' · <strong style="color:#B91C1C">Expired</strong>':'');}
+    select.addEventListener('change',refresh);refresh();
+})();
+</script>
+{% endblock %}

@@ -479,8 +479,13 @@
     <div class="title-row">
         <div class="title-left">
             <div class="title-content">
+                {% if session.get('role') in ['ufc_admin','ufc_mitra'] %}
+                <span class="page-kicker">AVPL Marketplace</span>
+                <h2>Published AVPL Products</h2>
+                {% else %}
                 <span class="page-kicker">Product Inventory</span>
                 <h2>Products Module</h2>
+                {% endif %}
                 <p>Review available products, categories, pricing, type, and centre-wise availability.</p>
             </div>
         </div>
@@ -514,8 +519,13 @@
                     <th>Product</th>
                     <th>Category</th>
                     <th>Type</th>
+                    {% if session.get('role') in ['ufc_admin','ufc_mitra'] %}
+                    <th>Marketplace</th>
+                    <th>Saleable Stock</th>
+                    {% else %}
                     <th>Available Centres</th>
                     <th>Price</th>
+                    {% endif %}
                 </tr>
             </thead>
 
@@ -536,11 +546,16 @@
                         <span class="product-pill">{{ i.type }}</span>
                     </td>
 
+                    {% if session.get('role') in ['ufc_admin','ufc_mitra'] %}
+                    <td data-label="Marketplace"><span class="product-pill">Published by AVPL</span></td>
+                    <td data-label="Saleable Stock">{{ (i.get('_marketplace_stock') or {}).get('saleable_quantity', 0) }}</td>
+                    {% else %}
                     <td data-label="Available Centres">{{ i.available_centres }}</td>
 
                     <td data-label="Price">
                         <span class="product-price">₹{{ i.price }}</span>
                     </td>
+                    {% endif %}
                 </tr>
             {% else %}
                 <tr>
