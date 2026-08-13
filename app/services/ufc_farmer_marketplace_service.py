@@ -649,9 +649,11 @@ def get_farmer_marketplace(actor_user_id, *, search=""):
             "picture": _image_value(product),
             "centre_uid": centre_uid,
             "centre_name": centre_name,
-            # Stage 6 is catalogue visibility only. Stage 7 introduces the
-            # transactional Farmer order/reservation/delivery workflow.
-            "ordering_enabled": False,
+            # Stage 7 enables transaction-controlled ordering. The token is
+            # unique to this rendered form so a double-click/retry cannot
+            # accidentally create two identical orders.
+            "ordering_enabled": saleable > 0,
+            "request_token": uuid4().hex,
         })
 
     text = _clean_text(search, 120).lower()

@@ -25,7 +25,7 @@
   <div class="totals"><div class="row"><span>Taxable Value</span><strong>₹{{ invoice.taxable_value_display }}</strong></div><div class="row"><span>CGST</span><strong>₹{{ invoice.cgst_amount_display }}</strong></div><div class="row"><span>SGST</span><strong>₹{{ invoice.sgst_amount_display }}</strong></div><div class="row"><span>IGST</span><strong>₹{{ invoice.igst_amount_display }}</strong></div><div class="row grand"><span>Grand Total</span><span>₹{{ invoice.grand_total_display }}</span></div><div class="row"><span>Paid</span><strong>₹{{ invoice.amount_paid_display }}</strong></div><div class="row"><span>Balance Due</span><strong>₹{{ invoice.outstanding_amount_display }}</strong></div></div>
 
   <div class="foot"><div class="sign">Prepared / System Generated</div><div class="sign">Authorized Signatory — AVPL</div></div>
-  <div class="note">Generated from fulfilled UnnatFarm AVPL → UFC Order {{ invoice.avpl_order_number }}. Physical AVPL stock was reduced at dispatch. UFC purchase and stock are created only after the UFC confirms physical receipt. Payment allocation and final Accounting posting are managed separately so this invoice is never rewritten after issue.</div>
+  <div class="note">Generated from fulfilled UnnatFarm AVPL → UFC Order {{ invoice.avpl_order_number }}. Physical AVPL stock was reduced at dispatch. UFC purchase and stock are created only after the UFC confirms physical receipt. Payments are allocated through the unified settlement ledger. Paid and outstanding balances update without changing the issued invoice amount; Accounting posting remains controlled by the existing maker-checker workflow.</div>
 </div>
 </body>
 </html>

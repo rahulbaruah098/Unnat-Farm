@@ -22,6 +22,28 @@ from app.services.ufc_farmer_marketplace_service import (
     get_ufc_marketplace_setup,
     save_product_selling_setup,
 )
+from app.services.ufc_farmer_order_service import (
+    approve_farmer_order as stage7_approve_farmer_order,
+    cancel_farmer_order as stage7_cancel_farmer_order,
+    create_farmer_order as stage7_create_farmer_order,
+    deliver_farmer_order as stage7_deliver_farmer_order,
+    ensure_delivery_documents as stage7_ensure_delivery_documents,
+    get_farmer_order_overview as stage7_get_farmer_order_overview,
+    get_farmer_purchase_overview as stage7_get_farmer_purchase_overview,
+    get_invoice_print_context as stage7_get_invoice_print_context,
+    get_order as stage7_get_order,
+    get_ufc_order_overview as stage7_get_ufc_order_overview,
+    get_ufc_sales_overview as stage7_get_ufc_sales_overview,
+    reject_farmer_order as stage7_reject_farmer_order,
+    refresh_ufc_farmer_tax_documents as stage8_refresh_ufc_farmer_tax_documents,
+)
+from app.services.payment_service import (
+    get_farmer_payment_overview,
+    get_payment_receipt_context,
+    get_ufc_payment_overview,
+    record_payment as stage8_record_payment,
+    reverse_payment as stage8_reverse_payment,
+)
 from datetime import datetime
 from uuid import uuid4
 
@@ -545,16 +567,30 @@ def _get_farmer_orders_for_web(user, q="", page=1, per_page=10):
 @modules_bp.route("/buy", methods=["GET", "POST"])
 @login_required
 def buy():
-    # Stage 6 retires legacy Farmer visibility/order paths from this mixed Buy
-    # screen. Farmers now see only the Marketplace published by their mapped
-    # UFC. Transactional ordering is intentionally introduced in Stage 7.
+    # Stage 7: Farmers use the mapped-UFC Marketplace transaction flow.
+    # Keep /modules/buy backward-compatible for the mobile/API client, but do
+    # not execute the legacy direct-stock mutation path for Farmers.
     if str(session.get("role") or "").strip().lower() == "farmer":
         if request.method == "POST":
-            message = "Farmer ordering from the UFC Marketplace will be enabled in Stage 7."
+            payload = request.get_json(silent=True) if request.is_json else {}
+            try:
+                result = stage7_create_farmer_order(
+                    session.get("user_id"),
+                    payload.get("product_id") or request.form.get("product_id"),
+                    payload.get("quantity") or request.form.get("quantity"),
+                    request_token=payload.get("request_token") or request.form.get("request_token", ""),
+                    note=payload.get("note") or request.form.get("note", ""),
+                )
+            except (ValueError, PermissionError, RuntimeError) as exc:
+                if wants_json_response():
+                    return json_error(str(exc), 400)
+                flash(str(exc), "danger")
+                return redirect(url_for("modules.farmer_marketplace"))
             if wants_json_response():
-                return json_error(message, 409)
-            flash(message, "info")
-            return redirect(url_for("modules.farmer_marketplace"))
+                return jsonify(json_safe({"ok": True, **result})), 201
+            flash(result.get("message") or "Order placed successfully.", "success")
+            return redirect(url_for("modules.farmer_my_orders"))
+
         if wants_json_response():
             try:
                 overview = get_farmer_marketplace(
@@ -1392,76 +1428,55 @@ def sell():
 @modules_bp.route("/my-orders")
 @login_required
 def farmer_my_orders():
-    is_app = wants_json_response() or request.args.get("user_id")
-
-    user_id = (
-        request.args.get("user_id")
-        or session.get("user_id")
-        or ""
-    ).strip()
+    if str(session.get("role") or "").strip().lower() != "farmer":
+        if wants_json_response():
+            return json_error("Only Farmers can view My Orders.", 403)
+        flash("Only Farmers can view My Orders.", "danger")
+        return redirect(url_for("dashboard.home"))
 
     try:
-        user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
-    except Exception:
-        user = {}
-
-    if not user:
+        overview = stage7_get_farmer_order_overview(
+            session.get("user_id"),
+            search=request.args.get("q", ""),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
         if wants_json_response():
-            return json_error("User not found. Please login again.", 404)
-
-        flash("User not found. Please login again.", "danger")
-        return redirect(url_for("dashboard.home"))
-
-    if (user.get("role") or session.get("role")) != "farmer":
-        if wants_json_response():
-            return json_error("Only farmer can view My Orders.", 403)
-
-        flash("Only farmer can view My Orders.", "danger")
-        return redirect(url_for("dashboard.home"))
-
-    q = request.args.get("q", "").strip()
-    page = request.args.get("page", 1)
-    per_page = request.args.get("per_page", 10)
-
-    result = _get_farmer_orders_for_web(
-        user,
-        q=q,
-        page=page,
-        per_page=per_page
-    )
+            return json_error(str(exc), 400)
+        flash(str(exc), "danger")
+        overview = {
+            "rows": [],
+            "centre_uid": "",
+            "centre_name": "Mapped UFC",
+            "farmer_name": "Farmer",
+            "query": request.args.get("q", ""),
+            "summary": {"count": 0, "total_value": "0.00"},
+        }
 
     if wants_json_response():
-        return jsonify(json_safe({
-            "ok": True,
-            "orders": result["orders"],
-            "total_orders": result["total_orders"],
-            "total_amount": result["total_amount"],
-            "page": result["page"],
-            "per_page": result["per_page"],
-            "total_pages": result["total_pages"],
-            "has_prev": result["has_prev"],
-            "has_next": result["has_next"],
-            "prev_page": result["prev_page"],
-            "next_page": result["next_page"],
-            "q": q
-        }))
+        payload = {"ok": True, **overview}
+        payload["orders"] = overview.get("rows", [])
+        payload["total_orders"] = overview.get("summary", {}).get("count", 0)
+        payload["total_amount"] = overview.get("summary", {}).get("total_value", "0.00")
+        return jsonify(json_safe(payload))
+    return render_template("modules/farmer_orders.html", overview=overview)
 
-    return render_template(
-        "modules/farmer_orders.html",
-        orders=result["orders"],
-        total_orders=result["total_orders"],
-        total_amount=result["total_amount"],
-        page=result["page"],
-        per_page=result["per_page"],
-        total_pages=result["total_pages"],
-        has_prev=result["has_prev"],
-        has_next=result["has_next"],
-        prev_page=result["prev_page"],
-        next_page=result["next_page"],
-        q=q
-    )
 
-#changes by atlanta
+@modules_bp.route("/my-orders/<order_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_cancel_order(order_id):
+    try:
+        result = stage7_cancel_farmer_order(
+            session.get("user_id"),
+            order_id,
+            reason=request.form.get("reason", ""),
+        )
+        flash(result.get("message") or "Order cancelled.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_my_orders"))
+
+
 @modules_bp.route("/finance", methods=["GET", "POST"])
 @login_required
 @roles_required("farmer")
@@ -2655,6 +2670,33 @@ def request_profile_update():
 def purchases():
     q = request.args.get("q", "").strip()
 
+    # Stage 7: internal UFC -> Farmer purchases are automatic and linked to
+    # the delivered Farmer order. Preserve the legacy transaction reader for
+    # other roles/backward-compatible app calls.
+    if str(session.get("role") or "").strip().lower() == "farmer":
+        try:
+            overview = stage7_get_farmer_purchase_overview(
+                session.get("user_id"),
+                search=q,
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if wants_json_response():
+                return json_error(str(exc), 400)
+            flash(str(exc), "danger")
+            overview = {
+                "rows": [],
+                "centre_uid": "",
+                "centre_name": "Mapped UFC",
+                "farmer_name": "Farmer",
+                "query": q,
+                "summary": {"count": 0, "total_value": "0.00"},
+            }
+        if wants_json_response():
+            payload = {"ok": True, **overview}
+            payload["items"] = overview.get("rows", [])
+            return jsonify(json_safe(payload))
+        return render_template("modules/farmer_purchases.html", overview=overview)
+
     user_id = (
         request.args.get("user_id")
         or session.get("user_id")
@@ -3308,297 +3350,334 @@ def mitra_stock():
         q=q
     )
 
-@modules_bp.route("/centre-orders", methods=["GET", "POST"])
+# ---------------------------------------------------------------------------
+# Stage 7 — Farmer -> UFC Orders, Reservation, Delivery and linked sales
+# ---------------------------------------------------------------------------
+
+
+@modules_bp.route("/centre-orders")
 @login_required
 @roles_required("ufc_admin")
 def centre_orders():
-    centre_uid = session.get("centre_uid")
-
-    if request.method == "POST":
-        order_id = request.form.get("order_id")
-        status = request.form.get("status")
-
-        order = mongo.db.orders.find_one({
-            "_id": ObjectId(order_id),
-            "centre_uid": centre_uid
-        })
-
-        if not order:
-            if wants_json_response():
-                return json_error("Order not found for this centre.", 404)
-
-            flash("Order not found for this centre.", "danger")
-            return redirect(url_for("modules.centre_orders"))
-
-        mongo.db.orders.update_one(
-            {"_id": ObjectId(order_id)},
-            {
-                "$set": {
-                    "status": status,
-                    "updated_at": now_utc()
-                }
-            }
+    try:
+        overview = stage7_get_ufc_order_overview(
+            session.get("user_id"),
+            session.get("centre_uid"),
+            search=request.args.get("q", ""),
+            status_filter=request.args.get("status", "all"),
         )
-
-        mongo.db.notifications.insert_one({
-            "to_user_id": order.get("farmer_user_id"),
-            "role": "farmer",
-            "title": "Order Status Updated",
-            "message": f"Your order for {order.get('product_name')} is now {status}.",
-            "status": "unread",
-            "created_at": now_utc()
-        })
-
+    except (ValueError, PermissionError, RuntimeError) as exc:
         if wants_json_response():
-            return jsonify({
-                "ok": True,
-                "message": "Order status updated and farmer notified."
-            })
-
-        flash("Order status updated and farmer notified.", "success")
-        return redirect(url_for("modules.centre_orders"))
-
-    q = request.args.get("q", "").strip()
-
-    query = {
-        "centre_uid": centre_uid
-    }
-
-    if q:
-        query["$or"] = [
-            {"farmer_name": {"$regex": q, "$options": "i"}},
-            {"product_name": {"$regex": q, "$options": "i"}},
-            {"status": {"$regex": q, "$options": "i"}},
-            {"created_at": {"$regex": q, "$options": "i"}},
-            {"mitra_uid": {"$regex": q, "$options": "i"}},
-            {"centre_uid": {"$regex": q, "$options": "i"}}
-        ]
-
-    orders = list(
-        mongo.db.orders.find(query).sort("created_at", -1)
-    )
-
-    # Attach product image for app/web JSON users
-    for order in orders:
-        product_id = str(
-            order.get("product_id")
-            or order.get("farmer_product_id")
-            or order.get("source_product_id")
-            or ""
-        ).strip()
-
-        product_doc = {}
-
-        if product_id:
-            try:
-                product_oid = ObjectId(product_id)
-
-                product_doc = (
-                    mongo.db.products.find_one({"_id": product_oid})
-                    or mongo.db.farmer_products.find_one({"_id": product_oid})
-                    or {}
-                )
-            except Exception:
-                product_doc = {}
-
-        image_value = (
-            order.get("image")
-            or order.get("image_url")
-            or order.get("picture")
-            or order.get("product_image")
-            or order.get("photo")
-            or product_doc.get("image")
-            or product_doc.get("image_url")
-            or product_doc.get("picture")
-            or product_doc.get("product_image")
-            or product_doc.get("photo")
-            or product_doc.get("file_path")
-            or product_doc.get("filename")
-            or ""
-        )
-
-        if image_value:
-            image_value = str(image_value).replace("\\", "/")
-            order["image"] = image_value
-            order["image_url"] = image_value
-            order["picture"] = image_value
-
+            return json_error(str(exc), 400)
+        flash(str(exc), "danger")
+        overview = {
+            "rows": [],
+            "centre_uid": session.get("centre_uid") or "",
+            "centre_name": session.get("centre_uid") or "UFC",
+            "query": request.args.get("q", ""),
+            "selected_status": request.args.get("status", "all"),
+            "summary": {"total": 0, "requested": 0, "approved": 0, "rejected": 0, "cancelled": 0, "delivered": 0},
+        }
     if wants_json_response():
-        return jsonify(json_safe({
-            "ok": True,
-            "orders": orders,
-            "q": q
-        }))
+        payload = {"ok": True, **overview}
+        payload["orders"] = overview.get("rows", [])
+        return jsonify(json_safe(payload))
+    return render_template("modules/centre_orders.html", overview=overview)
 
-    return render_template(
-        "modules/centre_orders.html",
-        orders=orders,
-        q=q
-    )
+
+@modules_bp.route("/centre-orders/<order_id>")
+@login_required
+@roles_required("ufc_admin")
+def centre_order_detail(order_id):
+    try:
+        order = stage7_get_order(
+            order_id,
+            actor_user_id=session.get("user_id"),
+            centre_uid=session.get("centre_uid"),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.centre_orders"))
+    return render_template("modules/ufc_farmer_order_detail.html", order=order)
+
+
+@modules_bp.route("/centre-orders/<order_id>/approve", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def approve_farmer_order_view(order_id):
+    try:
+        result = stage7_approve_farmer_order(
+            session.get("user_id"),
+            session.get("centre_uid"),
+            order_id,
+            request.form.get("approved_quantity"),
+            note=request.form.get("note", ""),
+            payment_due_days=request.form.get("payment_due_days"),
+        )
+        flash(result.get("message") or "Farmer order approved.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.centre_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/centre-orders/<order_id>/reject", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def reject_farmer_order_view(order_id):
+    try:
+        result = stage7_reject_farmer_order(
+            session.get("user_id"),
+            session.get("centre_uid"),
+            order_id,
+            reason=request.form.get("reason", ""),
+        )
+        flash(result.get("message") or "Farmer order rejected.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.centre_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/centre-orders/<order_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def cancel_farmer_order_view(order_id):
+    try:
+        result = stage7_cancel_farmer_order(
+            session.get("user_id"),
+            order_id,
+            centre_uid_hint=session.get("centre_uid"),
+            reason=request.form.get("reason", ""),
+        )
+        flash(result.get("message") or "Farmer order cancelled.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.centre_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/centre-orders/<order_id>/deliver", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def deliver_farmer_order_view(order_id):
+    delivery_succeeded = False
+    try:
+        result = stage7_deliver_farmer_order(
+            session.get("user_id"),
+            session.get("centre_uid"),
+            order_id,
+            delivery_note=request.form.get("delivery_note", ""),
+        )
+        delivery_succeeded = True
+        warning = result.get("financial_warning")
+        if warning:
+            flash("Delivery and UFC stock update succeeded. Sales document sync needs attention: " + warning, "warning")
+        else:
+            flash(result.get("message") or "Order delivered.", "success")
+
+        # Stage 8: payment is a separate idempotent settlement after physical
+        # delivery. A payment failure must never roll back or repeat stock.
+        collection_option = str(request.form.get("collection_option") or "none").strip().lower()
+        if delivery_succeeded and not warning and collection_option in {"full", "partial"}:
+            delivered_order = result.get("order") or {}
+            invoice_id = delivered_order.get("invoice_id_str") or delivered_order.get("ufc_farmer_invoice_id_str")
+            if not invoice_id:
+                raise RuntimeError("Delivery succeeded, but the invoice is not ready for payment collection yet. Use Payments after repairing the sales document.")
+            if collection_option == "full":
+                amount_to_record = delivered_order.get("outstanding_amount") or delivered_order.get("grand_total") or delivered_order.get("total_amount")
+            else:
+                amount_to_record = request.form.get("amount_received")
+            payment_result = stage8_record_payment(
+                session.get("user_id"),
+                "ufc_farmer_invoice",
+                invoice_id,
+                amount_to_record,
+                request.form.get("payment_mode") or "cash",
+                reference=request.form.get("payment_reference", ""),
+                note="Collected during Farmer order delivery. " + str(request.form.get("payment_note") or ""),
+                idempotency_key=request.form.get("payment_token", ""),
+            )
+            flash(payment_result.get("message") or "Delivery payment recorded.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        # If delivery already succeeded, make the distinction explicit so the
+        # operator never clicks Deliver again just because settlement failed.
+        if delivery_succeeded:
+            flash("Delivery is complete; only payment recording needs attention: " + str(exc), "warning")
+        else:
+            flash(str(exc), "danger")
+    return redirect(url_for("modules.centre_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/centre-orders/<order_id>/repair-financials", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def repair_farmer_order_financials(order_id):
+    try:
+        result = stage7_ensure_delivery_documents(session.get("user_id"), order_id)
+        flash(result.get("message") or "Sales documents repaired.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.centre_order_detail", order_id=order_id))
+
 
 @modules_bp.route("/farmer/order", methods=["POST"])
+@modules_bp.route("/farmer-marketplace/order", methods=["POST"])
 @login_required
 @roles_required("farmer")
 def place_farmer_order():
-    # Stage 6 is marketplace publication/visibility only. Keep the legacy
-    # direct-order handler from mutating old product quantities before Stage 7
-    # introduces UFC reservation and fulfilment.
-    if not current_app.config.get("STAGE7_FARMER_ORDER_ENABLED", False):
-        message = "Farmer ordering will be enabled in Stage 7. You can currently browse products published by your UFC."
+    payload = request.get_json(silent=True) if request.is_json else {}
+    try:
+        result = stage7_create_farmer_order(
+            session.get("user_id"),
+            payload.get("product_id") or request.form.get("product_id"),
+            payload.get("quantity") or request.form.get("quantity"),
+            request_token=payload.get("request_token") or request.form.get("request_token", ""),
+            note=payload.get("note") or request.form.get("note", ""),
+            payment_term=payload.get("payment_term") or request.form.get("payment_term", "cod"),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
         if wants_json_response():
-            return json_error(message, 409)
-        flash(message, "info")
+            return json_error(str(exc), 400)
+        flash(str(exc), "danger")
         return redirect(url_for("modules.farmer_marketplace"))
 
-    product_id = request.form.get("product_id")
-    product_name = request.form.get("product_name")
-    quantity = float(request.form.get("quantity") or 0)
-    unit_price = float(request.form.get("unit_price") or 0)
+    if wants_json_response():
+        return jsonify(json_safe({"ok": True, **result})), 201
+    flash(result.get("message") or "Order placed successfully.", "success")
+    return redirect(url_for("modules.farmer_my_orders"))
 
-    if quantity <= 0:
-        flash("Invalid quantity.", "danger")
-        return redirect(url_for("modules.buy"))
 
-    user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
-
-    farmer = mongo.db.farmer_master.find_one({
-        "linked_user_id": session["user_id"]
-    }) or mongo.db.farmer_master.find_one({
-        "linked_user_id": ObjectId(session["user_id"])
-    }) or mongo.db.farmer_master.find_one({
-        "contact_no": user.get("phone")
-    }) or {}
-
-    farmer_product = None
-    avpl_product = None
-    product_source = "avpl_product"
-
-    if product_id:
-        try:
-            farmer_product = mongo.db.farmer_products.find_one({
-                "_id": ObjectId(product_id)
-            })
-        except Exception:
-            farmer_product = None
-
-    if farmer_product:
-        product_source = "farmer_product"
-
-        if str(farmer_product.get("farmer_user_id")) == str(session.get("user_id")):
-            flash("You cannot buy your own listed product.", "danger")
-            return redirect(url_for("modules.buy"))
-
-        available_qty = float(farmer_product.get("available_quantity") or 0)
-
-        if quantity > available_qty:
-            flash("Not enough quantity available.", "danger")
-            return redirect(url_for("modules.buy"))
-
-        product_name = farmer_product.get("product_name")
-        unit_price = float(farmer_product.get("unit_price") or 0)
-
-        # ✅ Reduce farmer product stock
-        update_result = mongo.db.farmer_products.update_one(
-            {
-                "_id": ObjectId(product_id),
-                "available_quantity": {"$gte": quantity}
-            },
-            {
-                "$inc": {
-                    "available_quantity": -quantity
-                },
-                "$set": {
-                    "updated_at": now_utc()
-                }
-            }
+@modules_bp.route("/ufc-farmer-sales")
+@login_required
+@roles_required("ufc_admin")
+def ufc_farmer_sales():
+    try:
+        overview = stage7_get_ufc_sales_overview(
+            session.get("user_id"),
+            session.get("centre_uid"),
+            search=request.args.get("q", ""),
+            payment_status=request.args.get("payment", "all"),
         )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {
+            "rows": [],
+            "centre_uid": session.get("centre_uid") or "",
+            "centre_name": session.get("centre_uid") or "UFC",
+            "query": request.args.get("q", ""),
+            "selected_payment": request.args.get("payment", "all"),
+            "summary": {"count": 0, "total_sales": "0.00", "outstanding": "0.00"},
+        }
+    return render_template("modules/ufc_farmer_sales.html", overview=overview)
 
-        if update_result.modified_count == 0:
-            flash("Stock changed recently. Please try again.", "danger")
-            return redirect(url_for("modules.buy"))
 
-    else:
-        if not current_app.config.get("LEGACY_DIRECT_AVPL_ORDER_ENABLED", False):
-            flash(
-                "Direct AVPL ordering is temporarily disabled during the staged AVPL workflow rollout.",
-                "warning",
-            )
-            return redirect(url_for("modules.buy"))
-
-        if product_id:
-            try:
-                avpl_product = mongo.db.products.find_one({
-                    "_id": ObjectId(product_id),
-                    "is_deleted": {"$ne": True},
-                    "is_active": {"$ne": False}
-                })
-            except Exception:
-                avpl_product = None
-
-        if not avpl_product:
-            flash("This product is currently unavailable.", "danger")
-            return redirect(url_for("modules.buy"))
-
-        product_name = avpl_product.get("name") or avpl_product.get("product_name") or product_name
-        unit_price = float(avpl_product.get("price") or avpl_product.get("unit_price") or unit_price or 0)
-
-        available_qty = float(avpl_product.get("available_quantity") or 0)
-
-        if quantity > available_qty:
-            flash("Not enough quantity available.", "danger")
-            return redirect(url_for("modules.buy"))
-
-        # ✅ Reduce AVPL product stock
-        update_result = mongo.db.products.update_one(
-            {
-                "_id": ObjectId(product_id),
-                "available_quantity": {"$gte": quantity},
-                "is_deleted": {"$ne": True},
-                "is_active": {"$ne": False}
-            },
-            {
-                "$inc": {
-                    "available_quantity": -quantity
-                },
-                "$set": {
-                    "updated_at": now_utc()
-                }
-            }
+@modules_bp.route("/farmer-sales-invoices/<invoice_id>/print")
+@login_required
+def farmer_sales_invoice_print(invoice_id):
+    try:
+        context = stage7_get_invoice_print_context(
+            invoice_id,
+            actor_user_id=session.get("user_id"),
         )
-
-        if update_result.modified_count == 0:
-            flash("Stock changed recently. Please try again.", "danger")
-            return redirect(url_for("modules.buy"))
-
-    total_amount = quantity * unit_price
-
-    mongo.db.orders.insert_one({
-        "product_id": product_id,
-        "product_name": product_name,
-        "quantity": quantity,
-        "unit_price": unit_price,
-        "total_amount": total_amount,
-        "farmer_user_id": session.get("user_id"),
-        "farmer_id": str(farmer.get("_id")),
-        "farmer_name": farmer.get("name") or user.get("name"),
-        "farmer_contact": farmer.get("contact_no") or user.get("phone"),
-        "centre_uid": farmer.get("centre_uid"),
-        "mitra_uid": farmer.get("mitra_uid"),
-        "order_type": "farmer_purchase",
-        "product_source": product_source,
-        "status": "placed",
-        "source_reference": _legacy_source_reference("FARMER_DIRECT_ORDER"),
-        "accounting_status": "not_posted",
-        "migration_status": "legacy_operational",
-        "created_at": now_utc(),
-        "updated_at": now_utc(),
-    })
-
-    flash("Order placed successfully.", "success")
-    return redirect(url_for("modules.buy"))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        role = str(session.get("role") or "").strip().lower()
+        if role == "ufc_admin":
+            return redirect(url_for("modules.ufc_farmer_sales"))
+        return redirect(url_for("modules.farmer_my_orders"))
+    return render_template("modules/ufc_farmer_invoice_print.html", **context)
 
 
+# ---------------------------------------------------------------------------
+# Stage 8 — Unified UFC/Farmer payments, receipts and settlement
+# ---------------------------------------------------------------------------
 
+
+@modules_bp.route("/payments")
+@login_required
+@roles_required("ufc_admin")
+def ufc_payments():
+    try:
+        overview = get_ufc_payment_overview(session.get("user_id"))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"centre_uid": session.get("centre_uid") or "", "avpl_payables": [], "farmer_receivables": [], "recent_payments": [], "payment_modes": {}, "summary": {"avpl_due": "0.00", "farmer_due": "0.00", "recent_count": 0}}
+    return render_template("modules/ufc_payments.html", overview=overview)
+
+
+@modules_bp.route("/payments/refresh-tax-documents", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def refresh_ufc_tax_documents():
+    try:
+        result = stage8_refresh_ufc_farmer_tax_documents(
+            session.get("user_id"),
+            session.get("centre_uid"),
+        )
+        category = "warning" if result.get("errors") else "success"
+        flash(result.get("message") or "HSN/GST documents refreshed.", category)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.ufc_payments"))
+
+
+@modules_bp.route("/payments/record", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def record_ufc_payment():
+    try:
+        result = stage8_record_payment(
+            session.get("user_id"),
+            request.form.get("source_type"),
+            request.form.get("invoice_id"),
+            request.form.get("amount"),
+            request.form.get("payment_mode"),
+            reference=request.form.get("reference", ""),
+            note=request.form.get("note", ""),
+            idempotency_key=request.form.get("payment_token", ""),
+        )
+        flash(result.get("message") or "Payment recorded.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.ufc_payments"))
+
+
+@modules_bp.route("/payments/<payment_id>/reverse", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def reverse_ufc_payment(payment_id):
+    try:
+        result = stage8_reverse_payment(session.get("user_id"), payment_id, request.form.get("reason", ""))
+        flash(result.get("message") or "Payment reversed.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.ufc_payments"))
+
+
+@modules_bp.route("/my-payments")
+@login_required
+@roles_required("farmer")
+def farmer_payments():
+    try:
+        overview = get_farmer_payment_overview(session.get("user_id"))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"payables": [], "recent_payments": [], "summary": {"outstanding": "0.00", "recent_count": 0}}
+    return render_template("modules/farmer_payments.html", overview=overview)
+
+
+@modules_bp.route("/payment-receipts/<payment_id>/print")
+@login_required
+def payment_receipt_print(payment_id):
+    try:
+        context = get_payment_receipt_context(session.get("user_id"), payment_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        role = str(session.get("role") or "").strip().lower()
+        if role == "ufc_admin":
+            return redirect(url_for("modules.ufc_payments"))
+        if role == "farmer":
+            return redirect(url_for("modules.farmer_payments"))
+        return redirect(url_for("dashboard.home"))
+    return render_template("modules/payment_receipt_print.html", **context)
 
 
 # ---------------------------------------------------------------------------
@@ -3617,6 +3696,7 @@ def request_avpl_order():
             request.form.get('product_id'),
             request.form.get('quantity'),
             note=request.form.get('request_note', ''),
+            payment_term=request.form.get('payment_term', 'credit'),
         )
         order = result.get('order') or {}
         if wants_json_response():
@@ -3689,25 +3769,73 @@ def ufc_avpl_order_detail(order_id):
 @login_required
 @roles_required('ufc_admin')
 def receive_avpl_order(order_id):
+    receipt_succeeded = False
+    result = None
     try:
+        # Physical receipt is always completed first. Payment is a separate,
+        # idempotent Stage 8 settlement so a settlement error can never cause
+        # the operator to receive the same stock twice.
         result = receive_ufc_order(
             session.get('user_id'),
             session.get('centre_uid'),
             order_id,
             receipt_note=request.form.get('receipt_note', ''),
         )
+        receipt_succeeded = True
+        received_order = result.get('order') or {}
+
         if wants_json_response():
             return jsonify(json_safe({
                 'ok': True,
                 'message': result.get('message'),
-                'order': result.get('order'),
+                'order': received_order,
                 'purchase': result.get('purchase'),
             }))
+
         flash(result.get('message') or 'Goods received and added to UFC stock.', 'success')
+
+        # Optional Pay-on-Receipt collection. Credit orders normally keep the
+        # amount outstanding and are settled later from Payments & Settlement.
+        collection_option = str(request.form.get('collection_option') or 'none').strip().lower()
+        if collection_option in {'full', 'partial'}:
+            invoice_id = received_order.get('avpl_sales_invoice_id_str')
+            if not invoice_id:
+                raise RuntimeError(
+                    'Receipt and UFC stock update succeeded, but the AVPL Sales Invoice is not ready for settlement yet. '
+                    'Use Payments & Settlement after the invoice is repaired/synchronized.'
+                )
+
+            if collection_option == 'full':
+                amount_to_record = (
+                    received_order.get('outstanding_amount')
+                    if received_order.get('outstanding_amount') not in (None, '')
+                    else received_order.get('invoice_grand_total') or received_order.get('total_amount')
+                )
+            else:
+                amount_to_record = request.form.get('amount_paid_now')
+
+            payment_result = stage8_record_payment(
+                session.get('user_id'),
+                'avpl_ufc_invoice',
+                invoice_id,
+                amount_to_record,
+                request.form.get('payment_mode') or 'cash',
+                reference=request.form.get('payment_reference', ''),
+                note='Recorded when UFC confirmed AVPL goods receipt. ' + str(request.form.get('payment_note') or ''),
+                idempotency_key=request.form.get('payment_token') or f'AVPLRECEIPTPAY-{order_id}',
+            )
+            flash(payment_result.get('message') or 'Payment recorded successfully.', 'success')
+
     except (ValueError, PermissionError, RuntimeError) as exc:
         if wants_json_response():
             return json_error(str(exc), 400)
-        flash(str(exc), 'danger')
+        if receipt_succeeded:
+            flash(
+                'Goods receipt and UFC stock update are complete; only payment recording needs attention: ' + str(exc),
+                'warning',
+            )
+        else:
+            flash(str(exc), 'danger')
     return redirect(url_for('modules.ufc_avpl_order_detail', order_id=order_id))
 
 

@@ -113,7 +113,7 @@
                 <tr><td>Other Charges</td><td>₹{{ invoice.other_charges }}</td></tr>
                 <tr><td>Round-off</td><td>₹{{ invoice.round_off }}</td></tr>
                 <tr class="grand"><td>Grand Total</td><td>₹{{ invoice.grand_total }}</td></tr>
-                {% if invoice.payable_posted %}<tr><td>Outstanding</td><td>₹{{ invoice.outstanding_amount }}</td></tr>{% endif %}
+                {% if invoice.payable_posted %}<tr><td>Paid</td><td>₹{{ invoice.paid_amount or invoice.amount_paid or '0.00' }}</td></tr><tr><td>Outstanding</td><td>₹{{ invoice.outstanding_amount }}</td></tr><tr><td>Payment Status</td><td><strong>{{ invoice.payment_status_display or invoice.payment_status|replace('_',' ')|title }}</strong></td></tr>{% endif %}
             </table>
         </section>
 
@@ -122,7 +122,7 @@
                 <div><small>Official Purchase Invoice</small><strong>{{ invoice.official_purchase_invoice_number or 'Not posted' }}</strong></div>
                 <div><small>Accounting Voucher</small><strong>{{ invoice.accounting_voucher_number or invoice.accounting_voucher_reference or 'Not prepared' }}</strong></div>
                 <div><small>Financial Year</small><strong>{{ invoice.financial_year_code or '-' }}</strong></div>
-                <div><small>Supplier Payable</small><strong>{{ '₹' ~ invoice.outstanding_amount ~ ' open' if invoice.payable_posted else 'Not posted' }}</strong></div>
+                <div><small>Supplier Payable</small><strong>{{ (invoice.payment_status_display ~ ' · ₹' ~ invoice.outstanding_amount ~ ' due') if invoice.payable_posted else 'Not posted' }}</strong></div>
             </div>
         </section>
 

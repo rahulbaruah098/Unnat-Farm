@@ -8,6 +8,7 @@
   <div class="head">
     <div><h2>Sales to UFC</h2><p>Automatic AVPL seller-side records generated from physically dispatched UFC orders.</p></div>
     <div class="actions">
+      <a class="btn" href="{{ url_for('admin.payments_dashboard') }}">Payments & Settlement</a>
       <a class="btn" href="{{ url_for('admin.ufc_order_requests') }}">UFC Order Requests</a>
       {% if session.get('role') in ['super_admin','avpl_admin'] %}
       <form method="post" action="{{ url_for('admin.sync_existing_ufc_sales') }}" onsubmit="return confirm('Create/repair Sales documents for dispatched Stage 4 orders that are missing them?');"><button class="btn primary" type="submit">Sync Existing Orders</button></form>
@@ -22,7 +23,7 @@
     <div class="sum"><small>UFC Outstanding</small><strong>₹{{ overview.get('summary',{}).get('outstanding','0.00') }}</strong></div>
   </div>
 
-  <div class="note"><strong>No duplicate sale entry.</strong> Dispatch creates one AVPL Sale Entry + one Sales Invoice + one AVPL receivable. When UFC confirms receipt, its automatic Purchase Entry is linked to the same invoice. Payment recording remains for the later financial stage.</div>
+  <div class="note"><strong>No duplicate sale entry.</strong> Dispatch creates one AVPL Sale Entry + one Sales Invoice + one AVPL receivable. When UFC confirms receipt, its automatic Purchase Entry is linked to the same invoice. Payments are now recorded from Payments & Settlement and automatically update the AVPL receivable, UFC payable and this sale.</div>
 
   <form class="filters" method="get">
     <input name="q" value="{{ overview.get('query','') }}" placeholder="Search sale, invoice, UFC, order or product">

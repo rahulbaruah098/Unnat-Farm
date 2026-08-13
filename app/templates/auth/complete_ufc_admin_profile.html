@@ -109,10 +109,12 @@
         </label>
 
         <label>
-            GST Number
-            <input type="text" name="gst_number"
+            GSTIN (optional)
+            <input type="text" name="gst_number" maxlength="15"
                    value="{{ master.gst_number or user.gst_number or '' }}"
-                   required>
+                   placeholder="15-character GSTIN if registered"
+                   style="text-transform:uppercase">
+            <small class="muted">Leave blank if the UFC is not GST-registered. If entered, UnnatFarm validates the GSTIN structure before using it for tax invoices.</small>
         </label>
 
         <label>
@@ -146,11 +148,10 @@
         </label>
 
         <label>
-            GST Upload
-            <input type="file" name="gst_file"
-                   {% if not master.gst_file %}required{% endif %}>
+            GST Registration Document (optional)
+            <input type="file" name="gst_file">
             <small class="muted">
-                Upload again only if AVPL asked for correction.
+                Upload this only when the UFC is GST-registered. Existing GST documents remain available for AVPL validation.
             </small>
         </label>
 

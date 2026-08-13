@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Farmer Order {{ order.order_number }}{% endblock %}
+{% block content %}
+<style>
+.page{padding:24px;background:#fff;border:1px solid #dceee2;border-radius:24px;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.muted{color:#64748b}.pill{display:inline-flex;padding:7px 11px;border-radius:999px;background:#eef8f1;color:#2f7a4c;font-weight:900}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}.box{padding:13px;border:1px solid #e2efe6;border-radius:14px;background:#fbfefc}.box small{display:block;color:#64748b}.box strong{display:block;margin-top:4px;color:#17252a}.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{padding:16px;border:1px solid #e2efe6;border-radius:16px}.card h3{margin:0 0 10px;color:#17252a}.card input,.card textarea,.card select{width:100%;box-sizing:border-box;border:1px solid #d6e5da;border-radius:10px;padding:10px;font:inherit;margin:6px 0;background:#fff}.card button{border:0;border-radius:10px;padding:10px 14px;background:#5fa878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.danger button{background:#b45309}.red button{background:#b91c1c}.notice{margin-top:14px;padding:12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#92400e}.success{margin-top:14px;padding:12px;border-radius:12px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}.history{margin-top:18px}.history-item{padding:10px 0;border-bottom:1px solid #edf3ef}.back{display:inline-flex;margin-top:16px;text-decoration:none;color:#2f7a4c;font-weight:900}@media(max-width:760px){.page{padding:15px}.grid,.actions{grid-template-columns:1fr 1fr}}@media(max-width:520px){.grid,.actions{grid-template-columns:1fr}}
+</style>
+<div class="page">
+  <div class="head"><div><h2>{{ order.order_number }}</h2><div class="muted">{{ order.farmer_name }} · {{ order.product_name }}</div></div><span class="pill">{{ order.status_label }}</span></div>
+  <div class="grid">
+    <div class="box"><small>Requested</small><strong>{{ order.requested_quantity_display }} {{ order.unit_code }}</strong></div>
+    <div class="box"><small>Approved</small><strong>{{ order.approved_quantity_display }} {{ order.unit_code }}</strong></div>
+    <div class="box"><small>Farmer Price</small><strong>₹{{ order.unit_price_display }} / {{ order.unit_code }}</strong></div>
+    <div class="box"><small>Order Value</small><strong>₹{{ order.grand_total_display }}</strong></div>
+    <div class="box"><small>Payment Term</small><strong>{{ order.payment_term_label or 'Pay on Delivery' }}</strong></div>
+  </div>
+
+  <div class="actions">
+    {% if order.status == 'requested' %}
+    <form class="card" method="post" action="{{ url_for('modules.approve_farmer_order_view', order_id=order.id) }}"><h3>Approve & Reserve</h3><div class="muted">Physical stock stays unchanged until delivery.</div><input type="number" step="0.0001" min="0.0001" max="{{ order.requested_quantity }}" name="approved_quantity" value="{{ order.requested_quantity_display }}" required>{% if order.payment_term == 'credit' %}<label><strong>Credit Days</strong></label><input type="number" name="payment_due_days" min="0" max="365" step="1" value="{{ order.payment_due_days or 0 }}" placeholder="0"><div class="muted">Optional. 0 means due immediately; enter e.g. 7 or 15 days if credit is approved.</div>{% endif %}<textarea name="note" rows="2" placeholder="Optional approval note"></textarea><button type="submit">Approve & Reserve Stock</button></form>
+    <form class="card red" method="post" action="{{ url_for('modules.reject_farmer_order_view', order_id=order.id) }}"><h3>Reject Order</h3><textarea name="reason" rows="3" placeholder="Reason (recommended)"></textarea><button type="submit">Reject</button></form>
+    {% elif order.status == 'approved' %}
+    <form class="card" method="post" action="{{ url_for('modules.deliver_farmer_order_view', order_id=order.id) }}" onsubmit="return confirm('Confirm physical delivery? UFC stock will reduce now. Any payment entered here will be recorded only once.');">
+      <h3>Deliver & Collect Payment</h3>
+      <div class="muted">Delivery reduces UFC physical stock and creates the UFC Sale, Farmer Purchase and invoice automatically.</div>
+      <input type="hidden" name="payment_token" value="DELIVERYPAY-{{ order.id }}">
+      <textarea name="delivery_note" rows="2" placeholder="Optional delivery note"></textarea>
+      <label><strong>Payment at delivery</strong></label>
+      <select name="collection_option" id="collectionOption" onchange="toggleDeliveryPayment(this)">
+        <option value="none">No payment now / keep outstanding</option>
+        <option value="full" {% if order.payment_term == 'cod' %}selected{% endif %}>Full payment</option>
+        <option value="partial">Partial payment</option>
+      </select>
+      <div id="deliveryPaymentFields">
+        <select name="payment_mode">
+          <option value="cash">Cash</option><option value="upi">UPI</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option>
+        </select>
+        <input type="number" name="amount_received" min="0.01" step="0.01" placeholder="Amount received (required for partial)">
+        <input type="text" name="payment_reference" maxlength="160" placeholder="UPI / Bank / Cheque reference (optional for cash)">
+      </div>
+      <div class="muted" style="margin:5px 0 10px;">For full payment, the system uses the final invoice outstanding automatically. Partial payment leaves the balance outstanding.</div>
+      <button type="submit">Mark Delivered</button>
+    </form>
+    <form class="card danger" method="post" action="{{ url_for('modules.cancel_farmer_order_view', order_id=order.id) }}"><h3>Cancel Before Delivery</h3><div class="muted">Reserved stock will be released automatically.</div><textarea name="reason" rows="2" placeholder="Cancellation reason"></textarea><button type="submit">Cancel & Release Stock</button></form>
+    {% endif %}
+  </div>
+
+  {% if order.status == 'delivered' %}
+    <div class="success"><strong>Delivered.</strong> UFC stock has been reduced. UFC Sale and Farmer Purchase are automatic.<br><strong>Payment:</strong> {{ order.payment_status_label }}{% if order.outstanding_amount %} · Outstanding ₹{{ '%.2f'|format(order.outstanding_amount|float) }}{% endif %} · <a href="{{ url_for('modules.ufc_payments') }}" style="color:#065f46;font-weight:900;">Open Payments</a></div>
+    {% if order.invoice_id_str %}<p><a class="back" href="{{ url_for('modules.farmer_sales_invoice_print', invoice_id=order.invoice_id_str) }}" target="_blank">Print Invoice / Receipt →</a></p>{% endif %}
+    {% if order.financial_sync_status == 'repair_required' %}<div class="notice"><strong>Sales document sync needs repair:</strong> {{ order.financial_sync_error }}<form method="post" action="{{ url_for('modules.repair_farmer_order_financials', order_id=order.id) }}" style="margin-top:10px;"><button type="submit" style="border:0;border-radius:10px;padding:9px 13px;background:#b45309;color:#fff;font:inherit;font-weight:900;">Create / Repair Sales Documents</button></form></div>{% endif %}
+  {% endif %}
+
+  {% if order.history %}<div class="history"><h3>Order Timeline</h3>{% for h in order.history|reverse %}<div class="history-item"><strong>{{ h.action|replace('_',' ')|title }}</strong> <span class="muted">· {{ h.actor_name }}</span>{% if h.note %}<div class="muted">{{ h.note }}</div>{% endif %}</div>{% endfor %}</div>{% endif %}
+  <a class="back" href="{{ url_for('modules.centre_orders') }}">← Back to Farmer Orders</a>
+</div>
+<script>
+function toggleDeliveryPayment(select){
+  const box=document.getElementById('deliveryPaymentFields');
+  if(!box)return;
+  box.style.display=select.value==='none'?'none':'block';
+}
+document.addEventListener('DOMContentLoaded',function(){
+  const s=document.getElementById('collectionOption');
+  if(s)toggleDeliveryPayment(s);
+});
+</script>
+{% endblock %}

@@ -398,6 +398,7 @@ def _serialize_sale(row):
     result["unit_price_display"] = _money(row.get("unit_price"))
     result["taxable_value_display"] = _money(row.get("taxable_value"))
     result["grand_total_display"] = _money(row.get("grand_total"))
+    result["amount_paid_display"] = _money(row.get("amount_paid") if row.get("amount_paid") is not None else row.get("paid_amount"))
     result["outstanding_amount_display"] = _money(row.get("outstanding_amount"))
     result["estimated_cogs_display"] = _money(row.get("estimated_cogs"))
     result["gross_margin_display"] = _money(row.get("gross_margin_amount"))
@@ -448,7 +449,7 @@ def _upsert_sale(order, actor, financial):
         "amount_paid": 0.0,
         "outstanding_amount": float(financial["grand_total"]),
         "accounting_status": "ready_for_posting",
-        "accounting_note": "Revenue/receivable posting is prepared for the later controlled Accounting stage. Stock already moved at physical dispatch.",
+        "accounting_note": "Payment settlements create controlled Accounting handoff events; final voucher posting remains under the existing maker-checker controls. Stock already moved at physical dispatch.",
         "created_by": actor["_id"],
         "created_by_name": actor.get("resolved_name") or "",
         "created_at": timestamp,
@@ -497,6 +498,12 @@ def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_
             "invoice_date": invoice_date,
             "due_date": due_date,
             "credit_period_days": max(int(credit_period_days or 0), 0),
+            "payment_term": order.get("payment_term") or "credit",
+            "payment_term_label": {
+                "cod": "Pay on Delivery",
+                "credit": "Credit / Pay Later",
+                "prepaid_online": "Prepaid / Online (Coming Soon)",
+            }.get(order.get("payment_term") or "credit", "Credit / Pay Later"),
             "seller": seller,
             "buyer": buyer,
             "place_of_supply_state": financial["place_of_supply_state"],
@@ -551,7 +558,7 @@ def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_
                 "sales_ledger_ready": bool(financial["sales_ledger_id"]),
                 "inventory_ledger_ready": bool(financial["inventory_ledger_id"]),
                 "financial_year_ready": True,
-                "note": "Official Accounting voucher posting is intentionally connected in the later financial stage.",
+                "note": "Payment settlement creates a controlled Accounting event. Final voucher posting remains subject to the existing Accounting maker-checker controls.",
             },
             "created_by": actor["_id"],
             "created_by_name": actor.get("resolved_name") or "",

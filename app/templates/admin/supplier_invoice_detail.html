@@ -34,7 +34,7 @@
     {% endif %}
 
     {% if invoice.posting_status == 'posted' %}
-        <div class="notice"><strong>Purchase posted:</strong> Official Purchase Invoice <strong>{{ invoice.official_purchase_invoice_number }}</strong> and Accounting Voucher <strong>{{ invoice.accounting_voucher_number }}</strong> were posted. The supplier payable is open for ₹{{ invoice.outstanding_amount }}. Stock was not increased again.</div>
+        <div class="notice"><strong>Purchase posted:</strong> Official Purchase Invoice <strong>{{ invoice.official_purchase_invoice_number }}</strong> and Accounting Voucher <strong>{{ invoice.accounting_voucher_number }}</strong> were posted. Supplier payment status is <strong>{{ invoice.payment_status_display }}</strong> with ₹{{ invoice.outstanding_amount }} outstanding. <a href="{{ url_for('admin.payments_dashboard') }}" style="font-weight:900;color:inherit;">Open Payments & Settlement</a>. Stock was not increased again.</div>
     {% elif invoice.posting_status == 'prepared' %}
         <div class="notice warning"><strong>Ready for final approval:</strong> Voucher draft {{ invoice.accounting_voucher_reference }} passed Accounting validation. An authorized AVPL Admin or Super Admin can now complete the purchase posting.</div>
     {% elif invoice.posting_status == 'posting' %}

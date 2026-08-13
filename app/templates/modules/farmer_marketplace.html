@@ -2,15 +2,15 @@
 {% block title %}My UFC Marketplace{% endblock %}
 {% block content %}
 <style>
-.fmp{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.head p{margin:5px 0 0;color:#64748b}.centre{display:inline-flex;padding:8px 12px;border:1px solid #b9dcca;border-radius:999px;background:#f3fbf6;color:#2f7a4c;font-weight:900}.note{margin:15px 0;padding:12px 14px;border:1px solid #b9dcca;border-radius:14px;background:#f3fbf6;color:#3e6850;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:15px 0}.sum{padding:13px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.sum small{display:block;color:#64748b}.sum strong{display:block;margin-top:3px;font-size:1.2rem;color:#17252a}.search{display:flex;gap:8px;margin-bottom:15px}.search input{flex:1;height:42px;border:1px solid #d6e5da;border-radius:999px;padding:0 14px;font:inherit}.search button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5fa878;color:#fff;font:inherit;font-weight:900}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}.card{border:1px solid #e2efe6;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 10px 26px rgba(15,23,42,.05)}.img{height:180px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:800}.img img{width:100%;height:100%;object-fit:contain}.body{padding:14px}.body h3{margin:0 0 5px;color:#17252a}.meta{margin:3px 0;color:#64748b;font-size:.9rem}.price{margin:11px 0 4px;font-size:1.35rem;font-weight:900;color:#2f7a4c}.stock{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.77rem;font-weight:900}.badge.in{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}.badge.out{background:#fff7ed;color:#b45309;border:1px solid #fed7aa}.limits{margin-top:9px;padding:9px 10px;border-radius:11px;background:#f8fafc;color:#52625b;font-size:.86rem}.order-soon{margin-top:11px;padding:10px;border:1px dashed #cfe6d8;border-radius:12px;background:#fbfefc;color:#64748b;text-align:center;font-weight:800}.empty{padding:34px;text-align:center;color:#64748b;border:1px dashed #cfe6d8;border-radius:16px}@media(max-width:620px){.fmp{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr}.search{flex-direction:column}.search button{width:100%}}
+.fmp{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.head p{margin:5px 0 0;color:#64748b}.centre{display:inline-flex;padding:8px 12px;border:1px solid #b9dcca;border-radius:999px;background:#f3fbf6;color:#2f7a4c;font-weight:900}.note{margin:15px 0;padding:12px 14px;border:1px solid #b9dcca;border-radius:14px;background:#f3fbf6;color:#3e6850;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:15px 0}.sum{padding:13px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.sum small{display:block;color:#64748b}.sum strong{display:block;margin-top:3px;font-size:1.2rem;color:#17252a}.search{display:flex;gap:8px;margin-bottom:15px}.search input{flex:1;height:42px;border:1px solid #d6e5da;border-radius:999px;padding:0 14px;font:inherit}.search button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5fa878;color:#fff;font:inherit;font-weight:900}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}.card{border:1px solid #e2efe6;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 10px 26px rgba(15,23,42,.05)}.img{height:180px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:800}.img img{width:100%;height:100%;object-fit:contain}.body{padding:14px}.body h3{margin:0 0 5px;color:#17252a}.meta{margin:3px 0;color:#64748b;font-size:.9rem}.price{margin:11px 0 4px;font-size:1.35rem;font-weight:900;color:#2f7a4c}.stock{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.77rem;font-weight:900}.badge.in{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}.badge.out{background:#fff7ed;color:#b45309;border:1px solid #fed7aa}.limits{margin-top:9px;padding:9px 10px;border-radius:11px;background:#f8fafc;color:#52625b;font-size:.86rem}.order-box{margin-top:12px;padding-top:12px;border-top:1px solid #e7efe9}.order-row{display:grid;grid-template-columns:minmax(100px,.65fr) minmax(150px,1fr) auto;gap:8px}.order-row input,.order-row select{min-width:0;height:42px;border:1px solid #d6e5da;border-radius:12px;padding:0 12px;font:inherit;background:#fff}.order-row button{height:42px;border:0;border-radius:12px;padding:0 16px;background:#5fa878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.order-row button:hover{background:#3b7d55}.disabled{margin-top:12px;padding:10px;border-radius:12px;background:#f8fafc;color:#94a3b8;text-align:center;font-weight:800}.empty{padding:34px;text-align:center;color:#64748b;border:1px dashed #cfe6d8;border-radius:16px}@media(max-width:620px){.fmp{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr}.search{flex-direction:column}.search button{width:100%}.order-row{grid-template-columns:1fr}}
 </style>
 <div class="fmp">
   <div class="head">
-    <div><h2>My UFC Marketplace</h2><p>Welcome {{ overview.get('farmer_name') }}. You only see products published by your mapped UFC.</p></div>
+    <div><h2>My UFC Marketplace</h2><p>Order inputs directly from your mapped UFC Centre.</p></div>
     <div class="centre">{{ overview.get('centre_name') }} · {{ overview.get('centre_uid') }}</div>
   </div>
 
-  <div class="note"><strong>Stage 6:</strong> Product visibility, UFC selling price and live stock are ready. Farmer ordering will be enabled in Stage 7 so stock reservation and delivery remain transaction-controlled.</div>
+  <div class="note"><strong>Simple ordering:</strong> Place your request here. UFC stock is reserved only after approval and physically reduced only when your UFC delivers the product.</div>
 
   <div class="summary">
     <div class="sum"><small>Published Products</small><strong>{{ overview.get('summary',{}).get('published',0) }}</strong></div>
@@ -27,9 +27,7 @@
     {% for p in overview.get('rows',[]) %}
       <div class="card">
         <div class="img">
-          {% if p.image %}
-            <img src="{{ url_for('documents.serve', filename=p.image) }}" alt="{{ p.product_name }}" onerror="this.style.display='none';this.parentNode.textContent='No Image';">
-          {% else %}No Image{% endif %}
+          {% if p.image %}<img src="{{ url_for('documents.serve', filename=p.image) }}" alt="{{ p.product_name }}" onerror="this.style.display='none';this.parentNode.textContent='No Image';">{% else %}No Image{% endif %}
         </div>
         <div class="body">
           <h3>{{ p.product_name }}</h3>
@@ -37,15 +35,29 @@
           <div class="meta">Sold by {{ p.centre_name }}</div>
           <div class="price">₹{{ p.selling_price_display }} / {{ p.unit_code }}</div>
           <div class="stock">
-            {% if p.availability_status == 'in_stock' %}
-              <span class="badge in">In Stock · {{ p.saleable_quantity }} {{ p.unit_code }}</span>
-            {% else %}
-              <span class="badge out">Out of Stock</span>
-            {% endif %}
+            {% if p.availability_status == 'in_stock' %}<span class="badge in">In Stock · {{ p.saleable_quantity }} {{ p.unit_code }}</span>{% else %}<span class="badge out">Out of Stock</span>{% endif %}
           </div>
           <div class="limits">Minimum: {{ p.min_order_quantity_display }} {{ p.unit_code }}{% if p.max_order_quantity > 0 %} · Maximum: {{ p.max_order_quantity_display }} {{ p.unit_code }}{% endif %}</div>
           {% if p.notes %}<div class="meta" style="margin-top:9px;">{{ p.notes }}</div>{% endif %}
-          <div class="order-soon">Ordering opens in Stage 7</div>
+
+          {% if p.ordering_enabled %}
+          <form class="order-box" method="post" action="{{ url_for('modules.place_farmer_order') }}" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Placing...';">
+            <input type="hidden" name="product_id" value="{{ p.product_id }}">
+            <input type="hidden" name="request_token" value="{{ p.request_token }}">
+            <div class="order-row">
+              <input type="number" name="quantity" step="0.0001" min="{{ p.min_order_quantity }}" {% if p.effective_max_quantity > 0 %}max="{{ p.effective_max_quantity }}"{% endif %} value="{{ p.min_order_quantity_display }}" required aria-label="Order quantity">
+              <select name="payment_term" aria-label="Payment option">
+                <option value="cod">Pay on Delivery</option>
+                <option value="credit">Credit / Pay Later</option>
+                <option value="prepaid_online" disabled>Prepaid / Online — Coming Soon</option>
+              </select>
+              <button type="submit">Place Order</button>
+            </div>
+            <div class="meta" style="margin-top:7px;">Payment can be full or partial at delivery. Any balance remains outstanding automatically.</div>
+          </form>
+          {% else %}
+          <div class="disabled">Currently Out of Stock</div>
+          {% endif %}
         </div>
       </div>
     {% else %}

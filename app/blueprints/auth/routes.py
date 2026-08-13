@@ -1,6 +1,7 @@
 from bson import ObjectId
 from datetime import datetime
 import json
+import re
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app.extensions import mongo
 from app.utils.security import verify_password
@@ -13,6 +14,19 @@ from app.services.document_service import store_document
 from app.services.location_service import list_states, list_districts, list_blocks, list_villages
 
 auth_bp = Blueprint('auth', __name__)
+
+GSTIN_FORMAT = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
+
+def _normalize_optional_gstin(value):
+    # Blank means non-GST for UnnatFarm. A supplied GSTIN must pass the
+    # standard 15-character structure before tax invoice calculation.
+    gstin = "".join(str(value or "").split()).upper()
+    if not gstin:
+        return "", False
+    if not GSTIN_FORMAT.fullmatch(gstin):
+        raise ValueError("Enter a valid 15-character GSTIN, or leave GSTIN blank if this UFC is not GST-registered.")
+    return gstin, True
+
 
 
 def _latest_validation_for_user(user_id, entity_type=None):
@@ -1071,6 +1085,7 @@ def complete_ufc_admin():
                 'village': master.get('village') or user.get('village') or '',
                 'pan_number': master.get('pan_number') or '',
                 'gst_number': master.get('gst_number') or '',
+                'gst_registered': bool(master.get('gst_registered')),
                 'trader_license_number': master.get('trader_license_number') or '',
                 'other_licenses': master.get('other_licenses') or '',
                 'approval_status': user.get('approval_status') or 'pending_profile',
@@ -1128,6 +1143,11 @@ def complete_ufc_admin():
                 'trader_license_number': request.form.get('trader_license_number', '').strip(),
                 'other_licenses': request.form.get('other_licenses', '').strip(),
             }
+
+        try:
+            form['gst_number'], form['gst_registered'] = _normalize_optional_gstin(form.get('gst_number'))
+        except ValueError as exc:
+            return jsonify({'ok': False, 'message': str(exc)}), 400
 
         if not form['name_of_enterprise'] or not form['name_of_owner']:
             return jsonify({
@@ -1250,6 +1270,20 @@ def complete_ufc_admin():
     'trader_license_number': request.form.get('trader_license_number', '').strip(),
     'other_licenses': request.form.get('other_licenses', '').strip(),
 }
+
+        try:
+            form['gst_number'], form['gst_registered'] = _normalize_optional_gstin(form.get('gst_number'))
+        except ValueError as exc:
+            flash(str(exc), 'danger')
+            master = {**master, **form}
+            return render_template(
+                'auth/complete_ufc_admin_profile.html',
+                user=user,
+                states=states,
+                master=master,
+                rejection_reason=rejection_reason,
+                latest_validation=latest_validation
+            )
         
         if not form['owner_dob'] or not form['owner_age']:
             flash('Please enter a valid Owner Date of Birth.', 'danger')

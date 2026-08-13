@@ -1488,6 +1488,16 @@ body.sidebar-collapsed .sidebar-logout{
 
             </a>
 
+            <a
+                href="{{ url_for('admin.payments_dashboard') }}"
+                class="sidebar-link {% if request.endpoint in ['admin.payments_dashboard','admin.record_payment_view','admin.reverse_payment_view','admin.payment_receipt_print'] %}active{% endif %}"
+            >
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h4M16 10.5v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                <span class="nav-label">Payments & Settlement</span>
+            </a>
+
 
             <!-- ==================================================
                  PROCUREMENT DROPDOWN
@@ -2568,6 +2578,13 @@ body.sidebar-collapsed .sidebar-logout{
                             My UFC Stock
                         </a>
 
+                        <a
+                            href="{{ url_for('modules.ufc_payments') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.ufc_payments','modules.record_ufc_payment','modules.reverse_ufc_payment','modules.payment_receipt_print'] %}active{% endif %}"
+                        >
+                            Payments & Settlement
+                        </a>
+
                     </div>
 
                 </div>
@@ -2641,16 +2658,23 @@ body.sidebar-collapsed .sidebar-logout{
 
                         <a
                             href="{{ url_for('modules.centre_orders') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.centre_orders','modules.centre_order_detail','modules.approve_farmer_order_view','modules.reject_farmer_order_view','modules.cancel_farmer_order_view','modules.deliver_farmer_order_view','modules.repair_farmer_order_financials'] %}active{% endif %}"
                         >
                             Farmer Orders
                         </a>
 
                         <a
-                            href="{{ url_for('modules.pos') }}"
-                            class="nav-sub-link"
+                            href="{{ url_for('modules.ufc_farmer_sales') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.ufc_farmer_sales','modules.farmer_sales_invoice_print'] %}active{% endif %}"
                         >
-                            POS / Sales
+                            Sales to Farmers
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.pos') }}"
+                            class="nav-sub-link {% if request.endpoint == 'modules.pos' %}active{% endif %}"
+                        >
+                            POS / Direct Sales
                         </a>
 
                     </div>
@@ -3005,16 +3029,23 @@ body.sidebar-collapsed .sidebar-logout{
 
                         <a
                             href="{{ url_for('modules.farmer_my_orders') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_my_orders','modules.farmer_cancel_order'] %}active{% endif %}"
                         >
                             My Orders
                         </a>
 
                         <a
                             href="{{ url_for('modules.purchases') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.purchases','modules.farmer_sales_invoice_print'] %}active{% endif %}"
                         >
                             My Purchases
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.farmer_payments') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_payments','modules.payment_receipt_print'] %}active{% endif %}"
+                        >
+                            My Payments
                         </a>
 
                     </div>

@@ -33,6 +33,18 @@ ORDER_STATUS_LABELS = {
     "received": "Received",
 }
 
+PAYMENT_TERM_LABELS = {
+    "cod": "Pay on Delivery",
+    "credit": "Credit / Pay Later",
+    "prepaid_online": "Prepaid / Online (Coming Soon)",
+}
+PAYMENT_STATUS_LABELS = {
+    "unpaid": "Unpaid",
+    "partially_paid": "Partially Paid",
+    "paid": "Paid",
+    "not_recorded": "Not Recorded Yet",
+}
+
 
 def _decimal(value, default="0"):
     try:
@@ -279,6 +291,10 @@ def _serialize_order(order):
     row["received_quantity_display"] = _qty(row.get("received_quantity"))
     row["unit_price_display"] = _money(row.get("unit_price"))
     row["total_amount_display"] = _money(row.get("total_amount"))
+    row["payment_term_label"] = PAYMENT_TERM_LABELS.get(str(row.get("payment_term") or "credit"), str(row.get("payment_term") or "credit").replace("_", " ").title())
+    row["payment_status_label"] = PAYMENT_STATUS_LABELS.get(str(row.get("payment_status") or "unpaid"), str(row.get("payment_status") or "unpaid").replace("_", " ").title())
+    row["amount_paid_display"] = _money(row.get("amount_paid") if row.get("amount_paid") is not None else row.get("paid_amount"))
+    row["outstanding_amount_display"] = _money(row.get("outstanding_amount") if row.get("outstanding_amount") is not None else row.get("invoice_grand_total") or row.get("total_amount"))
     return row
 
 
@@ -321,7 +337,7 @@ def _notify_avpl_admins(title, message):
         _notify_user(user.get("_id"), title, message, user.get("role") or "avpl_admin")
 
 
-def create_ufc_order_request(actor_user_id, centre_uid_hint, product_id, quantity, note=""):
+def create_ufc_order_request(actor_user_id, centre_uid_hint, product_id, quantity, note="", payment_term="credit"):
     _ensure_indexes()
     actor, centre_uid, centre_name = _get_ufc_actor(actor_user_id, centre_uid_hint)
     entity = _active_avpl_entity()
@@ -355,6 +371,12 @@ def create_ufc_order_request(actor_user_id, centre_uid_hint, product_id, quantit
             f"Only {_qty(saleable)} {product.get('base_unit_code') or product.get('base_unit_name') or 'units'} are currently saleable at AVPL."
         )
 
+    payment_term = _clean_text(payment_term, 40).lower() or "credit"
+    if payment_term == "prepaid_online":
+        raise ValueError("Online prepaid payment is coming soon. Choose Pay on Delivery or Credit / Pay Later for now.")
+    if payment_term not in {"cod", "credit"}:
+        raise ValueError("Select Pay on Delivery or Credit / Pay Later.")
+
     timestamp = now_utc()
     document = {
         "order_number": _next_order_number(),
@@ -386,6 +408,8 @@ def create_ufc_order_request(actor_user_id, centre_uid_hint, product_id, quantit
         "ufc_stock_posted": False,
         "purchase_entry_created": False,
         "accounting_status": "not_posted",
+        "payment_term": payment_term,
+        "payment_term_label": PAYMENT_TERM_LABELS.get(payment_term, payment_term.replace("_", " ").title()),
         "payment_status": "not_recorded",
         "financial_sync_status": "not_applicable",
         "financial_sync_error": None,

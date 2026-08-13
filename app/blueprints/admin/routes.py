@@ -90,6 +90,12 @@ from app.services.avpl_ufc_sales_service import (
     get_avpl_sales_overview,
     get_sales_invoice_print_context,
 )
+from app.services.payment_service import (
+    get_avpl_payment_overview,
+    get_payment_receipt_context,
+    record_payment as stage8_record_payment,
+    reverse_payment as stage8_reverse_payment,
+)
 from datetime import datetime
 from math import isfinite
 
@@ -3558,3 +3564,73 @@ def sync_existing_ufc_sales():
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), 'danger')
     return redirect(url_for('admin.ufc_sales'))
+
+# ---------------------------------------------------------------------------
+# Stage 8 — AVPL unified payments, settlement and accounting event queue
+# ---------------------------------------------------------------------------
+
+
+@admin_bp.route('/payments')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def payments_dashboard():
+    try:
+        overview = get_avpl_payment_overview(session.get('user_id'))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'supplier_payables': [],
+            'ufc_receivables': [],
+            'recent_payments': [],
+            'payment_modes': {},
+            'summary': {'supplier_due': '0.00', 'ufc_due': '0.00', 'recent_count': 0, 'accounting_pending': 0},
+        }
+    return render_template('admin/payments.html', overview=overview)
+
+
+@admin_bp.route('/payments/record', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def record_payment_view():
+    try:
+        result = stage8_record_payment(
+            session.get('user_id'),
+            request.form.get('source_type'),
+            request.form.get('invoice_id'),
+            request.form.get('amount'),
+            request.form.get('payment_mode'),
+            reference=request.form.get('reference', ''),
+            note=request.form.get('note', ''),
+            idempotency_key=request.form.get('payment_token', ''),
+        )
+        flash(result.get('message') or 'Payment recorded.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.payments_dashboard'))
+
+
+@admin_bp.route('/payments/<payment_id>/reverse', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def reverse_payment_view(payment_id):
+    try:
+        result = stage8_reverse_payment(
+            session.get('user_id'), payment_id, request.form.get('reason', '')
+        )
+        flash(result.get('message') or 'Payment reversed.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.payments_dashboard'))
+
+
+@admin_bp.route('/payment-receipts/<payment_id>/print')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def payment_receipt_print(payment_id):
+    try:
+        context = get_payment_receipt_context(session.get('user_id'), payment_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.payments_dashboard'))
+    return render_template('modules/payment_receipt_print.html', **context)
+

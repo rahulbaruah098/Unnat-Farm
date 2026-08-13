@@ -7,7 +7,7 @@
 <div class="pp">
   <div class="head">
     <div><h2>UFC Purchase Entries</h2><p>{{ overview.get('centre_name') }} · AVPL purchases are created automatically after confirmed receipt.</p></div>
-    <div class="actions"><a class="btn" href="{{ url_for('modules.ufc_avpl_orders') }}">My AVPL Orders</a><a class="btn" href="{{ url_for('modules.ufc_stock') }}">My UFC Stock</a></div>
+    <div class="actions"><a class="btn" href="{{ url_for('modules.ufc_avpl_orders') }}">My AVPL Orders</a><a class="btn" href="{{ url_for('modules.ufc_stock') }}">My UFC Stock</a><a class="btn" href="{{ url_for('modules.ufc_payments') }}">Payments & Settlement</a></div>
   </div>
 
   <div class="summary">
@@ -15,7 +15,7 @@
     <div class="sum"><small>Total Purchase Value</small><strong>₹{{ overview.get('summary',{}).get('total_value','0.00') }}</strong></div>
   </div>
 
-  <div class="note"><strong>Automatic permanently.</strong> Purchases received from AVPL should never be re-entered manually. The AVPL Sales Invoice, tax values and payable are linked to this same purchase. Payment allocation and official UFC Accounting posting come in the later financial stage.</div>
+  <div class="note"><strong>Automatic permanently.</strong> Purchases received from AVPL should never be re-entered manually. The AVPL Sales Invoice, tax values and payable are linked to this same purchase. Payments are now handled from Payments & Settlement. Full and partial settlements automatically update this Purchase Entry, the AVPL invoice and the linked outstanding balance. Accounting handoff follows the controlled Accounting workflow.</div>
 
   <form class="search" method="get"><input name="q" value="{{ overview.get('query','') }}" placeholder="Search purchase, AVPL order, invoice or product"><button type="submit">Search</button></form>
 
@@ -40,7 +40,7 @@
         <td>₹{{ r.taxable_value_display }}</td>
         <td>₹{{ r.gst_amount_display }}{% if r.gst_rate %}<br><small>{{ r.gst_rate }}%</small>{% endif %}</td>
         <td><strong>₹{{ r.total_amount_display }}</strong></td>
-        <td><span class="badge ready">{{ 'Ready for later posting' if r.financial_link_status == 'linked' else 'Not Posted Yet' }}</span></td>
+        <td><span class="badge ready">{{ 'Linked · controlled posting' if r.financial_link_status == 'linked' else 'Not Posted Yet' }}</span></td>
         <td>
           {% if r.payment_status == 'unpaid' %}<span class="badge unpaid">Unpaid</span><br><small>Due ₹{{ r.outstanding_amount_display }}</small>
           {% elif r.payment_status == 'partially_paid' %}<span class="badge unpaid">Partially Paid</span><br><small>Due ₹{{ r.outstanding_amount_display }}</small>
