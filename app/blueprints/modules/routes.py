@@ -37,6 +37,17 @@ from app.services.ufc_farmer_order_service import (
     reject_farmer_order as stage7_reject_farmer_order,
     refresh_ufc_farmer_tax_documents as stage8_refresh_ufc_farmer_tax_documents,
 )
+from app.services.ufc_profile_service import (
+    UFC_DOCUMENTS,
+    calculate_age as calculate_ufc_owner_age,
+    get_ufc_admin_master,
+    get_ufc_profile_documents,
+    normalize_gstin,
+    normalize_pan,
+    normalize_pin,
+    parse_bool as parse_profile_bool,
+    profile_health,
+)
 from app.services.payment_service import (
     get_farmer_payment_overview,
     get_payment_receipt_context,
@@ -2395,6 +2406,35 @@ def profile():
     elif role == "ufc_mitra":
         master = mongo.db.ufc_mitra_master.find_one({"linked_user_id": str(user["_id"])})
 
+    if role == "ufc_admin" and user:
+        master = get_ufc_admin_master(user) or master or {}
+        ufc_documents = get_ufc_profile_documents(str(user["_id"]), master)
+        latest_profile_update = mongo.db.profile_update_requests.find_one(
+            {"user_id": str(user["_id"]), "role": "ufc_admin"},
+            sort=[("requested_at", -1), ("reviewed_at", -1), ("_id", -1)]
+        )
+        pending_profile_update = (
+            latest_profile_update
+            if latest_profile_update and latest_profile_update.get("status") == "pending"
+            else None
+        )
+        rejected_profile_update = (
+            latest_profile_update
+            if latest_profile_update and latest_profile_update.get("status") == "rejected"
+            else None
+        )
+        health = profile_health(user, master, ufc_documents)
+        return render_template(
+            "modules/ufc_admin_profile.html",
+            user=user,
+            master=master,
+            documents=ufc_documents,
+            health=health,
+            latest_profile_update=latest_profile_update,
+            pending_profile_update=pending_profile_update,
+            rejected_profile_update=rejected_profile_update,
+        )
+
     all_docs = list(
         mongo.db.documents.find({
             "linked_user_id": str(user["_id"]),
@@ -2462,6 +2502,236 @@ def profile():
         rejected_profile_update=rejected_profile_update
     )
 
+
+
+def _ufc_profile_upload_is_valid(file_storage, max_bytes=5 * 1024 * 1024):
+    if not file_storage or not file_storage.filename:
+        return True, ""
+    extension = file_storage.filename.rsplit(".", 1)[-1].lower() if "." in file_storage.filename else ""
+    if extension not in {"pdf", "jpg", "jpeg", "png", "webp"}:
+        return False, "Only PDF, JPG, PNG or WEBP documents are allowed."
+    try:
+        file_storage.seek(0, 2)
+        size = file_storage.tell()
+        file_storage.seek(0)
+    except Exception:
+        size = 0
+    if size > max_bytes:
+        return False, "Each document must be 5 MB or smaller."
+    return True, ""
+
+
+@modules_bp.route("/profile/ufc-admin/edit")
+@login_required
+def edit_ufc_admin_business_profile():
+    if str(session.get("role") or "").strip().lower() != "ufc_admin":
+        flash("This profile editor is available only for UFC Admin users.", "danger")
+        return redirect(url_for("modules.profile"))
+
+    try:
+        user = mongo.db.users.find_one({"_id": ObjectId(session.get("user_id"))}) or {}
+    except Exception:
+        user = {}
+
+    if not user:
+        flash("User not found. Please login again.", "danger")
+        return redirect(url_for("auth.logout"))
+
+    approval = str(user.get("approval_status") or session.get("approval_status") or "").strip().lower()
+    if approval != "approved":
+        if approval in {"pending_profile", "rejected"}:
+            return redirect(url_for("auth.complete_ufc_admin"))
+        return redirect(url_for("dashboard.pending_access"))
+
+    pending_request = mongo.db.profile_update_requests.find_one({
+        "user_id": str(user["_id"]),
+        "role": "ufc_admin",
+        "status": "pending",
+    })
+    if pending_request:
+        flash("Your profile changes are already waiting for AVPL approval. Your current approved profile remains active.", "warning")
+        return redirect(url_for("modules.profile"))
+
+    master = get_ufc_admin_master(user)
+    documents = get_ufc_profile_documents(str(user["_id"]), master)
+    health = profile_health(user, master, documents)
+    return render_template(
+        "modules/ufc_admin_profile_edit.html",
+        user=user,
+        master=master,
+        documents=documents,
+        health=health,
+    )
+
+
+@modules_bp.route("/profile/ufc-admin/update", methods=["POST"])
+@login_required
+def submit_ufc_admin_business_profile_update():
+    if str(session.get("role") or "").strip().lower() != "ufc_admin":
+        flash("This profile update is available only for UFC Admin users.", "danger")
+        return redirect(url_for("modules.profile"))
+
+    try:
+        user = mongo.db.users.find_one({"_id": ObjectId(session.get("user_id"))}) or {}
+    except Exception:
+        user = {}
+
+    if not user:
+        flash("User not found. Please login again.", "danger")
+        return redirect(url_for("auth.logout"))
+
+    if str(user.get("approval_status") or "").strip().lower() != "approved":
+        flash("Complete the initial Centre profile approval before submitting profile changes.", "warning")
+        return redirect(url_for("auth.complete_ufc_admin"))
+
+    user_id = str(user["_id"])
+    existing_pending = mongo.db.profile_update_requests.find_one({
+        "user_id": user_id,
+        "role": "ufc_admin",
+        "status": "pending",
+    })
+    if existing_pending:
+        flash("You already have a Centre profile update waiting for AVPL approval.", "warning")
+        return redirect(url_for("modules.profile"))
+
+    master = get_ufc_admin_master(user)
+    documents = get_ufc_profile_documents(user_id, master)
+
+    name_of_enterprise = request.form.get("name_of_enterprise", "").strip()
+    name_of_owner = request.form.get("name_of_owner", "").strip()
+    owner_dob = request.form.get("owner_dob", "").strip()
+    owner_age = calculate_ufc_owner_age(owner_dob)
+    district = request.form.get("district", "").strip()
+    block = request.form.get("block", "").strip()
+    village = request.form.get("village", "").strip()
+    address = request.form.get("address", "").strip()
+    email = request.form.get("email", "").strip()
+    trader_license_number = request.form.get("trader_license_number", "").strip()
+    other_licenses = request.form.get("other_licenses", "").strip()
+    state = str(master.get("state") or user.get("state") or "").strip()
+
+    if not all([name_of_enterprise, name_of_owner, owner_dob, owner_age, district, block, village]):
+        flash("Please complete the enterprise, owner and Centre location fields.", "danger")
+        return redirect(url_for("modules.edit_ufc_admin_business_profile"))
+
+    if email and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        flash("Enter a valid email address or leave the email field blank.", "danger")
+        return redirect(url_for("modules.edit_ufc_admin_business_profile"))
+
+    try:
+        pan_number = normalize_pan(request.form.get("pan_number", ""), required=True)
+        postal_code = normalize_pin(request.form.get("postal_code", ""))
+        gst_number, gst_registered = normalize_gstin(
+            request.form.get("gst_number", ""),
+            registered=request.form.get("gst_registered"),
+            pan=pan_number,
+            state=state,
+        )
+    except ValueError as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.edit_ufc_admin_business_profile"))
+
+    upload_fields = {
+        "registration_certificate": "Registration Certificate",
+        "pan_file": "PAN",
+        "gst_file": "GST Registration",
+        "trader_license_file": "Trader License",
+        "other_license_file": "Other Licenses",
+    }
+    selected_uploads = {}
+    for field, label in upload_fields.items():
+        file_storage = request.files.get(field)
+        if file_storage and file_storage.filename:
+            ok, message = _ufc_profile_upload_is_valid(file_storage)
+            if not ok:
+                flash(f"{label}: {message}", "danger")
+                return redirect(url_for("modules.edit_ufc_admin_business_profile"))
+            selected_uploads[field] = file_storage
+
+    missing_required_docs = []
+    if not (documents.get("registration_certificate") or {}).get("exists") and "registration_certificate" not in selected_uploads:
+        missing_required_docs.append("Registration Certificate")
+    if not (documents.get("pan_file") or {}).get("exists") and "pan_file" not in selected_uploads:
+        missing_required_docs.append("PAN document")
+    if gst_registered and not (documents.get("gst_file") or {}).get("exists") and "gst_file" not in selected_uploads:
+        missing_required_docs.append("GST Registration document")
+
+    if missing_required_docs:
+        flash("Please upload the missing required document(s): " + ", ".join(missing_required_docs) + ".", "danger")
+        return redirect(url_for("modules.edit_ufc_admin_business_profile"))
+
+    uploaded_docs = []
+    for field, file_storage in selected_uploads.items():
+        label = upload_fields[field]
+        try:
+            filename = save_file(file_storage, "ufc_profile_update")
+        except ValueError as exc:
+            flash(f"{label}: {exc}", "danger")
+            return redirect(url_for("modules.edit_ufc_admin_business_profile"))
+        uploaded_docs.append({
+            "field": field,
+            "label": label,
+            "document_type": label,
+            "filename": filename,
+            "uploaded_at": now_utc(),
+        })
+
+    proposed_fields = {
+        "name_of_enterprise": name_of_enterprise,
+        "name_of_owner": name_of_owner,
+        "owner_dob": owner_dob,
+        "owner_age": owner_age,
+        "state": state,
+        "district": district,
+        "block": block,
+        "village": village,
+        "address": address,
+        "postal_code": postal_code,
+        "email": email,
+        "pan_number": pan_number,
+        "gst_registered": bool(gst_registered),
+        "gst_number": gst_number,
+        "trader_license_number": trader_license_number,
+        "other_licenses": other_licenses,
+    }
+
+    request_doc = {
+        "user_id": user_id,
+        "master_id": str(master.get("_id") or ""),
+        "role": "ufc_admin",
+        "request_type": "ufc_business_profile_update",
+        "status": "pending",
+        "proposed_fields": proposed_fields,
+        "uploaded_docs": uploaded_docs,
+        "requested_at": now_utc(),
+        "reviewed_by": None,
+        "reviewed_at": None,
+        "rejection_reason": "",
+    }
+    request_id = mongo.db.profile_update_requests.insert_one(request_doc).inserted_id
+
+    mongo.db.validations.insert_one({
+        "entity_id": str(request_id),
+        "entity_type": "profile_update_request",
+        "submitted_by": user_id,
+        "submitted_role": "ufc_admin",
+        "status": "pending",
+        "created_at": now_utc(),
+        "updated_at": now_utc(),
+        "title": "UFC Centre Business Profile Update",
+        "metadata": {
+            "request_id": str(request_id),
+            "user_id": user_id,
+            "role": "ufc_admin",
+            "centre_uid": user.get("centre_uid") or master.get("centre_uid") or "",
+        },
+    })
+
+    flash(
+        "Centre profile changes submitted for AVPL approval. Your currently approved business and tax details remain active until the request is approved.",
+        "success",
+    )
+    return redirect(url_for("modules.profile"))
 
 @modules_bp.route("/profile/update-request", methods=["POST"])
 @login_required

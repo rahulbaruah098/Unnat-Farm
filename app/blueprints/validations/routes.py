@@ -352,6 +352,18 @@ def take_action(validation_id):
                 "updated_at": now_utc()
             }
 
+            proposed_fields = update_request.get("proposed_fields") or {}
+            if role == "ufc_admin" and proposed_fields:
+                allowed_profile_fields = {
+                    "name_of_enterprise", "name_of_owner", "owner_dob", "owner_age",
+                    "state", "district", "block", "village", "address", "postal_code",
+                    "email", "pan_number", "gst_registered", "gst_number",
+                    "trader_license_number", "other_licenses",
+                }
+                for key in allowed_profile_fields:
+                    if key in proposed_fields:
+                        update_fields[key] = proposed_fields.get(key)
+
             for doc in uploaded_docs:
                 field = doc.get("field")
                 filename = doc.get("filename")
@@ -365,6 +377,13 @@ def take_action(validation_id):
                     update_fields["government_id_file"] = filename
                 elif field == "supporting_document":
                     update_fields["supporting_document"] = filename
+                elif field in {
+                    "registration_certificate", "pan_file", "gst_file",
+                    "trader_license_file", "other_license_file"
+                }:
+                    # Keep a convenience reference on the master while the
+                    # documents collection remains the source of truth.
+                    update_fields[field] = filename
 
                 document_type = doc.get("label") or doc.get("document_type")
 
@@ -388,7 +407,24 @@ def take_action(validation_id):
                     same_type_names = [
                         "Supporting Document",
                         "Support Document"
-                ]
+                    ]
+                elif field == "registration_certificate":
+                    same_type_names = [
+                        "Registration Certificate",
+                        "Centre Registration Certificate"
+                    ]
+                elif field == "pan_file":
+                    same_type_names = ["PAN", "PAN Card", "PAN Document"]
+                elif field == "gst_file":
+                    same_type_names = [
+                        "GST", "GST Certificate", "GST Registration", "GST Registration Document"
+                    ]
+                elif field == "trader_license_file":
+                    same_type_names = [
+                        "Trader License", "Trade License", "Trader Licence", "Trade Licence"
+                    ]
+                elif field == "other_license_file":
+                    same_type_names = ["Other Licenses", "Other License", "Other Licences"]
 
                 mongo.db.documents.update_many(
     {
@@ -438,10 +474,43 @@ def take_action(validation_id):
                     {"$set": update_fields}
                 )
 
+            user_update_fields = {"updated_at": now_utc()}
+            for key in ["state", "district", "block", "village", "email"]:
+                if key in update_fields:
+                    user_update_fields[key] = update_fields.get(key)
+            # Keep tax/business fields mirrored for legacy readers without
+            # changing login credentials or role/account identity.
+            if role == "ufc_admin":
+                for key in [
+                    "name_of_enterprise", "name_of_owner", "owner_dob", "owner_age",
+                    "address", "postal_code", "pan_number", "gst_registered", "gst_number",
+                    "trader_license_number", "other_licenses"
+                ]:
+                    if key in update_fields:
+                        user_update_fields[key] = update_fields.get(key)
+
             mongo.db.users.update_one(
                 {"_id": ObjectId(user_id)},
-                {"$set": update_fields}
+                {"$set": user_update_fields}
             )
+
+            if role == "ufc_admin" and update_fields.get("gst_registered") is False:
+                mongo.db.documents.update_many(
+                    {
+                        "linked_user_id": str(user_id),
+                        "document_type": {"$in": [
+                            "GST", "GST Certificate", "GST Registration", "GST Registration Document"
+                        ]},
+                        "status": "active",
+                    },
+                    {
+                        "$set": {
+                            "status": "historical",
+                            "historical_reason": "Centre profile approved as non-GST registered.",
+                            "updated_at": now_utc(),
+                        }
+                    }
+                )
 
             mongo.db.profile_update_requests.update_one(
     {"_id": ObjectId(item["entity_id"])},

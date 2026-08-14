@@ -1,67 +1,28 @@
 import os
-from flask import Blueprint, send_file, current_app, abort, request
-from werkzeug.utils import safe_join
+
+from flask import Blueprint, abort, request, send_file
+
+from app.services.document_service import candidate_upload_dirs, find_document_path
 from app.utils.decorators import login_required
 
 
 documents_bp = Blueprint('documents', __name__, url_prefix='/documents')
 
 
+# Backward-compatible private helper names. Dashboard and older routes import
+# these names directly, so keep them while using one resolver implementation.
 def _candidate_upload_dirs():
-    """Return all upload directories used by older/newer project versions.
-
-    Earlier builds sometimes saved files under project_root/uploads, while some
-    configs pointed to app/uploads or a relative uploads folder. This resolver
-    checks all safe known locations so old uploaded documents continue to open
-    from AVPL validation screens.
-    """
-    dirs = []
-
-    configured = current_app.config.get('UPLOAD_FOLDER') or 'uploads'
-    if configured:
-        dirs.append(configured)
-        if not os.path.isabs(configured):
-            dirs.append(os.path.abspath(configured))
-            dirs.append(os.path.abspath(os.path.join(current_app.root_path, '..', configured)))
-            dirs.append(os.path.abspath(os.path.join(current_app.root_path, configured)))
-
-    dirs.append(os.path.abspath(os.path.join(current_app.root_path, '..', 'uploads')))
-    dirs.append(os.path.abspath(os.path.join(current_app.root_path, 'uploads')))
-
-    # keep order, remove duplicates
-    seen = set()
-    clean = []
-    for d in dirs:
-        if not d:
-            continue
-        ad = os.path.abspath(d)
-        if ad not in seen:
-            seen.add(ad)
-            clean.append(ad)
-    return clean
+    return candidate_upload_dirs()
 
 
 def _find_document_path(filename):
-    safe_name = os.path.basename(filename or '')
-    if not safe_name or safe_name in {'.', '..'}:
-        return None
-
-    for directory in _candidate_upload_dirs():
-        candidate = safe_join(directory, safe_name)
-        if candidate and os.path.isfile(candidate):
-            return candidate
-
-        for root, dirs, files in os.walk(directory):
-            if safe_name in files:
-                return os.path.join(root, safe_name)
-
-    return None
+    return find_document_path(filename)
 
 
 @documents_bp.route('/<path:filename>')
 @login_required
 def serve(filename):
-    file_path = _find_document_path(filename)
+    file_path = find_document_path(filename)
     if not file_path:
         abort(404)
 

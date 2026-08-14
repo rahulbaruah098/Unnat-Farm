@@ -1,230 +1,88 @@
 {% extends 'base.html' %}
-{% block title %}Complete UFC Admin Profile{% endblock %}
-
+{% block title %}Complete UFC Centre Profile{% endblock %}
 {% block content %}
-<div class="page-card">
-    <h2>
-        {% if session.get('approval_status') == 'rejected' %}
-            Rectify UFC Admin Application
-        {% else %}
-            Complete UFC Admin Profile
-        {% endif %}
-    </h2>
+<style>
+.onboard{font-family:"Times New Roman",Georgia,serif;color:#17252A}.shell{width:100%;border:1px solid #DCEEE2;border-radius:26px;padding:26px;background:rgba(255,255,255,.95);box-shadow:0 22px 55px rgba(23,37,42,.10)}
+.head{margin-bottom:18px}.head h2{margin:0 0 5px;font-size:clamp(1.5rem,2vw,1.95rem)}.head p{margin:0;color:#64748B;line-height:1.5}.uid{margin-top:12px;display:inline-flex;padding:8px 12px;border-radius:999px;background:#EAF7EE;color:#2F6C47;border:1px solid #CDE8D6;font-weight:700}
+.notice{padding:13px 15px;border-radius:15px;border:1px solid #CDE8D6;background:#F2FAF5;color:#315F42;line-height:1.5;margin-bottom:16px}.notice.danger{border-color:#FECACA;background:#FEF2F2;color:#991B1B}
+fieldset{border:1px solid #DCEEE2;border-radius:20px;padding:18px;margin:0 0 16px;background:#FCFEFD}legend{padding:0 8px;font-size:1.18rem;font-weight:700}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}.field label,.label{font-weight:700}.field input,.field textarea{width:100%;min-height:44px;border:1px solid #D8E9DE;border-radius:13px;padding:10px 12px;background:#fff;color:#334155;font:inherit;outline:none}.field textarea{min-height:86px;resize:vertical}.field input[readonly]{background:#F8FAF9;color:#64748B}.hint{font-size:.86rem;color:#64748B;line-height:1.4}.radio-row{display:flex;gap:10px;flex-wrap:wrap}.radio-option{display:flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid #D8E9DE;border-radius:12px;background:#fff}.radio-option input{width:auto;min-height:auto;margin:0}.doc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.doc{padding:14px;border:1px solid #DCEEE2;border-radius:16px;background:#fff}.doc-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.badge{padding:4px 8px;border-radius:999px;font-size:.8rem;font-weight:700}.good{background:#DCFCE7;color:#166534}.warn{background:#FEF3C7;color:#92400E}.muted{background:#F1F5F9;color:#64748B}.doc a{color:#2F6C47;font-weight:700;text-decoration:none}.submit-row{display:flex;justify-content:flex-end}.submit{min-height:44px;padding:10px 18px;border:0;border-radius:999px;background:#5FA878;color:#fff;font:inherit;font-weight:700;cursor:pointer}.submit:hover{background:#3B7D55}
+@media(max-width:820px){.grid,.doc-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.shell{padding:20px}}@media(max-width:480px){.shell{padding:15px;border-radius:20px}.submit-row,.submit{width:100%}}
+</style>
 
-    {% if rejection_reason or session.get('rejection_reason') %}
-        <div class="alert-box danger">
-            <strong>Your application was rejected.</strong><br>
-            <strong>Reason / Rectification Required:</strong>
-            {{ rejection_reason or session.get('rejection_reason') }}
-        </div>
-    {% endif %}
-
-    <div class="info-banner">
-        Your Centre Unique ID:
-        <strong>{{ user.centre_uid or master.centre_uid or 'Not Generated' }}</strong>
+<div class="onboard"><div class="shell">
+    <div class="head">
+        <h2>{% if session.get('approval_status') == 'rejected' %}Correct Centre Profile{% else %}Complete Centre Profile{% endif %}</h2>
+        <p>AVPL created your login with only the minimum account details. Complete the Centre business, tax and compliance profile once, then submit it for validation.</p>
+        <span class="uid">Centre UID: {{ user.centre_uid or master.centre_uid or 'Not Generated' }}</span>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="grid-form two-col">
+    {% if rejection_reason or session.get('rejection_reason') %}<div class="notice danger"><strong>Correction required:</strong> {{ rejection_reason or session.get('rejection_reason') }}</div>{% endif %}
+    <div class="notice">For GST-registered Centres, select <strong>Yes</strong>, enter the GSTIN and upload the GST registration document. If the Centre is not GST-registered, select <strong>No</strong>. UnnatFarm will not charge GST from an invalid or incomplete Centre tax profile.</div>
 
-        <label>
-            Name of Enterprise
-            <input type="text" name="name_of_enterprise"
-                   value="{{ master.name_of_enterprise or user.name_of_enterprise or '' }}"
-                   required>
-        </label>
+    <form method="post" enctype="multipart/form-data" id="centreProfileForm">
+        <fieldset><legend>1. Centre & Owner</legend><div class="grid">
+            <div class="field"><label>Enterprise Name *</label><input name="name_of_enterprise" value="{{ master.name_of_enterprise or user.name_of_enterprise or user.name or '' }}" required></div>
+            <div class="field"><label>Owner Name *</label><input name="name_of_owner" value="{{ master.name_of_owner or user.name_of_owner or '' }}" required></div>
+            <div class="field"><label>Owner Date of Birth *</label><input type="date" name="owner_dob" id="ownerDob" value="{{ master.owner_dob or user.owner_dob or '' }}" required></div>
+            <div class="field"><label>Owner Age</label><input id="ownerAge" value="{{ master.owner_age or user.owner_age or '' }}" readonly></div>
+            <div class="field"><label>State</label><input value="{{ user.state or master.state or '' }}" readonly><input type="hidden" name="state" value="{{ user.state or master.state or '' }}"><span class="hint">State was selected by AVPL when the Centre UID was created.</span></div>
+            <div class="field"><label>Email</label><input type="email" name="email" value="{{ master.email or user.email or '' }}" placeholder="centre@example.com"></div>
+        </div></fieldset>
 
-        <label>
-            Name of Owner
-            <input type="text" name="name_of_owner"
-                   value="{{ master.name_of_owner or user.name_of_owner or '' }}"
-                   required>
-        </label>
+        <fieldset><legend>2. Centre Address</legend><div class="grid">
+            <div class="field full"><label>Address / Landmark</label><textarea name="address" placeholder="Shop/building, road or landmark">{{ master.address or user.address or '' }}</textarea></div>
+            <div class="field"><label>District *</label><input name="district" value="{{ master.district or user.district or '' }}" required></div>
+            <div class="field"><label>Block *</label><input name="block" value="{{ master.block or user.block or '' }}" required></div>
+            <div class="field"><label>Village / Town *</label><input name="village" value="{{ master.village or user.village or '' }}" required></div>
+            <div class="field"><label>PIN Code</label><input name="postal_code" maxlength="6" inputmode="numeric" value="{{ master.postal_code or user.postal_code or '' }}" placeholder="6-digit PIN"></div>
+        </div></fieldset>
 
-        <label>
-    Owner DOB
-    <input
-        type="date"
-        name="owner_dob"
-        id="ownerDob"
-        value="{{ master.owner_dob or user.owner_dob or '' }}"
-        required
-    >
-</label>
+        <fieldset><legend>3. Tax & License Details</legend><div class="grid">
+            <div class="field"><label>PAN *</label><input name="pan_number" id="panNumber" maxlength="10" value="{{ master.pan_number or user.pan_number or '' }}" placeholder="ABCDE1234F" required></div>
+            <div class="field"><span class="label">GST Registered? *</span><div class="radio-row">
+                <label class="radio-option"><input type="radio" name="gst_registered" value="yes" {% if master.gst_registered %}checked{% endif %} required> Yes</label>
+                <label class="radio-option"><input type="radio" name="gst_registered" value="no" {% if not master.gst_registered %}checked{% endif %}> No</label>
+            </div></div>
+            <div class="field full" id="gstinField"><label>GSTIN *</label><input name="gst_number" id="gstNumber" maxlength="15" value="{{ master.gst_number or user.gst_number or '' }}" placeholder="15-character GSTIN"><span class="hint">Format, PAN segment and Centre-state consistency are checked. This does not perform live GST-portal verification.</span></div>
+            <div class="field"><label>Trader License Number</label><input name="trader_license_number" value="{{ master.trader_license_number or user.trader_license_number or '' }}"></div>
+            <div class="field"><label>Other Licenses</label><input name="other_licenses" value="{{ master.other_licenses or user.other_licenses or '' }}"></div>
+        </div></fieldset>
 
-<label>
-    Owner Age
-    <input
-        type="number"
-        name="owner_age"
-        id="ownerAge"
-        value="{{ master.owner_age or user.owner_age or '' }}"
-        placeholder="Auto-calculated from DOB"
-        readonly
-        required
-    >
-</label>
+        <fieldset><legend>4. Compliance Documents</legend>
+            <div class="notice" style="margin-top:0">Registration Certificate and PAN document are required. GST document is required only if the Centre is GST-registered. A deleted/missing physical file does not count as an uploaded document.</div>
+            <div class="doc-grid">
+            {% set doc_fields = [
+                ('registration_certificate','Registration Certificate','Required'),
+                ('pan_file','PAN Document','Required'),
+                ('gst_file','GST Registration Document','Required if GST registered'),
+                ('trader_license_file','Trader License','Optional'),
+                ('other_license_file','Other Licenses','Optional')
+            ] %}
+            {% for field,label,requirement in doc_fields %}
+                {% set d = (existing_documents or {}).get(field, {}) %}
+                <div class="doc" id="doc-{{ field }}">
+                    <div class="doc-head"><strong>{{ label }}</strong>{% if d.exists %}<span class="badge good">Available</span>{% elif d.missing_file %}<span class="badge warn">File Missing</span>{% else %}<span class="badge muted">Not Uploaded</span>{% endif %}</div>
+                    <div class="hint" style="margin-bottom:8px">{{ requirement }}{% if d.exists %} · <a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">View current</a>{% endif %}</div>
+                    <input type="file" name="{{ field }}" id="{{ field }}" accept=".pdf,.jpg,.jpeg,.png,.webp" data-existing="{{ '1' if d.exists else '0' }}">
+                </div>
+            {% endfor %}
+            </div>
+        </fieldset>
 
-        <label>
-            State
-            <input type="text"
-                   value="{{ user.state or master.state or '' }}"
-                   readonly>
-            <input type="hidden"
-                   name="state"
-                   value="{{ user.state or master.state or '' }}">
-            <small class="muted">
-                State is fixed from AVPL Admin user creation. Type district, block and village manually below.
-            </small>
-        </label>
-
-        <label>
-            District
-            <input type="text" name="district"
-                   value="{{ master.district or user.district or '' }}"
-                   placeholder="Type district manually"
-                   required>
-        </label>
-
-        <label>
-            Block
-            <input type="text" name="block"
-                   value="{{ master.block or user.block or '' }}"
-                   placeholder="Type block manually"
-                   required>
-        </label>
-
-        <label>
-            Village
-            <input type="text" name="village"
-                   value="{{ master.village or user.village or '' }}"
-                   placeholder="Type village manually"
-                   required>
-        </label>
-
-        <label>
-            PAN Number
-            <input type="text" name="pan_number"
-                   value="{{ master.pan_number or user.pan_number or '' }}"
-                   required>
-        </label>
-
-        <label>
-            GSTIN (optional)
-            <input type="text" name="gst_number" maxlength="15"
-                   value="{{ master.gst_number or user.gst_number or '' }}"
-                   placeholder="15-character GSTIN if registered"
-                   style="text-transform:uppercase">
-            <small class="muted">Leave blank if the UFC is not GST-registered. If entered, UnnatFarm validates the GSTIN structure before using it for tax invoices.</small>
-        </label>
-
-        <label>
-            Trader License Number (optional)
-            <input type="text" name="trader_license_number"
-                   value="{{ master.trader_license_number or user.trader_license_number or '' }}">
-        </label>
-
-        <label>
-            Other Licenses (optional)
-            <input type="text" name="other_licenses"
-                   value="{{ master.other_licenses or user.other_licenses or '' }}">
-        </label>
-
-        <label>
-            Registration Certificate
-            <input type="file" name="registration_certificate"
-                   {% if not master.registration_certificate %}required{% endif %}>
-            <small class="muted">
-                Upload again only if AVPL asked for correction.
-            </small>
-        </label>
-
-        <label>
-            PAN Upload
-            <input type="file" name="pan_file"
-                   {% if not master.pan_file %}required{% endif %}>
-            <small class="muted">
-                Upload again only if AVPL asked for correction.
-            </small>
-        </label>
-
-        <label>
-            GST Registration Document (optional)
-            <input type="file" name="gst_file">
-            <small class="muted">
-                Upload this only when the UFC is GST-registered. Existing GST documents remain available for AVPL validation.
-            </small>
-        </label>
-
-        <label>
-            Trader License Upload
-            <input type="file" name="trader_license_file">
-            {% if master.trader_license_file %}
-                <small class="muted">Upload a new file only if correction is required. The new upload will replace the previous active file.</small>
-            {% endif %}
-        </label>
-
-        <label>
-            Other Licenses Upload
-            <input type="file" name="other_license_file">
-            {% if master.other_license_file %}
-                <small class="muted">Upload a new file only if correction is required. The new upload will replace the previous active file.</small>
-            {% endif %}
-        </label>
-
-        <div class="span-2">
-            <button type="submit">
-                {% if session.get('approval_status') == 'rejected' %}
-                    Resubmit For AVPL Validation
-                {% else %}
-                    Submit For AVPL Validation
-                {% endif %}
-            </button>
-        </div>
-
+        <div class="submit-row"><button class="submit" type="submit">{% if session.get('approval_status') == 'rejected' %}Resubmit for AVPL Validation{% else %}Submit for AVPL Validation{% endif %}</button></div>
     </form>
-</div>
+</div></div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-    const dobInput = document.getElementById('ownerDob');
-    const ageInput = document.getElementById('ownerAge');
-
-    function calculateOwnerAgeFromDob(){
-        if(!dobInput || !ageInput) return;
-
-        const dobValue = dobInput.value;
-
-        if(!dobValue){
-            ageInput.value = '';
-            return;
-        }
-
-        const dob = new Date(dobValue);
-        const today = new Date();
-
-        if(Number.isNaN(dob.getTime()) || dob > today){
-            ageInput.value = '';
-            return;
-        }
-
-        let age = today.getFullYear() - dob.getFullYear();
-        const monthDiff = today.getMonth() - dob.getMonth();
-        const dayDiff = today.getDate() - dob.getDate();
-
-        if(monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)){
-            age--;
-        }
-
-        ageInput.value = age >= 0 ? age : '';
-    }
-
-    if(dobInput){
-        dobInput.max = new Date().toISOString().split('T')[0];
-        dobInput.addEventListener('change', calculateOwnerAgeFromDob);
-        dobInput.addEventListener('input', calculateOwnerAgeFromDob);
-        calculateOwnerAgeFromDob();
-    }
-});
+(function(){
+    const dob=document.getElementById('ownerDob'),age=document.getElementById('ownerAge');
+    function calc(){if(!dob||!age||!dob.value){if(age)age.value='';return;}const d=new Date(dob.value),t=new Date();if(Number.isNaN(d.getTime())||d>t){age.value='';return;}let a=t.getFullYear()-d.getFullYear();if(t.getMonth()<d.getMonth()||(t.getMonth()===d.getMonth()&&t.getDate()<d.getDate()))a--;age.value=a>=0?a:'';}
+    if(dob){dob.max=new Date().toISOString().split('T')[0];dob.addEventListener('change',calc);calc();}
+    const pan=document.getElementById('panNumber'),gst=document.getElementById('gstNumber'),gstField=document.getElementById('gstinField'),gstFile=document.getElementById('gst_file');
+    if(pan)pan.addEventListener('input',()=>pan.value=pan.value.toUpperCase().replace(/\s/g,''));if(gst)gst.addEventListener('input',()=>gst.value=gst.value.toUpperCase().replace(/\s/g,''));
+    function toggleGST(){const y=document.querySelector('input[name="gst_registered"][value="yes"]');const on=!!(y&&y.checked);if(gstField)gstField.style.display=on?'flex':'none';if(gst){gst.required=on;if(!on)gst.value='';}if(gstFile){gstFile.required=on&&gstFile.dataset.existing!=='1';}}
+    document.querySelectorAll('input[name="gst_registered"]').forEach(x=>x.addEventListener('change',toggleGST));toggleGST();
+    ['registration_certificate','pan_file'].forEach(id=>{const e=document.getElementById(id);if(e&&e.dataset.existing!=='1')e.required=true;});
+})();
 </script>
-
 {% endblock %}

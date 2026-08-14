@@ -9,6 +9,7 @@ from pymongo import ASCENDING, DESCENDING, ReturnDocument
 
 from app.extensions import mongo
 from app.services.accounting_configuration_service import INDIA_STATE_CODES
+from app.services.ufc_profile_service import is_valid_gstin, parse_bool as parse_profile_bool
 from app.services.location_service import STATE_CODES as LOCATION_STATE_CODES
 from app.services.accounting_financial_year_service import get_open_financial_year_for_date
 from app.services.accounting_number_series_service import (
@@ -209,7 +210,15 @@ def _buyer_snapshot(order):
         linked_user = mongo.db.users.find_one({"_id": _to_object_id(linked_user_id)}) or mongo.db.users.find_one({"_id": linked_user_id})
     linked_user = linked_user or {}
 
-    gstin = str(centre.get("gst_number") or centre.get("gstin") or "").strip().upper()
+    raw_gstin = str(centre.get("gst_number") or centre.get("gstin") or "").strip().upper()
+    gstin_valid = is_valid_gstin(raw_gstin)
+    gstin = raw_gstin if gstin_valid else ""
+    explicit_registered = parse_profile_bool(
+        centre.get("gst_registered") if centre.get("gst_registered") is not None else centre.get("is_gst_registered"),
+        default=None,
+    )
+    is_registered = bool(gstin_valid and explicit_registered is not False)
+
     raw_state_name = str(centre.get("state") or linked_user.get("state") or "").strip()
     state_name, state_code = _resolve_gst_state(
         raw_state_name,
@@ -229,7 +238,11 @@ def _buyer_snapshot(order):
         "owner_name": centre.get("name_of_owner") or centre.get("name") or "",
         "gstin": gstin,
         "pan": str(centre.get("pan_number") or centre.get("pan") or "").strip().upper(),
-        "gst_registration_status": "registered_regular" if len(gstin) == 15 else "unregistered",
+        "gst_registration_status": "registered_regular" if is_registered else "unregistered",
+        "gst_configuration_warning": (
+            "Invalid Centre GSTIN ignored for tax-state resolution. Correct the UFC Centre profile."
+            if raw_gstin and not gstin_valid else ""
+        ),
         "state": state_name,
         "state_code": state_code,
         "district": centre.get("district") or linked_user.get("district") or "",

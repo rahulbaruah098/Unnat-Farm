@@ -488,6 +488,36 @@
     {% endif %}
 </div>
 
+    {% if profile_update_request and profile_update_request.proposed_fields %}
+    <h3>Requested Business Profile Changes</h3>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Field</th><th>Current Approved</th><th>Requested</th></tr></thead>
+            <tbody>
+            {% for key, requested_value in profile_update_request.proposed_fields.items() %}
+                {% set current_value = master.get(key) if master else '' %}
+                <tr>
+                    <td>{{ key|replace('_',' ')|title }}</td>
+                    <td>{% if key == 'gst_registered' %}{{ 'Yes' if current_value else 'No' }}{% else %}{{ current_value if current_value not in [none,''] else '-' }}{% endif %}</td>
+                    <td>{% if key == 'gst_registered' %}{{ 'Yes' if requested_value else 'No' }}{% else %}{{ requested_value if requested_value not in [none,''] else '-' }}{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mobile-card-list">
+        {% for key, requested_value in profile_update_request.proposed_fields.items() %}
+            {% set current_value = master.get(key) if master else '' %}
+            <div class="detail-card">
+                <span class="detail-card-label">{{ key|replace('_',' ')|title }}</span>
+                <span class="detail-card-value"><strong>Current:</strong> {% if key == 'gst_registered' %}{{ 'Yes' if current_value else 'No' }}{% else %}{{ current_value if current_value not in [none,''] else '-' }}{% endif %}</span>
+                <span class="detail-card-value"><strong>Requested:</strong> {% if key == 'gst_registered' %}{{ 'Yes' if requested_value else 'No' }}{% else %}{{ requested_value if requested_value not in [none,''] else '-' }}{% endif %}</span>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <h3>Uploaded Documents</h3>
 
     <div class="table-wrap">

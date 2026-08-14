@@ -167,6 +167,9 @@ def complete_ufc_admin_profile(user_id, form):
         'pan_number': form['pan_number'],
         'gst_number': form.get('gst_number') or '',
         'gst_registered': bool(form.get('gst_registered')),
+        'address': form.get('address'),
+        'postal_code': form.get('postal_code'),
+        'email': form.get('email'),
         'trader_license_number': form.get('trader_license_number'),
         'other_licenses': form.get('other_licenses'),
         'approval_status': 'pending',
@@ -194,7 +197,13 @@ def complete_ufc_admin_profile(user_id, form):
                     'block',
                     'village',
                     'owner_dob',
-                    'owner_age'
+                    'owner_age',
+                    'address',
+                    'postal_code',
+                    'email',
+                    'pan_number',
+                    'gst_number',
+                    'gst_registered'
                 ]
                 if k in master
             }

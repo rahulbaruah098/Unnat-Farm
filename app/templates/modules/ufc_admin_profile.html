@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+.ufc-profile-page{font-family:"Times New Roman",Georgia,serif;color:#17252A}
+.profile-shell{width:100%;border:1px solid rgba(220,238,226,.95);border-radius:26px;padding:26px;background:rgba(255,255,255,.94);box-shadow:0 22px 55px rgba(23,37,42,.10)}
+.profile-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:20px}
+.profile-title h2{margin:0 0 5px;font-size:clamp(1.55rem,2.2vw,2rem);color:#17252A}.profile-title p{margin:0;color:#64748B;line-height:1.5}
+.profile-actions{display:flex;gap:10px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 16px;border-radius:999px;border:1px solid rgba(95,168,120,.28);text-decoration:none;font-weight:700;transition:.2s ease}.btn-primary{background:#5FA878;color:#fff;border-color:#5FA878}.btn-primary:hover{background:#3B7D55}.btn-soft{background:#F2FAF5;color:#2F6C47}.btn-disabled{background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0;cursor:not-allowed}
+.status-banner{margin:0 0 18px;padding:14px 16px;border-radius:16px;border:1px solid #CDE8D6;background:#F2FAF5;color:#315F42;line-height:1.5}.status-banner.warning{border-color:#FDE68A;background:#FFFBEB;color:#854D0E}.status-banner.danger{border-color:#FECACA;background:#FEF2F2;color:#991B1B}
+.summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:22px}.summary-card{padding:16px 17px;border:1px solid #DCEEE2;border-radius:18px;background:linear-gradient(180deg,#fff,#F8FCF9)}.summary-label{display:block;font-size:.9rem;color:#64748B;margin-bottom:7px}.summary-value{display:block;font-size:1.18rem;font-weight:700;color:#17252A;word-break:break-word}.progress{height:8px;margin-top:10px;border-radius:999px;background:#E7F2EA;overflow:hidden}.progress>span{display:block;height:100%;background:#5FA878;border-radius:inherit}
+.section{margin-top:18px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.section-head h3{margin:0;font-size:1.28rem}.section-note{font-size:.9rem;color:#64748B}
+.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.detail{padding:14px 15px;border:1px solid #DCEEE2;border-radius:16px;background:#fff}.detail-label{display:block;font-size:.86rem;color:#64748B;margin-bottom:5px}.detail-value{display:block;font-weight:700;color:#23343A;line-height:1.4;word-break:break-word}.detail.full{grid-column:1/-1}
+.tax-card{padding:16px;border:1px solid #DCEEE2;border-radius:18px;background:#FAFDFB}.tax-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.badge{display:inline-flex;align-items:center;min-height:26px;padding:4px 9px;border-radius:999px;font-size:.84rem;font-weight:700}.badge.good{background:#DCFCE7;color:#166534}.badge.warn{background:#FEF3C7;color:#92400E}.badge.muted{background:#F1F5F9;color:#64748B}.tax-warning{margin-top:12px;padding:11px 13px;border-radius:13px;background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;line-height:1.45}
+.docs{display:grid;gap:10px}.doc-row{display:grid;grid-template-columns:minmax(180px,1.1fr) minmax(130px,.7fr) minmax(180px,1fr);gap:12px;align-items:center;padding:13px 14px;border:1px solid #DCEEE2;border-radius:16px;background:#fff}.doc-name{font-weight:700}.doc-sub{display:block;margin-top:3px;font-size:.84rem;color:#64748B}.doc-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.doc-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:6px 11px;border-radius:999px;text-decoration:none;background:#EFF8F2;color:#2F6C47;border:1px solid #CDE8D6;font-weight:700;font-size:.9rem}.missing{color:#B45309;font-weight:700}
+.account-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.account-item{padding:12px 14px;border-radius:14px;background:#F8FCF9;border:1px solid #E2F0E6}.account-item span{display:block;font-size:.84rem;color:#64748B;margin-bottom:3px}.account-item strong{word-break:break-word}
+@media(max-width:860px){.summary-grid,.detail-grid,.tax-row,.account-strip{grid-template-columns:1fr}.detail.full{grid-column:auto}.doc-row{grid-template-columns:1fr}.doc-actions{justify-content:flex-start}.profile-shell{padding:20px}}
+@media(max-width:480px){.profile-shell{padding:16px;border-radius:20px}.profile-actions,.profile-actions .btn{width:100%}.profile-actions .btn{flex:1}}
+</style>
+
+<div class="ufc-profile-page">
+<div class="profile-shell">
+    <div class="profile-top">
+        <div class="profile-title">
+            <h2>Centre Profile</h2>
+            <p>Business, tax and compliance details used for Centre operations and invoices.</p>
+        </div>
+        <div class="profile-actions">
+            {% if pending_profile_update %}
+                <span class="btn btn-disabled">Update Pending</span>
+            {% else %}
+                <a class="btn btn-primary" href="{{ url_for('modules.edit_ufc_admin_business_profile') }}">Edit Business Profile</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if pending_profile_update %}
+        <div class="status-banner warning">
+            <strong>Profile update awaiting AVPL approval.</strong> Your currently approved details remain active until the request is reviewed, so Centre operations are not interrupted.
+        </div>
+    {% elif rejected_profile_update %}
+        <div class="status-banner danger">
+            <strong>Last profile update was rejected.</strong>
+            {{ rejected_profile_update.rejection_reason or 'Please review the details and submit a corrected request.' }}
+        </div>
+    {% elif health.tax_issue %}
+        <div class="status-banner warning"><strong>Tax profile needs attention.</strong> {{ health.tax_issue }}</div>
+    {% endif %}
+
+    <div class="summary-grid">
+        <div class="summary-card"><span class="summary-label">Centre UID</span><span class="summary-value">{{ user.centre_uid or master.centre_uid or '-' }}</span></div>
+        <div class="summary-card"><span class="summary-label">AVPL Approval</span><span class="summary-value">{{ (user.approval_status or 'approved')|replace('_',' ')|title }}</span></div>
+        <div class="summary-card">
+            <span class="summary-label">Profile Readiness</span><span class="summary-value">{{ health.percent }}%</span>
+            <div class="progress"><span style="width:{{ health.percent }}%"></span></div>
+        </div>
+    </div>
+
+    {% if health.missing %}
+        <div class="status-banner warning"><strong>Complete / correct:</strong> {{ health.missing|join(', ') }}.</div>
+    {% endif %}
+
+    <div class="section">
+        <div class="section-head"><h3>Business Details</h3><span class="section-note">Approved profile</span></div>
+        <div class="detail-grid">
+            <div class="detail"><span class="detail-label">Enterprise Name</span><span class="detail-value">{{ master.name_of_enterprise or user.name or '-' }}</span></div>
+            <div class="detail"><span class="detail-label">Owner Name</span><span class="detail-value">{{ master.name_of_owner or '-' }}</span></div>
+            <div class="detail"><span class="detail-label">Owner Date of Birth</span><span class="detail-value">{{ master.owner_dob or '-' }}</span></div>
+            <div class="detail"><span class="detail-label">Owner Age</span><span class="detail-value">{{ master.owner_age or '-' }}</span></div>
+            <div class="detail"><span class="detail-label">Phone</span><span class="detail-value">{{ user.phone or master.contact_no or '-' }}</span></div>
+            <div class="detail"><span class="detail-label">Email</span><span class="detail-value">{{ master.email or user.email or '-' }}</span></div>
+            <div class="detail full"><span class="detail-label">Centre Address</span><span class="detail-value">{{ master.address or '' }}{% if master.address %}, {% endif %}{{ master.village or user.village or '' }}{% if master.block or user.block %}, {{ master.block or user.block }}{% endif %}{% if master.district or user.district %}, {{ master.district or user.district }}{% endif %}{% if master.state or user.state %}, {{ master.state or user.state }}{% endif %}{% if master.postal_code %} - {{ master.postal_code }}{% endif %}</span></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-head"><h3>Tax & Compliance</h3><span class="section-note">Used by sales and invoice workflows</span></div>
+        <div class="tax-card">
+            <div class="tax-row">
+                <div class="detail"><span class="detail-label">PAN</span><span class="detail-value">{{ master.pan_number or '-' }}</span></div>
+                <div class="detail">
+                    <span class="detail-label">GST Registration</span>
+                    <span class="detail-value">
+                        {% if health.gst_registered %}<span class="badge good">Registered</span>{% else %}<span class="badge muted">Not Registered</span>{% endif %}
+                    </span>
+                </div>
+                <div class="detail">
+                    <span class="detail-label">GSTIN</span>
+                    <span class="detail-value">{{ health.gstin or '-' }}
+                        {% if health.gstin %}
+                            {% if health.gstin_valid %}<span class="badge good">Format OK</span>{% else %}<span class="badge warn">Needs Correction</span>{% endif %}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% if health.tax_issue %}<div class="tax-warning">{{ health.tax_issue }} Use <strong>Edit Business Profile</strong> to correct it. GST is not charged from an invalid Centre tax profile.</div>{% endif %}
+            <div class="detail-grid" style="margin-top:12px">
+                <div class="detail"><span class="detail-label">Trader License</span><span class="detail-value">{{ master.trader_license_number or '-' }}</span></div>
+                <div class="detail"><span class="detail-label">Other Licenses</span><span class="detail-value">{{ master.other_licenses or '-' }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-head"><h3>Compliance Documents</h3><span class="section-note">Actions appear only when the real file exists</span></div>
+        <div class="docs">
+            {% for field in ['registration_certificate','pan_file','gst_file','trader_license_file','other_license_file'] %}
+                {% set d = documents.get(field) %}
+                {% set gst_not_required = field == 'gst_file' and not health.gst_registered %}
+                <div class="doc-row">
+                    <div>
+                        <span class="doc-name">{{ d.label }}</span>
+                        <span class="doc-sub">
+                            {% if field in ['registration_certificate','pan_file'] %}Required{% elif field == 'gst_file' %}Required only for GST-registered Centre{% else %}Optional{% endif %}
+                        </span>
+                    </div>
+                    <div>
+                        {% if gst_not_required %}<span class="badge muted">Not Required</span>
+                        {% elif d.exists %}<span class="badge good">Available</span>
+                        {% elif d.missing_file %}<span class="badge warn">File Missing</span>
+                        {% else %}<span class="badge warn">Not Uploaded</span>{% endif %}
+                    </div>
+                    <div class="doc-actions">
+                        {% if d.exists %}
+                            <a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">View</a>
+                            <a href="{{ url_for('documents.serve', filename=d.filename, download=1) }}">Download</a>
+                        {% elif not gst_not_required %}
+                            <span class="missing">Re-upload required</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-head"><h3>Account</h3></div>
+        <div class="account-strip">
+            <div class="account-item"><span>Username</span><strong>{{ user.username or '-' }}</strong></div>
+            <div class="account-item"><span>Role</span><strong>{{ (user.role or 'ufc_admin')|replace('_',' ')|title }}</strong></div>
+            <div class="account-item"><span>Last Login</span><strong>{{ user.last_login or '-' }}</strong></div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

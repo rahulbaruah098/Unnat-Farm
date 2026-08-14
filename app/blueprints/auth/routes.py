@@ -11,21 +11,21 @@ from app.utils.helpers import now_utc
 from app.services.user_service import get_user_for_login, update_last_login, create_farmer_registration, complete_ufc_admin_profile, complete_ufc_mitra_profile
 from app.services.mapping_service import validate_farmer_mapping
 from app.services.document_service import store_document
+from app.services.ufc_profile_service import (
+    get_ufc_profile_documents,
+    normalize_gstin,
+    normalize_pan,
+    normalize_pin,
+    parse_bool as parse_profile_bool,
+)
 from app.services.location_service import list_states, list_districts, list_blocks, list_villages
 
 auth_bp = Blueprint('auth', __name__)
 
 GSTIN_FORMAT = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
 
-def _normalize_optional_gstin(value):
-    # Blank means non-GST for UnnatFarm. A supplied GSTIN must pass the
-    # standard 15-character structure before tax invoice calculation.
-    gstin = "".join(str(value or "").split()).upper()
-    if not gstin:
-        return "", False
-    if not GSTIN_FORMAT.fullmatch(gstin):
-        raise ValueError("Enter a valid 15-character GSTIN, or leave GSTIN blank if this UFC is not GST-registered.")
-    return gstin, True
+def _normalize_optional_gstin(value, registered=None, pan="", state=""):
+    return normalize_gstin(value, registered=registered, pan=pan, state=state)
 
 
 
@@ -1007,30 +1007,10 @@ def complete_ufc_admin():
         )
 
     def _existing_ufc_admin_documents(user_id, master):
-        master_id = master.get('_id') if master else None
-
-        doc_map = {
-            'registration_certificate': 'Registration Certificate',
-            'pan_file': 'PAN',
-            'gst_file': 'GST',
-            'trader_license_file': 'Trader License',
-            'other_license_file': 'Other Licenses',
-        }
-
-        result = {}
-
-        for field, label in doc_map.items():
-            doc = _latest_ufc_admin_doc(user_id, master_id, label)
-
-            result[field] = {
-                'label': label,
-                'name': _doc_name(doc),
-                'path': _doc_value(doc),
-                'url': _doc_value(doc),
-                'exists': bool(_doc_value(doc)),
-            }
-
-        return result
+        # Stage 8+ profile hardening: a database row is not enough.
+        # A document is considered available only when the underlying file
+        # can actually be resolved in the configured/legacy upload folders.
+        return get_ufc_profile_documents(user_id, master or {})
 
     if is_app:
         user_id = (
@@ -1086,6 +1066,9 @@ def complete_ufc_admin():
                 'pan_number': master.get('pan_number') or '',
                 'gst_number': master.get('gst_number') or '',
                 'gst_registered': bool(master.get('gst_registered')),
+                'address': master.get('address') or '',
+                'postal_code': master.get('postal_code') or '',
+                'email': master.get('email') or user.get('email') or '',
                 'trader_license_number': master.get('trader_license_number') or '',
                 'other_licenses': master.get('other_licenses') or '',
                 'approval_status': user.get('approval_status') or 'pending_profile',
@@ -1121,7 +1104,11 @@ def complete_ufc_admin():
                 'block': (data.get('block') or user.get('block') or '').strip(),
                 'village': (data.get('village') or user.get('village') or '').strip(),
                 'pan_number': (data.get('pan_number') or '').strip(),
+                'gst_registered': data.get('gst_registered'),
                 'gst_number': (data.get('gst_number') or '').strip(),
+                'address': (data.get('address') or '').strip(),
+                'postal_code': (data.get('postal_code') or '').strip(),
+                'email': (data.get('email') or '').strip(),
                 'trader_license_number': (data.get('trader_license_number') or '').strip(),
                 'other_licenses': (data.get('other_licenses') or '').strip(),
             }
@@ -1139,13 +1126,24 @@ def complete_ufc_admin():
                 'block': request.form.get('block', '').strip() or user.get('block', ''),
                 'village': request.form.get('village', '').strip() or user.get('village', ''),
                 'pan_number': request.form.get('pan_number', '').strip(),
+                'gst_registered': request.form.get('gst_registered'),
                 'gst_number': request.form.get('gst_number', '').strip(),
+                'address': request.form.get('address', '').strip(),
+                'postal_code': request.form.get('postal_code', '').strip(),
+                'email': request.form.get('email', '').strip(),
                 'trader_license_number': request.form.get('trader_license_number', '').strip(),
                 'other_licenses': request.form.get('other_licenses', '').strip(),
             }
 
         try:
-            form['gst_number'], form['gst_registered'] = _normalize_optional_gstin(form.get('gst_number'))
+            form['pan_number'] = normalize_pan(form.get('pan_number'), required=True)
+            form['postal_code'] = normalize_pin(form.get('postal_code'))
+            form['gst_number'], form['gst_registered'] = _normalize_optional_gstin(
+                form.get('gst_number'),
+                registered=form.get('gst_registered'),
+                pan=form.get('pan_number'),
+                state=form.get('state'),
+            )
         except ValueError as exc:
             return jsonify({'ok': False, 'message': str(exc)}), 400
 
@@ -1241,6 +1239,11 @@ def complete_ufc_admin():
         flash('User not found. Please login again.', 'danger')
         return redirect(url_for('auth.logout'))
 
+    if str(user.get('approval_status') or '').strip().lower() == 'approved':
+        # Approved Centres use the safe update-request flow so current tax and
+        # business data remain active until AVPL reviews the requested change.
+        return redirect(url_for('modules.edit_ufc_admin_business_profile'))
+
     master = mongo.db.ufc_admin_master.find_one({'linked_user_id': session['user_id']}) or {}
     latest_validation = _latest_validation_for_user(session['user_id'], 'ufc_admin_profile') or {}
 
@@ -1266,13 +1269,24 @@ def complete_ufc_admin():
     'block': request.form.get('block', '').strip() or user.get('block', ''),
     'village': request.form.get('village', '').strip() or user.get('village', ''),
     'pan_number': request.form.get('pan_number', '').strip(),
+    'gst_registered': request.form.get('gst_registered'),
     'gst_number': request.form.get('gst_number', '').strip(),
+    'address': request.form.get('address', '').strip(),
+    'postal_code': request.form.get('postal_code', '').strip(),
+    'email': request.form.get('email', '').strip(),
     'trader_license_number': request.form.get('trader_license_number', '').strip(),
     'other_licenses': request.form.get('other_licenses', '').strip(),
 }
 
         try:
-            form['gst_number'], form['gst_registered'] = _normalize_optional_gstin(form.get('gst_number'))
+            form['pan_number'] = normalize_pan(form.get('pan_number'), required=True)
+            form['postal_code'] = normalize_pin(form.get('postal_code'))
+            form['gst_number'], form['gst_registered'] = _normalize_optional_gstin(
+                form.get('gst_number'),
+                registered=form.get('gst_registered'),
+                pan=form.get('pan_number'),
+                state=form.get('state'),
+            )
         except ValueError as exc:
             flash(str(exc), 'danger')
             master = {**master, **form}
@@ -1281,20 +1295,91 @@ def complete_ufc_admin():
                 user=user,
                 states=states,
                 master=master,
+                existing_documents=_existing_ufc_admin_documents(session['user_id'], master),
                 rejection_reason=rejection_reason,
                 latest_validation=latest_validation
             )
         
+        if not form['name_of_enterprise'] or not form['name_of_owner']:
+            flash('Enterprise name and owner name are required.', 'danger')
+            master = {**master, **form}
+            return render_template(
+                'auth/complete_ufc_admin_profile.html',
+                user=user,
+                states=states,
+                master=master,
+                existing_documents=_existing_ufc_admin_documents(session['user_id'], master),
+                rejection_reason=rejection_reason,
+                latest_validation=latest_validation
+            )
+
         if not form['owner_dob'] or not form['owner_age']:
             flash('Please enter a valid Owner Date of Birth.', 'danger')
             return render_template(
-        'auth/complete_ufc_admin_profile.html',
-        user=user,
-        states=states,
-        master=master,
-        rejection_reason=rejection_reason,
-        latest_validation=latest_validation
-    )
+                'auth/complete_ufc_admin_profile.html',
+                user=user,
+                states=states,
+                master=master,
+                existing_documents=_existing_ufc_admin_documents(session['user_id'], master),
+                rejection_reason=rejection_reason,
+                latest_validation=latest_validation
+            )
+
+        existing_documents = _existing_ufc_admin_documents(session['user_id'], master)
+        selected_files = {
+            field: request.files.get(field)
+            for field in [
+                'registration_certificate', 'pan_file', 'gst_file',
+                'trader_license_file', 'other_license_file'
+            ]
+        }
+        for field, file_storage in selected_files.items():
+            if not file_storage or not file_storage.filename:
+                continue
+            extension = file_storage.filename.rsplit('.', 1)[-1].lower() if '.' in file_storage.filename else ''
+            if extension not in {'pdf', 'jpg', 'jpeg', 'png', 'webp'}:
+                flash('Only PDF, JPG, PNG or WEBP documents are allowed.', 'danger')
+                master = {**master, **form}
+                return render_template(
+                    'auth/complete_ufc_admin_profile.html',
+                    user=user, states=states, master=master, existing_documents=existing_documents,
+                    rejection_reason=rejection_reason, latest_validation=latest_validation
+                )
+            try:
+                file_storage.seek(0, 2)
+                size = file_storage.tell()
+                file_storage.seek(0)
+            except Exception:
+                size = 0
+            if size > 5 * 1024 * 1024:
+                flash('Each document must be 5 MB or smaller.', 'danger')
+                master = {**master, **form}
+                return render_template(
+                    'auth/complete_ufc_admin_profile.html',
+                    user=user, states=states, master=master, existing_documents=existing_documents,
+                    rejection_reason=rejection_reason, latest_validation=latest_validation
+                )
+
+        missing_documents = []
+        if not existing_documents.get('registration_certificate', {}).get('exists') and not (selected_files['registration_certificate'] and selected_files['registration_certificate'].filename):
+            missing_documents.append('Registration Certificate')
+        if not existing_documents.get('pan_file', {}).get('exists') and not (selected_files['pan_file'] and selected_files['pan_file'].filename):
+            missing_documents.append('PAN document')
+        if form.get('gst_registered') and not existing_documents.get('gst_file', {}).get('exists') and not (selected_files['gst_file'] and selected_files['gst_file'].filename):
+            missing_documents.append('GST Registration document')
+
+        if missing_documents:
+            flash('Please upload the missing required document(s): ' + ', '.join(missing_documents) + '.', 'danger')
+            master = {**master, **form}
+            return render_template(
+                'auth/complete_ufc_admin_profile.html',
+                user=user,
+                states=states,
+                master=master,
+                existing_documents=existing_documents,
+                rejection_reason=rejection_reason,
+                latest_validation=latest_validation
+            )
 
         master_id = complete_ufc_admin_profile(session['user_id'], form)
 
@@ -1358,6 +1443,7 @@ def complete_ufc_admin():
         user=user,
         states=states,
         master=master,
+        existing_documents=_existing_ufc_admin_documents(session['user_id'], master),
         rejection_reason=rejection_reason,
         latest_validation=latest_validation
     )
