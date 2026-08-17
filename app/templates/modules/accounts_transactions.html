@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.accounts-shell{width:100%;display:grid;gap:20px;font-family:"Times New Roman",Georgia,serif;color:#17252A}.accounts-card{background:rgba(255,255,255,.94);border:1px solid rgba(220,238,226,.95);border-radius:24px;padding:24px;box-shadow:0 18px 45px rgba(23,37,42,.08)}.page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}.page-head h2{margin:0;font-size:clamp(1.55rem,2.2vw,2rem)}.page-head p{margin:8px 0 0;color:#64748B;font-weight:600}.flow-note{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;background:#F0F9F3;border:1px solid #D6ECDD;color:#2F6E46;font-weight:800}.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:20px}.summary-card{border:1px solid #DCEEE2;border-radius:18px;padding:17px;background:linear-gradient(180deg,#fff,#F8FCF9)}.summary-card span{display:block;color:#64748B;font-weight:700;font-size:.92rem}.summary-card strong{display:block;margin-top:10px;font-size:1.6rem;color:#27364A}.summary-card small{display:block;margin-top:5px;color:#7A8A9A}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tab{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid #D5E9DC;background:#F8FCF9;color:#3B6F4D;text-decoration:none;font-weight:800}.tab.active{background:#4E9A68;color:#fff;border-color:#4E9A68}.tab .count{font-size:.78rem;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.22)}.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.entries{display:flex;flex-direction:column;gap:6px;color:#536273;font-weight:700}.entries select{min-width:96px;height:40px;border:1px solid #CFE5D6;border-radius:11px;padding:0 10px;background:#fff}.search-form{display:flex;gap:8px;flex-wrap:wrap}.search-form input{width:min(340px,72vw);height:42px;border:1px solid #CFE5D6;border-radius:13px;padding:0 13px;outline:none}.search-form input:focus{border-color:#5FA878;box-shadow:0 0 0 3px rgba(95,168,120,.12)}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 14px;border-radius:999px;border:0;text-decoration:none;font-weight:800;cursor:pointer}.btn-primary{background:#5FA878;color:#fff}.btn-soft{background:#EFF8F2;color:#32704A;border:1px solid #D4E9DB}.btn-danger-soft{background:#FFF1F1;color:#B54242}.table-info{margin:10px 0;padding:9px 13px;border-radius:12px;background:#F2FAF4;border:1px solid #DCEEE2;color:#3A7450;font-weight:700}.table-wrap{overflow-x:auto;border:1px solid #DCEEE2;border-radius:18px;background:#fff}.data-table{width:100%;min-width:1350px;border-collapse:collapse}.data-table th,.data-table td{padding:13px 12px;border-bottom:1px solid #E7F0EA;border-right:1px solid #EDF4EF;text-align:left;vertical-align:middle}.data-table th{background:#E8F6EC;color:#24333C;font-weight:800;white-space:nowrap}.data-table th:last-child,.data-table td:last-child{border-right:0}.data-table tr:last-child td{border-bottom:0}.money{font-weight:900;color:#25384A}.direction{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;font-size:.83rem;font-weight:900}.direction.out{background:#FFF1F1;color:#A43E3E}.direction.in{background:#ECF9F0;color:#2D7647}.badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:.8rem;font-weight:900;background:#EFF3F6;color:#526274}.badge.paid,.badge.completed{background:#EAF8EE;color:#287246}.badge.partially_paid{background:#FFF7DF;color:#946C16}.badge.unpaid{background:#FFF0F0;color:#A53D3D}.badge.reversed{background:#F3F0F8;color:#725493}.actions{display:flex;gap:6px;flex-wrap:wrap}.action-link{display:inline-flex;align-items:center;padding:6px 9px;border-radius:9px;border:1px solid #D5E9DC;background:#F7FBF8;color:#34734A;text-decoration:none;font-weight:800;font-size:.84rem;white-space:nowrap}.action-link:hover{background:#4E9A68;color:#fff;border-color:#4E9A68}.empty{padding:28px!important;text-align:center!important;color:#718096}.pagination{display:flex;justify-content:flex-end;gap:7px;margin-top:14px;flex-wrap:wrap}.page-button{min-width:38px;height:38px;border:1px solid #CFE5D6;border-radius:10px;background:#F7FBF8;color:#39734D;font-weight:800;cursor:pointer}.page-button.active{background:#4E9A68;color:#fff}.page-button:disabled{opacity:.4;cursor:not-allowed}@media(max-width:1050px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.accounts-card{padding:17px;border-radius:18px}.summary-grid{grid-template-columns:1fr}.search-form,.search-form input,.search-form .btn{width:100%}.toolbar{align-items:stretch}.entries select{width:100%}.pagination{justify-content:center}}
+</style>
+
+<div class="accounts-shell">
+    <section class="accounts-card">
+        <div class="page-head">
+            <div>
+                <h2>Transactions</h2>
+                <p>Actual payment movements between AVPL, Suppliers and UFC Centres.</p>
+            </div>
+            <div class="flow-note">Supplier → AVPL → UFC</div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card"><span>Paid to Suppliers</span><strong>₹{{ overview.summary.supplier_paid }}</strong><small>Completed supplier payments</small></div>
+            <div class="summary-card"><span>Received from UFCs</span><strong>₹{{ overview.summary.ufc_received }}</strong><small>Completed UFC payments</small></div>
+            <div class="summary-card"><span>Supplier Outstanding</span><strong>₹{{ overview.summary.supplier_outstanding }}</strong><small>Posted supplier invoices</small></div>
+            <div class="summary-card"><span>UFC Outstanding</span><strong>₹{{ overview.summary.ufc_receivable }}</strong><small>Issued AVPL sales invoices</small></div>
+        </div>
+    </section>
+
+    <section class="accounts-card">
+        <div class="tabs">
+            <a class="tab {% if overview.selected_segment == 'all' %}active{% endif %}" href="{{ url_for('modules.transactions', segment='all', q=overview.query) }}">All <span class="count">{{ overview.counts.all }}</span></a>
+            <a class="tab {% if overview.selected_segment == 'supplier' %}active{% endif %}" href="{{ url_for('modules.transactions', segment='supplier', q=overview.query) }}">Supplier Transactions <span class="count">{{ overview.counts.supplier }}</span></a>
+            <a class="tab {% if overview.selected_segment == 'ufc' %}active{% endif %}" href="{{ url_for('modules.transactions', segment='ufc', q=overview.query) }}">UFC Transactions <span class="count">{{ overview.counts.ufc }}</span></a>
+        </div>
+
+        <div class="toolbar">
+            <label class="entries">Show entries
+                <select id="accountsRowsPerPage"><option>25</option><option>50</option><option>100</option></select>
+            </label>
+            <form class="search-form" method="get">
+                <input type="hidden" name="segment" value="{{ overview.selected_segment }}">
+                <input type="text" name="q" value="{{ overview.query }}" placeholder="Search payment, supplier/UFC, order or invoice">
+                <button class="btn btn-primary" type="submit">Search</button>
+                {% if overview.query %}<a class="btn btn-danger-soft" href="{{ url_for('modules.transactions', segment=overview.selected_segment) }}">Clear</a>{% endif %}
+            </form>
+        </div>
+
+        <div class="table-info" id="accountsTransactionInfo"></div>
+        <div class="table-wrap">
+            <table class="data-table" id="accountsTransactionTable">
+                <thead><tr><th>Date</th><th>Flow</th><th>Payment No.</th><th>Supplier / UFC</th><th>Order</th><th>Invoice</th><th>Invoice Amount</th><th>Paid / Received</th><th>Mode</th><th>Settlement</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for row in overview.rows %}
+                    <tr>
+                        <td>{{ row.date or '-' }}</td>
+                        <td><span class="direction {{ row.direction }}">{{ row.direction_label }}</span></td>
+                        <td><strong>{{ row.payment_number or '-' }}</strong>{% if row.status == 'reversed' %}<br><span class="badge reversed">Reversed</span>{% endif %}</td>
+                        <td>{{ row.party_name }}{% if row.centre_uid %}<br><small>{{ row.centre_uid }}</small>{% endif %}</td>
+                        <td>{{ row.order_number or '-' }}</td>
+                        <td>{{ row.invoice_number or '-' }}</td>
+                        <td class="money">₹{{ row.invoice_total }}</td>
+                        <td class="money">₹{{ row.amount }}</td>
+                        <td>{{ row.payment_mode or '-' }}{% if row.reference %}<br><small>{{ row.reference }}</small>{% endif %}</td>
+                        <td><span class="badge {{ row.settlement_status }}">{{ row.settlement_status_label }}</span>{% if row.outstanding != '0.00' %}<br><small>Due ₹{{ row.outstanding }}</small>{% endif %}</td>
+                        <td>
+                            <div class="actions">
+                                {% if row.source_type == 'supplier_invoice' and row.invoice_id %}<a class="action-link" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=row.invoice_id) }}">Invoice</a>{% elif row.source_type == 'avpl_ufc_invoice' and row.invoice_id %}<a class="action-link" target="_blank" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=row.invoice_id) }}">Invoice</a>{% endif %}
+                                <a class="action-link" target="_blank" href="{{ url_for('admin.payment_receipt_print', payment_id=row.id) }}">Receipt</a>
+                                {% if row.source_type == 'supplier_invoice' and row.order_id %}<a class="action-link" href="{{ url_for('admin.purchase_order_detail', order_id=row.order_id) }}">PO</a>{% elif row.source_type == 'avpl_ufc_invoice' and row.order_id %}<a class="action-link" href="{{ url_for('admin.ufc_order_request_detail', order_id=row.order_id) }}">Order</a>{% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td class="empty" colspan="11">No AVPL account transactions found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination" id="accountsTransactionPagination"></div>
+    </section>
+</div>
+
+<script>
+(function(){
+    const table=document.getElementById('accountsTransactionTable');
+    const select=document.getElementById('accountsRowsPerPage');
+    const info=document.getElementById('accountsTransactionInfo');
+    const pager=document.getElementById('accountsTransactionPagination');
+    if(!table||!select||!info||!pager)return;
+    const rows=[...table.querySelectorAll('tbody tr')].filter(r=>!r.querySelector('td[colspan]'));
+    let page=1;
+    function render(){
+        const size=parseInt(select.value||25,10), total=rows.length, pages=Math.max(Math.ceil(total/size),1); page=Math.min(page,pages);
+        rows.forEach((r,i)=>r.style.display=(i>=(page-1)*size&&i<page*size)?'':'none');
+        info.textContent=total?`Showing ${(page-1)*size+1} to ${Math.min(page*size,total)} of ${total} transactions`:'No records found';
+        pager.innerHTML='';
+        if(total<=size)return;
+        const add=(label,target,disabled,active)=>{const b=document.createElement('button');b.type='button';b.className='page-button'+(active?' active':'');b.textContent=label;b.disabled=disabled;b.onclick=()=>{page=target;render()};pager.appendChild(b)};
+        add('‹',page-1,page===1,false);
+        for(let i=1;i<=pages;i++){if(pages<=7||i===1||i===pages||Math.abs(i-page)<=1)add(String(i),i,false,i===page)}
+        add('›',page+1,page===pages,false);
+    }
+    select.addEventListener('change',()=>{page=1;render()}); render();
+})();
+</script>
+{% endblock %}

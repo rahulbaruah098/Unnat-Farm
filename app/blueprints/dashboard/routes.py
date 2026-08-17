@@ -12,6 +12,7 @@ from app.services.dashboard_service import (
     get_farmer_dashboard,
 )
 from app.services.ufc_farmer_marketplace_service import get_farmer_marketplace
+from app.services.avpl_accounts_operations_service import get_accounts_dashboard_overview
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -629,7 +630,29 @@ def home():
 
     if role == "accounts":
         product_summary, farmer_products = get_farmer_product_dashboard()
-        return render_template("dashboard/accounts.html", stats=get_system_overview(), product_summary=product_summary, farmer_products=farmer_products)
+        try:
+            accounts_overview = get_accounts_dashboard_overview(session.get("user_id"))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            current_app.logger.warning("Accounts dashboard financial overview unavailable: %s", exc)
+            accounts_overview = {
+                "supplier_purchase_value": "0.00",
+                "ufc_sales_value": "0.00",
+                "supplier_outstanding": "0.00",
+                "ufc_receivable": "0.00",
+                "cost_of_goods_sold": "0.00",
+                "gross_margin": "0.00",
+                "gross_margin_percent": "0.00",
+                "supplier_order_count": 0,
+                "ufc_order_count": 0,
+                "transaction_count": 0,
+            }
+        return render_template(
+            "dashboard/accounts.html",
+            stats=get_system_overview(),
+            accounts_overview=accounts_overview,
+            product_summary=product_summary,
+            farmer_products=farmer_products,
+        )
 
     if role == "sales_nelocals":
         product_summary, farmer_products = get_farmer_product_dashboard()

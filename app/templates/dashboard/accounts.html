@@ -81,7 +81,7 @@
 
     .stat-grid{
         display:grid;
-        grid-template-columns:repeat(3, minmax(0, 1fr));
+        grid-template-columns:repeat(5, minmax(0, 1fr));
         gap:18px;
         margin-bottom:26px;
     }
@@ -441,7 +441,7 @@
         }
 
         .stat-grid{
-            grid-template-columns:repeat(3, minmax(0, 1fr));
+            grid-template-columns:repeat(2, minmax(0, 1fr));
             gap:12px;
         }
 
@@ -560,7 +560,7 @@
 
     @media(max-width:520px){
         .stat-grid{
-            grid-template-columns:repeat(3, minmax(0, 1fr));
+            grid-template-columns:1fr;
             gap:8px;
         }
 
@@ -628,25 +628,35 @@
                 <div class="title-content">
                     <span class="page-kicker">Accounts Overview</span>
                     <h2>Accounts Dashboard</h2>
-                    <p>Monitor products, orders, transactions, and farmer-wise product availability.</p>
+                    <p>Monitor AVPL purchases, UFC sales, outstanding balances, margin, and farmer-wise product availability.</p>
                 </div>
             </div>
         </div>
 
         <div class="stat-grid">
             <div class="stat">
-                <span>Products</span>
-                <strong>{{ stats.total_products }}</strong>
+                <span>Supplier Purchases</span>
+                <strong>₹{{ accounts_overview.supplier_purchase_value }}</strong>
             </div>
 
             <div class="stat">
-                <span>Orders</span>
-                <strong>{{ stats.total_orders }}</strong>
+                <span>UFC Sales</span>
+                <strong>₹{{ accounts_overview.ufc_sales_value }}</strong>
             </div>
 
             <div class="stat">
-                <span>Transactions</span>
-                <strong>{{ stats.total_transactions }}</strong>
+                <span>Supplier Outstanding</span>
+                <strong>₹{{ accounts_overview.supplier_outstanding }}</strong>
+            </div>
+
+            <div class="stat">
+                <span>UFC Receivable</span>
+                <strong>₹{{ accounts_overview.ufc_receivable }}</strong>
+            </div>
+
+            <div class="stat">
+                <span>Gross Margin</span>
+                <strong>₹{{ accounts_overview.gross_margin }}</strong>
             </div>
         </div>
     </div>

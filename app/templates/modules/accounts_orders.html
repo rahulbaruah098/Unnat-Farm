@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.accounts-shell{width:100%;display:grid;gap:20px;font-family:"Times New Roman",Georgia,serif;color:#17252A}.accounts-card{background:rgba(255,255,255,.94);border:1px solid rgba(220,238,226,.95);border-radius:24px;padding:24px;box-shadow:0 18px 45px rgba(23,37,42,.08)}.page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}.page-head h2{margin:0;font-size:clamp(1.55rem,2.2vw,2rem)}.page-head p{margin:8px 0 0;color:#64748B;font-weight:600}.flow-note{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;background:#F0F9F3;border:1px solid #D6ECDD;color:#2F6E46;font-weight:800}.summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px;max-width:760px}.summary-card{border:1px solid #DCEEE2;border-radius:18px;padding:17px;background:linear-gradient(180deg,#fff,#F8FCF9)}.summary-card span{display:block;color:#64748B;font-weight:700}.summary-card strong{display:block;margin-top:8px;font-size:1.7rem;color:#27364A}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tab{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid #D5E9DC;background:#F8FCF9;color:#3B6F4D;text-decoration:none;font-weight:800}.tab.active{background:#4E9A68;color:#fff;border-color:#4E9A68}.tab .count{font-size:.78rem;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.22)}.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.entries{display:flex;flex-direction:column;gap:6px;color:#536273;font-weight:700}.entries select{min-width:96px;height:40px;border:1px solid #CFE5D6;border-radius:11px;padding:0 10px;background:#fff}.search-form{display:flex;gap:8px;flex-wrap:wrap}.search-form input{width:min(340px,72vw);height:42px;border:1px solid #CFE5D6;border-radius:13px;padding:0 13px;outline:none}.search-form input:focus{border-color:#5FA878;box-shadow:0 0 0 3px rgba(95,168,120,.12)}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 14px;border-radius:999px;border:0;text-decoration:none;font-weight:800;cursor:pointer}.btn-primary{background:#5FA878;color:#fff}.btn-danger-soft{background:#FFF1F1;color:#B54242}.table-info{margin:10px 0;padding:9px 13px;border-radius:12px;background:#F2FAF4;border:1px solid #DCEEE2;color:#3A7450;font-weight:700}.table-wrap{overflow-x:auto;border:1px solid #DCEEE2;border-radius:18px;background:#fff}.data-table{width:100%;min-width:1250px;border-collapse:collapse}.data-table th,.data-table td{padding:13px 12px;border-bottom:1px solid #E7F0EA;border-right:1px solid #EDF4EF;text-align:left;vertical-align:middle}.data-table th{background:#E8F6EC;color:#24333C;font-weight:800;white-space:nowrap}.data-table th:last-child,.data-table td:last-child{border-right:0}.data-table tr:last-child td{border-bottom:0}.money{font-weight:900;color:#25384A}.badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:.8rem;font-weight:900;background:#EFF3F6;color:#526274}.badge.paid,.badge.fully_received,.badge.received,.badge.dispatched{background:#EAF8EE;color:#287246}.badge.partially_paid,.badge.partially_received,.badge.pending_approval,.badge.approved{background:#FFF7DF;color:#946C16}.badge.unpaid,.badge.not_invoiced,.badge.not_posted,.badge.requested{background:#FFF0F0;color:#A53D3D}.badge.cancelled,.badge.rejected{background:#F1F2F4;color:#68717C}.actions{display:flex;gap:6px;flex-wrap:wrap}.action-link{display:inline-flex;align-items:center;padding:6px 9px;border-radius:9px;border:1px solid #D5E9DC;background:#F7FBF8;color:#34734A;text-decoration:none;font-weight:800;font-size:.84rem;white-space:nowrap}.action-link:hover{background:#4E9A68;color:#fff;border-color:#4E9A68}.empty{padding:28px!important;text-align:center!important;color:#718096}.pagination{display:flex;justify-content:flex-end;gap:7px;margin-top:14px;flex-wrap:wrap}.page-button{min-width:38px;height:38px;border:1px solid #CFE5D6;border-radius:10px;background:#F7FBF8;color:#39734D;font-weight:800;cursor:pointer}.page-button.active{background:#4E9A68;color:#fff}.page-button:disabled{opacity:.4;cursor:not-allowed}@media(max-width:650px){.accounts-card{padding:17px;border-radius:18px}.summary-grid{grid-template-columns:1fr}.search-form,.search-form input,.search-form .btn{width:100%}.toolbar{align-items:stretch}.entries select{width:100%}.pagination{justify-content:center}}
+</style>
+
+<div class="accounts-shell">
+    <section class="accounts-card">
+        <div class="page-head">
+            <div>
+                <h2>Procurement / Orders</h2>
+                <p>Track both purchasing from Suppliers and UFC orders placed with AVPL.</p>
+            </div>
+            <div class="flow-note">Supplier → AVPL → UFC</div>
+        </div>
+        <div class="summary-grid">
+            <div class="summary-card"><span>Supplier Orders</span><strong>{{ overview.summary.supplier_order_count }}</strong></div>
+            <div class="summary-card"><span>UFC Orders</span><strong>{{ overview.summary.ufc_order_count }}</strong></div>
+        </div>
+    </section>
+
+    <section class="accounts-card">
+        <div class="tabs">
+            <a class="tab {% if overview.selected_segment == 'supplier' %}active{% endif %}" href="{{ url_for('modules.orders', segment='supplier', q=overview.query) }}">Supplier Orders <span class="count">{{ overview.summary.supplier_order_count }}</span></a>
+            <a class="tab {% if overview.selected_segment == 'ufc' %}active{% endif %}" href="{{ url_for('modules.orders', segment='ufc', q=overview.query) }}">UFC Orders <span class="count">{{ overview.summary.ufc_order_count }}</span></a>
+        </div>
+
+        <div class="toolbar">
+            <label class="entries">Show entries
+                <select id="accountsRowsPerPage"><option>25</option><option>50</option><option>100</option></select>
+            </label>
+            <form class="search-form" method="get">
+                <input type="hidden" name="segment" value="{{ overview.selected_segment }}">
+                <input type="text" name="q" value="{{ overview.query }}" placeholder="Search supplier/UFC, order, product or invoice">
+                <button class="btn btn-primary" type="submit">Search</button>
+                {% if overview.query %}<a class="btn btn-danger-soft" href="{{ url_for('modules.orders', segment=overview.selected_segment) }}">Clear</a>{% endif %}
+            </form>
+        </div>
+
+        <div class="table-info" id="accountsOrderInfo"></div>
+        <div class="table-wrap">
+            {% if overview.selected_segment == 'supplier' %}
+            <table class="data-table" id="accountsOrderTable">
+                <thead><tr><th>Date</th><th>PO No.</th><th>Supplier</th><th>Items</th><th>Order Value</th><th>GRN</th><th>Supplier Invoice</th><th>Paid</th><th>Outstanding</th><th>Payment</th><th>Order Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for row in overview.supplier_rows %}
+                    <tr>
+                        <td>{{ row.date or '-' }}</td>
+                        <td><strong>{{ row.po_number or '-' }}</strong></td>
+                        <td>{{ row.supplier_name }}</td>
+                        <td>{{ row.item_count }}</td>
+                        <td class="money">₹{{ row.order_value }}</td>
+                        <td><span class="badge {{ row.status }}">{{ row.grn_status_label }}</span>{% if row.latest_grn_number %}<br><small>{{ row.latest_grn_number }}</small>{% endif %}</td>
+                        <td>{{ row.invoice_number or 'Not invoiced' }}</td>
+                        <td class="money">₹{{ row.paid }}</td>
+                        <td class="money">₹{{ row.outstanding }}</td>
+                        <td><span class="badge {{ row.payment_status }}">{{ row.payment_status_label }}</span></td>
+                        <td><span class="badge {{ row.status }}">{{ row.status_label }}</span></td>
+                        <td><div class="actions">
+                            <a class="action-link" href="{{ url_for('admin.purchase_order_detail', order_id=row.id) }}">View PO</a>
+                            {% if row.latest_grn_id %}<a class="action-link" href="{{ url_for('admin.goods_receipt_detail', receipt_id=row.latest_grn_id) }}">GRN</a>{% endif %}
+                            {% if row.latest_invoice_id %}<a class="action-link" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=row.latest_invoice_id) }}">Invoice</a>{% endif %}
+                            {% if row.latest_invoice_id and row.invoice_printable %}<a class="action-link" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=row.latest_invoice_id) }}">Print</a>{% endif %}
+                        </div></td>
+                    </tr>
+                {% else %}<tr><td class="empty" colspan="12">No supplier orders found.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <table class="data-table" id="accountsOrderTable">
+                <thead><tr><th>Date</th><th>Order No.</th><th>UFC Centre</th><th>Product</th><th>Qty</th><th>Order Value</th><th>Dispatch</th><th>Sales Invoice</th><th>Paid</th><th>Outstanding</th><th>Payment</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for row in overview.ufc_rows %}
+                    <tr>
+                        <td>{{ row.date or '-' }}</td>
+                        <td><strong>{{ row.order_number or '-' }}</strong></td>
+                        <td>{{ row.centre_name }}{% if row.centre_uid %}<br><small>{{ row.centre_uid }}</small>{% endif %}</td>
+                        <td>{{ row.product_name }}</td>
+                        <td>{{ row.quantity }} {{ row.unit_code }}</td>
+                        <td class="money">₹{{ row.order_value }}</td>
+                        <td><span class="badge {{ row.status }}">{{ row.dispatch_status_label }}</span></td>
+                        <td>{{ row.invoice_number or 'Not generated' }}</td>
+                        <td class="money">₹{{ row.paid }}</td>
+                        <td class="money">₹{{ row.outstanding }}</td>
+                        <td><span class="badge {{ row.payment_status }}">{{ row.payment_status_label }}</span></td>
+                        <td><span class="badge {{ row.status }}">{{ row.status_label }}</span></td>
+                        <td><div class="actions">
+                            <a class="action-link" href="{{ url_for('admin.ufc_order_request_detail', order_id=row.id) }}">View Order</a>
+                            {% if row.sale_id %}<a class="action-link" href="{{ url_for('admin.ufc_sale_detail', sale_id=row.sale_id) }}">Sale</a>{% endif %}
+                            {% if row.invoice_id %}<a class="action-link" target="_blank" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=row.invoice_id) }}">Invoice</a>{% endif %}
+                        </div></td>
+                    </tr>
+                {% else %}<tr><td class="empty" colspan="13">No UFC orders found.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        <div class="pagination" id="accountsOrderPagination"></div>
+    </section>
+</div>
+
+<script>
+(function(){
+    const table=document.getElementById('accountsOrderTable'),select=document.getElementById('accountsRowsPerPage'),info=document.getElementById('accountsOrderInfo'),pager=document.getElementById('accountsOrderPagination');
+    if(!table||!select||!info||!pager)return;
+    const rows=[...table.querySelectorAll('tbody tr')].filter(r=>!r.querySelector('td[colspan]'));let page=1;
+    function render(){const size=parseInt(select.value||25,10),total=rows.length,pages=Math.max(Math.ceil(total/size),1);page=Math.min(page,pages);rows.forEach((r,i)=>r.style.display=(i>=(page-1)*size&&i<page*size)?'':'none');info.textContent=total?`Showing ${(page-1)*size+1} to ${Math.min(page*size,total)} of ${total} orders`:'No records found';pager.innerHTML='';if(total<=size)return;const add=(label,target,disabled,active)=>{const b=document.createElement('button');b.type='button';b.className='page-button'+(active?' active':'');b.textContent=label;b.disabled=disabled;b.onclick=()=>{page=target;render()};pager.appendChild(b)};add('‹',page-1,page===1,false);for(let i=1;i<=pages;i++){if(pages<=7||i===1||i===pages||Math.abs(i-page)<=1)add(String(i),i,false,i===page)}add('›',page+1,page===pages,false)}
+    select.addEventListener('change',()=>{page=1;render()});render();
+})();
+</script>
+{% endblock %}

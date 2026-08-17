@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.accounts-shell{width:100%;display:grid;gap:20px;font-family:"Times New Roman",Georgia,serif;color:#17252A}.accounts-card{background:rgba(255,255,255,.94);border:1px solid rgba(220,238,226,.95);border-radius:24px;padding:24px;box-shadow:0 18px 45px rgba(23,37,42,.08)}.page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}.page-head h2{margin:0;font-size:clamp(1.55rem,2.2vw,2rem)}.page-head p{margin:8px 0 0;color:#64748B;font-weight:600}.flow-note{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;background:#F0F9F3;border:1px solid #D6ECDD;color:#2F6E46;font-weight:800}.summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:20px}.summary-card{border:1px solid #DCEEE2;border-radius:18px;padding:17px;background:linear-gradient(180deg,#fff,#F8FCF9)}.summary-card span{display:block;color:#64748B;font-weight:700;font-size:.92rem}.summary-card strong{display:block;margin-top:9px;font-size:1.55rem;color:#27364A}.summary-card small{display:block;margin-top:5px;color:#7A8A9A}.toolbar{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:18px}.search-form{display:flex;gap:8px;flex-wrap:wrap}.search-form input{width:min(380px,72vw);height:42px;border:1px solid #CFE5D6;border-radius:13px;padding:0 13px;outline:none}.search-form input:focus{border-color:#5FA878;box-shadow:0 0 0 3px rgba(95,168,120,.12)}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 14px;border-radius:999px;border:0;text-decoration:none;font-weight:800;cursor:pointer}.btn-primary{background:#5FA878;color:#fff}.btn-danger-soft{background:#FFF1F1;color:#B54242}.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0 0 14px;flex-wrap:wrap}.section-head h3{margin:0;font-size:1.3rem}.section-head p{margin:6px 0 0;color:#64748B;font-weight:600}.table-wrap{overflow-x:auto;border:1px solid #DCEEE2;border-radius:18px;background:#fff}.data-table{width:100%;min-width:1180px;border-collapse:collapse}.data-table th,.data-table td{padding:13px 12px;border-bottom:1px solid #E7F0EA;border-right:1px solid #EDF4EF;text-align:left;vertical-align:middle}.data-table th{background:#E8F6EC;color:#24333C;font-weight:800;white-space:nowrap}.data-table th:last-child,.data-table td:last-child{border-right:0}.data-table tr:last-child td{border-bottom:0}.money{font-weight:900;color:#25384A}.positive{color:#267044}.badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:.8rem;font-weight:900;background:#EFF3F6;color:#526274}.badge.paid,.badge.posted{background:#EAF8EE;color:#287246}.badge.partially_paid{background:#FFF7DF;color:#946C16}.badge.unpaid,.badge.not_posted{background:#FFF0F0;color:#A53D3D}.actions{display:flex;gap:6px;flex-wrap:wrap}.action-link{display:inline-flex;align-items:center;padding:6px 9px;border-radius:9px;border:1px solid #D5E9DC;background:#F7FBF8;color:#34734A;text-decoration:none;font-weight:800;font-size:.84rem;white-space:nowrap}.action-link:hover{background:#4E9A68;color:#fff;border-color:#4E9A68}.empty{padding:28px!important;text-align:center!important;color:#718096}.section-gap{height:20px}@media(max-width:1100px){.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.accounts-card{padding:17px;border-radius:18px}.summary-grid{grid-template-columns:1fr}.search-form,.search-form input,.search-form .btn{width:100%}.toolbar{justify-content:stretch}}
+</style>
+
+<div class="accounts-shell">
+    <section class="accounts-card">
+        <div class="page-head">
+            <div>
+                <h2>Purchase &amp; Sales Summary</h2>
+                <p>See how much AVPL purchases from Suppliers, sells to UFC Centres, and earns as gross margin.</p>
+            </div>
+            <div class="flow-note">Supplier → AVPL → UFC</div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card"><span>Total Supplier Purchases</span><strong>₹{{ overview.summary.supplier_purchase_value }}</strong><small>Posted supplier invoices</small></div>
+            <div class="summary-card"><span>Total UFC Sales</span><strong>₹{{ overview.summary.ufc_sales_value }}</strong><small>Issued AVPL sales invoices</small></div>
+            <div class="summary-card"><span>Cost of Goods Sold</span><strong>₹{{ overview.summary.cost_of_goods_sold }}</strong><small>WAC-based estimated COGS</small></div>
+            <div class="summary-card"><span>Gross Margin</span><strong class="positive">₹{{ overview.summary.gross_margin }}</strong><small>{{ overview.summary.gross_margin_percent }}% on taxable sales</small></div>
+            <div class="summary-card"><span>Supplier Payable</span><strong>₹{{ overview.summary.supplier_outstanding }}</strong><small>Still payable by AVPL</small></div>
+            <div class="summary-card"><span>UFC Receivable</span><strong>₹{{ overview.summary.ufc_receivable }}</strong><small>Still receivable from UFCs</small></div>
+        </div>
+    </section>
+
+    <section class="accounts-card">
+        <div class="toolbar">
+            <form class="search-form" method="get">
+                <input type="text" name="q" value="{{ overview.query }}" placeholder="Search supplier, UFC, PO/order, invoice or product">
+                <button class="btn btn-primary" type="submit">Search</button>
+                {% if overview.query %}<a class="btn btn-danger-soft" href="{{ url_for('modules.sales_details') }}">Clear</a>{% endif %}
+            </form>
+        </div>
+
+        <div class="section-head"><div><h3>Supplier Purchases</h3><p>Supplier invoices linked to AVPL purchase orders and payment status.</p></div></div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th>Date</th><th>Supplier</th><th>PO</th><th>Purchase Invoice</th><th>Purchase Value</th><th>Paid</th><th>Outstanding</th><th>Payment</th><th>Posting</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for row in overview.supplier_rows %}
+                    <tr>
+                        <td>{{ row.date or '-' }}</td>
+                        <td>{{ row.supplier_name }}</td>
+                        <td>{{ row.po_number or '-' }}</td>
+                        <td><strong>{{ row.invoice_number or '-' }}</strong></td>
+                        <td class="money">₹{{ row.purchase_value }}</td>
+                        <td class="money">₹{{ row.paid }}</td>
+                        <td class="money">₹{{ row.outstanding }}</td>
+                        <td><span class="badge {{ row.payment_status }}">{{ row.payment_status_label }}</span></td>
+                        <td><span class="badge {{ row.posting_status }}">{{ row.posting_status_label }}</span></td>
+                        <td><div class="actions">
+                            {% if row.purchase_order_id %}<a class="action-link" href="{{ url_for('admin.purchase_order_detail', order_id=row.purchase_order_id) }}">PO</a>{% endif %}
+                            <a class="action-link" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=row.id) }}">Invoice</a>
+                            {% if row.printable %}<a class="action-link" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=row.id) }}">Print</a>{% endif %}
+                        </div></td>
+                    </tr>
+                {% else %}<tr><td class="empty" colspan="10">No supplier purchase invoices found.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section-gap"></div>
+
+        <div class="section-head"><div><h3>UFC Sales</h3><p>AVPL sales to UFC Centres with invoice, COGS, margin and settlement position.</p></div></div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th>Date</th><th>UFC Centre</th><th>Order</th><th>Sales Invoice</th><th>Product</th><th>Sales Value</th><th>COGS</th><th>Gross Margin</th><th>Received</th><th>Outstanding</th><th>Payment</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for row in overview.ufc_rows %}
+                    <tr>
+                        <td>{{ row.date or '-' }}</td>
+                        <td>{{ row.centre_name }}{% if row.centre_uid %}<br><small>{{ row.centre_uid }}</small>{% endif %}</td>
+                        <td>{{ row.order_number or '-' }}</td>
+                        <td><strong>{{ row.invoice_number or '-' }}</strong></td>
+                        <td>{{ row.product_name }}</td>
+                        <td class="money">₹{{ row.sales_value }}</td>
+                        <td class="money">₹{{ row.cogs }}</td>
+                        <td class="money positive">₹{{ row.gross_margin }}<br><small>{{ row.gross_margin_percent }}%</small></td>
+                        <td class="money">₹{{ row.received }}</td>
+                        <td class="money">₹{{ row.outstanding }}</td>
+                        <td><span class="badge {{ row.payment_status }}">{{ row.payment_status_label }}</span></td>
+                        <td><div class="actions">
+                            {% if row.order_id %}<a class="action-link" href="{{ url_for('admin.ufc_order_request_detail', order_id=row.order_id) }}">Order</a>{% endif %}
+                            <a class="action-link" href="{{ url_for('admin.ufc_sale_detail', sale_id=row.id) }}">Sale</a>
+                            {% if row.invoice_id %}<a class="action-link" target="_blank" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=row.invoice_id) }}">Invoice</a>{% endif %}
+                        </div></td>
+                    </tr>
+                {% else %}<tr><td class="empty" colspan="12">No AVPL-to-UFC sales found.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

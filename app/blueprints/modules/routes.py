@@ -55,6 +55,11 @@ from app.services.payment_service import (
     record_payment as stage8_record_payment,
     reverse_payment as stage8_reverse_payment,
 )
+from app.services.avpl_accounts_operations_service import (
+    get_accounts_order_overview,
+    get_accounts_transaction_overview,
+    get_purchase_sales_summary,
+)
 from datetime import datetime
 from uuid import uuid4
 
@@ -2096,13 +2101,35 @@ def update_support_ticket(ticket_id):
 @modules_bp.route("/orders")
 @login_required
 def orders():
-    query = {}
-    if session.get("role") == "ufc_admin":
-        query["centre_uid"] = session.get("centre_uid")
-    elif session.get("role") == "ufc_mitra":
-        query["mitra_uid"] = session.get("mitra_uid")
-
+    role = str(session.get("role") or "").strip().lower()
     q = request.args.get("q", "").strip()
+
+    # Stage 1 Accounts read-model: keep the legacy /orders JSON response and
+    # non-AVPL role behaviour untouched, while Accounts/AVPL users get the
+    # unified Supplier <-> AVPL <-> UFC operational view on the web page.
+    if role in {"accounts", "avpl_admin", "super_admin"} and not wants_json_response():
+        try:
+            overview = get_accounts_order_overview(
+                session.get("user_id"),
+                segment=request.args.get("segment", "supplier"),
+                query_text=q,
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), "danger")
+            overview = {
+                "selected_segment": request.args.get("segment", "supplier"),
+                "query": q,
+                "supplier_rows": [],
+                "ufc_rows": [],
+                "summary": {"supplier_order_count": 0, "ufc_order_count": 0},
+            }
+        return render_template("modules/accounts_orders.html", overview=overview)
+
+    query = {}
+    if role == "ufc_admin":
+        query["centre_uid"] = session.get("centre_uid")
+    elif role == "ufc_mitra":
+        query["mitra_uid"] = session.get("mitra_uid")
 
     if q:
         query["$or"] = [
@@ -2168,19 +2195,45 @@ def products():
 @modules_bp.route("/transactions")
 @login_required
 def transactions():
+    role = str(session.get("role") or "").strip().lower()
+    q = request.args.get("q", "").strip()
+
+    # Stage 1 Accounts read-model. Existing JSON and UFC/Farmer/Mitra flows
+    # continue to use the legacy transactions collection exactly as before.
+    if role in {"accounts", "avpl_admin", "super_admin"} and not wants_json_response():
+        try:
+            overview = get_accounts_transaction_overview(
+                session.get("user_id"),
+                segment=request.args.get("segment", "all"),
+                query_text=q,
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), "danger")
+            overview = {
+                "rows": [],
+                "selected_segment": request.args.get("segment", "all"),
+                "query": q,
+                "summary": {
+                    "supplier_paid": "0.00",
+                    "ufc_received": "0.00",
+                    "supplier_outstanding": "0.00",
+                    "ufc_receivable": "0.00",
+                },
+                "counts": {"all": 0, "supplier": 0, "ufc": 0},
+            }
+        return render_template("modules/accounts_transactions.html", overview=overview)
+
     query = {}
 
-    if session.get("role") == "ufc_admin":
+    if role == "ufc_admin":
         query["centre_uid"] = session.get("centre_uid")
 
-    elif session.get("role") == "ufc_mitra":
+    elif role == "ufc_mitra":
         query["mitra_uid"] = session.get("mitra_uid")
 
-    elif session.get("role") == "farmer":
+    elif role == "farmer":
         user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
         query["farmer_contact"] = user.get("phone")
-
-    q = request.args.get("q", "").strip()
 
     if q:
         query["$or"] = [
@@ -3490,9 +3543,39 @@ def finance_leads():
    
 @modules_bp.route("/sales-details")
 @login_required
-@roles_required("avpl_admin", "sales_unnatfarm", "accounts")
+@roles_required("avpl_admin", "sales_unnatfarm", "accounts", "super_admin")
 def sales_details():
     q = request.args.get("q", "").strip()
+    role = str(session.get("role") or "").strip().lower()
+
+    # Accounts/AVPL users see the financial purchase-vs-sales read-model.
+    # Sales UnnatFarm keeps the existing POS sales-details workflow unchanged.
+    if role in {"accounts", "avpl_admin", "super_admin"}:
+        try:
+            overview = get_purchase_sales_summary(
+                session.get("user_id"),
+                query_text=q,
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), "danger")
+            overview = {
+                "query": q,
+                "summary": {
+                    "supplier_purchase_value": "0.00",
+                    "ufc_sales_value": "0.00",
+                    "cost_of_goods_sold": "0.00",
+                    "gross_margin": "0.00",
+                    "gross_margin_percent": "0.00",
+                    "supplier_outstanding": "0.00",
+                    "ufc_receivable": "0.00",
+                },
+                "supplier_rows": [],
+                "ufc_rows": [],
+            }
+        return render_template(
+            "modules/accounts_purchase_sales_summary.html",
+            overview=overview,
+        )
 
     sales = list(mongo.db.pos_sales.find({}).sort("created_at", -1))
 
