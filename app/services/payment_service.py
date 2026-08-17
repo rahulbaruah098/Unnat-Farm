@@ -33,6 +33,22 @@ FARMER_PAYABLE_COLLECTION = "farmer_payables"
 FARMER_PURCHASE_COLLECTION = "farmer_purchase_entries"
 UFC_FARMER_ORDER_COLLECTION = "ufc_farmer_orders"
 
+# Stage 9 — Farmer-produced output sold to external/local buyers.
+FARMER_EXTERNAL_INVOICE_COLLECTION = "farmer_external_sales_invoices"
+FARMER_EXTERNAL_SALE_COLLECTION = "farmer_external_sales"
+FARMER_EXTERNAL_RECEIVABLE_COLLECTION = "farmer_external_receivables"
+FARMER_EXTERNAL_PURCHASE_INVOICE_COLLECTION = "farmer_external_purchase_invoices"
+FARMER_EXTERNAL_PURCHASE_COLLECTION = "farmer_external_purchases"
+FARMER_EXTERNAL_PAYABLE_COLLECTION = "farmer_external_payables"
+
+# Corrected Stage 9 — Farmer Produce Marketplace (Farmer seller -> Farmer/UFC/AVPL buyer).
+FARMER_MARKET_INVOICE_COLLECTION = "farmer_marketplace_sales_invoices"
+FARMER_MARKET_SALE_COLLECTION = "farmer_marketplace_sales"
+FARMER_MARKET_RECEIVABLE_COLLECTION = "farmer_marketplace_receivables"
+FARMER_MARKET_PURCHASE_COLLECTION = "farmer_marketplace_purchase_entries"
+FARMER_MARKET_PAYABLE_COLLECTION = "farmer_marketplace_payables"
+FARMER_MARKET_ORDER_COLLECTION = "farmer_produce_marketplace_orders"
+
 MONEY_QUANTUM = Decimal("0.01")
 PAYMENT_MODES = {
     "cash": "Cash",
@@ -49,6 +65,9 @@ SOURCE_LABELS = {
     "supplier_invoice": "Supplier Payment",
     "avpl_ufc_invoice": "UFC Payment to AVPL",
     "ufc_farmer_invoice": "Farmer Payment to UFC",
+    "farmer_external_invoice": "Buyer Payment to Farmer",
+    "farmer_external_purchase_invoice": "Farmer Payment to Outside Seller",
+    "farmer_marketplace_invoice": "Farmer Produce Market Payment",
 }
 
 
@@ -148,6 +167,9 @@ def _source_invoice(source_type, invoice_id):
         "supplier_invoice": SUPPLIER_INVOICE_COLLECTION,
         "avpl_ufc_invoice": AVPL_UFC_INVOICE_COLLECTION,
         "ufc_farmer_invoice": UFC_FARMER_INVOICE_COLLECTION,
+        "farmer_external_invoice": FARMER_EXTERNAL_INVOICE_COLLECTION,
+        "farmer_external_purchase_invoice": FARMER_EXTERNAL_PURCHASE_INVOICE_COLLECTION,
+        "farmer_marketplace_invoice": FARMER_MARKET_INVOICE_COLLECTION,
     }.get(str(source_type or "").strip().lower())
     if not collection_name:
         raise ValueError("Unsupported payment source.")
@@ -192,12 +214,60 @@ def _assert_access(actor, source_type, invoice, *, write=False):
             return
         raise PermissionError("Manual Farmer payment collection must be recorded by the UFC Centre.")
 
+    if source_type == "farmer_external_invoice":
+        if role != "farmer":
+            raise PermissionError("Only the Farmer who recorded this sale can manage the buyer payment.")
+        owner_id = str(invoice.get("farmer_user_id") or invoice.get("farmer_user_id_str") or "")
+        if owner_id != str(actor.get("_id") or ""):
+            seller = invoice.get("seller") or {}
+            owner_id = str(seller.get("farmer_user_id") or seller.get("farmer_user_id_str") or "")
+        if owner_id != str(actor.get("_id") or ""):
+            raise PermissionError("This Farmer sales receipt does not belong to you.")
+        return
+
+    if source_type == "farmer_external_purchase_invoice":
+        if role != "farmer":
+            raise PermissionError("Only the Farmer who recorded this outside purchase can manage its payment.")
+        owner_id = str(invoice.get("farmer_user_id") or invoice.get("farmer_user_id_str") or "")
+        if owner_id != str(actor.get("_id") or ""):
+            buyer = invoice.get("buyer") or {}
+            owner_id = str(buyer.get("farmer_user_id") or buyer.get("farmer_user_id_str") or "")
+        if owner_id != str(actor.get("_id") or ""):
+            raise PermissionError("This outside purchase record does not belong to you.")
+        return
+
+
+    if source_type == "farmer_marketplace_invoice":
+        seller = invoice.get("seller") or {}
+        buyer = invoice.get("buyer") or {}
+        seller_id = str(invoice.get("farmer_user_id") or invoice.get("farmer_user_id_str") or seller.get("farmer_user_id") or seller.get("farmer_user_id_str") or "")
+        if role == "farmer" and seller_id == str(actor.get("_id") or ""):
+            # Seller may record cash/collection received or inspect receipts.
+            return
+        buyer_type = str(invoice.get("buyer_type") or buyer.get("type") or "")
+        buyer_key = str(invoice.get("buyer_key") or buyer.get("key") or "")
+        if buyer_type == "farmer":
+            if role == "farmer" and buyer_key == str(actor.get("_id") or ""):
+                return
+            raise PermissionError("This Farmer Produce Market invoice does not belong to you.")
+        if buyer_type == "ufc":
+            if role == "ufc_admin" and buyer_key and buyer_key == _resolve_ufc_uid(actor):
+                return
+            raise PermissionError("This Farmer Produce Market invoice does not belong to your UFC Centre.")
+        if buyer_type == "avpl":
+            if role in {"super_admin", "avpl_admin", "accounts"}:
+                return
+            raise PermissionError("Only AVPL authorized users can manage this Farmer Produce Market payment.")
+        raise PermissionError("You are not authorized for this Farmer Produce Market payment.")
+
 
 def _invoice_number(source_type, invoice):
     if source_type == "supplier_invoice":
         return invoice.get("official_purchase_invoice_number") or invoice.get("supplier_invoice_number") or invoice.get("internal_reference") or str(invoice.get("_id"))
     if source_type == "avpl_ufc_invoice":
         return invoice.get("invoice_number") or invoice.get("document_number") or str(invoice.get("_id"))
+    if source_type in {"farmer_external_invoice", "farmer_external_purchase_invoice"}:
+        return invoice.get("document_number") or invoice.get("invoice_number") or str(invoice.get("_id"))
     return invoice.get("document_number") or invoice.get("invoice_number") or str(invoice.get("_id"))
 
 
@@ -241,6 +311,34 @@ def _party_snapshot(source_type, invoice):
             "payee_key": "AVPL",
             "payee_name": (invoice.get("seller") or {}).get("legal_name") or "AVPL",
         }
+    if source_type == "farmer_external_invoice":
+        buyer = invoice.get("buyer") or {}
+        seller = invoice.get("seller") or {}
+        return {
+            "payer_key": str(buyer.get("phone") or buyer.get("centre_uid") or buyer.get("name") or f"BUYER:{invoice.get('_id')}"),
+            "payer_name": buyer.get("name") or "Buyer",
+            "payee_key": str(invoice.get("farmer_user_id") or invoice.get("farmer_user_id_str") or seller.get("farmer_user_id") or "FARMER"),
+            "payee_name": seller.get("name") or invoice.get("farmer_name") or "Farmer",
+        }
+    if source_type == "farmer_external_purchase_invoice":
+        seller = invoice.get("seller") or {}
+        buyer = invoice.get("buyer") or {}
+        farmer_id = invoice.get("farmer_user_id") or invoice.get("farmer_user_id_str") or buyer.get("farmer_user_id") or "FARMER"
+        return {
+            "payer_key": str(farmer_id),
+            "payer_name": buyer.get("name") or invoice.get("farmer_name") or "Farmer",
+            "payee_key": str(seller.get("phone") or seller.get("name") or f"OUTSIDE-SELLER:{invoice.get('_id')}"),
+            "payee_name": seller.get("name") or "Outside Seller",
+        }
+    if source_type == "farmer_marketplace_invoice":
+        buyer = invoice.get("buyer") or {}
+        seller = invoice.get("seller") or {}
+        return {
+            "payer_key": str(invoice.get("buyer_key") or buyer.get("key") or buyer.get("centre_uid") or buyer.get("user_id") or buyer.get("user_id_str") or f"BUYER:{invoice.get('_id')}"),
+            "payer_name": buyer.get("name") or "Buyer",
+            "payee_key": str(invoice.get("farmer_user_id") or invoice.get("farmer_user_id_str") or seller.get("farmer_user_id") or seller.get("farmer_user_id_str") or "FARMER"),
+            "payee_name": seller.get("name") or "Farmer",
+        }
     buyer = invoice.get("buyer") or {}
     seller = invoice.get("seller") or {}
     return {
@@ -275,6 +373,44 @@ def _sync_linked_documents(source_type, invoice, paid, outstanding, status, paym
             mongo.db[UFC_PAYABLE_COLLECTION].update_one({"avpl_ufc_order_id": order_id}, {"$set": {**common, "status": "closed" if status == "paid" else "open"}})
             mongo.db[UFC_PURCHASE_COLLECTION].update_one({"avpl_ufc_order_id": order_id}, {"$set": common})
             mongo.db[AVPL_UFC_ORDER_COLLECTION].update_one({"_id": order_id}, {"$set": common})
+        return
+
+    if source_type == "farmer_external_invoice":
+        sale_id = invoice.get("farmer_external_sale_id")
+        if sale_id:
+            mongo.db[FARMER_EXTERNAL_SALE_COLLECTION].update_one({"_id": sale_id}, {"$set": common})
+            mongo.db[FARMER_EXTERNAL_RECEIVABLE_COLLECTION].update_one(
+                {"farmer_external_sale_id": sale_id},
+                {"$set": {**common, "status": "closed" if status == "paid" else "open"}},
+            )
+        return
+
+    if source_type == "farmer_external_purchase_invoice":
+        purchase_id = invoice.get("farmer_external_purchase_id")
+        if purchase_id:
+            mongo.db[FARMER_EXTERNAL_PURCHASE_COLLECTION].update_one({"_id": purchase_id}, {"$set": common})
+            mongo.db[FARMER_EXTERNAL_PAYABLE_COLLECTION].update_one(
+                {"farmer_external_purchase_id": purchase_id},
+                {"$set": {**common, "status": "closed" if status == "paid" else "open"}},
+            )
+        return
+
+    if source_type == "farmer_marketplace_invoice":
+        order_id = invoice.get("farmer_marketplace_order_id")
+        sale_id = invoice.get("farmer_marketplace_sale_id")
+        if sale_id:
+            mongo.db[FARMER_MARKET_SALE_COLLECTION].update_one({"_id": sale_id}, {"$set": common})
+        if order_id:
+            mongo.db[FARMER_MARKET_RECEIVABLE_COLLECTION].update_one(
+                {"farmer_marketplace_order_id": order_id},
+                {"$set": {**common, "status": "closed" if status == "paid" else "open"}},
+            )
+            mongo.db[FARMER_MARKET_PAYABLE_COLLECTION].update_one(
+                {"farmer_marketplace_order_id": order_id},
+                {"$set": {**common, "status": "closed" if status == "paid" else "open"}},
+            )
+            mongo.db[FARMER_MARKET_PURCHASE_COLLECTION].update_one({"farmer_marketplace_order_id": order_id}, {"$set": common})
+            mongo.db[FARMER_MARKET_ORDER_COLLECTION].update_one({"_id": order_id}, {"$set": common})
         return
 
     order_id = invoice.get("ufc_farmer_order_id")
@@ -315,6 +451,33 @@ def _create_accounting_events(payment, invoice):
             ("avpl_receipt", "AVPL", "Receipt voucher: debit Cash/Bank/UPI/Cheque settlement ledger and reduce UFC receivable."),
             ("ufc_payment", str(invoice.get("centre_uid") or "UFC"), "UFC payment-side event linked to the same settlement."),
         ]
+    elif source_type == "farmer_external_invoice":
+        roles = [(
+            "farmer_receipt",
+            f"FARMER:{invoice.get('farmer_user_id_str') or invoice.get('farmer_user_id') or 'UNKNOWN'}",
+            "Farmer external-sale receipt event. Keep for audit/reporting; post only if Farmer accounting is enabled in a future controlled workflow.",
+        )]
+    elif source_type == "farmer_external_purchase_invoice":
+        roles = [(
+            "farmer_payment",
+            f"FARMER:{invoice.get('farmer_user_id_str') or invoice.get('farmer_user_id') or 'UNKNOWN'}",
+            "Farmer outside-purchase payment event. Keep for audit/reporting; post only if Farmer accounting is enabled in a future controlled workflow.",
+        )]
+    elif source_type == "farmer_marketplace_invoice":
+        buyer = invoice.get("buyer") or {}
+        buyer_type = invoice.get("buyer_type") or buyer.get("type") or ""
+        buyer_key = invoice.get("buyer_key") or buyer.get("key") or "BUYER"
+        roles = [(
+            "farmer_receipt",
+            f"FARMER:{invoice.get('farmer_user_id_str') or invoice.get('farmer_user_id') or 'UNKNOWN'}",
+            "Farmer Produce Market receipt event linked to the marketplace order.",
+        )]
+        if buyer_type == "ufc":
+            roles.append(("ufc_farmer_procurement_payment", str(buyer_key), "UFC payment-side event for produce purchased from a mapped Farmer."))
+        elif buyer_type == "avpl":
+            roles.append(("avpl_farmer_procurement_payment", "AVPL", "AVPL payment-side event for produce purchased from a Farmer."))
+        elif buyer_type == "farmer":
+            roles.append(("farmer_market_purchase_payment", f"FARMER:{buyer_key}", "Farmer buyer payment-side event for Farmer Produce Market purchase."))
     else:
         roles = [("ufc_receipt", str(invoice.get("centre_uid") or "UFC"), "UFC receipt-side event linked to Farmer receivable settlement.")]
     for event_role, entity_key, note in roles:
@@ -644,6 +807,24 @@ def reverse_payment(actor_user_id, payment_id, reason):
     elif source_type == "ufc_farmer_invoice":
         if role not in {"super_admin", "avpl_admin", "accounts", "ufc_admin"}:
             raise PermissionError("You are not authorized to reverse this Farmer payment.")
+    elif source_type in {"farmer_external_invoice", "farmer_external_purchase_invoice"}:
+        if role != "farmer":
+            raise PermissionError("Only the Farmer who recorded this payment can reverse it.")
+    elif source_type == "farmer_marketplace_invoice":
+        seller = invoice.get("seller") or {}
+        seller_id = str(invoice.get("farmer_user_id") or invoice.get("farmer_user_id_str") or seller.get("farmer_user_id") or "")
+        buyer = invoice.get("buyer") or {}
+        buyer_type = invoice.get("buyer_type") or buyer.get("type") or ""
+        buyer_key = str(invoice.get("buyer_key") or buyer.get("key") or "")
+        allowed = role == "farmer" and seller_id == str(actor.get("_id") or "")
+        if buyer_type == "farmer" and role == "farmer" and buyer_key == str(actor.get("_id") or ""):
+            allowed = True
+        if buyer_type == "ufc" and role == "ufc_admin" and buyer_key == _resolve_ufc_uid(actor):
+            allowed = True
+        if buyer_type == "avpl" and role in {"super_admin", "avpl_admin", "accounts"}:
+            allowed = True
+        if not allowed:
+            raise PermissionError("You are not authorized to reverse this Farmer Produce Market payment.")
     else:
         raise PermissionError("You are not authorized to reverse this payment.")
     reason = _clean(reason, 1000)
@@ -732,6 +913,34 @@ def _serialize_invoice_row(source_type, invoice):
         row.update({"party_name": invoice.get("supplier_name") or "Supplier", "reference": invoice.get("po_number") or "", "can_pay": invoice.get("payable_posted") is True and outstanding > 0})
     elif source_type == "avpl_ufc_invoice":
         row.update({"party_name": invoice.get("centre_name") or invoice.get("centre_uid") or "UFC", "reference": invoice.get("avpl_order_number") or "", "centre_uid": invoice.get("centre_uid") or "", "can_pay": outstanding > 0})
+    elif source_type == "farmer_external_invoice":
+        buyer = invoice.get("buyer") or {}
+        row.update({
+            "party_name": buyer.get("name") or "Buyer",
+            "reference": invoice.get("sale_number") or "",
+            "centre_uid": invoice.get("centre_uid") or "",
+            "can_pay": outstanding > 0,
+        })
+    elif source_type == "farmer_external_purchase_invoice":
+        seller = invoice.get("seller") or {}
+        row.update({
+            "party_name": seller.get("name") or "Outside Seller",
+            "reference": invoice.get("purchase_number") or seller.get("bill_number") or "",
+            "centre_uid": invoice.get("centre_uid") or "",
+            "can_pay": outstanding > 0,
+        })
+    elif source_type == "farmer_marketplace_invoice":
+        buyer = invoice.get("buyer") or {}
+        seller = invoice.get("seller") or {}
+        row.update({
+            "party_name": seller.get("name") or "Farmer",
+            "counterparty_name": buyer.get("name") or "Buyer",
+            "reference": invoice.get("order_number") or invoice.get("sale_number") or "",
+            "centre_uid": buyer.get("centre_uid") or invoice.get("centre_uid") or "",
+            "buyer_type": invoice.get("buyer_type") or buyer.get("type") or "",
+            "buyer_key": invoice.get("buyer_key") or buyer.get("key") or "",
+            "can_pay": outstanding > 0,
+        })
     else:
         buyer = invoice.get("buyer") or {}
         row.update({"party_name": buyer.get("name") or invoice.get("farmer_name") or "Farmer", "reference": invoice.get("order_number") or "", "centre_uid": invoice.get("centre_uid") or "", "can_pay": outstanding > 0})
@@ -762,17 +971,20 @@ def get_avpl_payment_overview(actor_user_id):
         raise PermissionError("Only AVPL authorized users can view this payment workspace.")
     supplier_rows = [_serialize_invoice_row("supplier_invoice", row) for row in mongo.db[SUPPLIER_INVOICE_COLLECTION].find({"payable_posted": True, "posting_status": "posted"}).sort("posted_at", DESCENDING).limit(100)]
     ufc_rows = [_serialize_invoice_row("avpl_ufc_invoice", row) for row in mongo.db[AVPL_UFC_INVOICE_COLLECTION].find({"status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
-    recent = _recent_payments({"$or": [{"source_type": "supplier_invoice"}, {"source_type": "avpl_ufc_invoice"}]})
+    farmer_market_rows = [_serialize_invoice_row("farmer_marketplace_invoice", row) for row in mongo.db[FARMER_MARKET_INVOICE_COLLECTION].find({"buyer_type": "avpl", "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
+    recent = _recent_payments({"$or": [{"source_type": "supplier_invoice"}, {"source_type": "avpl_ufc_invoice"}, {"source_type": "farmer_marketplace_invoice", "payer_key": "AVPL"}]})
     supplier_due = sum((_decimal(r["outstanding_display"]) for r in supplier_rows), Decimal("0"))
     ufc_due = sum((_decimal(r["outstanding_display"]) for r in ufc_rows), Decimal("0"))
+    farmer_due = sum((_decimal(r["outstanding_display"]) for r in farmer_market_rows), Decimal("0"))
     pending_accounting = mongo.db[ACCOUNTING_EVENT_COLLECTION].count_documents({"entity_key": "AVPL", "accounting_status": {"$in": ["ready_for_posting", "reversal_required"]}})
     return {
         "supplier_payables": supplier_rows,
         "ufc_receivables": ufc_rows,
+        "farmer_payables": farmer_market_rows,
         "recent_payments": recent,
         "accounting_events": _accounting_event_rows({"entity_key": "AVPL"}),
         "payment_modes": PAYMENT_MODES,
-        "summary": {"supplier_due": _money(supplier_due), "ufc_due": _money(ufc_due), "recent_count": len(recent), "accounting_pending": pending_accounting},
+        "summary": {"supplier_due": _money(supplier_due), "ufc_due": _money(ufc_due), "farmer_due": _money(farmer_due), "recent_count": len(recent), "accounting_pending": pending_accounting},
     }
 
 
@@ -786,16 +998,19 @@ def get_ufc_payment_overview(actor_user_id):
         raise ValueError("This UFC Admin is not linked to a Centre UID.")
     avpl_rows = [_serialize_invoice_row("avpl_ufc_invoice", row) for row in mongo.db[AVPL_UFC_INVOICE_COLLECTION].find({"centre_uid": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
     farmer_rows = [_serialize_invoice_row("ufc_farmer_invoice", row) for row in mongo.db[UFC_FARMER_INVOICE_COLLECTION].find({"centre_uid": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
-    recent = _recent_payments({"$or": [{"source_type": "avpl_ufc_invoice", "payer_key": centre_uid}, {"source_type": "ufc_farmer_invoice", "payee_key": centre_uid}]})
+    produce_purchase_rows = [_serialize_invoice_row("farmer_marketplace_invoice", row) for row in mongo.db[FARMER_MARKET_INVOICE_COLLECTION].find({"buyer_type": "ufc", "buyer_key": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
+    recent = _recent_payments({"$or": [{"source_type": "avpl_ufc_invoice", "payer_key": centre_uid}, {"source_type": "ufc_farmer_invoice", "payee_key": centre_uid}, {"source_type": "farmer_marketplace_invoice", "payer_key": centre_uid}]})
     avpl_due = sum((_decimal(r["outstanding_display"]) for r in avpl_rows), Decimal("0"))
     farmer_due = sum((_decimal(r["outstanding_display"]) for r in farmer_rows), Decimal("0"))
+    produce_purchase_due = sum((_decimal(r["outstanding_display"]) for r in produce_purchase_rows), Decimal("0"))
     return {
         "centre_uid": centre_uid,
         "avpl_payables": avpl_rows,
         "farmer_receivables": farmer_rows,
+        "farmer_produce_payables": produce_purchase_rows,
         "recent_payments": recent,
         "payment_modes": PAYMENT_MODES,
-        "summary": {"avpl_due": _money(avpl_due), "farmer_due": _money(farmer_due), "recent_count": len(recent)},
+        "summary": {"avpl_due": _money(avpl_due), "farmer_due": _money(farmer_due), "farmer_produce_due": _money(produce_purchase_due), "recent_count": len(recent)},
     }
 
 
@@ -804,20 +1019,101 @@ def get_farmer_payment_overview(actor_user_id):
     actor = _get_actor(actor_user_id)
     if actor.get("resolved_role") != "farmer":
         raise PermissionError("Only Farmers can view My Payments.")
-    invoices = list(mongo.db[UFC_FARMER_INVOICE_COLLECTION].find({"$or": [
+
+    # Internal UnnatFarm purchases from the mapped UFC.
+    purchase_invoices = list(mongo.db[UFC_FARMER_INVOICE_COLLECTION].find({"$or": [
         {"buyer.farmer_user_id": actor["_id"]},
         {"buyer.farmer_user_id_str": str(actor["_id"])},
     ]}).sort("issued_at", DESCENDING).limit(100))
-    rows = []
-    for invoice in invoices:
+    payables = []
+    for invoice in purchase_invoices:
         try:
             _assert_access(actor, "ufc_farmer_invoice", invoice, write=False)
-            rows.append(_serialize_invoice_row("ufc_farmer_invoice", invoice))
+            payables.append(_serialize_invoice_row("ufc_farmer_invoice", invoice))
         except PermissionError:
             continue
-    recent = _recent_payments({"source_type": "ufc_farmer_invoice", "payer_key": str(actor["_id"])})
-    due = sum((_decimal(r["outstanding_display"]) for r in rows), Decimal("0"))
-    return {"payables": rows, "recent_payments": recent, "summary": {"outstanding": _money(due), "recent_count": len(recent)}}
+
+    # Stage 9: purchases made outside UnnatFarm are entered once by the Farmer
+    # and use the same settlement engine as internal purchases.
+    outside_purchase_invoices = list(mongo.db[FARMER_EXTERNAL_PURCHASE_INVOICE_COLLECTION].find({"$or": [
+        {"farmer_user_id": actor["_id"]},
+        {"farmer_user_id_str": str(actor["_id"])},
+        {"buyer.farmer_user_id": actor["_id"]},
+        {"buyer.farmer_user_id_str": str(actor["_id"])},
+    ], "status": {"$ne": "voided"}}).sort("issued_at", DESCENDING).limit(100))
+    for invoice in outside_purchase_invoices:
+        try:
+            _assert_access(actor, "farmer_external_purchase_invoice", invoice, write=False)
+            payables.append(_serialize_invoice_row("farmer_external_purchase_invoice", invoice))
+        except PermissionError:
+            continue
+
+    # Farmer Produce Market purchases made from other Farmers.
+    marketplace_purchase_invoices = list(mongo.db[FARMER_MARKET_INVOICE_COLLECTION].find({
+        "buyer_type": "farmer",
+        "buyer_key": str(actor["_id"]),
+        "status": {"$ne": "voided"},
+    }).sort("issued_at", DESCENDING).limit(100))
+    for invoice in marketplace_purchase_invoices:
+        try:
+            _assert_access(actor, "farmer_marketplace_invoice", invoice, write=False)
+            payables.append(_serialize_invoice_row("farmer_marketplace_invoice", invoice))
+        except PermissionError:
+            continue
+
+    # Money external/local buyers owe the Farmer for produced output.
+    sale_invoices = list(mongo.db[FARMER_EXTERNAL_INVOICE_COLLECTION].find({"$or": [
+        {"farmer_user_id": actor["_id"]},
+        {"farmer_user_id_str": str(actor["_id"])},
+        {"seller.farmer_user_id": actor["_id"]},
+        {"seller.farmer_user_id_str": str(actor["_id"])},
+    ], "status": {"$ne": "voided"}}).sort("issued_at", DESCENDING).limit(100))
+    receivables = []
+    for invoice in sale_invoices:
+        try:
+            _assert_access(actor, "farmer_external_invoice", invoice, write=False)
+            receivables.append(_serialize_invoice_row("farmer_external_invoice", invoice))
+        except PermissionError:
+            continue
+
+    # Money Farmer Produce Market buyers owe this Farmer.
+    marketplace_sale_invoices = list(mongo.db[FARMER_MARKET_INVOICE_COLLECTION].find({
+        "$or": [
+            {"farmer_user_id": actor["_id"]},
+            {"farmer_user_id_str": str(actor["_id"])},
+            {"seller.farmer_user_id": actor["_id"]},
+            {"seller.farmer_user_id_str": str(actor["_id"])},
+        ],
+        "status": {"$ne": "voided"},
+    }).sort("issued_at", DESCENDING).limit(100))
+    for invoice in marketplace_sale_invoices:
+        try:
+            _assert_access(actor, "farmer_marketplace_invoice", invoice, write=False)
+            receivables.append(_serialize_invoice_row("farmer_marketplace_invoice", invoice))
+        except PermissionError:
+            continue
+
+    recent = _recent_payments({"$or": [
+        {"source_type": "ufc_farmer_invoice", "payer_key": str(actor["_id"])},
+        {"source_type": "farmer_external_purchase_invoice", "payer_key": str(actor["_id"])},
+        {"source_type": "farmer_external_invoice", "payee_key": str(actor["_id"])},
+        {"source_type": "farmer_marketplace_invoice", "payer_key": str(actor["_id"])},
+        {"source_type": "farmer_marketplace_invoice", "payee_key": str(actor["_id"])},
+    ]})
+    payable_due = sum((_decimal(r["outstanding_display"]) for r in payables), Decimal("0"))
+    receivable_due = sum((_decimal(r["outstanding_display"]) for r in receivables), Decimal("0"))
+    return {
+        "payables": payables,
+        "receivables": receivables,
+        "recent_payments": recent,
+        "payment_modes": PAYMENT_MODES,
+        "summary": {
+            "outstanding": _money(payable_due),
+            "payable_outstanding": _money(payable_due),
+            "receivable_outstanding": _money(receivable_due),
+            "recent_count": len(recent),
+        },
+    }
 
 
 def get_payment_receipt_context(actor_user_id, payment_id):

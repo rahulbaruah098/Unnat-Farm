@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}My Production{% endblock %}
+{% block content %}
+<style>
+.f9{font-family:"Times New Roman",Georgia,serif;color:#17252a;max-width:1180px;margin:0 auto}.hero{background:linear-gradient(135deg,#f4fbf6,#fff);border:1px solid #dceee2;border-radius:26px;padding:24px;box-shadow:0 18px 44px rgba(15,23,42,.07)}.hero h1{margin:0 0 6px;font-size:clamp(1.7rem,3vw,2.2rem)}.muted{color:#64748b}.steps{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.step{padding:7px 11px;border-radius:999px;background:#edf8f0;color:#2f6d47;font-weight:800;font-size:.9rem}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}.stat{border:1px solid #e2efe6;background:#fff;border-radius:18px;padding:15px}.stat span{display:block;color:#64748b;font-size:.88rem}.stat strong{display:block;margin-top:5px;font-size:1.25rem}.card{background:#fff;border:1px solid #dceee2;border-radius:22px;padding:20px;margin-top:16px;box-shadow:0 12px 34px rgba(15,23,42,.05)}.card h2,.card h3{margin:0 0 6px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-weight:800}.field input,.field select,.field textarea{width:100%;border:1px solid #cfe3d6;border-radius:13px;padding:11px 12px;background:#fbfefc;font:inherit;box-sizing:border-box}.field textarea{min-height:86px;resize:vertical}.wide{grid-column:1/-1}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:11px 18px;background:#4f9667;color:#fff;font:inherit;font-weight:900;cursor:pointer;text-decoration:none}.btn.secondary{background:#edf8f0;color:#2f6d47;border:1px solid #cfe3d6}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.table{overflow:auto;border:1px solid #e2efe6;border-radius:16px;margin-top:14px}.table table{width:100%;border-collapse:collapse;min-width:760px}.table th,.table td{padding:11px;border-bottom:1px solid #edf3ef;text-align:left}.table th{background:#f3fbf6}.tip{margin-top:14px;padding:12px 14px;border:1px solid #cfe3d6;background:#f4fbf6;border-radius:14px;color:#315e43}.details{margin-top:16px;border:1px dashed #bcd9c6;border-radius:16px;padding:12px}.details summary{cursor:pointer;font-weight:900;color:#315e43}.balance.good{color:#047857}.balance.warn{color:#b45309}@media(max-width:850px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.form-grid{grid-template-columns:1fr}.wide{grid-column:auto}.hero,.card{padding:15px}.stats{grid-template-columns:1fr 1fr}}
+</style>
+<div class="f9">
+  <section class="hero">
+    <h1>My Production</h1>
+    <div class="muted">When your crop, fish, poultry or other produce is ready, add it here. The quantity goes straight into <b>My Produce Stock</b>.</div>
+    <div class="steps"><span class="step">1 · Add production</span><span class="step">2 · Check stock</span><span class="step">3 · List on marketplace</span><span class="step">4 · Receive orders & payment</span></div>
+  </section>
+
+  <div class="stats">
+    <div class="stat"><span>Production entries</span><strong>{{ overview.summary.production_batches }}</strong></div>
+    <div class="stat"><span>Products in stock</span><strong>{{ overview.summary.products_in_stock }}</strong></div>
+    <div class="stat"><span>Total sales recorded</span><strong>₹{{ overview.summary.sales_value }}</strong></div>
+    <div class="stat"><span>Simple balance estimate</span><strong class="balance {{ 'good' if overview.summary.estimated_balance_raw >= 0 else 'warn' }}">₹{{ overview.summary.estimated_balance }}</strong></div>
+  </div>
+
+  <section class="card">
+    <h2>Add Production / Harvest</h2>
+    <div class="muted">Only the basic details are required. You can leave the optional fields blank.</div>
+    <form method="post" class="form-grid" autocomplete="off">
+      <input type="hidden" name="production_token" value="{{ overview.production_token }}">
+      <div class="field"><label>Produce Name *</label><input name="product_name" list="farmerProductChoices" placeholder="e.g. Tomato, Rohu Fish, Chicken" required maxlength="120"><datalist id="farmerProductChoices">{% for item in overview.product_choices %}<option value="{{ item }}">{% endfor %}</datalist></div>
+      <div class="field"><label>Quantity Produced *</label><input type="number" name="quantity" min="0.001" step="0.001" placeholder="e.g. 50" required></div>
+      <div class="field"><label>Unit *</label><select name="unit_code" required>{% for code,label in overview.unit_choices.items() %}<option value="{{ code }}" {% if code == 'KG' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Harvest / Production Date *</label><input type="date" name="harvest_date" value="{{ overview.today }}" max="{{ overview.today }}" required></div>
+      <details class="details wide"><summary>More details (optional)</summary><div class="form-grid">
+        <div class="field"><label>Variety</label><input name="variety" maxlength="120" placeholder="e.g. Local variety"></div>
+        <div class="field"><label>Grade / Quality</label><input name="grade" maxlength="80" placeholder="e.g. Grade A"></div>
+        <div class="field"><label>Note</label><input name="notes" maxlength="1000" placeholder="Optional note"></div>
+      </div></details>
+      <div class="wide actions"><button class="btn" type="submit">Add to My Produce Stock</button><a class="btn secondary" href="{{ url_for('modules.farmer_produce_stock') }}">View My Produce Stock</a><a class="btn secondary" href="{{ url_for('modules.farmer_marketplace_listing_new') }}">Sell on Marketplace</a></div>
+    </form>
+    <div class="tip"><b>Simple rule:</b> adding production increases your produce stock. It does not create a sale and does not affect the UFC stock you purchased earlier.</div>
+  </section>
+
+  <section class="card">
+    <h3>Simple Farm Money View</h3>
+    <div class="muted">This is an easy estimate, not your statutory accounts. It compares recorded produce sales with inputs bought through your UFC or outside sellers, plus the extra farming expenses you add below.</div>
+    <div class="stats">
+      <div class="stat"><span>Inputs bought</span><strong>₹{{ overview.summary.input_cost }}</strong></div>
+      <div class="stat"><span>Other expenses</span><strong>₹{{ overview.summary.other_expenses }}</strong></div>
+      <div class="stat"><span>Sales value</span><strong>₹{{ overview.summary.sales_value }}</strong></div>
+      <div class="stat"><span>Payments received</span><strong>₹{{ overview.summary.cash_received }}</strong></div>
+    </div>
+    <div class="tip"><b>Avoid double entry:</b> if an input is already in <b>My Purchases</b> (from your UFC or an outside seller), do not add the same amount again here. Use this section for other costs such as labour, transport, electricity or expenses without a purchase record.</div>
+    <details class="details"><summary>Add another farming expense</summary>
+      <form method="post" action="{{ url_for('modules.farmer_production_expense') }}" class="form-grid">
+        <input type="hidden" name="expense_token" value="{{ overview.expense_token }}">
+        <div class="field"><label>Expense Type</label><select name="category">{% for code,label in overview.expense_categories.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Amount *</label><input type="number" name="amount" min="0.01" step="0.01" required></div>
+        <div class="field"><label>Date</label><input type="date" name="expense_date" value="{{ overview.today }}" max="{{ overview.today }}"></div>
+        <div class="field"><label>Short Note</label><input name="note" maxlength="500" placeholder="Optional"></div>
+        <div class="wide"><button class="btn" type="submit">Save Expense</button></div>
+      </form>
+    </details>
+  </section>
+
+  <section class="card">
+    <h3>Recent Production</h3>
+    <div class="table"><table><thead><tr><th>Date</th><th>Produce</th><th>Quantity</th><th>Reference</th></tr></thead><tbody>
+      {% for row in overview.productions %}<tr><td>{{ row.harvest_date }}</td><td><b>{{ row.product_name }}</b>{% if row.variety %}<div class="muted">{{ row.variety }}</div>{% endif %}</td><td>{{ row.quantity_display }} {{ row.unit_code }}</td><td>{{ row.production_number }}</td></tr>{% else %}<tr><td colspan="4" style="text-align:center;padding:24px;color:#64748b">No production recorded yet. Add your first harvest above.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+{% endblock %}

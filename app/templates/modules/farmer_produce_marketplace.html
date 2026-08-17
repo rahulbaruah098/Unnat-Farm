@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Farmer Produce Market{% endblock %}
+{% block content %}
+<style>
+.market{width:100%;font-family:"Times New Roman",Georgia,serif;color:#17252a}.hero{padding:22px;border:1px solid #dceee2;border-radius:22px;background:#fff;box-shadow:0 14px 35px rgba(15,23,42,.06)}.hero-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.hero h1{margin:0 0 5px;font-size:1.65rem}.muted{color:#687a70}.tools{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:999px;border:1px solid #cfe6d8;background:#f4fbf6;color:#2f6d47;text-decoration:none;font-weight:900;cursor:pointer;font:inherit}.btn.primary{background:#4f9667;color:#fff;border-color:#4f9667}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.stat{padding:12px;border:1px solid #e1eee5;border-radius:14px;background:#fbfefc}.stat strong{display:block;font-size:1.25rem;margin-top:3px}.search{margin:16px 0;display:flex;gap:8px;flex-wrap:wrap}.search input{flex:1;min-width:220px;border:1px solid #cfe3d6;border-radius:12px;padding:10px 12px;font:inherit}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.card{background:#fff;border:1px solid #dceee2;border-radius:20px;overflow:hidden;box-shadow:0 10px 25px rgba(15,23,42,.05)}.photo{height:190px;background:#f0f7f2;display:flex;align-items:center;justify-content:center;color:#7d8f84;overflow:hidden}.photo img{width:100%;height:100%;object-fit:cover}.body{padding:15px}.seller{font-size:.85rem;color:#52705d;margin-bottom:5px}.name{font-size:1.2rem;font-weight:900;margin:0 0 5px}.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chip{font-size:.75rem;padding:4px 8px;border-radius:999px;background:#eef7f1;color:#2f6d47;font-weight:800}.stock{padding:8px 10px;border-radius:11px;background:#f5fbf7;margin:9px 0;font-weight:800}.out{background:#fff4f2;color:#a23c32}.price{font-size:1.08rem;font-weight:900;color:#245c39}.packages{font-size:.88rem;color:#4f6156;margin:5px 0}.order{border-top:1px solid #e8f0eb;padding-top:12px;margin-top:12px}.order select,.order input,.order textarea{width:100%;box-sizing:border-box;border:1px solid #cfe3d6;border-radius:10px;padding:8px 9px;font:inherit;margin-top:5px}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.help{font-size:.8rem;color:#718178;margin-top:5px}.empty{padding:35px;text-align:center;background:#fff;border:1px dashed #cfe3d6;border-radius:20px}.owner{padding:9px;border-radius:11px;background:#f8f5ec;color:#785d1f;font-size:.88rem}.mode-fields{margin-top:8px}@media(max-width:1000px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.grid{grid-template-columns:1fr}.hero{padding:16px}.two{grid-template-columns:1fr}.photo{height:180px}}
+</style>
+<div class="market">
+  <section class="hero">
+    <div class="hero-row">
+      <div><h1>Farmer Produce Market</h1><div class="muted">Fresh produce listed directly by Farmers. Farmers and AVPL can browse the network; UFC Centres see produce from Farmers mapped to their Centre.</div></div>
+      <div class="tools">
+        {% if overview.viewer.role == 'farmer' %}<a class="btn" href="{{ url_for('modules.farmer_marketplace_listings') }}">My Listings</a>{% endif %}
+        {% if overview.viewer.role != 'accounts' %}<a class="btn" href="{{ url_for('modules.farmer_produce_market_my_orders') }}">My Produce Orders</a>{% endif %}
+      </div>
+    </div>
+    <div class="stats"><div class="stat"><span class="muted">Market listings</span><strong>{{ overview.summary.listing_count or 0 }}</strong></div><div class="stat"><span class="muted">Available now</span><strong>{{ overview.summary.available_count or 0 }}</strong></div></div>
+  </section>
+  <form class="search" method="get"><input name="q" value="{{ overview.query }}" placeholder="Search tomato, rice, farmer, village..."><label class="btn"><input type="checkbox" name="available" value="1" {% if request.args.get('available') == '1' %}checked{% endif %}> Available only</label><button class="btn primary">Search</button></form>
+
+  <div class="grid">
+    {% for p in overview.rows %}
+    <article class="card">
+      <div class="photo">{% if p.images %}<img src="{{ url_for('documents.serve', filename=p.images[0]) }}" alt="{{ p.product_name }}">{% else %}No product image{% endif %}</div>
+      <div class="body">
+        <div class="seller">{{ p.farmer_name }}{% if p.village %} · {{ p.village }}{% endif %}{% if p.district %} · {{ p.district }}{% endif %}</div>
+        <div class="name">{{ p.title or p.product_name }}</div>
+        <div class="muted">{{ p.product_name }}{% if p.variety %} · {{ p.variety }}{% endif %}{% if p.grade %} · {{ p.grade }}{% endif %}</div>
+        <div class="chips"><span class="chip">{{ p.unit_code }}</span>{% if p.selling_mode in ['loose','both'] %}<span class="chip">Loose</span>{% endif %}{% if p.selling_mode in ['bag','both'] %}<span class="chip">Bag / Pack</span>{% endif %}</div>
+        <div class="stock {{ 'out' if not p.is_available else '' }}">{% if p.is_available %}Available to order: {{ p.available_to_order_display }} {{ p.unit_code }}{% else %}Currently out of stock{% endif %}</div>
+        {% if p.selling_mode in ['loose','both'] %}<div class="price">₹{{ p.loose_price_display }} / {{ p.unit_code }}</div><div class="help">Minimum {{ p.min_order_quantity_display }} {{ p.unit_code }}</div>{% endif %}
+        {% if p.package_options %}<div class="packages">{% for b in p.package_options %}<div>{{ b.label }} · {{ b.quantity_per_bag_display }} {{ p.unit_code }} · <strong>₹{{ b.price_per_bag_display }}</strong>{% if b.available_bags is defined %} · up to {{ b.available_bags }} bag{{ '' if b.available_bags == 1 else 's' }} now{% endif %}</div>{% endfor %}</div>{% endif %}
+        {% if p.description %}<div class="muted" style="margin-top:8px">{{ p.description }}</div>{% endif %}
+
+        {% if p.is_owner %}<div class="owner" style="margin-top:12px">This is your own listing. Manage it from <a href="{{ url_for('modules.farmer_marketplace_listings') }}">My Listings</a>.</div>
+        {% elif overview.viewer.role == 'accounts' %}<div class="owner" style="margin-top:12px">View only. AVPL operational users place produce orders.</div>
+        {% elif p.is_available %}
+        <form class="order market-order-form" method="post" action="{{ url_for('modules.farmer_produce_market_order') }}" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
+          <input type="hidden" name="listing_id" value="{{ p.id }}"><input type="hidden" name="order_token" value="{{ overview.order_token }}-{{ loop.index }}">
+          {% if p.selling_mode == 'both' %}<label>How do you want to buy?<select name="purchase_mode" class="purchase-mode"><option value="loose">Loose / per {{ p.unit_code }}</option><option value="bag">Bag / Pack</option></select></label>{% elif p.selling_mode == 'bag' %}<input type="hidden" name="purchase_mode" value="bag">{% else %}<input type="hidden" name="purchase_mode" value="loose">{% endif %}
+          <div class="mode-fields loose-fields" {% if p.selling_mode == 'bag' %}style="display:none"{% endif %}><label>Quantity ({{ p.unit_code }})<input type="number" name="quantity_loose" min="{{ p.min_order_quantity or 0.001 }}" max="{{ p.available_to_order }}" step="0.001" placeholder="e.g. 20"></label></div>
+          <div class="mode-fields bag-fields" {% if p.selling_mode != 'bag' %}style="display:none"{% endif %}><label>Bag / Pack size<select name="package_index">{% for b in p.package_options %}<option value="{{ b.index }}" {% if b.available_bags <= 0 %}disabled{% endif %}>{{ b.label }} · {{ b.quantity_per_bag_display }} {{ p.unit_code }} · ₹{{ b.price_per_bag_display }} · {{ b.available_bags }} available</option>{% endfor %}</select></label><label>Number of bags / packs<input type="number" name="quantity_bag" min="1" step="1" placeholder="e.g. 2"></label></div>
+          <input type="hidden" name="quantity" class="final-quantity">
+          <label>Payment<select name="payment_term"><option value="pay_on_receipt">Pay on Receipt</option><option value="credit">Request Credit / Pay Later</option></select></label>
+          <label>Note (optional)<textarea name="note" rows="2" maxlength="500" placeholder="Pickup, quality or delivery note"></textarea></label>
+          <button class="btn primary" type="submit" style="width:100%;margin-top:9px">Request Order</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% else %}<div class="empty" style="grid-column:1/-1"><h3>No Farmer produce listings found</h3><div class="muted">Try another search. Farmers can publish produce from their harvest stock.</div></div>{% endfor %}
+  </div>
+</div>
+<script>
+document.querySelectorAll('.market-order-form').forEach(function(form){
+  const mode=form.querySelector('.purchase-mode'); const loose=form.querySelector('.loose-fields'); const bag=form.querySelector('.bag-fields'); const final=form.querySelector('.final-quantity');
+  function update(){ const v=mode?mode.value:(form.querySelector('input[name=purchase_mode]')||{}).value; if(loose)loose.style.display=v==='loose'?'block':'none'; if(bag)bag.style.display=v==='bag'?'block':'none'; }
+  if(mode)mode.addEventListener('change',update); update();
+  form.addEventListener('submit',function(e){ const v=mode?mode.value:(form.querySelector('input[name=purchase_mode]')||{}).value; const src=form.querySelector(v==='bag'?'input[name=quantity_bag]':'input[name=quantity_loose]'); if(!src || !src.value){e.preventDefault(); const b=form.querySelector('button[type=submit]'); if(b)b.disabled=false; alert('Enter the order quantity.'); return;} final.value=src.value; });
+});
+</script>
+{% endblock %}

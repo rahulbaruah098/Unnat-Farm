@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Edit Produce Listing' if listing else 'Sell on Marketplace' }}{% endblock %}
+{% block content %}
+<style>
+.wrap{max-width:1000px;margin:auto;font-family:"Times New Roman",Georgia,serif;color:#17252a}.head,.card{background:#fff;border:1px solid #dceee2;border-radius:22px;padding:20px;box-shadow:0 12px 30px rgba(15,23,42,.05)}.head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.head h1{margin:0}.muted{color:#687a70}.card{margin-top:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.full{grid-column:1/-1}label{display:flex;flex-direction:column;gap:5px;font-weight:800}input,select,textarea{width:100%;box-sizing:border-box;border:1px solid #cfe3d6;border-radius:11px;padding:10px;font:inherit;background:#fff}.hint{font-size:.82rem;color:#718178;font-weight:400}.stock-info{padding:12px;border-radius:12px;background:#f3fbf6;border:1px solid #cfe6d8}.mode{display:flex;gap:12px;flex-wrap:wrap}.mode label{flex-direction:row;align-items:center;font-weight:700}.mode input{width:auto}.packs{display:grid;gap:9px}.pack{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:8px;padding:10px;border:1px solid #e0ece4;border-radius:12px;background:#fbfefc}.actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:16px}.btn{border:1px solid #cfe6d8;border-radius:999px;padding:10px 15px;background:#f4fbf6;color:#2f6d47;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.btn.primary{background:#4f9667;color:#fff;border-color:#4f9667}@media(max-width:650px){.grid,.pack{grid-template-columns:1fr}.full{grid-column:auto}.card,.head{padding:15px}}
+</style>
+<div class="wrap">
+  <div class="head"><div><h1>{{ 'Edit Produce Listing' if listing else 'Sell on Farmer Produce Market' }}</h1><div class="muted">Choose produce already in My Produce Stock. Publishing does not reduce stock.</div></div><a class="btn" href="{{ url_for('modules.farmer_marketplace_listings') }}">My Listings</a></div>
+  <form method="post" enctype="multipart/form-data" class="card" id="listingForm">
+    <div class="grid">
+      <label class="full">Produce from My Stock
+        {% if listing %}<input type="hidden" name="product_key" value="{{ listing.product_key }}"><select disabled><option>{{ listing.product_name }} · {{ listing.physical_stock_display }} {{ listing.unit_code }} physical</option></select>
+        {% else %}<select name="product_key" id="productKey" required><option value="">Choose produce</option>{% for s in stock_rows %}<option value="{{ s.product_key }}" data-unit="{{ s.unit_code }}" data-saleable="{{ s.saleable_display }}" {% if selected_product_key == s.product_key %}selected{% endif %}>{{ s.product_name }} · {{ s.saleable_display }} {{ s.unit_code }} saleable</option>{% endfor %}</select>{% endif %}
+        <span class="hint">Add Production / Harvest first if the produce is not listed here.</span>
+      </label>
+      <label>Marketplace title<input name="title" maxlength="150" value="{{ listing.title if listing else '' }}" placeholder="e.g. Fresh Farm Tomatoes"></label>
+      <label>Quantity offered<input type="number" name="listed_quantity" min="0.001" step="0.001" required value="{{ listing.listed_quantity if listing else '' }}" placeholder="e.g. 400"><span class="hint">This is the maximum quantity you want to offer from current stock.</span></label>
+      <label>Variety<input name="variety" maxlength="120" value="{{ listing.variety if listing else '' }}" placeholder="Optional"></label>
+      <label>Grade / quality<input name="grade" maxlength="80" value="{{ listing.grade if listing else '' }}" placeholder="e.g. Grade A"></label>
+      <div class="full"><strong>How will you sell?</strong><div class="mode" style="margin-top:8px"><label><input type="radio" name="selling_mode" value="loose" {% if not listing or listing.selling_mode=='loose' %}checked{% endif %}> Per KG / unit</label><label><input type="radio" name="selling_mode" value="bag" {% if listing and listing.selling_mode=='bag' %}checked{% endif %}> Bags / packs</label><label><input type="radio" name="selling_mode" value="both" {% if listing and listing.selling_mode=='both' %}checked{% endif %}> Both</label></div></div>
+      <div id="looseFields" class="full stock-info"><div class="grid"><label>Price per stock unit (₹)<input type="number" name="loose_price" min="0.01" step="0.01" value="{{ listing.loose_price if listing else '' }}" placeholder="e.g. 35"></label><label>Minimum loose order<input type="number" name="min_order_quantity" min="0.001" step="0.001" value="{{ listing.min_order_quantity if listing else 1 }}" placeholder="e.g. 20"></label></div></div>
+      <div id="bagFields" class="full stock-info"><strong>Bag / Pack options</strong><div class="hint">Example: 25 KG bag ₹800, 30 KG bag ₹950, 40 KG bag ₹1,250. Actual stock always remains in the base harvest unit.</div><div class="packs" style="margin-top:9px">
+        {% for i in range(4) %}{% set b = listing.package_options[i] if listing and listing.package_options|length > i else {} %}<div class="pack"><input name="package_label" value="{{ b.label or '' }}" placeholder="Label, e.g. 25 KG Bag"><input type="number" name="package_quantity" min="0.001" step="0.001" value="{{ b.quantity_per_bag if b else '' }}" placeholder="Quantity inside bag"><input type="number" name="package_price" min="0.01" step="0.01" value="{{ b.price_per_bag if b else '' }}" placeholder="Price per bag ₹"></div>{% endfor %}
+      </div></div>
+      <label class="full">Product images<input type="file" name="images" accept="image/*" multiple><span class="hint">Up to 4 images. On edit, leave empty to keep current images.</span></label>
+      {% if listing and listing.images %}<div class="full muted">Current images: {{ listing.images|length }} uploaded.</div>{% endif %}
+      <label class="full">Short description<textarea name="description" rows="4" maxlength="1200" placeholder="Freshness, harvest details, pickup information...">{{ listing.description if listing else '' }}</textarea></label>
+    </div>
+    <div class="actions"><a class="btn" href="{{ url_for('modules.farmer_marketplace_listings') }}">Cancel</a><button class="btn" name="action" value="draft">Save Draft</button><button class="btn primary" name="action" value="publish">Publish to Marketplace</button></div>
+  </form>
+</div>
+<script>
+function modeState(){const v=(document.querySelector('input[name=selling_mode]:checked')||{}).value;document.getElementById('looseFields').style.display=(v==='loose'||v==='both')?'block':'none';document.getElementById('bagFields').style.display=(v==='bag'||v==='both')?'block':'none';}
+document.querySelectorAll('input[name=selling_mode]').forEach(x=>x.addEventListener('change',modeState));modeState();
+</script>
+{% endblock %}

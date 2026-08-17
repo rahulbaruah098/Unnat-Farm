@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Record Outside Purchase{% endblock %}
+{% block content %}
+<style>
+.fp9{font-family:"Times New Roman",Georgia,serif;color:#17252a;max-width:940px;margin:0 auto}.hero,.card{background:#fff;border:1px solid #dceee2;border-radius:24px;padding:22px;margin-bottom:15px;box-shadow:0 14px 38px rgba(15,23,42,.06)}.hero{background:linear-gradient(135deg,#f4fbf6,#fff)}.hero h1{margin:0 0 6px}.muted{color:#64748b}.tip{padding:12px 14px;border:1px solid #cfe3d6;background:#f4fbf6;border-radius:14px;color:#315e43;margin-top:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-weight:900}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;border:1px solid #cfe3d6;border-radius:13px;padding:11px 12px;background:#fbfefc;font:inherit}.field textarea{min-height:82px;resize:vertical}.wide{grid-column:1/-1}.section-title{margin:18px 0 5px}.choice{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:10px}.choice label{border:1px solid #dbeae0;border-radius:14px;padding:12px;background:#fbfefc;cursor:pointer}.choice input{margin-right:6px}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:11px 18px;background:#4f9667;color:#fff;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.btn.secondary{background:#edf8f0;color:#2f6d47;border:1px solid #cfe3d6}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}.hidden{display:none!important}@media(max-width:680px){.hero,.card{padding:15px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.choice{grid-template-columns:1fr}}
+</style>
+<div class="fp9">
+  <section class="hero">
+    <h1>Record an Outside Purchase</h1>
+    <div class="muted">Use this only when you bought an input or material from a local shop or seller outside UnnatFarm.</div>
+    <div class="tip"><b>Bought from your UFC?</b> Do not enter it here. UFC purchases are already added to <b>My Purchases</b> automatically after delivery.</div>
+  </section>
+
+  <form method="post" class="card" autocomplete="off" id="outsidePurchaseForm">
+    <input type="hidden" name="purchase_token" value="{{ purchase_token }}">
+    <input type="hidden" name="payment_token" value="{{ payment_token }}">
+
+    <h2 style="margin-top:0">1. What did you buy?</h2>
+    <div class="muted" style="margin-bottom:14px">Only the basic details are required.</div>
+    <div class="grid">
+      <div class="field"><label>Shop / Seller Name *</label><input name="seller_name" maxlength="160" placeholder="e.g. Maa Agro Store" required></div>
+      <div class="field"><label>Item / Input Name *</label><input name="product_name" maxlength="160" placeholder="e.g. Seed, feed, packaging" required></div>
+      <div class="field"><label>Quantity *</label><input type="number" name="quantity" min="0.001" step="0.001" placeholder="e.g. 10" required></div>
+      <div class="field"><label>Unit *</label><select name="unit_code" required>{% for code,label in unit_choices.items() %}<option value="{{ code }}" {% if code == 'KG' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Total Amount Paid / Payable *</label><input type="number" name="total_amount" id="totalAmount" min="0.01" step="0.01" placeholder="₹ 0.00" required></div>
+      <div class="field"><label>Purchase Date *</label><input type="date" name="purchase_date" value="{{ today }}" max="{{ today }}" required></div>
+      <div class="field"><label>Seller Bill Number</label><input name="bill_number" maxlength="120" placeholder="Optional"></div>
+      <div class="field"><label>Payment Terms</label><select name="payment_term" id="paymentTerm"><option value="pay_now">Pay Now</option><option value="credit">Credit / Pay Later</option></select></div>
+      <div class="field hidden" id="creditDaysField"><label>Credit Days</label><input type="number" name="credit_days" min="0" max="365" value="0"></div>
+      <div class="field wide"><label>Short Note</label><textarea name="note" maxlength="1000" placeholder="Optional"></textarea></div>
+    </div>
+
+    <h2 class="section-title">2. Payment</h2>
+    <div class="muted">Tell the system what you paid today. You can pay the remaining amount later from <b>My Payments</b>.</div>
+    <div class="choice">
+      <label><input type="radio" name="payment_option" value="full" checked> <b>Paid in Full</b><div class="muted">I paid the full amount now.</div></label>
+      <label><input type="radio" name="payment_option" value="partial"> <b>Paid Partly</b><div class="muted">I paid some amount now.</div></label>
+      <label><input type="radio" name="payment_option" value="none"> <b>Pay Later</b><div class="muted">Nothing paid now.</div></label>
+    </div>
+
+    <div class="grid" id="paymentFields" style="margin-top:14px">
+      <div class="field hidden" id="partialAmountField"><label>Amount Paid Now *</label><input type="number" name="amount_paid" id="amountPaid" min="0.01" step="0.01" placeholder="₹ 0.00"></div>
+      <div class="field"><label>Payment Mode *</label><select name="payment_mode" id="paymentMode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option></select></div>
+      <div class="field" id="paymentReferenceField"><label>Payment Reference</label><input name="payment_reference" id="paymentReference" maxlength="160" placeholder="Optional for cash"></div>
+      <div class="field"><label>Payment Note</label><input name="payment_note" maxlength="300" placeholder="Optional"></div>
+    </div>
+
+    <div class="tip">This creates a simple <b>Outside Purchase Record</b> for your own farm records. It does not replace the seller's original GST/tax invoice, and it does not create artificial stock inside the UnnatFarm Product Master.</div>
+    <div class="actions"><button class="btn" type="submit">Save Purchase</button><a class="btn secondary" href="{{ url_for('modules.purchases') }}">Back to My Purchases</a></div>
+  </form>
+</div>
+<script>
+(function(){
+  const term=document.getElementById('paymentTerm');
+  const credit=document.getElementById('creditDaysField');
+  const paymentFields=document.getElementById('paymentFields');
+  const partial=document.getElementById('partialAmountField');
+  const amountPaid=document.getElementById('amountPaid');
+  const total=document.getElementById('totalAmount');
+  const mode=document.getElementById('paymentMode');
+  const ref=document.getElementById('paymentReference');
+  const options=[...document.querySelectorAll('input[name="payment_option"]')];
+  function selected(){return (options.find(x=>x.checked)||{}).value||'none'}
+  function update(){
+    const opt=selected();
+    credit.classList.toggle('hidden',term.value!=='credit');
+    paymentFields.classList.toggle('hidden',opt==='none');
+    partial.classList.toggle('hidden',opt!=='partial');
+    amountPaid.required=opt==='partial';
+    if(opt!=='partial') amountPaid.value='';
+    if(term.value==='credit' && opt==='full' && !document.activeElement?.closest('.choice')){
+      // Keep user choice; credit can still be paid early/full.
+    }
+    ref.placeholder=mode.value==='cash'?'Optional for cash':'Required for non-cash payment';
+  }
+  term.addEventListener('change',function(){
+    if(term.value==='credit'){
+      const payLater=options.find(x=>x.value==='none');
+      if(payLater) payLater.checked=true;
+    }
+    update();
+  });
+  options.forEach(x=>x.addEventListener('change',update));
+  mode.addEventListener('change',update);
+  total.addEventListener('input',function(){if(amountPaid) amountPaid.max=total.value||''});
+  update();
+})();
+</script>
+{% endblock %}

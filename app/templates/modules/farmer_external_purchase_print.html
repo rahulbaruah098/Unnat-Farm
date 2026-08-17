@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Outside Purchase Record{% endblock %}
+{% block content %}
+<style>
+.doc9{max-width:880px;margin:0 auto;background:#fff;border:1px solid #d7e7dc;border-radius:18px;padding:28px;font-family:"Times New Roman",Georgia,serif;color:#17252a}.head{display:flex;justify-content:space-between;gap:18px;border-bottom:2px solid #315e43;padding-bottom:14px}.head h1{margin:0}.muted{color:#64748b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}.box{border:1px solid #e1ece5;border-radius:12px;padding:13px}.line{display:flex;justify-content:space-between;gap:15px;padding:9px 0;border-bottom:1px solid #edf3ef}.line.total{font-size:1.15rem;font-weight:900;border-top:2px solid #315e43;border-bottom:0;margin-top:8px}.note{margin-top:18px;padding:12px 14px;border-radius:12px;background:#f4fbf6;border:1px solid #cfe3d6;color:#315e43}.actions{display:flex;gap:8px;margin-bottom:14px;justify-content:flex-end}.btn{border:0;border-radius:999px;padding:9px 14px;background:#4f9667;color:#fff;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}@media print{.actions,.app-header,.sidebar,.footer{display:none!important}.main{margin:0!important;padding:0!important}.doc9{border:0;padding:0;max-width:none}}@media(max-width:620px){.doc9{padding:16px}.grid{grid-template-columns:1fr}.head{flex-direction:column}}
+</style>
+<div class="actions"><button class="btn" onclick="window.print()">Print / Save PDF</button></div>
+<div class="doc9">
+  <div class="head"><div><h1>Outside Purchase Record</h1><div class="muted">For Farmer's own farm records</div></div><div><b>{{ invoice.document_number }}</b><div class="muted">{{ purchase.purchase_date }}</div></div></div>
+  <div class="grid"><div class="box"><b>Buyer / Farmer</b><div>{{ farmer.name }}</div>{% if farmer.phone %}<div class="muted">{{ farmer.phone }}</div>{% endif %}</div><div class="box"><b>Shop / Seller</b><div>{{ purchase.seller_name }}</div>{% if purchase.bill_number %}<div class="muted">Seller Bill: {{ purchase.bill_number }}</div>{% endif %}</div></div>
+  <div class="line"><span>Item / Input</span><b>{{ purchase.product_name }}</b></div>
+  <div class="line"><span>Quantity</span><b>{{ purchase.quantity_display }} {{ purchase.unit_code }}</b></div>
+  <div class="line"><span>Payment Terms</span><b>{{ purchase.payment_term_label }}</b></div>
+  {% if invoice.due_date %}<div class="line"><span>Due Date</span><b>{{ invoice.due_date }}</b></div>{% endif %}
+  <div class="line total"><span>Total Purchase Amount</span><span>₹{{ invoice.grand_total_display }}</span></div>
+  <div class="line"><span>Paid</span><b>₹{{ invoice.paid_display }}</b></div>
+  <div class="line"><span>Outstanding</span><b>₹{{ invoice.outstanding_display }}</b></div>
+  <div class="line"><span>Payment Status</span><b>{{ invoice.payment_status_label }}</b></div>
+  {% if purchase.note %}<div class="line"><span>Note</span><span>{{ purchase.note }}</span></div>{% endif %}
+  <div class="note"><b>Important:</b> This is an UnnatFarm MIS record created by the Farmer for an outside purchase. It is not a substitute for the seller's original tax invoice/GST bill. Keep the original seller bill where applicable.</div>
+</div>
+{% endblock %}

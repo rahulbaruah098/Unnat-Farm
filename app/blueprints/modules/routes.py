@@ -1,3 +1,4 @@
+import os
 import re
 from bson import ObjectId
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
@@ -55,10 +56,42 @@ from app.services.payment_service import (
     record_payment as stage8_record_payment,
     reverse_payment as stage8_reverse_payment,
 )
-from app.services.avpl_accounts_operations_service import (
-    get_accounts_order_overview,
-    get_accounts_transaction_overview,
-    get_purchase_sales_summary,
+from app.services.farmer_marketplace_service import (
+    approve_order as stage9_market_approve_order,
+    cancel_order as stage9_market_cancel_order,
+    dispatch_order as stage9_market_dispatch_order,
+    get_invoice_print_context as stage9_market_get_invoice_print_context,
+    get_listing as stage9_market_get_listing,
+    get_listing_form_context as stage9_market_get_listing_form_context,
+    get_marketplace as stage9_market_get_marketplace,
+    get_my_listings as stage9_market_get_my_listings,
+    get_order_detail as stage9_market_get_order_detail,
+    get_orders as stage9_market_get_orders,
+    get_purchases as stage9_market_get_purchases,
+    get_sales as stage9_market_get_sales,
+    place_order as stage9_market_place_order,
+    receive_order as stage9_market_receive_order,
+    reject_order as stage9_market_reject_order,
+    repair_financial_documents as stage9_market_repair_financial_documents,
+    save_listing as stage9_market_save_listing,
+    set_listing_status as stage9_market_set_listing_status,
+)
+from app.services.farmer_production_service import (
+    create_external_purchase as stage9_create_external_purchase,
+    create_external_sale as stage9_create_external_sale,
+    get_external_purchase_form_context as stage9_get_external_purchase_form_context,
+    get_external_purchase_print_context as stage9_get_external_purchase_print_context,
+    get_external_purchase_rows as stage9_get_external_purchase_rows,
+    get_invoice_print_context as stage9_get_invoice_print_context,
+    get_production_overview as stage9_get_production_overview,
+    get_sale_detail as stage9_get_sale_detail,
+    get_sale_form_context as stage9_get_sale_form_context,
+    get_sales_overview as stage9_get_sales_overview,
+    get_stock_overview as stage9_get_stock_overview,
+    record_expense as stage9_record_expense,
+    record_production as stage9_record_production,
+    record_stock_loss as stage9_record_stock_loss,
+    void_external_sale as stage9_void_external_sale,
 )
 from datetime import datetime
 from uuid import uuid4
@@ -1156,6 +1189,12 @@ def add_farmer_product():
 def sell():
     role = session.get("role")
 
+    # Stage 9 web workflow: Farmer output now has a real production-stock-sale
+    # lifecycle. Keep the legacy POST code below for older app compatibility,
+    # but never show the old "post availability" screen to web Farmers.
+    if str(role or "").strip().lower() == "farmer" and request.method == "GET" and not wants_json_response():
+        return redirect(url_for("modules.farmer_sales_new"))
+
     # UFC MITRA SELL MODULE - stock based selling
     if role == "ufc_mitra":
         user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
@@ -2101,35 +2140,13 @@ def update_support_ticket(ticket_id):
 @modules_bp.route("/orders")
 @login_required
 def orders():
-    role = str(session.get("role") or "").strip().lower()
-    q = request.args.get("q", "").strip()
-
-    # Stage 1 Accounts read-model: keep the legacy /orders JSON response and
-    # non-AVPL role behaviour untouched, while Accounts/AVPL users get the
-    # unified Supplier <-> AVPL <-> UFC operational view on the web page.
-    if role in {"accounts", "avpl_admin", "super_admin"} and not wants_json_response():
-        try:
-            overview = get_accounts_order_overview(
-                session.get("user_id"),
-                segment=request.args.get("segment", "supplier"),
-                query_text=q,
-            )
-        except (ValueError, PermissionError, RuntimeError) as exc:
-            flash(str(exc), "danger")
-            overview = {
-                "selected_segment": request.args.get("segment", "supplier"),
-                "query": q,
-                "supplier_rows": [],
-                "ufc_rows": [],
-                "summary": {"supplier_order_count": 0, "ufc_order_count": 0},
-            }
-        return render_template("modules/accounts_orders.html", overview=overview)
-
     query = {}
-    if role == "ufc_admin":
+    if session.get("role") == "ufc_admin":
         query["centre_uid"] = session.get("centre_uid")
-    elif role == "ufc_mitra":
+    elif session.get("role") == "ufc_mitra":
         query["mitra_uid"] = session.get("mitra_uid")
+
+    q = request.args.get("q", "").strip()
 
     if q:
         query["$or"] = [
@@ -2195,45 +2212,19 @@ def products():
 @modules_bp.route("/transactions")
 @login_required
 def transactions():
-    role = str(session.get("role") or "").strip().lower()
-    q = request.args.get("q", "").strip()
-
-    # Stage 1 Accounts read-model. Existing JSON and UFC/Farmer/Mitra flows
-    # continue to use the legacy transactions collection exactly as before.
-    if role in {"accounts", "avpl_admin", "super_admin"} and not wants_json_response():
-        try:
-            overview = get_accounts_transaction_overview(
-                session.get("user_id"),
-                segment=request.args.get("segment", "all"),
-                query_text=q,
-            )
-        except (ValueError, PermissionError, RuntimeError) as exc:
-            flash(str(exc), "danger")
-            overview = {
-                "rows": [],
-                "selected_segment": request.args.get("segment", "all"),
-                "query": q,
-                "summary": {
-                    "supplier_paid": "0.00",
-                    "ufc_received": "0.00",
-                    "supplier_outstanding": "0.00",
-                    "ufc_receivable": "0.00",
-                },
-                "counts": {"all": 0, "supplier": 0, "ufc": 0},
-            }
-        return render_template("modules/accounts_transactions.html", overview=overview)
-
     query = {}
 
-    if role == "ufc_admin":
+    if session.get("role") == "ufc_admin":
         query["centre_uid"] = session.get("centre_uid")
 
-    elif role == "ufc_mitra":
+    elif session.get("role") == "ufc_mitra":
         query["mitra_uid"] = session.get("mitra_uid")
 
-    elif role == "farmer":
+    elif session.get("role") == "farmer":
         user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
         query["farmer_contact"] = user.get("phone")
+
+    q = request.args.get("q", "").strip()
 
     if q:
         query["$or"] = [
@@ -3014,6 +3005,27 @@ def purchases():
                 "query": q,
                 "summary": {"count": 0, "total_value": "0.00"},
             }
+        # Stage 9: also show purchases the Farmer records from local/outside
+        # sellers. Internal UFC purchases remain automatic and are never
+        # re-entered manually.
+        try:
+            outside = stage9_get_external_purchase_rows(session.get("user_id"), search=q)
+            outside_rows = outside.get("rows", [])
+            overview.setdefault("rows", []).extend(outside_rows)
+            try:
+                current_total = float(overview.get("summary", {}).get("total_value", 0) or 0)
+            except Exception:
+                current_total = 0.0
+            try:
+                outside_total = float(outside.get("total", 0) or 0)
+            except Exception:
+                outside_total = 0.0
+            overview.setdefault("summary", {})["count"] = len(overview.get("rows", []))
+            overview["summary"]["total_value"] = f"{current_total + outside_total:.2f}"
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if not wants_json_response():
+                flash(f"Outside purchases could not be loaded: {exc}", "warning")
+
         if wants_json_response():
             payload = {"ok": True, **overview}
             payload["items"] = overview.get("rows", [])
@@ -3543,39 +3555,9 @@ def finance_leads():
    
 @modules_bp.route("/sales-details")
 @login_required
-@roles_required("avpl_admin", "sales_unnatfarm", "accounts", "super_admin")
+@roles_required("avpl_admin", "sales_unnatfarm", "accounts")
 def sales_details():
     q = request.args.get("q", "").strip()
-    role = str(session.get("role") or "").strip().lower()
-
-    # Accounts/AVPL users see the financial purchase-vs-sales read-model.
-    # Sales UnnatFarm keeps the existing POS sales-details workflow unchanged.
-    if role in {"accounts", "avpl_admin", "super_admin"}:
-        try:
-            overview = get_purchase_sales_summary(
-                session.get("user_id"),
-                query_text=q,
-            )
-        except (ValueError, PermissionError, RuntimeError) as exc:
-            flash(str(exc), "danger")
-            overview = {
-                "query": q,
-                "summary": {
-                    "supplier_purchase_value": "0.00",
-                    "ufc_sales_value": "0.00",
-                    "cost_of_goods_sold": "0.00",
-                    "gross_margin": "0.00",
-                    "gross_margin_percent": "0.00",
-                    "supplier_outstanding": "0.00",
-                    "ufc_receivable": "0.00",
-                },
-                "supplier_rows": [],
-                "ufc_rows": [],
-            }
-        return render_template(
-            "modules/accounts_purchase_sales_summary.html",
-            overview=overview,
-        )
 
     sales = list(mongo.db.pos_sales.find({}).sort("created_at", -1))
 
@@ -4013,7 +3995,7 @@ def farmer_payments():
         overview = get_farmer_payment_overview(session.get("user_id"))
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), "danger")
-        overview = {"payables": [], "recent_payments": [], "summary": {"outstanding": "0.00", "recent_count": 0}}
+        overview = {"payables": [], "receivables": [], "recent_payments": [], "summary": {"outstanding": "0.00", "payable_outstanding": "0.00", "receivable_outstanding": "0.00", "recent_count": 0}}
     return render_template("modules/farmer_payments.html", overview=overview)
 
 
@@ -4031,6 +4013,711 @@ def payment_receipt_print(payment_id):
             return redirect(url_for("modules.farmer_payments"))
         return redirect(url_for("dashboard.home"))
     return render_template("modules/payment_receipt_print.html", **context)
+
+
+# ---------------------------------------------------------------------------
+# Stage 9 — Farmer Production, Produce Stock & External Sales
+# ---------------------------------------------------------------------------
+
+
+@modules_bp.route("/farmer-purchases/outside/new", methods=["GET", "POST"])
+@login_required
+@roles_required("farmer")
+def farmer_external_purchase_new():
+    if request.method == "POST":
+        purchase_succeeded = False
+        result = None
+        try:
+            result = stage9_create_external_purchase(
+                session.get("user_id"),
+                request.form.get("seller_name"),
+                request.form.get("product_name"),
+                request.form.get("quantity"),
+                request.form.get("unit_code"),
+                request.form.get("total_amount"),
+                purchase_date=request.form.get("purchase_date"),
+                bill_number=request.form.get("bill_number", ""),
+                payment_term=request.form.get("payment_term", "pay_now"),
+                credit_days=request.form.get("credit_days", 0),
+                note=request.form.get("note", ""),
+                idempotency_key=request.form.get("purchase_token", ""),
+            )
+            purchase_succeeded = True
+            invoice = result.get("invoice") or {}
+            flash(result.get("message") or "Outside purchase saved.", "success")
+
+            payment_option = str(request.form.get("payment_option") or "none").strip().lower()
+            if payment_option in {"full", "partial"} and invoice.get("id"):
+                amount_to_record = invoice.get("outstanding_display") if payment_option == "full" else request.form.get("amount_paid")
+                payment_result = stage8_record_payment(
+                    session.get("user_id"),
+                    "farmer_external_purchase_invoice",
+                    invoice.get("id"),
+                    amount_to_record,
+                    request.form.get("payment_mode") or "cash",
+                    reference=request.form.get("payment_reference", ""),
+                    note="Payment recorded with outside purchase. " + str(request.form.get("payment_note") or ""),
+                    idempotency_key=request.form.get("payment_token", ""),
+                )
+                flash(payment_result.get("message") or "Purchase payment recorded.", "success")
+
+            if wants_json_response():
+                return jsonify(json_safe({"ok": True, **result})), 201
+            return redirect(url_for("modules.purchases"))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if wants_json_response():
+                return json_error(str(exc), 400)
+            if purchase_succeeded:
+                flash(f"Purchase was saved, but payment needs attention: {exc}", "warning")
+                return redirect(url_for("modules.purchases"))
+            flash(str(exc), "danger")
+
+    try:
+        context = stage9_get_external_purchase_form_context(session.get("user_id"))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        context = {
+            "farmer": {}, "unit_choices": {}, "today": datetime.utcnow().date().isoformat(),
+            "purchase_token": f"FPUR-{uuid4().hex.upper()}", "payment_token": f"FPAY-{uuid4().hex.upper()}",
+        }
+    return render_template("modules/farmer_external_purchase_form.html", **context)
+
+
+@modules_bp.route("/farmer-purchases/outside/<invoice_id>/print")
+@login_required
+@roles_required("farmer")
+def farmer_external_purchase_print(invoice_id):
+    try:
+        context = stage9_get_external_purchase_print_context(session.get("user_id"), invoice_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.purchases"))
+    return render_template("modules/farmer_external_purchase_print.html", **context)
+
+
+@modules_bp.route("/my-payments/record-outside-purchase-payment", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def record_farmer_outside_purchase_payment():
+    try:
+        result = stage8_record_payment(
+            session.get("user_id"),
+            "farmer_external_purchase_invoice",
+            request.form.get("invoice_id"),
+            request.form.get("amount"),
+            request.form.get("payment_mode"),
+            reference=request.form.get("reference", ""),
+            note=request.form.get("note", ""),
+            idempotency_key=request.form.get("payment_token", ""),
+        )
+        flash(result.get("message") or "Purchase payment recorded.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_payments"))
+
+
+@modules_bp.route("/farmer-production", methods=["GET", "POST"])
+@login_required
+@roles_required("farmer")
+def farmer_production():
+    if request.method == "POST":
+        try:
+            result = stage9_record_production(
+                session.get("user_id"),
+                request.form.get("product_name"),
+                request.form.get("quantity"),
+                request.form.get("unit_code"),
+                harvest_date=request.form.get("harvest_date"),
+                variety=request.form.get("variety", ""),
+                grade=request.form.get("grade", ""),
+                estimated_cost=request.form.get("estimated_cost", 0),
+                notes=request.form.get("notes", ""),
+                idempotency_key=request.form.get("production_token", ""),
+            )
+            if wants_json_response():
+                return jsonify(json_safe({"ok": True, **result})), 201
+            flash(result.get("message") or "Production added to My Produce Stock.", "success")
+            return redirect(url_for("modules.farmer_produce_stock"))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if wants_json_response():
+                return json_error(str(exc), 400)
+            flash(str(exc), "danger")
+
+    try:
+        overview = stage9_get_production_overview(session.get("user_id"), request.args.get("q", ""))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {
+            "farmer": {}, "product_choices": [], "unit_choices": {}, "expense_categories": {},
+            "productions": [], "stock_rows": [], "expenses": [], "query": "", "today": datetime.utcnow().date().isoformat(),
+            "production_token": f"PROD-{uuid4().hex.upper()}", "expense_token": f"EXP-{uuid4().hex.upper()}",
+            "summary": {"production_batches": 0, "products_in_stock": 0, "sales_value": "0.00", "cash_received": "0.00", "input_cost": "0.00", "other_expenses": "0.00", "estimated_balance": "0.00", "estimated_balance_raw": 0},
+        }
+    if wants_json_response():
+        return jsonify(json_safe({"ok": True, **overview}))
+    return render_template("modules/farmer_production.html", overview=overview)
+
+
+@modules_bp.route("/farmer-production/expenses", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_production_expense():
+    try:
+        result = stage9_record_expense(
+            session.get("user_id"),
+            request.form.get("category"),
+            request.form.get("amount"),
+            expense_date=request.form.get("expense_date"),
+            note=request.form.get("note", ""),
+            idempotency_key=request.form.get("expense_token", ""),
+        )
+        flash(result.get("message") or "Expense saved.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_production"))
+
+
+@modules_bp.route("/farmer-produce-stock")
+@login_required
+@roles_required("farmer")
+def farmer_produce_stock():
+    try:
+        overview = stage9_get_stock_overview(session.get("user_id"), request.args.get("q", ""))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"farmer": {}, "rows": [], "movements": [], "query": "", "loss_token": f"LOSS-{uuid4().hex.upper()}"}
+    if wants_json_response():
+        return jsonify(json_safe({"ok": True, **overview}))
+    return render_template("modules/farmer_produce_stock.html", overview=overview)
+
+
+@modules_bp.route("/farmer-produce-stock/loss", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_produce_stock_loss():
+    try:
+        result = stage9_record_stock_loss(
+            session.get("user_id"),
+            request.form.get("product_key"),
+            request.form.get("quantity"),
+            reason=request.form.get("reason", "wastage"),
+            note=request.form.get("note", ""),
+            idempotency_key=request.form.get("loss_token", ""),
+        )
+        flash(result.get("message") or "Produce stock updated.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_produce_stock"))
+
+
+@modules_bp.route("/farmer-sales/new", methods=["GET", "POST"])
+@login_required
+@roles_required("farmer")
+def farmer_sales_new():
+    if request.method == "POST":
+        sale_succeeded = False
+        result = None
+        try:
+            result = stage9_create_external_sale(
+                session.get("user_id"),
+                request.form.get("product_key"),
+                request.form.get("quantity"),
+                request.form.get("unit_price"),
+                buyer_type=request.form.get("buyer_type", "local_buyer"),
+                buyer_name=request.form.get("buyer_name", ""),
+                buyer_phone=request.form.get("buyer_phone", ""),
+                buyer_address=request.form.get("buyer_address", ""),
+                sale_date=request.form.get("sale_date"),
+                payment_term=request.form.get("payment_term", "pay_now"),
+                credit_days=request.form.get("credit_days", 0),
+                note=request.form.get("note", ""),
+                idempotency_key=request.form.get("sale_token", ""),
+            )
+            sale_succeeded = True
+            sale = result.get("sale") or {}
+            invoice = result.get("invoice") or {}
+            flash(result.get("message") or "Sale saved.", "success")
+
+            # Optional collection at the moment the Farmer records the sale.
+            # Sale/stock remains completed even if the settlement needs repair,
+            # preventing a failed payment field from deducting stock twice.
+            collection_option = str(request.form.get("collection_option") or "none").strip().lower()
+            if collection_option in {"full", "partial"} and invoice.get("id"):
+                amount_to_record = invoice.get("outstanding_display") if collection_option == "full" else request.form.get("amount_received")
+                payment_result = stage8_record_payment(
+                    session.get("user_id"),
+                    "farmer_external_invoice",
+                    invoice.get("id"),
+                    amount_to_record,
+                    request.form.get("payment_mode") or "cash",
+                    reference=request.form.get("payment_reference", ""),
+                    note="Collected while recording Farmer produce sale. " + str(request.form.get("payment_note") or ""),
+                    idempotency_key=request.form.get("payment_token", ""),
+                )
+                flash(payment_result.get("message") or "Buyer payment recorded.", "success")
+
+            if wants_json_response():
+                return jsonify(json_safe({"ok": True, **result})), 201
+            return redirect(url_for("modules.farmer_sale_detail", sale_id=sale.get("id")))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if wants_json_response():
+                return json_error(str(exc), 400)
+            if sale_succeeded:
+                flash(f"Sale and stock update succeeded, but payment collection needs attention: {exc}", "warning")
+                sale = (result or {}).get("sale") or {}
+                if sale.get("id"):
+                    return redirect(url_for("modules.farmer_sale_detail", sale_id=sale.get("id")))
+            else:
+                flash(str(exc), "danger")
+
+    try:
+        context = stage9_get_sale_form_context(session.get("user_id"))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        context = {"farmer": {}, "stock_rows": [], "buyer_types": {}, "payment_terms": {}, "mapped_ufc": {}, "today": datetime.utcnow().date().isoformat(), "sale_token": f"FSALE-{uuid4().hex.upper()}", "payment_token": f"FPAY-{uuid4().hex.upper()}"}
+    return render_template("modules/farmer_sale_form.html", **context)
+
+
+@modules_bp.route("/farmer-sales")
+@login_required
+@roles_required("farmer")
+def farmer_sales():
+    try:
+        overview = stage9_get_sales_overview(session.get("user_id"), request.args.get("q", ""))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"farmer": {}, "rows": [], "query": "", "summary": {"sale_count": 0, "sale_value": "0.00", "received": "0.00", "outstanding": "0.00"}}
+    if wants_json_response():
+        return jsonify(json_safe({"ok": True, **overview}))
+    return render_template("modules/farmer_sales.html", overview=overview)
+
+
+@modules_bp.route("/farmer-sales/<sale_id>")
+@login_required
+@roles_required("farmer")
+def farmer_sale_detail(sale_id):
+    try:
+        context = stage9_get_sale_detail(session.get("user_id"), sale_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.farmer_sales"))
+    return render_template("modules/farmer_sale_detail.html", **context)
+
+
+@modules_bp.route("/farmer-sales/<sale_id>/void", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_sale_void(sale_id):
+    try:
+        result = stage9_void_external_sale(session.get("user_id"), sale_id, request.form.get("reason", ""))
+        flash(result.get("message") or "Sale cancelled.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_sale_detail", sale_id=sale_id))
+
+
+@modules_bp.route("/farmer-sales/receipts/<invoice_id>/print")
+@login_required
+@roles_required("farmer")
+def farmer_external_invoice_print(invoice_id):
+    try:
+        context = stage9_get_invoice_print_context(session.get("user_id"), invoice_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.farmer_sales"))
+    return render_template("modules/farmer_external_invoice_print.html", **context)
+
+
+@modules_bp.route("/my-payments/record-buyer-payment", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def record_farmer_buyer_payment():
+    sale_id = request.form.get("sale_id", "")
+    try:
+        result = stage8_record_payment(
+            session.get("user_id"),
+            "farmer_external_invoice",
+            request.form.get("invoice_id"),
+            request.form.get("amount"),
+            request.form.get("payment_mode"),
+            reference=request.form.get("reference", ""),
+            note=request.form.get("note", ""),
+            idempotency_key=request.form.get("payment_token", ""),
+        )
+        flash(result.get("message") or "Buyer payment recorded.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    if sale_id:
+        return redirect(url_for("modules.farmer_sale_detail", sale_id=sale_id))
+    return redirect(url_for("modules.farmer_payments"))
+
+
+@modules_bp.route("/my-payments/<payment_id>/reverse-buyer-payment", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def reverse_farmer_buyer_payment(payment_id):
+    sale_id = request.form.get("sale_id", "")
+    try:
+        result = stage8_reverse_payment(session.get("user_id"), payment_id, request.form.get("reason", ""))
+        flash(result.get("message") or "Buyer payment reversed.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    if sale_id:
+        return redirect(url_for("modules.farmer_sale_detail", sale_id=sale_id))
+    return redirect(url_for("modules.farmer_payments"))
+
+
+
+# ---------------------------------------------------------------------------
+# Corrected Stage 9 — Farmer Produce Marketplace & network commerce
+# ---------------------------------------------------------------------------
+
+
+def _stage9_market_package_options_from_form():
+    labels = request.form.getlist("package_label")
+    sizes = request.form.getlist("package_quantity")
+    prices = request.form.getlist("package_price")
+    count = max(len(labels), len(sizes), len(prices))
+    rows = []
+    for idx in range(count):
+        rows.append({
+            "label": labels[idx] if idx < len(labels) else "",
+            "quantity_per_bag": sizes[idx] if idx < len(sizes) else "",
+            "price_per_bag": prices[idx] if idx < len(prices) else "",
+        })
+    return rows
+
+
+def _stage9_save_market_images():
+    saved = []
+    for file in request.files.getlist("images")[:4]:
+        if not file or not file.filename:
+            continue
+        filename = save_file(file, "farmer_market")
+        if filename:
+            saved.append(filename)
+    return saved
+
+
+def _stage9_cleanup_saved_images(filenames):
+    folder = current_app.config.get("UPLOAD_FOLDER")
+    if not folder:
+        return
+    for filename in filenames or []:
+        try:
+            path = os.path.join(folder, filename)
+            if os.path.isfile(path):
+                os.remove(path)
+        except Exception:
+            pass
+
+
+@modules_bp.route("/farmer-produce-market")
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin", "accounts")
+def farmer_produce_market():
+    try:
+        overview = stage9_market_get_marketplace(
+            session.get("user_id"),
+            request.args.get("q", ""),
+            only_available=request.args.get("available") == "1",
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"viewer": {}, "rows": [], "query": "", "order_token": f"FMORD-{uuid4().hex.upper()}", "payment_terms": {}, "summary": {"listing_count": 0, "available_count": 0}}
+    if wants_json_response():
+        return jsonify(json_safe({"ok": True, **overview}))
+    return render_template("modules/farmer_produce_marketplace.html", overview=overview)
+
+
+@modules_bp.route("/farmer-produce-market/order", methods=["POST"])
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin")
+def farmer_produce_market_order():
+    try:
+        result = stage9_market_place_order(
+            session.get("user_id"),
+            request.form.get("listing_id"),
+            request.form.get("purchase_mode", "loose"),
+            request.form.get("quantity"),
+            package_index=request.form.get("package_index"),
+            payment_term=request.form.get("payment_term", "pay_on_receipt"),
+            note=request.form.get("note", ""),
+            idempotency_key=request.form.get("order_token", ""),
+        )
+        flash(result.get("message") or "Order request sent.", "success")
+        order = result.get("order") or {}
+        return redirect(url_for("modules.farmer_produce_market_order_detail", order_id=order.get("id")))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.farmer_produce_market"))
+
+
+@modules_bp.route("/farmer-produce-market/my-orders")
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin")
+def farmer_produce_market_my_orders():
+    try:
+        overview = stage9_market_get_orders(session.get("user_id"), side="buyer", search=request.args.get("q", ""))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"rows": [], "summary": {}, "side": "buyer", "query": ""}
+    return render_template("modules/farmer_marketplace_my_orders.html", overview=overview)
+
+
+@modules_bp.route("/farmer-produce-market/purchases")
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin")
+def farmer_produce_market_purchases():
+    try:
+        overview = stage9_market_get_purchases(session.get("user_id"), request.args.get("q", ""))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"buyer": {}, "rows": [], "stock_rows": [], "query": ""}
+    return render_template("modules/farmer_marketplace_purchases.html", overview=overview)
+
+
+@modules_bp.route("/farmer-produce-market/orders/<order_id>")
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin", "accounts")
+def farmer_produce_market_order_detail(order_id):
+    try:
+        context = stage9_market_get_order_detail(session.get("user_id"), order_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        role = session.get("role")
+        if role == "farmer":
+            return redirect(url_for("modules.farmer_produce_market_my_orders"))
+        return redirect(url_for("modules.farmer_produce_market"))
+    return render_template("modules/farmer_marketplace_order_detail.html", **context)
+
+
+@modules_bp.route("/farmer-produce-market/orders/<order_id>/cancel", methods=["POST"])
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin")
+def farmer_produce_market_cancel_order(order_id):
+    try:
+        result = stage9_market_cancel_order(session.get("user_id"), order_id, request.form.get("reason", ""))
+        flash(result.get("message") or "Order cancelled.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_produce_market_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/farmer-produce-market/orders/<order_id>/receive", methods=["POST"])
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin")
+def farmer_produce_market_receive_order(order_id):
+    result = None
+    try:
+        result = stage9_market_receive_order(session.get("user_id"), order_id)
+        receive_message = result.get("message") or "Goods received."
+        flash(receive_message, "warning" if "need repair" in receive_message.lower() else "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.farmer_produce_market_order_detail", order_id=order_id))
+
+    invoice = (result or {}).get("invoice") or {}
+    collection_option = str(request.form.get("collection_option") or "none").strip().lower()
+    if collection_option in {"full", "partial"} and invoice.get("id"):
+        try:
+            amount = invoice.get("outstanding_display") if collection_option == "full" else request.form.get("amount")
+            payment = stage8_record_payment(
+                session.get("user_id"),
+                "farmer_marketplace_invoice",
+                invoice.get("id"),
+                amount,
+                request.form.get("payment_mode") or "cash",
+                reference=request.form.get("reference", ""),
+                note=request.form.get("payment_note", "Received through Farmer Produce Market."),
+                idempotency_key=request.form.get("payment_token", ""),
+            )
+            flash(payment.get("message") or "Payment recorded.", "success")
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(f"Goods receipt succeeded, but payment needs attention: {exc}", "warning")
+    return redirect(url_for("modules.farmer_produce_market_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/my-produce-market/listings")
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_listings():
+    try:
+        overview = stage9_market_get_my_listings(session.get("user_id"), request.args.get("q", ""))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"rows": [], "summary": {}, "query": ""}
+    return render_template("modules/farmer_marketplace_listings.html", overview=overview)
+
+
+@modules_bp.route("/my-produce-market/listings/new", methods=["GET", "POST"])
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_listing_new():
+    return _farmer_marketplace_listing_form(None)
+
+
+@modules_bp.route("/my-produce-market/listings/<listing_id>/edit", methods=["GET", "POST"])
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_listing_edit(listing_id):
+    return _farmer_marketplace_listing_form(listing_id)
+
+
+def _farmer_marketplace_listing_form(listing_id):
+    if request.method == "POST":
+        saved_images = []
+        try:
+            saved_images = _stage9_save_market_images()
+            result = stage9_market_save_listing(
+                session.get("user_id"),
+                request.form.get("product_key"),
+                request.form.get("listed_quantity"),
+                request.form.get("selling_mode", "loose"),
+                loose_price=request.form.get("loose_price"),
+                min_order_quantity=request.form.get("min_order_quantity", 1),
+                package_options=_stage9_market_package_options_from_form(),
+                title=request.form.get("title", ""),
+                description=request.form.get("description", ""),
+                grade=request.form.get("grade", ""),
+                variety=request.form.get("variety", ""),
+                images=saved_images,
+                publish=request.form.get("action") == "publish",
+                listing_id=listing_id,
+            )
+            flash(result.get("message") or "Listing saved.", "success")
+            return redirect(url_for("modules.farmer_marketplace_listings"))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            _stage9_cleanup_saved_images(saved_images)
+            flash(str(exc), "danger")
+    try:
+        context = stage9_market_get_listing_form_context(session.get("user_id"), listing_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.farmer_marketplace_listings"))
+    context["selected_product_key"] = request.args.get("product_key", "")
+    return render_template("modules/farmer_marketplace_listing_form.html", **context)
+
+
+@modules_bp.route("/my-produce-market/listings/<listing_id>/status", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_listing_status(listing_id):
+    try:
+        result = stage9_market_set_listing_status(session.get("user_id"), listing_id, request.form.get("status"))
+        flash(result.get("message") or "Listing updated.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_marketplace_listings"))
+
+
+@modules_bp.route("/my-produce-market/orders")
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_orders_received():
+    try:
+        overview = stage9_market_get_orders(session.get("user_id"), side="seller", search=request.args.get("q", ""))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"rows": [], "summary": {}, "side": "seller", "query": ""}
+    return render_template("modules/farmer_marketplace_orders_received.html", overview=overview)
+
+
+@modules_bp.route("/my-produce-market/orders/<order_id>/approve", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_order_approve(order_id):
+    try:
+        result = stage9_market_approve_order(session.get("user_id"), order_id, credit_days=request.form.get("credit_days", 0))
+        flash(result.get("message") or "Order approved.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_produce_market_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/my-produce-market/orders/<order_id>/reject", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_order_reject(order_id):
+    try:
+        result = stage9_market_reject_order(session.get("user_id"), order_id, request.form.get("reason", ""))
+        flash(result.get("message") or "Order rejected.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_produce_market_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/my-produce-market/orders/<order_id>/dispatch", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_order_dispatch(order_id):
+    try:
+        result = stage9_market_dispatch_order(session.get("user_id"), order_id)
+        category = "warning" if "needs repair" in str(result.get("message") or "").lower() else "success"
+        flash(result.get("message") or "Order dispatched.", category)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_produce_market_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/my-produce-market/orders/<order_id>/repair", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_order_repair(order_id):
+    try:
+        result = stage9_market_repair_financial_documents(session.get("user_id"), order_id)
+        flash(result.get("message") or "Sales documents repaired.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_produce_market_order_detail", order_id=order_id))
+
+
+@modules_bp.route("/my-produce-market/sales")
+@login_required
+@roles_required("farmer")
+def farmer_marketplace_sales():
+    try:
+        overview = stage9_market_get_sales(session.get("user_id"), request.args.get("q", ""))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {"rows": [], "summary": {}, "query": ""}
+    return render_template("modules/farmer_marketplace_sales.html", overview=overview)
+
+
+@modules_bp.route("/farmer-produce-market/receipts/<invoice_id>/print")
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin", "accounts")
+def farmer_marketplace_invoice_print(invoice_id):
+    try:
+        context = stage9_market_get_invoice_print_context(session.get("user_id"), invoice_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.farmer_produce_market"))
+    return render_template("modules/farmer_marketplace_invoice_print.html", **context)
+
+
+@modules_bp.route("/farmer-produce-market/payments/record", methods=["POST"])
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin", "accounts")
+def farmer_marketplace_record_payment():
+    order_id = request.form.get("order_id") or ""
+    try:
+        result = stage8_record_payment(
+            session.get("user_id"),
+            "farmer_marketplace_invoice",
+            request.form.get("invoice_id"),
+            request.form.get("amount"),
+            request.form.get("payment_mode"),
+            reference=request.form.get("reference", ""),
+            note=request.form.get("note", ""),
+            idempotency_key=request.form.get("payment_token", ""),
+        )
+        flash(result.get("message") or "Payment recorded.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    if order_id:
+        return redirect(url_for("modules.farmer_produce_market_order_detail", order_id=order_id))
+    return redirect(url_for("modules.farmer_produce_market_my_orders"))
 
 
 # ---------------------------------------------------------------------------

@@ -1847,6 +1847,22 @@ body.sidebar-collapsed .sidebar-logout{
             </div>
 
 
+            <!-- FARMER PRODUCE PROCUREMENT -->
+
+            <div class="nav-group" data-group="avpl_farmer_procurement">
+                <button type="button" class="nav-group-toggle" onclick="toggleNavGroup(this)">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 18c4-8 8-10 16-12-1 8-4 12-11 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 20c3-5 6-8 11-11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                    <span class="nav-group-title">Farmer Procurement</span>
+                    <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2"/></svg></span>
+                </button>
+                <div class="nav-group-content"><div class="nav-group-inner">
+                    <a href="{{ url_for('modules.farmer_produce_market') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market' %}active{% endif %}">Farmer Produce Market</a>
+                    <a href="{{ url_for('modules.farmer_produce_market_my_orders') }}" class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_market_my_orders','modules.farmer_produce_market_order_detail'] %}active{% endif %}">My Produce Orders</a>
+                    <a href="{{ url_for('modules.farmer_produce_market_purchases') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market_purchases' %}active{% endif %}">Produce Purchases</a>
+                </div></div>
+            </div>
+
+
             <!-- PEOPLE -->
 
             <div
@@ -2592,6 +2608,22 @@ body.sidebar-collapsed .sidebar-logout{
             </div>
 
 
+            <!-- FARMER PRODUCE PROCUREMENT -->
+
+            <div class="nav-group" data-group="ufc_farmer_procurement">
+                <button type="button" class="nav-group-toggle" onclick="toggleNavGroup(this)">
+                    <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 18c4-8 8-10 16-12-1 8-4 12-11 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 20c3-5 6-8 11-11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                    <span class="nav-group-title">Farmer Procurement</span>
+                    <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2"/></svg></span>
+                </button>
+                <div class="nav-group-content"><div class="nav-group-inner">
+                    <a href="{{ url_for('modules.farmer_produce_market') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market' %}active{% endif %}">Farmer Produce Market</a>
+                    <a href="{{ url_for('modules.farmer_produce_market_my_orders') }}" class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_market_my_orders','modules.farmer_produce_market_order_detail'] %}active{% endif %}">My Produce Orders</a>
+                    <a href="{{ url_for('modules.farmer_produce_market_purchases') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market_purchases' %}active{% endif %}">Produce Purchases</a>
+                </div></div>
+            </div>
+
+
             <!-- FARMER OPERATIONS -->
 
             <div
@@ -3047,6 +3079,13 @@ body.sidebar-collapsed .sidebar-logout{
                         >
                             My Payments
                         </a>
+                        <a
+                            href="{{ url_for('modules.farmer_produce_market') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_market','modules.farmer_produce_market_order_detail','modules.farmer_produce_market_my_orders','modules.farmer_produce_market_purchases'] %}active{% endif %}"
+                        >
+                            Farmer Produce Market
+                        </a>
+
 
                     </div>
 
@@ -3111,10 +3150,52 @@ body.sidebar-collapsed .sidebar-logout{
                     <div class="nav-group-inner">
 
                         <a
-                            href="{{ url_for('modules.sell') }}"
-                            class="nav-sub-link"
+                            href="{{ url_for('modules.farmer_production') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_production','modules.farmer_production_expense'] %}active{% endif %}"
                         >
-                            Sell Produce
+                            Production / Harvest
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.farmer_produce_stock') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_stock','modules.farmer_produce_stock_loss'] %}active{% endif %}"
+                        >
+                            My Produce Stock
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.farmer_marketplace_listing_new') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_marketplace_listing_new','modules.farmer_marketplace_listing_edit'] %}active{% endif %}"
+                        >
+                            Sell on Marketplace
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.farmer_marketplace_listings') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_marketplace_listings','modules.farmer_marketplace_listing_status'] %}active{% endif %}"
+                        >
+                            My Listings
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.farmer_marketplace_orders_received') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_marketplace_orders_received','modules.farmer_marketplace_order_approve','modules.farmer_marketplace_order_reject','modules.farmer_marketplace_order_dispatch','modules.farmer_marketplace_order_repair'] %}active{% endif %}"
+                        >
+                            Orders Received
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.farmer_marketplace_sales') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_marketplace_sales','modules.farmer_marketplace_invoice_print'] %}active{% endif %}"
+                        >
+                            Marketplace Sales
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.farmer_sales_new') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_sales_new','modules.farmer_sales','modules.farmer_sale_detail','modules.farmer_external_invoice_print','modules.farmer_sale_void'] %}active{% endif %}"
+                        >
+                            Record Outside Sale
                         </a>
 
                     </div>
