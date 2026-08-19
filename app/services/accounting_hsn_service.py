@@ -16,6 +16,7 @@ from app.services.accounting_permission_service import (
     has_accounting_permission,
 )
 from app.utils.helpers import now_utc
+from app.services.workflow_policy_service import workflow_is_streamlined
 
 
 AVPL_ENTITY_CODE = "AVPL"
@@ -444,15 +445,18 @@ def update_hsn_master(hsn_id, actor_user_id, expected_version, form):
 
 
 def _transition(hsn_id, actor_user_id, expected_version, action, permission, allowed_roles, source_statuses, target_status, reason="", note=""):
-    actor = _get_actor(actor_user_id, allowed_roles=allowed_roles)
+    streamlined = workflow_is_streamlined("accounting.hsn") and action == "approve_hsn_master"
+    effective_roles = set(allowed_roles) | ({"accounts"} if streamlined else set())
+    actor = _get_actor(actor_user_id, allowed_roles=effective_roles)
     current = _get_hsn(hsn_id)
     entity = _assert_active_avpl_entity(current.get("accounting_entity_id"))
-    _require_permission(actor, entity["_id"], permission)
+    effective_permission = SUBMIT_PERMISSION if streamlined and actor.get("resolved_role") == "accounts" else permission
+    _require_permission(actor, entity["_id"], effective_permission)
     if current.get("status") not in set(source_statuses):
         raise ValueError("This HSN master is not in a valid state for the requested action.")
     if action in {"submit_hsn_master", "withdraw_hsn_master", "cancel_hsn_master"} and str(current.get("created_by")) != str(actor["_id"]):
         raise PermissionError("Only the original Accounts maker can perform this action.")
-    if action in {"approve_hsn_master", "return_hsn_master"} and str(current.get("created_by")) == str(actor["_id"]):
+    if action in {"approve_hsn_master", "return_hsn_master"} and str(current.get("created_by")) == str(actor["_id"]) and not streamlined:
         raise PermissionError("The maker cannot approve or return their own HSN master.")
     try:
         expected_version = int(expected_version)

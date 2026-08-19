@@ -1,0 +1,9 @@
+<div class="s10-tabs s10-no-print">
+  <a class="{% if stage10_page=='overview' %}active{% endif %}" href="{{ url_for('reports.overview') }}">Overview</a>
+  <a class="{% if stage10_page=='transactions' %}active{% endif %}" href="{{ url_for('reports.transactions') }}">Transaction Chains</a>
+  <a class="{% if stage10_page=='inventory' %}active{% endif %}" href="{{ url_for('reports.inventory') }}">Inventory</a>
+  <a class="{% if stage10_page=='financial' %}active{% endif %}" href="{{ url_for('reports.financial') }}">Receivable / Payable</a>
+  <a class="{% if stage10_page=='gst' %}active{% endif %}" href="{{ url_for('reports.gst') }}">GST / HSN</a>
+  <a class="{% if stage10_page=='reconciliation' %}active{% endif %}" href="{{ url_for('reports.reconciliation') }}">Reconciliation</a>
+  {% if scope.is_management %}<a class="{% if stage10_page=='system_health' %}active{% endif %}" href="{{ url_for('reports.system_health') }}">System Health</a>{% endif %}
+</div>

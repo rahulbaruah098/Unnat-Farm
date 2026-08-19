@@ -287,7 +287,7 @@
             <h2 id="gstTaxMasterTitle">GST tax master</h2>
             <p class="accounting-section-description">
                 Protected CGST, SGST and IGST components, controlled taxability classifications,
-                and maker-checker approved tax rates with permanent effective-date history.
+                and {% if streamlined_workflows_enabled %}validated active tax rates{% else %}maker-checker approved tax rates{% endif %} with permanent effective-date history.
             </p>
         </div>
         {% if gst_tax_overview.foundation.is_complete %}
@@ -447,7 +447,7 @@
                     </div>
                 </div>
                 <div class="accounting-gst-form-actions">
-                    <button class="accounting-primary-button" type="submit">Create GST rate draft</button>
+                    <button class="accounting-primary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate GST Rate{% else %}Create GST rate draft{% endif %}</button>
                 </div>
             </form>
         {% elif not gst_tax_overview.foundation.is_complete %}
@@ -550,7 +550,7 @@
                                             </div>
                                         </div>
                                         <div class="accounting-gst-actions">
-                                            <button class="accounting-gst-secondary-button" type="submit">Save changes</button>
+                                            <button class="accounting-gst-secondary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save changes{% endif %}</button>
                                         </div>
                                     </form>
                                 {% endif %}

@@ -63,6 +63,7 @@ from app.services.avpl_purchase_posting_service import (
     post_supplier_invoice_purchase,
     prepare_supplier_invoice_posting,
 )
+from app.services.workflow_policy_service import workflow_is_streamlined
 from app.services.avpl_inventory_service import (
     approve_stock_adjustment,
     create_stock_adjustment,
@@ -2359,8 +2360,15 @@ def create_purchase_order_view():
                     'items_json': request.form.get('items_json', '[]'),
                 },
                 auto_approve=(
-                    request.form.get('save_action') == 'approve'
-                    and session.get('role') in ['avpl_admin', 'super_admin']
+                    (
+                        workflow_is_streamlined('avpl.purchase_order')
+                        and request.form.get('save_action') != 'draft'
+                    )
+                    or (
+                        not workflow_is_streamlined('avpl.purchase_order')
+                        and request.form.get('save_action') == 'approve'
+                        and session.get('role') in ['avpl_admin', 'super_admin']
+                    )
                 ),
             )
             flash(result.get('message') or 'Purchase order saved.', 'success')
@@ -2441,8 +2449,15 @@ def edit_purchase_order_view(order_id):
                 },
                 request.form.get('expected_version'),
                 auto_approve=(
-                    request.form.get('save_action') == 'approve'
-                    and session.get('role') in ['avpl_admin', 'super_admin']
+                    (
+                        workflow_is_streamlined('avpl.purchase_order')
+                        and request.form.get('save_action') != 'draft'
+                    )
+                    or (
+                        not workflow_is_streamlined('avpl.purchase_order')
+                        and request.form.get('save_action') == 'approve'
+                        and session.get('role') in ['avpl_admin', 'super_admin']
+                    )
                 ),
             )
             flash(result.get('message') or 'Purchase order updated.', 'success')
@@ -2473,6 +2488,35 @@ def _purchase_order_action(service_function, order_id, **kwargs):
     return redirect(url_for('admin.purchase_order_detail', order_id=order_id))
 
 
+@admin_bp.route('/purchase-orders/<order_id>/complete', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def complete_purchase_order_view(order_id):
+    """One-click completion for a saved routine PO in streamlined mode."""
+    if not workflow_is_streamlined('avpl.purchase_order'):
+        flash('Simplified purchase-order completion is disabled.', 'warning')
+        return redirect(url_for('admin.purchase_order_detail', order_id=order_id))
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        order = get_purchase_order(entity['_id'], session.get('user_id'), order_id)
+        if order.get('status') in ['draft', 'returned_for_correction']:
+            submitted = submit_purchase_order(order_id, session.get('user_id'), order.get('version'))
+            order = submitted.get('order') or order
+        if order.get('status') == 'pending_approval':
+            completed = approve_purchase_order(
+                order_id, session.get('user_id'), order.get('version'),
+                approval_note='Completed through streamlined purchase workflow.',
+            )
+            flash(completed.get('message') or 'Purchase order completed.', 'success')
+        else:
+            flash('Purchase order is already ready for fulfilment.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.purchase_order_detail', order_id=order_id))
+
+
 @admin_bp.route('/purchase-orders/<order_id>/submit', methods=['POST'])
 @login_required
 @roles_required('super_admin', 'avpl_admin', 'accounts')
@@ -2482,7 +2526,7 @@ def submit_purchase_order_view(order_id):
 
 @admin_bp.route('/purchase-orders/<order_id>/approve', methods=['POST'])
 @login_required
-@roles_required('super_admin', 'avpl_admin')
+@roles_required('super_admin', 'avpl_admin', 'accounts')
 def approve_purchase_order_view(order_id):
     return _purchase_order_action(
         approve_purchase_order,
@@ -2595,8 +2639,15 @@ def create_goods_receipt_view():
                     'items_json': request.form.get('items_json', '[]'),
                 },
                 auto_post=(
-                    request.form.get('save_action') == 'post'
-                    and session.get('role') in ['avpl_admin', 'super_admin']
+                    (
+                        workflow_is_streamlined('avpl.goods_receipt')
+                        and request.form.get('save_action') != 'draft'
+                    )
+                    or (
+                        not workflow_is_streamlined('avpl.goods_receipt')
+                        and request.form.get('save_action') == 'post'
+                        and session.get('role') in ['avpl_admin', 'super_admin']
+                    )
                 ),
             )
             flash(
@@ -2671,8 +2722,15 @@ def edit_goods_receipt_view(receipt_id):
                 },
                 request.form.get('expected_version'),
                 auto_post=(
-                    request.form.get('save_action') == 'post'
-                    and session.get('role') in ['avpl_admin', 'super_admin']
+                    (
+                        workflow_is_streamlined('avpl.goods_receipt')
+                        and request.form.get('save_action') != 'draft'
+                    )
+                    or (
+                        not workflow_is_streamlined('avpl.goods_receipt')
+                        and request.form.get('save_action') == 'post'
+                        and session.get('role') in ['avpl_admin', 'super_admin']
+                    )
                 ),
             )
             flash(
@@ -2728,12 +2786,13 @@ def submit_goods_receipt_view(receipt_id):
 
 @admin_bp.route('/goods-receipts/<receipt_id>/post', methods=['POST'])
 @login_required
-@roles_required('super_admin', 'avpl_admin')
+@roles_required('super_admin', 'avpl_admin', 'accounts')
 def post_goods_receipt_view(receipt_id):
     return _goods_receipt_action(
         post_goods_receipt,
         receipt_id,
         posting_note=request.form.get('posting_note', ''),
+        allow_creator_post=workflow_is_streamlined('avpl.goods_receipt'),
     )
 
 
@@ -2810,6 +2869,32 @@ def supplier_invoices():
     )
 
 
+def _auto_finalize_supplier_invoice_if_ready(result):
+    """Finalize a matched supplier invoice in one save when streamlined mode is enabled.
+
+    Matching remains the safety gate. If final posting fails for a configuration reason, the
+    recorded invoice is preserved and the detail page exposes a safe retry action.
+    """
+    if not workflow_is_streamlined('avpl.supplier_invoice_posting'):
+        return result, None
+    invoice = (result or {}).get('invoice') or {}
+    if invoice.get('status') not in ['matched', 'matched_with_warnings']:
+        return result, None
+    if int(invoice.get('blocking_mismatch_count') or 0) > 0:
+        return result, None
+    if invoice.get('posting_status') == 'posted':
+        return result, None
+    try:
+        posted = post_supplier_invoice_purchase(
+            invoice.get('id'),
+            session.get('user_id'),
+            invoice.get('version'),
+        )
+        return posted, None
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        return result, str(exc)
+
+
 @admin_bp.route('/supplier-invoices/create', methods=['GET', 'POST'])
 @login_required
 @roles_required('super_admin', 'avpl_admin', 'accounts')
@@ -2828,6 +2913,7 @@ def create_supplier_invoice_view():
                     'items_json': request.form.get('items_json', '[]'),
                 },
             )
+            result, finalize_warning = _auto_finalize_supplier_invoice_if_ready(result)
             category = (
                 'success'
                 if result['invoice']['status'] in [
@@ -2840,6 +2926,11 @@ def create_supplier_invoice_view():
                 result.get('message') or 'Supplier Invoice recorded.',
                 category,
             )
+            if finalize_warning:
+                flash(
+                    'Invoice was recorded, but automatic finalization needs attention: ' + finalize_warning,
+                    'warning',
+                )
             return redirect(
                 url_for(
                     'admin.supplier_invoice_detail',
@@ -2910,6 +3001,7 @@ def edit_supplier_invoice_view(invoice_id):
                 },
                 request.form.get('expected_version'),
             )
+            result, finalize_warning = _auto_finalize_supplier_invoice_if_ready(result)
             category = (
                 'success'
                 if result['invoice']['status'] in [
@@ -3001,7 +3093,7 @@ def prepare_supplier_invoice_posting_view(invoice_id):
     methods=['POST'],
 )
 @login_required
-@roles_required('super_admin', 'avpl_admin')
+@roles_required('super_admin', 'avpl_admin', 'accounts')
 def post_supplier_invoice_purchase_view(invoice_id):
     try:
         result = post_supplier_invoice_purchase(

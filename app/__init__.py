@@ -14,6 +14,7 @@ from app.blueprints.master_data.routes import master_bp
 from app.blueprints.modules.routes import modules_bp
 from app.blueprints.documents.routes import documents_bp
 from app.blueprints.accounting.routes import accounting_bp
+from app.blueprints.reports.routes import reports_bp
 
 from flask_cors import CORS
 
@@ -49,18 +50,21 @@ def create_app():
         "mp4", "mov", "avi", "mkv", "webm"
     }
 
-    # AVPL staged-rollout controls. New modules remain disabled until their
-    # approved implementation stage is released. Legacy flags default to True
-    # so Stage 0 does not alter existing operational behaviour.
+    # AVPL workflow feature controls. Stages 1-10 are part of the current
+    # baseline, so completed modules default to enabled. Environment variables
+    # can still explicitly disable a module for emergency rollback.
     app.config.update(
-        AVPL_PRODUCT_MASTER_V2_ENABLED=_env_bool("AVPL_PRODUCT_MASTER_V2_ENABLED", False),
-        AVPL_PURCHASE_WORKFLOW_ENABLED=_env_bool("AVPL_PURCHASE_WORKFLOW_ENABLED", False),
-        AVPL_INVENTORY_LEDGER_ENABLED=_env_bool("AVPL_INVENTORY_LEDGER_ENABLED", False),
-        AVPL_LISTING_WORKFLOW_ENABLED=_env_bool("AVPL_LISTING_WORKFLOW_ENABLED", False),
-        AVPL_SALES_ACCOUNTING_ENABLED=_env_bool("AVPL_SALES_ACCOUNTING_ENABLED", False),
-        AVPL_REPORTS_ENABLED=_env_bool("AVPL_REPORTS_ENABLED", False),
+        AVPL_PRODUCT_MASTER_V2_ENABLED=_env_bool("AVPL_PRODUCT_MASTER_V2_ENABLED", True),
+        AVPL_PURCHASE_WORKFLOW_ENABLED=_env_bool("AVPL_PURCHASE_WORKFLOW_ENABLED", True),
+        AVPL_INVENTORY_LEDGER_ENABLED=_env_bool("AVPL_INVENTORY_LEDGER_ENABLED", True),
+        AVPL_LISTING_WORKFLOW_ENABLED=_env_bool("AVPL_LISTING_WORKFLOW_ENABLED", True),
+        AVPL_SALES_ACCOUNTING_ENABLED=_env_bool("AVPL_SALES_ACCOUNTING_ENABLED", True),
+        AVPL_REPORTS_ENABLED=_env_bool("AVPL_REPORTS_ENABLED", True),
         LEGACY_PRODUCT_RESTOCK_ENABLED=_env_bool("LEGACY_PRODUCT_RESTOCK_ENABLED", True),
         LEGACY_DIRECT_AVPL_ORDER_ENABLED=_env_bool("LEGACY_DIRECT_AVPL_ORDER_ENABLED", True),
+        # Refined operating mode: routine records can be completed in one step.
+        # High-risk reversals/financial-year controls remain explicit.
+        STREAMLINED_WORKFLOWS_ENABLED=_env_bool("STREAMLINED_WORKFLOWS_ENABLED", True),
     )
 
     mongo.init_app(app)
@@ -77,6 +81,7 @@ def create_app():
     app.register_blueprint(modules_bp)
     app.register_blueprint(documents_bp)
     app.register_blueprint(accounting_bp)
+    app.register_blueprint(reports_bp)
 
     @app.before_request
     def enforce_profile_and_validation_gate():
@@ -177,8 +182,10 @@ def create_app():
                 .title()
             )
 
+        from app.services.workflow_policy_service import streamlined_workflows_enabled
         return {
-            "current_display_name": display_name
+            "current_display_name": display_name,
+            "streamlined_workflows_enabled": streamlined_workflows_enabled(),
         }
 
     return app

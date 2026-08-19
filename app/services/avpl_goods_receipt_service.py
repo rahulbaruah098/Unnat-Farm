@@ -25,6 +25,7 @@ from app.services.avpl_purchase_order_service import (
     serialize_purchase_order,
 )
 from app.utils.helpers import now_utc
+from app.services.workflow_policy_service import workflow_is_streamlined
 
 
 GOODS_RECEIPT_COLLECTION = "avpl_goods_receipts"
@@ -1249,7 +1250,10 @@ def create_goods_receipt(
         changed_fields=sorted(payload.keys()),
     )
 
-    if auto_post and actor.get("resolved_role") in CHECKER_ROLES:
+    if auto_post and (
+        actor.get("resolved_role") in CHECKER_ROLES
+        or workflow_is_streamlined("avpl.goods_receipt")
+    ):
         return post_goods_receipt(
             document["_id"],
             actor["_id"],
@@ -1354,7 +1358,10 @@ def update_goods_receipt(
         changed_fields=sorted(payload.keys()),
     )
 
-    if auto_post and actor.get("resolved_role") in CHECKER_ROLES:
+    if auto_post and (
+        actor.get("resolved_role") in CHECKER_ROLES
+        or workflow_is_streamlined("avpl.goods_receipt")
+    ):
         return post_goods_receipt(
             updated["_id"],
             actor["_id"],
@@ -1805,9 +1812,12 @@ def post_goods_receipt(
     allow_creator_post=False,
 ):
     actor = _get_actor(actor_user_id)
-    if actor.get("resolved_role") not in CHECKER_ROLES:
+    if (
+        actor.get("resolved_role") not in CHECKER_ROLES
+        and not workflow_is_streamlined("avpl.goods_receipt")
+    ):
         raise PermissionError(
-            "Only AVPL Admin or Super Admin can post a Goods Receipt."
+            "You are not authorized to post a Goods Receipt."
         )
 
     with _posting_lock(receipt_id):

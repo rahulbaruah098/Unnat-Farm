@@ -543,6 +543,13 @@
             border-radius:12px;
         }
     }
+
+    .live-metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:20px}
+    .live-metric{padding:16px;border:1px solid rgba(220,238,226,.95);border-radius:18px;background:#fff;box-shadow:0 10px 24px rgba(23,37,42,.05)}
+    .live-metric span{display:block;color:#64748B;font-size:.88rem;font-weight:800;margin-bottom:8px}
+    .live-metric strong{display:block;color:#17252A;font-size:1.35rem;font-weight:900}
+    @media(max-width:860px){.live-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:480px){.live-metric-grid{grid-template-columns:1fr}}
 </style>
 
 <div class="sales-page">
@@ -554,6 +561,12 @@
                 <h2>{{ title }}</h2>
                 <p>Monitor UFC centre sales performance, farmer input product availability, and farmer-wise product details.</p>
             </div>
+        </div>
+        <div class="live-metric-grid">
+            <div class="live-metric"><span>UFC Distribution Orders</span><strong>{{ network_stats.avpl_ufc_order_count }}</strong></div>
+            <div class="live-metric"><span>Farmer Input Orders</span><strong>{{ network_stats.farmer_input_order_count }}</strong></div>
+            <div class="live-metric"><span>AVPL Saleable Stock</span><strong>{{ network_stats.avpl_stock_saleable }}</strong></div>
+            <div class="live-metric"><span>UFC Receivable</span><strong>₹{{ "%.2f"|format(network_stats.ufc_receivable|float) }}</strong></div>
         </div>
     </div>
 

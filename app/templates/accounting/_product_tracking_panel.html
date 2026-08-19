@@ -226,7 +226,7 @@
 
         {% if not product_tracking_overview.prerequisites.has_accounting_ready_products %}
             <div class="accounting-notice warning">
-                Approve at least one Product Accounting mapping before configuring barcode, batch or expiry controls.
+                {% if streamlined_workflows_enabled %}Activate at least one Product Accounting mapping before configuring barcode, batch or expiry controls.{% else %}Approve at least one Product Accounting mapping before configuring barcode, batch or expiry controls.{% endif %}
             </div>
         {% endif %}
 
@@ -304,7 +304,7 @@
 
                 <div class="accounting-tracking-footer">
                     <small>EAN/UPC/GTIN values are check-digit validated. Live barcodes must be unique inside AVPL Accounting.</small>
-                    <button type="submit" class="accounting-primary-button">Create tracking draft</button>
+                    <button type="submit" class="accounting-primary-button">{% if streamlined_workflows_enabled %}Save & Activate Tracking{% else %}Create tracking draft{% endif %}</button>
                 </div>
             </form>
         {% elif product_tracking_capabilities.can_create and product_tracking_overview.prerequisites.has_accounting_ready_products %}
@@ -379,7 +379,7 @@
                                         <label class="accounting-tracking-toggle"><input type="checkbox" name="expiry_tracking_enabled" value="1" {% if profile.expiry_tracking_enabled %}checked{% endif %}><span><strong>Expiry tracking</strong></span></label>
                                         <label class="accounting-tracking-toggle"><input type="checkbox" name="expiry_date_required" value="1" {% if profile.expiry_date_required %}checked{% endif %}><span><strong>Expiry date required</strong></span></label>
                                     </div>
-                                    <div class="accounting-tracking-footer"><span></span><button type="submit" class="accounting-primary-button">Save draft</button></div>
+                                    <div class="accounting-tracking-footer"><span></span><button type="submit" class="accounting-primary-button">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save draft{% endif %}</button></div>
                                 </form>
                             </details>
                         {% endif %}

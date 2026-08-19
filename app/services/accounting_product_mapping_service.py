@@ -14,6 +14,7 @@ from app.services.accounting_permission_service import (
 )
 from app.services.accounting_unit_service import get_active_unit_for_mapping
 from app.utils.helpers import now_utc
+from app.services.workflow_policy_service import workflow_is_streamlined
 
 
 MAPPING_COLLECTION = "accounting_product_mappings"
@@ -1071,10 +1072,13 @@ def _transition(
     reason="",
     note="",
 ):
-    actor = _get_actor(actor_user_id, allowed_roles=allowed_roles)
+    streamlined = workflow_is_streamlined("accounting.product_mapping") and action == "approve"
+    effective_roles = set(allowed_roles) | ({"accounts"} if streamlined else set())
+    actor = _get_actor(actor_user_id, allowed_roles=effective_roles)
     document = _get_mapping(mapping_id)
     entity = _assert_active_avpl_entity(document.get("accounting_entity_id"))
-    _require_permission(actor, entity["_id"], permission)
+    effective_permission = SUBMIT_PERMISSION if streamlined and actor.get("resolved_role") == "accounts" else permission
+    _require_permission(actor, entity["_id"], effective_permission)
 
     current_status = document.get("status") or STATUS_DRAFT
     if current_status not in set(source_statuses):
@@ -1089,7 +1093,7 @@ def _transition(
     if action in {"submit", "withdraw", "cancel"}:
         _assert_maker(document, actor)
 
-    if action in {"approve", "return"} and str(document.get("created_by")) == str(actor["_id"]):
+    if action in {"approve", "return"} and str(document.get("created_by")) == str(actor["_id"]) and not streamlined:
         raise PermissionError("The maker cannot approve or return their own product mapping.")
 
     clean_reason = _clean_text(reason, 1000)

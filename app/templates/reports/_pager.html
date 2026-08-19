@@ -1,0 +1,6 @@
+{% if report.pagination and report.pagination.total_pages > 1 %}
+<div class="s10-no-print" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-top:1px solid #edf2ee;background:#fbfdfb">
+  <div style="font-size:.82rem;color:#6b7b72">Showing {{ report.pagination.start }}–{{ report.pagination.end }} of {{ report.pagination.total }} · Page {{ report.pagination.page }}/{{ report.pagination.total_pages }}</div>
+  <div style="display:flex;gap:8px">{% if report.pagination.previous_url %}<a class="s10-btn secondary" href="{{ report.pagination.previous_url }}">Previous</a>{% endif %}{% if report.pagination.next_url %}<a class="s10-btn secondary" href="{{ report.pagination.next_url }}">Next</a>{% endif %}</div>
+</div>
+{% endif %}

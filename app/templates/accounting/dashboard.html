@@ -2270,10 +2270,8 @@
             <p class="accounting-eyebrow">UnnatFarm Finance Control</p>
             <h1 id="accountingPageTitle">Accounting</h1>
             <p class="accounting-subtitle">
-                The Accounting foundation now includes permanent access mapping,
-                controlled Financial Year lifecycle, approved AVPL configuration,
-                invoice/voucher numbering, disabled future-entity hierarchy mapping,
-                protected account groups, default AVPL ledgers, controlled supplier/customer party masters, GST/HSN/unit masters and approved product Accounting mappings without changing current MIS transactions.
+                Accounting keeps the full audit, numbering, tax and ledger controls, while routine setup is streamlined for day-to-day use.
+                Financial-year controls, posted-document corrections, reversals and other high-risk actions remain protected.
             </p>
         </div>
 
@@ -2282,6 +2280,12 @@
             Access verified
         </div>
     </div>
+
+    {% if streamlined_workflows_enabled %}
+    <div class="accounting-notice success" role="status">
+        <strong>Simplified workflow is active.</strong> Routine Accounting masters are validated and activated on Save, so Accounts users do not need a separate Submit → Approve cycle. High-risk financial controls still use controlled actions and remain fully audited.
+    </div>
+    {% endif %}
 
     <div class="accounting-status-grid">
         <article class="accounting-status-card">
@@ -2297,9 +2301,14 @@
         </article>
 
         <article class="accounting-status-card">
-            <span class="accounting-card-label">Approval queue</span>
-            <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count + party_ledger_overview.counts.pending_approval + gst_tax_overview.counts.pending_approval + unit_overview.custom_pending|length + unit_overview.conversion_pending|length + hsn_overview.pending_rows|length }}</strong>
-            <p>Financial Year, number-series, party-ledger and GST-rate items waiting for authorized review.</p>
+            <span class="accounting-card-label">Controlled review queue</span>
+            {% if streamlined_workflows_enabled %}
+                <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count }}</strong>
+                <p>Only protected Financial Year and numbering controls require a separate review in streamlined mode.</p>
+            {% else %}
+                <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count + party_ledger_overview.counts.pending_approval + gst_tax_overview.counts.pending_approval + unit_overview.custom_pending|length + unit_overview.conversion_pending|length + hsn_overview.pending_rows|length }}</strong>
+                <p>Strict maker-checker mode is enabled, including routine master approvals.</p>
+            {% endif %}
         </article>
     </div>
 

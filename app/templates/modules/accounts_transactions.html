@@ -5,6 +5,11 @@
 </style>
 
 <div class="accounts-shell">
+    {% if overview.setup_required %}
+    <div style="padding:14px 16px;border:1px solid #F2D59A;border-radius:14px;background:#FFF9E8;color:#7A5A16;font-weight:800;line-height:1.45;">
+        {{ overview.setup_message or 'Complete AVPL Accounting setup to start financial reporting.' }}
+    </div>
+    {% endif %}
     <section class="accounts-card">
         <div class="page-head">
             <div>

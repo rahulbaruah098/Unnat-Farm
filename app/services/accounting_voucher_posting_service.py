@@ -512,15 +512,19 @@ def _release_unused_lock(voucher_id, lock_token, error=None):
 # ---------------------------------------------------------------------------
 
 
-def post_voucher_draft(voucher_id, actor_user_id, expected_version):
+def post_voucher_draft(
+    voucher_id, actor_user_id, expected_version, *, allow_creator_post=False,
+    allowed_roles=None, required_permission=None,
+):
     """Post one validated voucher exactly once without requiring MongoDB transactions."""
     actor = _get_actor(
         actor_user_id,
-        allowed_roles={"avpl_admin", "super_admin"},
+        allowed_roles=allowed_roles or {"avpl_admin", "super_admin"},
     )
     voucher = _get_voucher(voucher_id)
     entity = _assert_active_avpl_entity(voucher.get("accounting_entity_id"))
-    _require_permission(actor, entity["_id"], POST_PERMISSION)
+    posting_permission = required_permission or POST_PERMISSION
+    _require_permission(actor, entity["_id"], posting_permission)
     ensure_voucher_posting_indexes()
 
     if voucher.get("status") == STATUS_POSTED:
@@ -531,7 +535,7 @@ def post_voucher_draft(voucher_id, actor_user_id, expected_version):
         }
     if voucher.get("status") != STATUS_DRAFT:
         raise ValueError("Only a validated draft voucher can be posted.")
-    if str(voucher.get("created_by")) == str(actor["_id"]):
+    if str(voucher.get("created_by")) == str(actor["_id"]) and not allow_creator_post:
         raise PermissionError(
             "Maker-checker control: the voucher maker cannot post the same voucher."
         )
@@ -573,7 +577,7 @@ def post_voucher_draft(voucher_id, actor_user_id, expected_version):
             document_type=voucher.get("voucher_type"),
             idempotency_key=posting_key,
             actor_user_id=actor["_id"],
-            required_permission=POST_PERMISSION,
+            required_permission=posting_permission,
             source_collection=VOUCHER_COLLECTION,
             source_id=voucher["_id"],
             metadata={
@@ -614,7 +618,7 @@ def post_voucher_draft(voucher_id, actor_user_id, expected_version):
         reservation = commit_reserved_number(
             reservation_id=reservation["id"],
             actor_user_id=actor["_id"],
-            required_permission=POST_PERMISSION,
+            required_permission=posting_permission,
             source_collection=VOUCHER_COLLECTION,
             source_id=voucher["_id"],
             source_reference=voucher.get("voucher_id") or "",

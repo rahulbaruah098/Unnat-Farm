@@ -484,6 +484,12 @@
             <span>Output Bonus 2%</span>
             <strong>{{ data.output_bonus }}</strong>
         </div>
+
+        <div class="stat"><span>Approved Farmers</span><strong>{{ data.approved_farmer_count }}</strong></div>
+        <div class="stat"><span>Profiles Pending</span><strong>{{ data.pending_farmer_count }}</strong></div>
+        <div class="stat"><span>Centre Farmer Orders Pending</span><strong>{{ data.centre_farmer_orders_pending }}</strong></div>
+        <div class="stat"><span>Recorded Input Volume</span><strong>₹{{ "%.2f"|format(data.monthly_purchase_total|float) }}</strong></div>
+        <div class="stat"><span>Recorded Sales Volume</span><strong>₹{{ "%.2f"|format(data.monthly_sales_total|float) }}</strong></div>
     </div>
 
     <h3 class="section-title">Month-wise Sales</h3>

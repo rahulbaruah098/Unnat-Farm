@@ -348,6 +348,16 @@
             <span>Mapped Farmers</span>
             <strong>{{ data.farmer_count }}</strong>
         </div>
+
+        <div class="stat"><span>Physical Input Stock</span><strong>{{ data.stock_physical }}</strong></div>
+        <div class="stat"><span>Reserved Input Stock</span><strong>{{ data.stock_reserved }}</strong></div>
+        <div class="stat"><span>Saleable Input Stock</span><strong>{{ data.stock_saleable }}</strong></div>
+        <div class="stat"><span>AVPL Orders In Progress</span><strong>{{ data.avpl_orders_pending }}</strong></div>
+        <div class="stat"><span>Farmer Orders Pending</span><strong>{{ data.farmer_orders_pending }}</strong></div>
+        <div class="stat"><span>Sales to Farmers</span><strong>₹{{ "%.2f"|format(data.farmer_sales_value|float) }}</strong></div>
+        <div class="stat"><span>Money to Receive</span><strong>₹{{ "%.2f"|format(data.farmer_receivable|float) }}</strong></div>
+        <div class="stat"><span>Money to Pay AVPL</span><strong>₹{{ "%.2f"|format(data.avpl_payable|float) }}</strong></div>
+        <div class="stat"><span>Produce Orders In Progress</span><strong>{{ data.produce_orders_pending }}</strong></div>
     </div>
 
     <h3 class="section-title">Mitra-wise Sales</h3>

@@ -1,6 +1,7 @@
 from datetime import date
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from app.services.workflow_policy_service import workflow_is_streamlined
 
 from app.services.accounting_account_group_service import (
     ensure_account_group_indexes,
@@ -303,9 +304,54 @@ def _run_ledger_action(action):
     return _redirect_dashboard("ledger-masters")
 
 
-def _run_party_ledger_action(action):
+def _streamline_routine_master(result, kind):
+    """Collapse draft -> submit -> approve for low-risk setup masters.
+
+    Existing service validation and audit events are reused. High-risk accounting
+    controls are intentionally excluded from this helper.
+    """
+    definitions = {
+        "party_ledger": ("accounting.party_ledger", "ledger", submit_party_ledger, approve_party_ledger),
+        "gst_tax": ("accounting.gst_tax", "rate", submit_gst_tax_rate, approve_gst_tax_rate),
+        "unit": ("accounting.unit", "unit", submit_custom_unit, approve_custom_unit),
+        "unit_conversion": ("accounting.unit_conversion", "conversion", submit_unit_conversion, approve_unit_conversion),
+        "hsn": ("accounting.hsn", "hsn", submit_hsn_master, approve_hsn_master),
+        "product_mapping": ("accounting.product_mapping", "mapping", submit_product_mapping, approve_product_mapping),
+        "product_tracking": ("accounting.product_tracking", "profile", submit_product_tracking_profile, approve_product_tracking_profile),
+    }
+    definition = definitions.get(kind)
+    if not definition:
+        return result
+    workflow_key, result_key, submit_action, approve_action = definition
+    if not workflow_is_streamlined(workflow_key):
+        return result
+    document = (result or {}).get(result_key) or {}
+    status = document.get("status")
+    if status in {"draft", "returned_for_correction", "returned"}:
+        submitted = submit_action(
+            document.get("id"), session["user_id"], document.get("version"),
+            "Activated automatically by streamlined workflow.",
+        )
+        document = (submitted or {}).get(result_key) or document
+        status = document.get("status")
+    if status != "pending_approval":
+        return result
+
+    approved = approve_action(
+        document.get("id"),
+        session["user_id"],
+        document.get("version"),
+        "Activated automatically by streamlined workflow.",
+    )
+    approved["message"] = (approved.get("message") or "Master activated.") + " No separate approval was required."
+    return approved
+
+
+def _run_party_ledger_action(action, streamline_kind=None):
     try:
         result = action()
+        if streamline_kind:
+            result = _streamline_routine_master(result, streamline_kind)
     except PermissionError as exc:
         flash(str(exc), "danger")
     except (ValueError, RuntimeError) as exc:
@@ -316,9 +362,11 @@ def _run_party_ledger_action(action):
     return _redirect_dashboard("party-ledgers")
 
 
-def _run_gst_tax_action(action):
+def _run_gst_tax_action(action, streamline_kind=None):
     try:
         result = action()
+        if streamline_kind:
+            result = _streamline_routine_master(result, streamline_kind)
     except PermissionError as exc:
         flash(str(exc), "danger")
     except (ValueError, RuntimeError) as exc:
@@ -330,9 +378,11 @@ def _run_gst_tax_action(action):
     return _redirect_dashboard("gst-tax-master")
 
 
-def _run_unit_action(action):
+def _run_unit_action(action, streamline_kind=None):
     try:
         result = action()
+        if streamline_kind:
+            result = _streamline_routine_master(result, streamline_kind)
     except PermissionError as exc:
         flash(str(exc), "danger")
     except (ValueError, RuntimeError) as exc:
@@ -344,9 +394,11 @@ def _run_unit_action(action):
     return _redirect_dashboard("units-master")
 
 
-def _run_hsn_action(action):
+def _run_hsn_action(action, streamline_kind=None):
     try:
         result = action()
+        if streamline_kind:
+            result = _streamline_routine_master(result, streamline_kind)
     except PermissionError as exc:
         flash(str(exc), "danger")
     except (ValueError, RuntimeError) as exc:
@@ -357,9 +409,11 @@ def _run_hsn_action(action):
     return _redirect_dashboard("hsn-master")
 
 
-def _run_product_mapping_action(action):
+def _run_product_mapping_action(action, streamline_kind=None):
     try:
         result = action()
+        if streamline_kind:
+            result = _streamline_routine_master(result, streamline_kind)
     except PermissionError as exc:
         flash(str(exc), "danger")
     except (ValueError, RuntimeError) as exc:
@@ -370,9 +424,11 @@ def _run_product_mapping_action(action):
     return _redirect_dashboard("product-accounting-mapping")
 
 
-def _run_product_tracking_action(action):
+def _run_product_tracking_action(action, streamline_kind=None):
     try:
         result = action()
+        if streamline_kind:
+            result = _streamline_routine_master(result, streamline_kind)
     except PermissionError as exc:
         flash(str(exc), "danger")
     except (ValueError, RuntimeError) as exc:
@@ -2149,7 +2205,8 @@ def party_ledger_create():
             accounting_entity_id=entity["_id"],
             actor_user_id=session["user_id"],
             raw_payload=request.form.to_dict(),
-        )
+        ),
+        streamline_kind="party_ledger",
     )
 
 
@@ -2164,7 +2221,8 @@ def party_ledger_edit(ledger_id):
             actor_user_id=session["user_id"],
             raw_payload=request.form.to_dict(),
             expected_version=request.form.get("version"),
-        )
+        ),
+        streamline_kind="party_ledger",
     )
 
 
@@ -2179,7 +2237,8 @@ def party_ledger_submit(ledger_id):
             actor_user_id=session["user_id"],
             expected_version=request.form.get("version"),
             submission_note=request.form.get("submission_note"),
-        )
+        ),
+        streamline_kind="party_ledger",
     )
 
 
@@ -2309,7 +2368,8 @@ def gst_tax_rate_create():
             accounting_entity_id=entity["_id"],
             actor_user_id=session["user_id"],
             raw_payload=request.form.to_dict(),
-        )
+        ),
+        streamline_kind="gst_tax",
     )
 
 
@@ -2324,7 +2384,8 @@ def gst_tax_rate_edit(rate_id):
             actor_user_id=session["user_id"],
             raw_payload=request.form.to_dict(),
             expected_version=request.form.get("version"),
-        )
+        ),
+        streamline_kind="gst_tax",
     )
 
 
@@ -2339,7 +2400,8 @@ def gst_tax_rate_submit(rate_id):
             actor_user_id=session["user_id"],
             expected_version=request.form.get("version"),
             submission_note=request.form.get("submission_note"),
-        )
+        ),
+        streamline_kind="gst_tax",
     )
 
 
@@ -2443,23 +2505,21 @@ def custom_unit_create():
     if not entity:
         flash("The active AVPL Accounting entity is not available.", "danger")
         return _redirect_dashboard("units-master")
-    return _run_unit_action(lambda: create_custom_unit(entity["_id"], session["user_id"], request.form))
-
+    return _run_unit_action(lambda: create_custom_unit(entity["_id"], session["user_id"], request.form), streamline_kind="unit")
 
 @accounting_bp.route("/units/<unit_id>/edit", methods=["POST"])
 @login_required
 @roles_required("accounts")
 @accounting_permission_required("accounting.unit.edit")
 def custom_unit_edit(unit_id):
-    return _run_unit_action(lambda: update_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form))
-
+    return _run_unit_action(lambda: update_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form), streamline_kind="unit")
 
 @accounting_bp.route("/units/<unit_id>/submit", methods=["POST"])
 @login_required
 @roles_required("accounts")
 @accounting_permission_required("accounting.unit.submit")
 def custom_unit_submit(unit_id):
-    return _run_unit_action(lambda: submit_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form.get("submission_note")))
+    return _run_unit_action(lambda: submit_custom_unit(unit_id, session["user_id"], request.form.get("version"), request.form.get("submission_note")), streamline_kind="unit")
 
 
 @accounting_bp.route("/units/<unit_id>/withdraw", methods=["POST"])
@@ -2519,23 +2579,21 @@ def unit_conversion_create():
     if not entity:
         flash("The active AVPL Accounting entity is not available.", "danger")
         return _redirect_dashboard("units-master")
-    return _run_unit_action(lambda: create_unit_conversion(entity["_id"], session["user_id"], request.form))
-
+    return _run_unit_action(lambda: create_unit_conversion(entity["_id"], session["user_id"], request.form), streamline_kind="unit_conversion")
 
 @accounting_bp.route("/unit-conversions/<conversion_id>/edit", methods=["POST"])
 @login_required
 @roles_required("accounts")
 @accounting_permission_required("accounting.unit.edit")
 def unit_conversion_edit(conversion_id):
-    return _run_unit_action(lambda: update_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form))
-
+    return _run_unit_action(lambda: update_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form), streamline_kind="unit_conversion")
 
 @accounting_bp.route("/unit-conversions/<conversion_id>/submit", methods=["POST"])
 @login_required
 @roles_required("accounts")
 @accounting_permission_required("accounting.unit.submit")
 def unit_conversion_submit(conversion_id):
-    return _run_unit_action(lambda: submit_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form.get("submission_note")))
+    return _run_unit_action(lambda: submit_unit_conversion(conversion_id, session["user_id"], request.form.get("version"), request.form.get("submission_note")), streamline_kind="unit_conversion")
 
 
 @accounting_bp.route("/unit-conversions/<conversion_id>/withdraw", methods=["POST"])
@@ -2595,23 +2653,21 @@ def hsn_master_create():
     if not entity:
         flash("The active AVPL Accounting entity is not available.", "danger")
         return _redirect_dashboard("hsn-master")
-    return _run_hsn_action(lambda: create_hsn_master(entity["_id"], session["user_id"], request.form))
-
+    return _run_hsn_action(lambda: create_hsn_master(entity["_id"], session["user_id"], request.form), streamline_kind="hsn")
 
 @accounting_bp.route("/hsn-masters/<hsn_id>/edit", methods=["POST"])
 @login_required
 @roles_required("accounts")
 @accounting_permission_required("accounting.hsn.edit")
 def hsn_master_edit(hsn_id):
-    return _run_hsn_action(lambda: update_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form))
-
+    return _run_hsn_action(lambda: update_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form), streamline_kind="hsn")
 
 @accounting_bp.route("/hsn-masters/<hsn_id>/submit", methods=["POST"])
 @login_required
 @roles_required("accounts")
 @accounting_permission_required("accounting.hsn.submit")
 def hsn_master_submit(hsn_id):
-    return _run_hsn_action(lambda: submit_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form.get("submission_note")))
+    return _run_hsn_action(lambda: submit_hsn_master(hsn_id, session["user_id"], request.form.get("version"), request.form.get("submission_note")), streamline_kind="hsn")
 
 
 @accounting_bp.route("/hsn-masters/<hsn_id>/withdraw", methods=["POST"])
@@ -2676,7 +2732,8 @@ def product_mapping_create():
         flash("The active AVPL Accounting entity is not available.", "danger")
         return _redirect_dashboard("product-accounting-mapping")
     return _run_product_mapping_action(
-        lambda: create_product_mapping(entity["_id"], session["user_id"], request.form)
+        lambda: create_product_mapping(entity["_id"], session["user_id"], request.form),
+        streamline_kind="product_mapping",
     )
 
 
@@ -2688,7 +2745,8 @@ def product_mapping_edit(mapping_id):
     return _run_product_mapping_action(
         lambda: update_product_mapping(
             mapping_id, session["user_id"], request.form.get("version"), request.form
-        )
+        ),
+        streamline_kind="product_mapping",
     )
 
 
@@ -2703,7 +2761,8 @@ def product_mapping_submit(mapping_id):
             session["user_id"],
             request.form.get("version"),
             request.form.get("submission_note"),
-        )
+        ),
+        streamline_kind="product_mapping",
     )
 
 
@@ -2842,7 +2901,8 @@ def product_tracking_create():
     return _run_product_tracking_action(
         lambda: create_product_tracking_profile(
             entity["_id"], session["user_id"], request.form
-        )
+        ),
+        streamline_kind="product_tracking",
     )
 
 
@@ -2857,7 +2917,8 @@ def product_tracking_edit(profile_id):
             session["user_id"],
             request.form.get("version"),
             request.form,
-        )
+        ),
+        streamline_kind="product_tracking",
     )
 
 
@@ -2872,7 +2933,8 @@ def product_tracking_submit(profile_id):
             session["user_id"],
             request.form.get("version"),
             request.form.get("submission_note"),
-        )
+        ),
+        streamline_kind="product_tracking",
     )
 
 

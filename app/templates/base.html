@@ -1489,6 +1489,14 @@ body.sidebar-collapsed .sidebar-logout{
             </a>
 
             <a
+                href="{{ url_for('reports.overview') }}"
+                class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"
+            >
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                <span class="nav-label">Reports & System Health</span>
+            </a>
+
+            <a
                 href="{{ url_for('admin.payments_dashboard') }}"
                 class="sidebar-link {% if request.endpoint in ['admin.payments_dashboard','admin.record_payment_view','admin.reverse_payment_view','admin.payment_receipt_print'] %}active{% endif %}"
             >
@@ -2269,7 +2277,7 @@ body.sidebar-collapsed .sidebar-logout{
                             href="{{ url_for('modules.sales_details') }}"
                             class="nav-sub-link"
                         >
-                            Sales Details
+                            Purchase &amp; Sales Summary
                         </a>
 
                         <a
@@ -2502,6 +2510,11 @@ body.sidebar-collapsed .sidebar-logout{
         =================================================== -->
 
         {% if session.get('role') == 'ufc_admin' %}
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Reports</div>
+            <a href="{{ url_for('reports.overview') }}" class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="nav-label">My Centre Reports</span></a>
+        </div>
 
         <div class="sidebar-section">
 
@@ -2988,6 +3001,11 @@ body.sidebar-collapsed .sidebar-logout{
         =================================================== -->
 
         {% if session.get('role') == 'farmer' %}
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Reports</div>
+            <a href="{{ url_for('reports.overview') }}" class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="nav-label">My Reports</span></a>
+        </div>
 
         <div class="sidebar-section">
 

@@ -141,6 +141,17 @@
             <span>Pending Validations</span>
             <strong>{{ stats.pending_validations }}</strong>
         </div>
+
+        <div class="stat"><span>Supplier Purchase Orders</span><strong>{{ stats.supplier_order_count }}</strong></div>
+        <div class="stat"><span>UFC Distribution Orders</span><strong>{{ stats.avpl_ufc_order_count }}</strong></div>
+        <div class="stat"><span>Farmer Input Orders</span><strong>{{ stats.farmer_input_order_count }}</strong></div>
+        <div class="stat"><span>Farmer Produce Orders</span><strong>{{ stats.produce_order_count }}</strong></div>
+        <div class="stat"><span>AVPL Physical Stock</span><strong>{{ stats.avpl_stock_physical }}</strong></div>
+        <div class="stat"><span>AVPL Reserved Stock</span><strong>{{ stats.avpl_stock_reserved }}</strong></div>
+        <div class="stat"><span>AVPL Saleable Stock</span><strong>{{ stats.avpl_stock_saleable }}</strong></div>
+        <div class="stat"><span>Pending / In-Progress Orders</span><strong>{{ stats.pending_orders }}</strong></div>
+        <div class="stat"><span>UFC Receivable</span><strong>₹{{ "%.2f"|format(stats.ufc_receivable|float) }}</strong></div>
+        <div class="stat"><span>Active Farmer Listings</span><strong>{{ stats.active_farmer_listings }}</strong></div>
     </div>
 </div>
 {% endblock %}

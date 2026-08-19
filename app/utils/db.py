@@ -209,6 +209,36 @@ def init_indexes(db):
         "pos_sales_source_reference_unique",
     )
 
+    # Stage 10 reporting/reconciliation indexes. These are non-destructive and
+    # target the high-cardinality filters used by dashboards, reports and UAT.
+    _ensure_index(db.avpl_purchase_orders, [("status", ASCENDING), ("order_date", ASCENDING)], name="s10_po_status_date_idx")
+    _ensure_index(db.avpl_purchase_orders, [("supplier_id", ASCENDING), ("order_date", ASCENDING)], name="s10_po_supplier_date_idx")
+    _ensure_index(db.avpl_purchase_orders, [("accounting_entity_id", ASCENDING), ("order_date", ASCENDING)], name="s10_po_entity_date_idx")
+    _ensure_index(db.avpl_goods_receipts, [("purchase_order_id", ASCENDING), ("status", ASCENDING)], name="s10_grn_po_status_idx")
+    _ensure_index(db.avpl_supplier_invoices, [("purchase_order_id", ASCENDING), ("status", ASCENDING)], name="s10_supplier_invoice_po_status_idx")
+    _ensure_index(db.avpl_supplier_invoices, [("payment_status", ASCENDING), ("due_date", ASCENDING)], name="s10_supplier_invoice_payment_due_idx")
+    _ensure_index(db.avpl_supplier_invoices, [("accounting_entity_id", ASCENDING), ("posting_status", ASCENDING), ("invoice_date", ASCENDING)], name="s10_supplier_invoice_entity_posting_date_idx")
+    _ensure_index(db.avpl_inventory_lots, [("source_product_id", ASCENDING), ("status", ASCENDING), ("expiry_date", ASCENDING)], name="s10_avpl_lot_product_expiry_idx")
+    _ensure_index(db.avpl_stock_movements, [("source_product_id", ASCENDING), ("movement_type", ASCENDING), ("created_at", ASCENDING)], name="s10_avpl_movement_product_type_date_idx")
+    _ensure_index(db.avpl_ufc_orders, [("centre_uid", ASCENDING), ("status", ASCENDING), ("created_at", ASCENDING)], name="s10_avpl_ufc_order_centre_status_idx")
+    _ensure_index(db.avpl_ufc_orders, [("accounting_entity_id", ASCENDING), ("created_at", ASCENDING)], name="s10_avpl_ufc_order_entity_date_idx")
+    _ensure_index(db.avpl_ufc_sales, [("accounting_entity_id", ASCENDING), ("sale_date", ASCENDING)], name="s10_avpl_ufc_sale_entity_date_idx")
+    _ensure_index(db.avpl_sales_invoices, [("accounting_entity_id", ASCENDING), ("status", ASCENDING), ("issued_at", ASCENDING)], name="s10_avpl_invoice_entity_status_date_idx")
+    _ensure_index(db.avpl_sales_invoices, [("payment_status", ASCENDING), ("due_date", ASCENDING)], name="s10_avpl_invoice_payment_due_idx")
+    _ensure_index(db.avpl_receivables, [("centre_uid", ASCENDING), ("payment_status", ASCENDING), ("due_date", ASCENDING)], name="s10_avpl_receivable_centre_due_idx")
+    _ensure_index(db.ufc_inventory_lots, [("centre_uid", ASCENDING), ("source_product_id", ASCENDING), ("status", ASCENDING), ("expiry_date", ASCENDING)], name="s10_ufc_lot_centre_product_expiry_idx")
+    _ensure_index(db.ufc_farmer_orders, [("centre_uid", ASCENDING), ("status", ASCENDING), ("created_at", ASCENDING)], name="s10_ufc_farmer_order_centre_status_idx")
+    _ensure_index(db.ufc_farmer_orders, [("farmer_user_id", ASCENDING), ("created_at", ASCENDING)], name="s10_ufc_farmer_order_farmer_date_idx")
+    _ensure_index(db.ufc_farmer_sales, [("centre_uid", ASCENDING), ("payment_status", ASCENDING), ("sale_date", ASCENDING)], name="s10_ufc_farmer_sale_centre_payment_idx")
+    _ensure_index(db.ufc_farmer_receivables, [("centre_uid", ASCENDING), ("payment_status", ASCENDING), ("due_date", ASCENDING)], name="s10_ufc_farmer_receivable_due_idx")
+    _ensure_index(db.farmer_produce_lots, [("farmer_user_id", ASCENDING), ("status", ASCENDING), ("product_name", ASCENDING)], name="s10_farmer_produce_lot_owner_idx")
+    _ensure_index(db.farmer_produce_marketplace_listings, [("centre_uid", ASCENDING), ("status", ASCENDING), ("product_name", ASCENDING)], name="s10_farmer_market_listing_centre_idx")
+    _ensure_index(db.farmer_produce_marketplace_orders, [("status", ASCENDING), ("created_at", ASCENDING)], name="s10_farmer_market_order_status_date_idx")
+    _ensure_index(db.farmer_marketplace_receivables, [("payment_status", ASCENDING), ("due_date", ASCENDING)], name="s10_farmer_market_receivable_due_idx")
+    _ensure_index(db.payments, [("status", ASCENDING), ("created_at", ASCENDING)], name="s10_payment_status_date_idx")
+    _ensure_index(db.payments, [("source_type", ASCENDING), ("invoice_id", ASCENDING), ("created_at", ASCENDING)], name="s10_payment_invoice_date_idx")
+    _ensure_index(db.posting_failures, [("status", ASCENDING), ("created_at", ASCENDING)], name="s10_posting_failure_status_idx")
+
     _ensure_index(db.audit_logs, [("created_at", ASCENDING)], name="audit_created_at_idx")
     _ensure_index(db.location_master, [("state", ASCENDING)], name="location_state_idx")
     _ensure_index(

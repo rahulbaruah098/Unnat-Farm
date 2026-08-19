@@ -29,6 +29,7 @@ from app.services.accounting_permission_service import (
     has_accounting_permission,
 )
 from app.utils.helpers import now_utc
+from app.services.workflow_policy_service import workflow_is_streamlined
 
 
 AVPL_ENTITY_CODE = "AVPL"
@@ -1213,13 +1214,18 @@ def cancel_party_ledger(ledger_id, actor_user_id, expected_version, reason=""):
 
 
 def approve_party_ledger(ledger_id, actor_user_id, expected_version, approval_note=""):
-    actor = _get_actor(actor_user_id, allowed_roles={"avpl_admin", "super_admin"})
+    streamlined = workflow_is_streamlined("accounting.party_ledger")
+    actor = _get_actor(
+        actor_user_id,
+        allowed_roles={"accounts", "avpl_admin", "super_admin"} if streamlined else {"avpl_admin", "super_admin"},
+    )
     ledger = _get_party_ledger(ledger_id)
-    entity = _assert_party_ledger_entity_access(actor, ledger, APPROVE_PERMISSION)
+    permission = SUBMIT_PERMISSION if streamlined and actor.get("resolved_role") == "accounts" else APPROVE_PERMISSION
+    entity = _assert_party_ledger_entity_access(actor, ledger, permission)
 
     if ledger.get("status") != STATUS_PENDING_APPROVAL:
         raise ValueError("Only a pending party ledger can be approved.")
-    if str(ledger.get("created_by")) == str(actor["_id"]):
+    if str(ledger.get("created_by")) == str(actor["_id"]) and not streamlined:
         raise PermissionError("The maker cannot approve the same party ledger.")
 
     expected_version = int(expected_version)

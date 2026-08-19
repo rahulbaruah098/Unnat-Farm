@@ -633,6 +633,12 @@
             </div>
         </div>
 
+        {% if accounts_overview.setup_required %}
+        <div style="margin-bottom:18px;padding:14px 16px;border:1px solid #F2D59A;border-radius:14px;background:#FFF9E8;color:#7A5A16;font-weight:800;line-height:1.45;">
+            {{ accounts_overview.setup_message or 'Complete AVPL Accounting setup to start financial reporting.' }}
+        </div>
+        {% endif %}
+
         <div class="stat-grid">
             <div class="stat">
                 <span>Supplier Purchases</span>
@@ -658,6 +664,12 @@
                 <span>Gross Margin</span>
                 <strong>₹{{ accounts_overview.gross_margin }}</strong>
             </div>
+
+            <div class="stat"><span>Supplier Purchase Orders</span><strong>{{ accounts_overview.supplier_order_count }}</strong></div>
+            <div class="stat"><span>UFC Orders</span><strong>{{ accounts_overview.ufc_order_count }}</strong></div>
+            <div class="stat"><span>Supplier / UFC Payments</span><strong>{{ accounts_overview.transaction_count }}</strong></div>
+            <div class="stat"><span>Active Farmer Listings</span><strong>{{ stats.active_farmer_listings }}</strong></div>
+            <div class="stat"><span>Farmer Produce Receivable</span><strong>₹{{ "%.2f"|format(stats.farmer_receivable|float) }}</strong></div>
         </div>
     </div>
 

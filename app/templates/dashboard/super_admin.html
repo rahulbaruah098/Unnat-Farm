@@ -279,6 +279,16 @@
             <span>Total Transactions</span>
             <strong>{{ stats.total_transactions }}</strong>
         </div>
+
+        <div class="stat"><span>Live Commercial Orders</span><strong>{{ stats.total_orders }}</strong></div>
+        <div class="stat"><span>Pending / In-Progress Orders</span><strong>{{ stats.pending_orders }}</strong></div>
+        <div class="stat"><span>AVPL Saleable Stock</span><strong>{{ stats.avpl_stock_saleable }}</strong></div>
+        <div class="stat"><span>AVPL Reserved Stock</span><strong>{{ stats.avpl_stock_reserved }}</strong></div>
+        <div class="stat"><span>Farmer Produce Listings</span><strong>{{ stats.active_farmer_listings }}</strong></div>
+        <div class="stat"><span>Payments Recorded</span><strong>{{ stats.payments_recorded }}</strong></div>
+        <div class="stat"><span>Supplier Outstanding</span><strong>₹{{ "%.2f"|format(stats.supplier_outstanding|float) }}</strong></div>
+        <div class="stat"><span>UFC Receivable</span><strong>₹{{ "%.2f"|format(stats.ufc_receivable|float) }}</strong></div>
+        <div class="stat"><span>Farmer Produce Receivable</span><strong>₹{{ "%.2f"|format(stats.farmer_receivable|float) }}</strong></div>
     </div>
 
     <p class="muted">

@@ -40,7 +40,7 @@
             <div class="field full"><strong>Tax handling</strong><small id="supplierTaxHelp">Select a supplier to preview tax treatment. HSN, unit and GST are taken automatically from the product's approved Accounting mapping.</small></div>
         </div></div></details></section>
 
-        <div class="actions"><a class="btn" href="{{ url_for('admin.purchase_orders') }}">Cancel</a><button class="btn primary" type="submit" name="save_action" value="draft">Save Draft</button>{% if session.get('role') in ['avpl_admin','super_admin'] %}<button class="btn approve" type="submit" name="save_action" value="approve">Save & Approve</button>{% endif %}</div>
+        <div class="actions"><a class="btn" href="{{ url_for('admin.purchase_orders') }}">Cancel</a>{% if streamlined_workflows_enabled %}<button class="btn approve" type="submit" name="save_action" value="complete">{{ 'Update Purchase Order' if order else 'Create Purchase Order' }}</button><button class="btn" type="submit" name="save_action" value="draft">Save as Draft</button>{% else %}<button class="btn primary" type="submit" name="save_action" value="draft">Save Draft</button>{% if session.get('role') in ['avpl_admin','super_admin'] %}<button class="btn approve" type="submit" name="save_action" value="approve">Save & Approve</button>{% endif %}{% endif %}</div>
     </form>
 </div>
 <script>

@@ -726,6 +726,27 @@
             height:165px;
         }
     }
+
+    .section-link{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+        margin-top:14px;
+        padding:10px 14px;
+        border-radius:12px;
+        background:#EAF7EE;
+        color:#2F7548;
+        font-weight:800;
+        text-decoration:none;
+        transition:transform .2s ease, background .2s ease;
+    }
+
+    .section-link:hover{
+        background:#DDF2E4;
+        transform:translateY(-1px);
+    }
+
 </style>
 
 <div class="farmer-dashboard">
@@ -763,6 +784,15 @@
                 <span>Insurance Eligibility</span>
                 <strong>{{ 'Enabled' if data.insurance_enabled else 'Locked' }}</strong>
             </div>
+
+            <div class="stat"><span>Produce Saleable Stock</span><strong>{{ data.produce_stock_saleable }}</strong></div>
+            <div class="stat"><span>Produce Reserved</span><strong>{{ data.produce_stock_reserved }}</strong></div>
+            <div class="stat"><span>Active Produce Listings</span><strong>{{ data.active_listings }}</strong></div>
+            <div class="stat"><span>Orders Received In Progress</span><strong>{{ data.orders_received_pending }}</strong></div>
+            <div class="stat"><span>Input Purchases</span><strong>₹{{ "%.2f"|format(data.input_purchase_value|float) }}</strong></div>
+            <div class="stat"><span>Produce Sales</span><strong>₹{{ "%.2f"|format(data.produce_sales_value|float) }}</strong></div>
+            <div class="stat"><span>Money to Receive</span><strong>₹{{ "%.2f"|format(data.money_to_receive|float) }}</strong></div>
+            <div class="stat"><span>Money to Pay</span><strong>₹{{ "%.2f"|format(data.money_to_pay|float) }}</strong></div>
         </div>
 
         <div class="info-banner">
@@ -893,72 +923,30 @@
     <section class="section-card">
         <div class="section-head">
             <div>
-                <h3>Farmer Marketplace</h3>
-                <p>Explore farmer-listed products and place orders directly.</p>
+                <h3>Farmer Produce Market</h3>
+                <p>Browse live Stage 9 produce listings. Orders, bag/loose pricing, reservation and payment use the linked produce workflow.</p>
             </div>
+            <a href="{{ url_for('modules.farmer_produce_market') }}" class="section-link">Open Produce Market</a>
         </div>
 
         <div class="product-grid">
-            {% for p in data.farmer_products_marketplace %}
+            {% for p in data.farmer_products_marketplace[:6] %}
                 <div class="product-card">
-                    {% if p.picture %}
-                        <img src="{{ url_for('documents.serve', filename=p.picture) }}"
-                             alt="{{ p.product_name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% elif p.file_path %}
-                        <img src="{{ url_for('documents.serve', filename=p.file_path) }}"
-                             alt="{{ p.product_name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% elif p.image %}
-                        <img src="{{ url_for('documents.serve', filename=p.image) }}"
-                             alt="{{ p.product_name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% else %}
-                        <div class="no-image">No Image</div>
-                    {% endif %}
-
-                    <h4>{{ p.product_name }}</h4>
-                    <p>Variety: {{ p.variety or '-' }}</p>
-                    <p>Location: {{ p.village or '-' }}{% if p.block %}, {{ p.block }}{% endif %}</p>
+                    <div class="no-image">Produce</div>
+                    <h4>{{ p.product_name or 'Produce' }}</h4>
                     <p>Farmer: {{ p.farmer_name or '-' }}</p>
-
+                    <p>Variety: {{ p.variety or '-' }} · Grade: {{ p.grade or '-' }}</p>
+                    <p>{{ p.village or p.district or 'Location not specified' }}</p>
                     <div class="product-footer">
                         <div>
-             <strong>₹{{ p.unit_price or '-' }}</strong>
-
-<span class="product-qty">
-    Available:
-    {% if p.available_quantity is defined and p.available_quantity is not none %}
-        {{ p.available_quantity }}
-    {% elif p.quantity is defined and p.quantity is not none %}
-        {{ p.quantity }}
-    {% else %}
-        -
-    {% endif %}
-</span>
+                            <strong>{% if p.loose_price %}₹{{ p.loose_price }}/{{ p.unit_code or 'KG' }}{% else %}Package pricing{% endif %}</strong>
+                            <span class="product-qty">Published listing</span>
                         </div>
-
-                        <form method="POST" action="{{ url_for('modules.place_farmer_order') }}" class="order-form">
-                            <input type="hidden" name="product_id" value="{{ p._id }}">
-                            <input type="hidden" name="product_name" value="{{ p.product_name }}">
-                            <input type="hidden" name="unit_price" value="{{ p.unit_price }}">
-                            <input
-                                type="number"
-                                name="quantity"
-                                min="1"
-                                step="1"
-                                placeholder="Qty"
-                                required
-                            >
-                            <button type="submit">Buy</button>
-                        </form>
+                        <a href="{{ url_for('modules.farmer_produce_market') }}">View</a>
                     </div>
                 </div>
             {% else %}
-                <p class="empty-product">No farmer products listed.</p>
+                <p class="empty-product">No farmer produce listings are currently published.</p>
             {% endfor %}
         </div>
     </section>

@@ -8,7 +8,7 @@
 </style>
 <div class="invoice-form-page">
     <div class="page-head"><div><h2>{{ 'Edit Supplier Invoice' if invoice else 'Record Supplier Invoice' }}</h2><p>Enter the supplier's invoice. The system will automatically compare it with the Purchase Order and received goods.</p></div><a class="back-link" href="{{ url_for('admin.supplier_invoices') }}">Back</a></div>
-    <div class="tip"><strong>You only need to enter what is printed on the supplier invoice.</strong> If everything matches the PO and accepted receipt, the system marks it matched automatically.</div>
+    <div class="tip"><strong>You only need to enter what is printed on the supplier invoice.</strong> If everything matches the PO and accepted receipt, the system marks it matched automatically{% if streamlined_workflows_enabled %} and finalizes the Purchase Invoice/payable in the same save{% endif %}.</div>
 
     <form method="post" id="invoiceForm">
         {% if invoice %}<input type="hidden" name="expected_version" value="{{ invoice.version }}">{% endif %}
@@ -34,7 +34,7 @@
             <div><div class="calculated"><div class="total-row"><span>Products</span><strong id="subtotalValue">₹0.00</strong></div><div class="total-row"><span>Discount</span><strong id="discountValue">₹0.00</strong></div><div class="total-row"><span>GST</span><strong id="taxValue">₹0.00</strong></div><div class="total-row"><span>Charges</span><strong id="chargesValue">₹0.00</strong></div><div class="total-row grand"><span>Calculated Total</span><strong id="computedTotal">₹0.00</strong></div></div><span id="taxableValue" hidden></span><div class="match-preview" id="matchPreview">The system will check the invoice when you save.</div></div>
         </div></section>
 
-        <div class="actions"><a class="btn" href="{{ url_for('admin.supplier_invoices') }}">Cancel</a><button class="btn primary" type="submit">Save & Check Invoice</button></div>
+        <div class="actions"><a class="btn" href="{{ url_for('admin.supplier_invoices') }}">Cancel</a><button class="btn primary" type="submit">{% if streamlined_workflows_enabled %}Save, Match & Finalize{% else %}Save & Check Invoice{% endif %}</button></div>
     </form>
 </div>
 <script>

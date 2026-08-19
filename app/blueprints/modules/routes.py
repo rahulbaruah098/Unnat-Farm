@@ -17,6 +17,11 @@ from app.services.avpl_ufc_order_service import (
 from app.services.avpl_ufc_sales_service import (
     get_sales_invoice_print_context,
 )
+from app.services.avpl_accounts_operations_service import (
+    get_accounts_order_overview,
+    get_accounts_transaction_overview,
+    get_purchase_sales_summary,
+)
 from app.services.ufc_farmer_marketplace_service import (
     bulk_update_publication as bulk_update_ufc_farmer_publication,
     get_farmer_marketplace,
@@ -2140,13 +2145,39 @@ def update_support_ticket(ticket_id):
 @modules_bp.route("/orders")
 @login_required
 def orders():
-    query = {}
-    if session.get("role") == "ufc_admin":
-        query["centre_uid"] = session.get("centre_uid")
-    elif session.get("role") == "ufc_mitra":
-        query["mitra_uid"] = session.get("mitra_uid")
-
+    role = str(session.get("role") or "").strip().lower()
     q = request.args.get("q", "").strip()
+
+    # Accounts/AVPL management must use the connected Stage 2-5 read model,
+    # not the legacy generic `orders` collection.  The shared URL is retained
+    # so UFC/Mitra/Sales behavior and existing links are not broken.
+    if role in {"accounts", "avpl_admin", "super_admin"}:
+        try:
+            overview = get_accounts_order_overview(
+                session.get("user_id"),
+                segment=request.args.get("segment", "supplier"),
+                query_text=q,
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            current_app.logger.warning("Accounts order overview unavailable: %s", exc)
+            overview = {
+                "selected_segment": request.args.get("segment", "supplier") if request.args.get("segment", "supplier") in {"supplier", "ufc"} else "supplier",
+                "query": q,
+                "supplier_rows": [],
+                "ufc_rows": [],
+                "summary": {"supplier_order_count": 0, "ufc_order_count": 0},
+                "setup_required": True,
+                "setup_message": str(exc),
+            }
+        if wants_json_response():
+            return jsonify(json_safe({"ok": True, "overview": overview}))
+        return render_template("modules/accounts_orders.html", overview=overview)
+
+    query = {}
+    if role == "ufc_admin":
+        query["centre_uid"] = session.get("centre_uid")
+    elif role == "ufc_mitra":
+        query["mitra_uid"] = session.get("mitra_uid")
 
     if q:
         query["$or"] = [
@@ -2212,19 +2243,51 @@ def products():
 @modules_bp.route("/transactions")
 @login_required
 def transactions():
+    role = str(session.get("role") or "").strip().lower()
+    q = request.args.get("q", "").strip()
+
+    # Management Accounts view: real unified payments linked to Supplier and
+    # AVPL->UFC invoices.  Other roles intentionally keep the legacy/shared
+    # transaction page so Stage 6-9 flows are not changed by this repair.
+    if role in {"accounts", "avpl_admin", "super_admin"}:
+        try:
+            overview = get_accounts_transaction_overview(
+                session.get("user_id"),
+                segment=request.args.get("segment", "all"),
+                query_text=q,
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            current_app.logger.warning("Accounts transaction overview unavailable: %s", exc)
+            selected = request.args.get("segment", "all")
+            overview = {
+                "rows": [],
+                "selected_segment": selected if selected in {"all", "supplier", "ufc"} else "all",
+                "query": q,
+                "summary": {
+                    "supplier_paid": "0.00",
+                    "ufc_received": "0.00",
+                    "supplier_outstanding": "0.00",
+                    "ufc_receivable": "0.00",
+                },
+                "counts": {"all": 0, "supplier": 0, "ufc": 0},
+                "setup_required": True,
+                "setup_message": str(exc),
+            }
+        if wants_json_response():
+            return jsonify(json_safe({"ok": True, "overview": overview}))
+        return render_template("modules/accounts_transactions.html", overview=overview)
+
     query = {}
 
-    if session.get("role") == "ufc_admin":
+    if role == "ufc_admin":
         query["centre_uid"] = session.get("centre_uid")
 
-    elif session.get("role") == "ufc_mitra":
+    elif role == "ufc_mitra":
         query["mitra_uid"] = session.get("mitra_uid")
 
-    elif session.get("role") == "farmer":
+    elif role == "farmer":
         user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
         query["farmer_contact"] = user.get("phone")
-
-    q = request.args.get("q", "").strip()
 
     if q:
         query["$or"] = [
@@ -3555,9 +3618,46 @@ def finance_leads():
    
 @modules_bp.route("/sales-details")
 @login_required
-@roles_required("avpl_admin", "sales_unnatfarm", "accounts")
+@roles_required("super_admin", "avpl_admin", "sales_unnatfarm", "accounts")
 def sales_details():
+    role = str(session.get("role") or "").strip().lower()
     q = request.args.get("q", "").strip()
+
+    # Accounts/AVPL management needs purchase-vs-sales finance, not the old POS
+    # farmer/mitra sales table.  Sales UnnatFarm intentionally keeps its
+    # existing POS screen to avoid changing that operational module.
+    if role in {"accounts", "avpl_admin", "super_admin"}:
+        try:
+            overview = get_purchase_sales_summary(
+                session.get("user_id"),
+                query_text=q,
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            current_app.logger.warning("Accounts purchase/sales summary unavailable: %s", exc)
+            overview = {
+                "query": q,
+                "summary": {
+                    "supplier_purchase_value": "0.00",
+                    "supplier_paid": "0.00",
+                    "supplier_outstanding": "0.00",
+                    "supplier_invoice_count": 0,
+                    "ufc_sales_value": "0.00",
+                    "ufc_received": "0.00",
+                    "ufc_receivable": "0.00",
+                    "ufc_invoice_count": 0,
+                    "cost_of_goods_sold": "0.00",
+                    "gross_margin": "0.00",
+                    "gross_margin_percent": "0.00",
+                    "sale_count": 0,
+                },
+                "supplier_rows": [],
+                "ufc_rows": [],
+                "setup_required": True,
+                "setup_message": str(exc),
+            }
+        if wants_json_response():
+            return jsonify(json_safe({"ok": True, "overview": overview}))
+        return render_template("modules/accounts_purchase_sales_summary.html", overview=overview)
 
     sales = list(mongo.db.pos_sales.find({}).sort("created_at", -1))
 
@@ -3578,6 +3678,9 @@ def sales_details():
             or q_lower in str(s.get("bonus_percentage", "")).lower()
             or q_lower in str(s.get("bonus_amount", "")).lower()
         ]
+
+    if wants_json_response():
+        return jsonify(json_safe({"ok": True, "sales": sales, "q": q}))
 
     return render_template(
         "modules/sales_details.html",

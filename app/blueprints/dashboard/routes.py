@@ -113,6 +113,17 @@ def _normalize_product_for_app(item):
                 or image_name
             )
 
+    item.setdefault("name", item.get("product_name") or "Product")
+    item.setdefault("type", item.get("product_role") or item.get("category") or "-")
+    if item.get("price") in (None, ""):
+        item["price"] = item.get("selling_price") or item.get("loose_price") or item.get("unit_price")
+    if item.get("available_quantity") in (None, ""):
+        item["available_quantity"] = (
+            item.get("saleable_quantity_value")
+            if item.get("saleable_quantity_value") is not None
+            else item.get("available_to_order")
+        )
+
     if image_value:
         image_value = str(image_value).replace("\\", "/")
 
@@ -147,108 +158,63 @@ def _get_app_farmer_products(user, limit=30):
     return [_normalize_product_for_app(item) for item in items]
 
 def _get_app_farmer_orders(user, limit=20):
+    """Return the Farmer's Stage 7 UFC input orders, with legacy fallback."""
     user = dict(user or {})
-
     user_id = str(user.get("_id") or user.get("id") or user.get("user_id") or "").strip()
     phone = str(user.get("phone") or user.get("contact_no") or "").strip()
+    oid = None
+    try:
+        oid = ObjectId(user_id) if user_id else None
+    except Exception:
+        oid = None
 
-    farmer = {}
-
-    if user_id:
-        try:
-            farmer = (
-                mongo.db.farmer_master.find_one({"linked_user_id": user_id})
-                or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(user_id)})
-                or {}
-            )
-        except Exception:
-            farmer = (
-                mongo.db.farmer_master.find_one({"linked_user_id": user_id})
-                or {}
-            )
-
-    if not farmer and phone:
-        farmer = mongo.db.farmer_master.find_one({"contact_no": phone}) or {}
-
-    farmer_id = str(farmer.get("_id") or "").strip()
-    farmer_phone = str(
-        farmer.get("contact_no")
-        or farmer.get("phone")
-        or phone
-        or ""
-    ).strip()
-
-    filters = []
-
-    if user_id:
-        filters.extend([
-            {"user_id": user_id},
-            {"farmer_user_id": user_id},
-            {"buyer_user_id": user_id},
-        ])
-
-    if farmer_id:
-        filters.append({"farmer_id": farmer_id})
-
-    if farmer_phone:
-        filters.extend([
-            {"farmer_phone": farmer_phone},
-            {"farmer_contact": farmer_phone},
-            {"phone": farmer_phone},
-        ])
-
-    if not filters:
-        return []
-
-    orders = list(
-        mongo.db.orders
-        .find({"$or": filters})
-        .sort("created_at", -1)
-        .limit(limit)
-    )
-
-    normalized_orders = []
-
-    for order in orders:
-        order = dict(order or {})
-
-        if "_id" in order:
-            order["_id"] = str(order["_id"])
-
-        # Keep app/web field compatibility
-        order["product_name"] = (
-            order.get("product_name")
-            or order.get("name")
-            or "Product"
+    owner_values = [value for value in [oid, user_id] if value]
+    orders = []
+    if owner_values:
+        orders = list(
+            mongo.db.ufc_farmer_orders
+            .find({"farmer_user_id": {"$in": owner_values}})
+            .sort("created_at", -1)
+            .limit(limit)
         )
 
-        order["quantity"] = order.get("quantity") or 0
-        order["unit_price"] = (
-            order.get("unit_price")
-            or order.get("price")
-            or order.get("selling_price")
-            or 0
-        )
-        order["total_amount"] = (
-            order.get("total_amount")
-            or order.get("amount")
-            or 0
-        )
+    if not orders:
+        farmer = {}
+        if user_id:
+            try:
+                farmer = (
+                    mongo.db.farmer_master.find_one({"linked_user_id": user_id})
+                    or (mongo.db.farmer_master.find_one({"linked_user_id": oid}) if oid else None)
+                    or {}
+                )
+            except Exception:
+                farmer = mongo.db.farmer_master.find_one({"linked_user_id": user_id}) or {}
+        if not farmer and phone:
+            farmer = mongo.db.farmer_master.find_one({"contact_no": phone}) or {}
+        farmer_id = str(farmer.get("_id") or "").strip()
+        farmer_phone = str(farmer.get("contact_no") or farmer.get("phone") or phone or "").strip()
+        filters = []
+        if user_id:
+            filters.extend([{"user_id": user_id}, {"farmer_user_id": user_id}, {"buyer_user_id": user_id}])
+        if farmer_id:
+            filters.append({"farmer_id": farmer_id})
+        if farmer_phone:
+            filters.extend([{"farmer_phone": farmer_phone}, {"farmer_contact": farmer_phone}, {"phone": farmer_phone}])
+        if filters:
+            orders = list(mongo.db.orders.find({"$or": filters}).sort("created_at", -1).limit(limit))
 
-        order["source"] = (
-            order.get("source")
-            or order.get("product_source")
-            or "avpl"
-        )
-
-        order["status"] = (
-            order.get("status")
-            or "placed"
-        )
-
-        normalized_orders.append(order)
-
-    return normalized_orders
+    normalized = []
+    for raw in orders:
+        order = dict(raw or {})
+        order["_id"] = str(order.get("_id") or "")
+        order["product_name"] = order.get("product_name") or order.get("name") or "Product"
+        order["quantity"] = order.get("requested_quantity") or order.get("quantity") or 0
+        order["unit_price"] = order.get("unit_price") or order.get("price") or order.get("selling_price") or 0
+        order["total_amount"] = order.get("total_amount") or order.get("grand_total") or order.get("amount") or 0
+        order["source"] = order.get("source") or order.get("product_source") or ("ufc" if raw.get("centre_uid") else "avpl")
+        order["status"] = order.get("status") or "placed"
+        normalized.append(order)
+    return normalized
 
 
 def _normalize_dashboard_products(data):
@@ -267,25 +233,54 @@ def _normalize_dashboard_products(data):
 
 
 def get_farmer_product_dashboard():
-    products = list(mongo.db.farmer_products.find({"status": "active"}).sort("created_at", -1))
+    """Live Farmer Produce summary for management/sales dashboards.
+
+    Stage 9 lots are the stock source of truth; legacy farmer_products are used
+    only when no Stage 9 data exists yet.
+    """
+    lots = list(
+        mongo.db.farmer_produce_lots
+        .find({"status": "active"})
+        .sort("updated_at", -1)
+    )
     summary_map = {}
-    for item in products:
+    for item in lots:
         name = item.get("product_name") or "Unknown"
         area_parts = [item.get("village"), item.get("block"), item.get("district")]
         area = ", ".join([x for x in area_parts if x]) or "-"
-        if name not in summary_map:
-            summary_map[name] = {"product_name": name, "available_quantity": 0, "areas": set()}
-        summary_map[name]["available_quantity"] += _to_number(item.get("available_quantity"))
+        row = summary_map.setdefault(name, {"product_name": name, "available_quantity": 0.0, "areas": set()})
+        row["available_quantity"] += max(
+            _to_number(item.get("available_quantity")) - _to_number(item.get("reserved_quantity")),
+            0,
+        )
         if area != "-":
-            summary_map[name]["areas"].add(area)
+            row["areas"].add(area)
+
+    products = list(
+        mongo.db.farmer_produce_marketplace_listings
+        .find({"status": "published"})
+        .sort("updated_at", -1)
+    )
+    if not lots and not products:
+        products = list(mongo.db.farmer_products.find({"status": "active"}).sort("created_at", -1))
+        for item in products:
+            name = item.get("product_name") or "Unknown"
+            area_parts = [item.get("village"), item.get("block"), item.get("district")]
+            area = ", ".join([x for x in area_parts if x]) or "-"
+            row = summary_map.setdefault(name, {"product_name": name, "available_quantity": 0.0, "areas": set()})
+            row["available_quantity"] += _to_number(item.get("available_quantity"))
+            if area != "-":
+                row["areas"].add(area)
+
     summary = []
     for row in summary_map.values():
         qty = row["available_quantity"]
         summary.append({
             "product_name": row["product_name"],
-            "available_quantity": int(qty) if qty.is_integer() else qty,
-            "areas": ", ".join(sorted(row["areas"])) or "-"
+            "available_quantity": int(qty) if float(qty).is_integer() else round(qty, 4),
+            "areas": ", ".join(sorted(row["areas"])) or "-",
         })
+    summary.sort(key=lambda x: (-_to_number(x.get("available_quantity")), x.get("product_name") or ""))
     return summary, products
 
 def get_ufc_admin_sales_trends():
@@ -304,13 +299,14 @@ def get_ufc_admin_sales_trends():
     prev_year_start = datetime(now.year - 1, 1, 1)
 
     sales = list(mongo.db.pos_sales.find({}))
+    sales.extend(list(mongo.db.ufc_farmer_sales.find({})))
 
     centre_map = {}
 
     for s in sales:
         centre_uid = s.get("centre_uid") or "Unknown"
-        amount = _to_number(s.get("total_amount"))
-        created_at = s.get("created_at")
+        amount = _to_number(s.get("total_amount") or s.get("grand_total") or s.get("amount"))
+        created_at = s.get("sale_date") or s.get("created_at")
 
         if not created_at:
             continue
@@ -541,6 +537,15 @@ def home():
                         or data.get("orders")
                         or []
                     ),
+                    "stock_physical": data.get("stock_physical", 0),
+                    "stock_reserved": data.get("stock_reserved", 0),
+                    "stock_saleable": data.get("stock_saleable", 0),
+                    "avpl_orders_pending": data.get("avpl_orders_pending", 0),
+                    "farmer_orders_pending": data.get("farmer_orders_pending", 0),
+                    "farmer_sales_value": data.get("farmer_sales_value", 0),
+                    "farmer_receivable": data.get("farmer_receivable", 0),
+                    "avpl_payable": data.get("avpl_payable", 0),
+                    "produce_orders_pending": data.get("produce_orders_pending", 0),
                 }
             })), 200
 
@@ -558,25 +563,33 @@ def home():
                     "input_bonus": data.get("input_bonus", 0),
                     "output_bonus": data.get("output_bonus", 0),
                     "monthly_sales": data.get("monthly_sales", []),
-                    "farmers": data.get("farmers", [])
+                    "farmers": data.get("farmers", []),
+                    "approved_farmer_count": data.get("approved_farmer_count", 0),
+                    "pending_farmer_count": data.get("pending_farmer_count", 0),
+                    "centre_farmer_orders_pending": data.get("centre_farmer_orders_pending", 0),
+                    "monthly_purchase_total": data.get("monthly_purchase_total", 0),
+                    "monthly_sales_total": data.get("monthly_sales_total", 0)
                 }
             })), 200
 
         # 🔹 FARMER DASHBOARD
         if role == "farmer":
-            data = get_farmer_dashboard(user.get("phone"))
+            data = get_farmer_dashboard(user.get("phone"), user_id=user.get("_id"))
 
             if not isinstance(data, dict):
                 data = {}
 
             data = _normalize_dashboard_products(data)
+            mapped_inputs = _get_app_farmer_products(user, limit=8)
+            if mapped_inputs:
+                data["recommended_products"] = mapped_inputs
 
-            # Add farmer marketplace products directly for app dashboard.
+            # Preserve the existing mobile response key, but source it from the
+            # Farmer's mapped UFC marketplace rather than a cross-farmer legacy feed.
             data["farmer_products"] = _get_app_farmer_products(user)
 
-            # IMPORTANT:
-            # App AVPL orders are inserted into mongo.db.orders with user_id/farmer_user_id.
-            # So fetch them directly here instead of depending only on get_farmer_dashboard(phone).
+            # Use the authoritative Stage 7 UFC -> Farmer order stream, with the
+            # legacy generic orders collection only as compatibility fallback.
             app_orders = _get_app_farmer_orders(user)
 
             data["orders"] = app_orders
@@ -656,7 +669,12 @@ def home():
 
     if role == "sales_nelocals":
         product_summary, farmer_products = get_farmer_product_dashboard()
-        return render_template("dashboard/sales_nelocals.html", product_summary=product_summary, farmer_products=farmer_products)
+        return render_template(
+            "dashboard/sales_nelocals.html",
+            product_summary=product_summary,
+            farmer_products=farmer_products,
+            network_stats=get_system_overview(),
+        )
 
     if role == "sales_unnatfarm":
         product_summary, farmer_products = get_farmer_product_dashboard()
@@ -666,7 +684,8 @@ def home():
             "dashboard/sales_unnatfarm.html",
             product_summary=product_summary,
             farmer_products=farmer_products,
-            ufc_sales_trends=ufc_sales_trends
+            ufc_sales_trends=ufc_sales_trends,
+            network_stats=get_system_overview(),
         )
 
     if role == "ufc_admin":
@@ -713,7 +732,7 @@ def home():
         return render_template("dashboard/ufc_mitra.html", data=data)
 
     if role == "farmer":
-        data = get_farmer_dashboard(user.get("phone"))
+        data = get_farmer_dashboard(user.get("phone"), user_id=user.get("_id"))
 
         if not isinstance(data, dict):
             data = {}
@@ -737,6 +756,10 @@ def home():
             or session.get("name")
             or "Farmer"
         )
+
+        mapped_inputs = _get_app_farmer_products(user, limit=8)
+        if mapped_inputs:
+            data["recommended_products"] = mapped_inputs
 
         # Same order fetch logic used by app dashboard
         web_orders = _get_app_farmer_orders(user)

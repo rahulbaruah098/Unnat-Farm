@@ -32,7 +32,7 @@
 
         <section class="section"><h3>What Arrived?</h3><div id="linesContainer" class="empty-lines">Select a Purchase Order to load products.</div><div class="totals" id="receiptTotals" hidden><div class="total-card"><small>Received</small><strong id="totalReceived">0.0000</strong></div><div class="total-card"><small>Accepted to Stock</small><strong id="totalAccepted">0.0000</strong></div><div class="total-card"><small>Rejected</small><strong id="totalRejected">0.0000</strong></div><div class="total-card"><small>Damaged</small><strong id="totalDamaged">0.0000</strong></div></div></section>
 
-        <div class="actions"><a class="btn" href="{{ url_for('admin.goods_receipts') }}">Cancel</a><button class="btn primary" type="submit" name="save_action" value="draft">Save Draft</button>{% if session.get('role') in ['avpl_admin','super_admin'] %}<button class="btn post" type="submit" name="save_action" value="post">Receive & Add Accepted Stock</button>{% endif %}</div>
+        <div class="actions"><a class="btn" href="{{ url_for('admin.goods_receipts') }}">Cancel</a>{% if streamlined_workflows_enabled %}<button class="btn post" type="submit" name="save_action" value="complete">Receive & Add Accepted Stock</button><button class="btn" type="submit" name="save_action" value="draft">Save as Draft</button>{% else %}<button class="btn primary" type="submit" name="save_action" value="draft">Save Draft</button>{% if session.get('role') in ['avpl_admin','super_admin'] %}<button class="btn post" type="submit" name="save_action" value="post">Receive & Add Accepted Stock</button>{% endif %}{% endif %}</div>
     </form>
 </div>
 <script>

@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Stage 10 Reports | UnnatFarm MIS{% endblock %}
+{% block extra_head %}{% include 'reports/_styles.html' %}{% endblock %}
+{% block content %}
+<div class="s10-shell">
+  <section class="s10-hero">
+    <div><h1> Management & Control Centre</h1><p>Live reporting across procurement, inventory, AVPL→UFC, UFC→Farmer and Farmer Produce commerce. </p></div>
+    <span class="s10-badge">● Live Data · {{ scope.role.replace('_',' ').title() }}</span>
+  </section>
+  {% include 'reports/_tabs.html' %}
+  {% include 'reports/_filters.html' %}
+  <div class="s10-grid">
+    <div class="s10-card"><small>{% if scope.is_management %}Supplier Purchases{% else %}Purchase Value{% endif %}</small><strong>₹{{ '%.2f'|format(report.kpis.supplier_purchases) }}</strong><div class="sub">Actual linked purchase/invoice data</div></div>
+    <div class="s10-card"><small>AVPL → UFC Sales</small><strong>₹{{ '%.2f'|format(report.kpis.avpl_ufc_sales) }}</strong><div class="sub">Automatic dispatch-linked sales</div></div>
+    <div class="s10-card"><small>UFC → Farmer Sales</small><strong>₹{{ '%.2f'|format(report.kpis.ufc_farmer_sales) }}</strong><div class="sub">Order + POS sales where in scope</div></div>
+    <div class="s10-card"><small>Farmer Produce Sales</small><strong>₹{{ '%.2f'|format(report.kpis.farmer_produce_sales) }}</strong><div class="sub">Farmer Produce Marketplace</div></div>
+    <div class="s10-card"><small>Outstanding Receivables</small><strong>₹{{ '%.2f'|format(report.kpis.receivables) }}</strong><div class="sub">Money to receive</div></div>
+    <div class="s10-card"><small>Outstanding Payables</small><strong>₹{{ '%.2f'|format(report.kpis.payables) }}</strong><div class="sub">Money to pay</div></div>
+    <div class="s10-card"><small>Inventory Value</small><strong>₹{{ '%.2f'|format(report.kpis.stock_value) }}</strong><div class="sub">Physical stock at known cost</div></div>
+    <div class="s10-card"><small>Saleable Stock</small><strong>{{ report.kpis.saleable_stock }}</strong><div class="sub">After reservations / blocked / damage / expiry</div></div>
+    <div class="s10-card"><small>Pending Orders</small><strong>{{ report.kpis.pending_orders }}</strong><div class="sub">Across active operational flows</div></div>
+    <div class="s10-card"><small>Awaiting Dispatch</small><strong>{{ report.kpis.awaiting_dispatch }}</strong><div class="sub">Approved and ready to move</div></div>
+    <div class="s10-card"><small>Awaiting Receipt</small><strong>{{ report.kpis.awaiting_receipt }}</strong><div class="sub">Dispatched, not fully received</div></div>
+    <div class="s10-card"><small>Payments Recorded</small><strong>₹{{ '%.2f'|format(report.kpis.payment_value) }}</strong><div class="sub">Unified payment engine</div></div>
+    {% if scope.is_management %}<div class="s10-card"><small>Estimated COGS</small><strong>₹{{ '%.2f'|format(report.kpis.estimated_cogs) }}</strong><div class="sub">AVPL→UFC sales</div></div><div class="s10-card"><small>Gross Margin</small><strong>₹{{ '%.2f'|format(report.kpis.estimated_gross_margin) }}</strong><div class="sub">Estimated from inventory cost</div></div>{% endif %}
+    <div class="s10-card"><small>Expiring ≤30 Days</small><strong>{{ report.kpis.expiring_30d }}</strong><div class="sub">Physical quantity needing attention</div></div>
+  </div>
+
+  <section class="s10-section"><div class="s10-section-head"><div><h2>Transaction Chain Health</h2><p>Completed business events should have their linked operational and financial records.</p></div><a class="s10-btn secondary" href="{{ url_for('reports.transactions') }}">Open Chains</a></div>
+    <div class="s10-grid" style="padding:16px;margin:0"><div class="s10-card"><small>Chains Checked</small><strong>{{ report.chains.summary.total }}</strong></div><div class="s10-card"><small>Complete</small><strong>{{ report.chains.summary.complete }}</strong></div><div class="s10-card"><small>Needs Attention</small><strong>{{ report.chains.summary.needs_attention }}</strong></div><div class="s10-card"><small>Open Financial Items</small><strong>{{ report.financial.summary.open_items }}</strong></div></div>
+  </section>
+
+  <section class="s10-section"><div class="s10-section-head"><div><h2>Inventory Snapshot</h2><p>{{ report.inventory.scope_label }} stock by source-of-truth lots.</p></div><a class="s10-btn secondary" href="{{ url_for('reports.inventory') }}">Open Inventory</a></div>
+    <div class="s10-table-wrap"><table class="s10-table"><thead><tr><th>Product</th><th>Physical</th><th>Reserved</th><th>Saleable</th><th>Damaged</th><th>Expired</th><th>Value</th></tr></thead><tbody>{% for row in report.inventory.rows[:10] %}<tr><td><strong>{{ row.product_name }}</strong><br><small>{{ row.product_code }}</small></td><td>{{ row.physical }} {{ row.unit_code }}</td><td>{{ row.reserved }}</td><td>{{ row.saleable }}</td><td>{{ row.damaged }}</td><td>{{ row.expired }}</td><td>₹{{ row.stock_value_display }}</td></tr>{% else %}<tr><td colspan="7" class="s10-empty">No stock data yet.</td></tr>{% endfor %}</tbody></table></div>
+  </section>
+</div>
+{% endblock %}

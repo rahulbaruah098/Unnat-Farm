@@ -1,0 +1,7 @@
+<form class="s10-filters s10-no-print" method="get">
+  <div class="wide"><label>Search</label><input name="q" value="{{ filters.q }}" placeholder="Reference, product, party, centre..."></div>
+  <div><label>From</label><input type="date" name="from" value="{{ filters.from_text }}"></div>
+  <div><label>To</label><input type="date" name="to" value="{{ filters.to_text }}"></div>
+  {% if show_status_filter|default(false) %}<div><label>Status</label><select name="status"><option value="all">All</option><option value="unpaid" {% if filters.status=='unpaid' %}selected{% endif %}>Unpaid</option><option value="partially_paid" {% if filters.status=='partially_paid' %}selected{% endif %}>Partially Paid</option><option value="paid" {% if filters.status=='paid' %}selected{% endif %}>Paid</option></select></div>{% endif %}
+  <div><button class="s10-btn" type="submit">Apply</button></div>
+</form>

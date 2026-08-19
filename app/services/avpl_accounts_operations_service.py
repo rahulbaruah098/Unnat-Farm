@@ -135,7 +135,13 @@ def _get_actor(actor_user_id):
 
 
 def _active_avpl_entity():
-    entity = mongo.db.accounting_entities.find_one(
+    """Return the active AVPL accounting entity, if setup has reached that step.
+
+    Accounts pages are read/reporting surfaces.  A fresh database must not turn
+    those pages into HTTP 500s before AVPL Accounting setup is completed.
+    Transaction-writing services still enforce their own strict entity checks.
+    """
+    return mongo.db.accounting_entities.find_one(
         {
             "entity_code": "AVPL",
             "entity_type": "avpl",
@@ -144,9 +150,27 @@ def _active_avpl_entity():
             "is_deleted": {"$ne": True},
         }
     )
-    if not entity:
-        raise RuntimeError("The active AVPL Accounting entity is unavailable.")
-    return entity
+
+
+def _empty_financial_summary():
+    return {
+        "supplier_purchase_value": "0.00",
+        "supplier_paid": "0.00",
+        "supplier_outstanding": "0.00",
+        "supplier_invoice_count": 0,
+        "ufc_sales_value": "0.00",
+        "ufc_received": "0.00",
+        "ufc_receivable": "0.00",
+        "ufc_invoice_count": 0,
+        "cost_of_goods_sold": "0.00",
+        "gross_margin": "0.00",
+        "gross_margin_percent": "0.00",
+        "sale_count": 0,
+    }
+
+
+def _setup_message():
+    return "Complete the AVPL Accounting entity setup to start financial reporting."
 
 
 def _invoice_number(source_type, invoice):
@@ -326,6 +350,25 @@ def get_accounts_transaction_overview(actor_user_id, *, segment="all", query_tex
     entity = _active_avpl_entity()
 
     selected_segment = str(segment or "all").strip().lower()
+    if not entity:
+        if selected_segment not in {"all", "supplier", "ufc"}:
+            selected_segment = "all"
+        return {
+            "rows": [],
+            "selected_segment": selected_segment,
+            "query": query_text or "",
+            "summary": {
+                "supplier_paid": "0.00",
+                "ufc_received": "0.00",
+                "supplier_outstanding": "0.00",
+                "ufc_receivable": "0.00",
+            },
+            "counts": {"all": 0, "supplier": 0, "ufc": 0},
+            "setup_required": True,
+            "setup_message": _setup_message(),
+        }
+
+    selected_segment = str(segment or "all").strip().lower()
     if selected_segment not in {"all", "supplier", "ufc"}:
         selected_segment = "all"
 
@@ -498,6 +541,20 @@ def _aggregate_invoice_payment_status(invoices):
 def get_accounts_order_overview(actor_user_id, *, segment="supplier", query_text="", limit=500):
     _get_actor(actor_user_id)
     entity = _active_avpl_entity()
+
+    selected_segment = str(segment or "supplier").strip().lower()
+    if not entity:
+        if selected_segment not in {"supplier", "ufc"}:
+            selected_segment = "supplier"
+        return {
+            "selected_segment": selected_segment,
+            "query": query_text or "",
+            "supplier_rows": [],
+            "ufc_rows": [],
+            "summary": {"supplier_order_count": 0, "ufc_order_count": 0},
+            "setup_required": True,
+            "setup_message": _setup_message(),
+        }
 
     selected_segment = str(segment or "supplier").strip().lower()
     if selected_segment not in {"supplier", "ufc"}:
@@ -679,6 +736,15 @@ def get_accounts_order_overview(actor_user_id, *, segment="supplier", query_text
 def get_purchase_sales_summary(actor_user_id, *, query_text="", limit=500):
     _get_actor(actor_user_id)
     entity = _active_avpl_entity()
+    if not entity:
+        return {
+            "query": query_text or "",
+            "summary": _empty_financial_summary(),
+            "supplier_rows": [],
+            "ufc_rows": [],
+            "setup_required": True,
+            "setup_message": _setup_message(),
+        }
     summary = _financial_summary(entity)
 
     supplier_rows = []
@@ -784,6 +850,15 @@ def get_purchase_sales_summary(actor_user_id, *, query_text="", limit=500):
 def get_accounts_dashboard_overview(actor_user_id):
     _get_actor(actor_user_id)
     entity = _active_avpl_entity()
+    if not entity:
+        return {
+            **_empty_financial_summary(),
+            "supplier_order_count": 0,
+            "ufc_order_count": 0,
+            "transaction_count": 0,
+            "setup_required": True,
+            "setup_message": _setup_message(),
+        }
     summary = _financial_summary(entity)
     supplier_invoice_ids = [
         row["_id"]

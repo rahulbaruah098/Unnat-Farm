@@ -43,6 +43,7 @@ from app.services.avpl_purchase_order_service import (
     PURCHASE_ORDER_COLLECTION,
 )
 from app.utils.helpers import now_utc
+from app.services.workflow_policy_service import workflow_is_streamlined
 
 
 POSTING_STATUS_NOT_POSTED = "not_posted"
@@ -412,7 +413,12 @@ def prepare_supplier_invoice_posting(
     actor_user_id,
     expected_version,
 ):
-    actor = _get_actor(actor_user_id, PREPARER_ROLES)
+    preparer_roles = (
+        ALLOWED_ROLES
+        if workflow_is_streamlined("avpl.supplier_invoice_posting")
+        else PREPARER_ROLES
+    )
+    actor = _get_actor(actor_user_id, preparer_roles)
     invoice = _get_invoice(invoice_id)
     _assert_invoice_match_ready(invoice)
     ensure_purchase_posting_indexes()
@@ -623,10 +629,33 @@ def post_supplier_invoice_purchase(
     actor_user_id,
     expected_version,
 ):
-    actor = _get_actor(actor_user_id, POSTER_ROLES)
+    poster_roles = (
+        ALLOWED_ROLES
+        if workflow_is_streamlined("avpl.supplier_invoice_posting")
+        else POSTER_ROLES
+    )
+    actor = _get_actor(actor_user_id, poster_roles)
+    streamlined = workflow_is_streamlined("avpl.supplier_invoice_posting")
+    posting_permission = (
+        "accounting.voucher.validate"
+        if streamlined and actor.get("resolved_role") == "accounts"
+        else POST_PERMISSION
+    )
     invoice = _get_invoice(invoice_id)
     _assert_invoice_match_ready(invoice)
     ensure_purchase_posting_indexes()
+
+    if (
+        streamlined
+        and invoice.get("posting_status") in {None, "", POSTING_STATUS_NOT_POSTED}
+    ):
+        prepared = prepare_supplier_invoice_posting(
+            invoice_id,
+            actor_user_id,
+            expected_version,
+        )
+        invoice = _get_invoice(invoice_id)
+        expected_version = invoice.get("version")
 
     if invoice.get("posting_status") == POSTING_STATUS_POSTED:
         return {
@@ -647,7 +676,10 @@ def post_supplier_invoice_purchase(
         )
     if not invoice.get("accounting_voucher_id"):
         raise ValueError("The prepared Accounting voucher link is unavailable.")
-    if str(invoice.get("posting_prepared_by") or "") == str(actor["_id"]):
+    if (
+        str(invoice.get("posting_prepared_by") or "") == str(actor["_id"])
+        and not workflow_is_streamlined("avpl.supplier_invoice_posting")
+    ):
         raise PermissionError(
             "Maker-checker control: the user who prepared the posting cannot perform the final posting."
         )
@@ -712,7 +744,7 @@ def post_supplier_invoice_purchase(
             document_type=PURCHASE_INVOICE_TYPE,
             idempotency_key=f"avpl-purchase-invoice:{event_id}",
             actor_user_id=actor["_id"],
-            required_permission=POST_PERMISSION,
+            required_permission=posting_permission,
             source_collection=SUPPLIER_INVOICE_COLLECTION,
             source_id=invoice["_id"],
             metadata={
@@ -729,13 +761,16 @@ def post_supplier_invoice_purchase(
             voucher["_id"],
             actor["_id"],
             voucher.get("version"),
+            allow_creator_post=streamlined,
+            allowed_roles=poster_roles,
+            required_permission=posting_permission,
         )
         posted_voucher = voucher_result["voucher"]
 
         reservation = commit_reserved_number(
             reservation_id=reservation["id"],
             actor_user_id=actor["_id"],
-            required_permission=POST_PERMISSION,
+            required_permission=posting_permission,
             source_collection=SUPPLIER_INVOICE_COLLECTION,
             source_id=invoice["_id"],
             source_reference=invoice.get("internal_reference") or "",

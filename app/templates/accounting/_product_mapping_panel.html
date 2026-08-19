@@ -192,7 +192,7 @@
             <p class="accounting-section-description">
                 Maps existing AVPL products to approved HSN, units and trade/inventory ledgers.
                 The operational product collection remains unchanged and unmapped products continue
-                working in existing MIS screens; only new Accounting transactions require approval here.
+                working in existing MIS screens; {% if streamlined_workflows_enabled %}new mappings validate and activate when saved.{% else %}only new Accounting transactions require approval here.{% endif %}
             </p>
         </div>
         {% if product_mapping_overview.active_mapped_product_count > 0 %}
@@ -229,7 +229,7 @@
         {% if not product_mapping_overview.prerequisites.is_ready %}
             <div class="accounting-notice warning">
                 <strong>Mapping prerequisites are incomplete.</strong>
-                {% if not product_mapping_overview.prerequisites.has_active_hsn %}Approve at least one HSN master. {% endif %}
+                {% if not product_mapping_overview.prerequisites.has_active_hsn %}{% if streamlined_workflows_enabled %}Activate at least one HSN master. {% else %}Approve at least one HSN master. {% endif %}{% endif %}
                 {% if not product_mapping_overview.prerequisites.has_active_units %}Initialize or approve units. {% endif %}
                 {% if not product_mapping_overview.prerequisites.has_purchase_ledger %}The Purchase ledger is unavailable. {% endif %}
                 {% if not product_mapping_overview.prerequisites.has_sales_ledger %}The Sales ledger is unavailable. {% endif %}
@@ -242,7 +242,7 @@
                 <form method="post"
                       action="{{ url_for('accounting.product_mapping_create') }}"
                       class="accounting-product-map-form">
-                    <h3>Create mapping draft</h3>
+                    <h3>{% if streamlined_workflows_enabled %}Create product mapping{% else %}Create mapping draft{% endif %}</h3>
                     <div class="accounting-product-map-grid">
                         <label class="wide">
                             <span>Existing AVPL product</span>
@@ -328,7 +328,7 @@
                     </div>
                     <div class="accounting-product-map-form-footer">
                         <small>Taxability and GST rate code are derived from the approved HSN to prevent inconsistent product tax setup.</small>
-                        <button type="submit" class="accounting-primary-button">Create mapping draft</button>
+                        <button type="submit" class="accounting-primary-button">{% if streamlined_workflows_enabled %}Save & Activate Mapping{% else %}Create mapping draft{% endif %}</button>
                     </div>
                 </form>
             {% else %}
@@ -409,7 +409,7 @@
                                         <label class="accounting-product-map-toggle"><input type="checkbox" name="purchase_enabled" value="1" {% if mapping.purchase_enabled %}checked{% endif %}><span><strong>Purchase enabled</strong></span></label>
                                         <label class="accounting-product-map-toggle"><input type="checkbox" name="sales_enabled" value="1" {% if mapping.sales_enabled %}checked{% endif %}><span><strong>Sales enabled</strong></span></label>
                                     </div>
-                                    <div class="accounting-product-map-form-footer"><span>Version {{ mapping.version }}</span><button class="accounting-primary-button" type="submit">Save draft</button></div>
+                                    <div class="accounting-product-map-form-footer"><span>Version {{ mapping.version }}</span><button class="accounting-primary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save draft{% endif %}</button></div>
                                 </form>
                             </details>
                         {% endif %}

@@ -10,7 +10,7 @@
         <div>
             <p class="accounting-eyebrow">Stage 4 · Batch 2</p>
             <h2>Units and alternate-unit conversions</h2>
-            <p class="accounting-section-description">Protected GST UQC units provide invoice-compatible quantity codes. Accounts may prepare business-specific units and direct conversion rules for AVPL Admin approval.</p>
+            <p class="accounting-section-description">Protected GST UQC units provide invoice-compatible quantity codes. {% if streamlined_workflows_enabled %}Accounts can save validated business-specific units and conversion rules directly.{% else %}Accounts may prepare business-specific units and direct conversion rules for AVPL Admin approval.{% endif %}</p>
         </div>
         {% if unit_overview.foundation.is_complete %}<span class="accounting-state-pill active">UQC foundation verified</span>{% else %}<span class="accounting-state-pill pending">UQC setup required</span>{% endif %}
     </div>
@@ -50,7 +50,7 @@
 
         {% if unit_capabilities.can_create %}
         <details class="unit-panel" open>
-            <summary>Create custom unit draft</summary>
+            <summary>{% if streamlined_workflows_enabled %}Create custom unit{% else %}Create custom unit draft{% endif %}</summary>
             {% if not unit_overview.foundation.is_complete %}<div class="accounting-notice warning">Synchronize the protected UQC catalog before creating custom units.</div>{% endif %}
             <form method="post" action="{{ url_for('accounting.custom_unit_create') }}" class="unit-form-grid">
                 <div class="unit-field"><label>Unit code</label><input name="unit_code" maxlength="20" placeholder="BAG_25KG" required></div>
@@ -61,7 +61,7 @@
                 <div class="unit-field"><label>Decimal places</label><input name="decimal_places" type="number" min="0" max="6" value="0" required></div>
                 <label class="unit-checkbox"><input type="checkbox" name="allows_fractional" value="1"> Allow fractional quantity</label>
                 <div class="unit-field full"><label>Description</label><textarea name="description" placeholder="Business use and packaging definition"></textarea></div>
-                <div class="unit-field full"><button class="unit-button" type="submit">Create custom unit draft</button></div>
+                <div class="unit-field full"><button class="unit-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate Unit{% else %}Create custom unit draft{% endif %}</button></div>
             </form>
         </details>
         {% endif %}
@@ -76,7 +76,7 @@
                     {% if unit.return_reason %}<div class="accounting-notice warning compact"><strong>Correction:</strong> {{ unit.return_reason }}</div>{% endif %}
                     {% set is_maker = unit.created_by == current_user_id %}
                     {% if unit_capabilities.can_edit and is_maker and unit.status in ['draft','returned_for_correction'] %}
-                    <details><summary>Edit draft</summary><form method="post" action="{{ url_for('accounting.custom_unit_edit', unit_id=unit.id) }}" class="unit-form-grid"><input type="hidden" name="version" value="{{ unit.version }}"><div class="unit-field"><label>Code</label><input name="unit_code" value="{{ unit.unit_code }}" required></div><div class="unit-field"><label>Name</label><input name="name" value="{{ unit.name }}" required></div><div class="unit-field"><label>Symbol</label><input name="symbol" value="{{ unit.symbol }}" required></div><div class="unit-field"><label>GST UQC</label><select name="uqc_code" required>{% for option in unit_overview.options.standard_uqc_units %}<option value="{{ option.uqc_code }}" {% if option.uqc_code==unit.uqc_code %}selected{% endif %}>{{ option.uqc_code }} — {{ option.name }}</option>{% endfor %}</select></div><div class="unit-field"><label>Dimension</label><select name="dimension">{% for code,label in unit_overview.options.dimension_labels.items() %}<option value="{{ code }}" {% if code==unit.dimension %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="unit-field"><label>Decimals</label><input name="decimal_places" type="number" min="0" max="6" value="{{ unit.decimal_places }}"></div><label class="unit-checkbox"><input type="checkbox" name="allows_fractional" value="1" {% if unit.allows_fractional %}checked{% endif %}> Allow fractions</label><div class="unit-field full"><label>Description</label><textarea name="description">{{ unit.description }}</textarea></div><div class="unit-field full"><button class="unit-button secondary">Save draft</button></div></form></details>
+                    <details><summary>Edit draft</summary><form method="post" action="{{ url_for('accounting.custom_unit_edit', unit_id=unit.id) }}" class="unit-form-grid"><input type="hidden" name="version" value="{{ unit.version }}"><div class="unit-field"><label>Code</label><input name="unit_code" value="{{ unit.unit_code }}" required></div><div class="unit-field"><label>Name</label><input name="name" value="{{ unit.name }}" required></div><div class="unit-field"><label>Symbol</label><input name="symbol" value="{{ unit.symbol }}" required></div><div class="unit-field"><label>GST UQC</label><select name="uqc_code" required>{% for option in unit_overview.options.standard_uqc_units %}<option value="{{ option.uqc_code }}" {% if option.uqc_code==unit.uqc_code %}selected{% endif %}>{{ option.uqc_code }} — {{ option.name }}</option>{% endfor %}</select></div><div class="unit-field"><label>Dimension</label><select name="dimension">{% for code,label in unit_overview.options.dimension_labels.items() %}<option value="{{ code }}" {% if code==unit.dimension %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="unit-field"><label>Decimals</label><input name="decimal_places" type="number" min="0" max="6" value="{{ unit.decimal_places }}"></div><label class="unit-checkbox"><input type="checkbox" name="allows_fractional" value="1" {% if unit.allows_fractional %}checked{% endif %}> Allow fractions</label><div class="unit-field full"><label>Description</label><textarea name="description">{{ unit.description }}</textarea></div><div class="unit-field full"><button class="unit-button secondary">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save draft{% endif %}</button></div></form></details>
                     {% endif %}
                     <div class="unit-action-row">
                     {% if unit_capabilities.can_submit and is_maker and unit.status in ['draft','returned_for_correction'] %}<form method="post" action="{{ url_for('accounting.custom_unit_submit', unit_id=unit.id) }}"><input type="hidden" name="version" value="{{ unit.version }}"><input name="submission_note" placeholder="Submission note"><button class="unit-button">Submit</button></form>{% endif %}
@@ -93,14 +93,14 @@
 
         {% if unit_capabilities.can_create %}
         <details class="unit-panel">
-            <summary>Create alternate-unit conversion draft</summary>
+            <summary>{% if streamlined_workflows_enabled %}Create alternate-unit conversion{% else %}Create alternate-unit conversion draft{% endif %}</summary>
             <form method="post" action="{{ url_for('accounting.unit_conversion_create') }}" class="unit-form-grid">
                 <div class="unit-field"><label>From unit</label><select name="from_unit_id" required><option value="">Select unit</option>{% for unit in unit_overview.options.active_units %}<option value="{{ unit.id }}">{{ unit.unit_code }} — {{ unit.name }}</option>{% endfor %}</select></div>
                 <div class="unit-field"><label>To unit</label><select name="to_unit_id" required><option value="">Select unit</option>{% for unit in unit_overview.options.active_units %}<option value="{{ unit.id }}">{{ unit.unit_code }} — {{ unit.name }}</option>{% endfor %}</select></div>
                 <div class="unit-field"><label>Factor</label><input name="factor" type="number" min="0.000000001" step="0.000000001" placeholder="25" required></div>
                 <label class="unit-checkbox"><input type="checkbox" name="is_bidirectional" value="1" checked> Permit reciprocal conversion</label>
                 <div class="unit-field full"><label>Description</label><textarea name="description" placeholder="Example: 1 BAG_25KG = 25 KGS"></textarea></div>
-                <div class="unit-field full"><button class="unit-button">Create conversion draft</button></div>
+                <div class="unit-field full"><button class="unit-button">{% if streamlined_workflows_enabled %}Save & Activate Conversion{% else %}Create conversion draft{% endif %}</button></div>
             </form>
         </details>
         {% endif %}

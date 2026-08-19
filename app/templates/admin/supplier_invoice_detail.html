@@ -59,9 +59,14 @@
         <div class="section-head"><h3>Purchase Completion</h3><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></div>
         <div class="posting-flow">
             <div class="posting-step {{ 'done' if invoice.status in ['matched','matched_with_warnings'] else 'blocked' }}"><span>1. Three-Way Match</span><strong>{{ invoice.status_display }}</strong></div>
+            {% if streamlined_workflows_enabled %}
+            <div class="posting-step {{ 'done' if invoice.posting_status == 'posted' else 'current' }}"><span>2. Purchase Finalization</span><strong>{{ 'Completed' if invoice.posting_status == 'posted' else ('Ready' if invoice.blocking_mismatch_count == 0 else 'Blocked') }}</strong></div>
+            <div class="posting-step {{ 'done' if invoice.payable_posted else '' }}"><span>3. Supplier Payable</span><strong>{{ 'Open · ₹' ~ invoice.outstanding_amount if invoice.payable_posted else 'Created during finalization' }}</strong></div>
+            {% else %}
             <div class="posting-step {{ 'done' if invoice.posting_status in ['prepared','posting','posted','recovery_required'] else 'current' }}"><span>2. Prepare Purchase</span><strong>{{ 'Completed' if invoice.posting_status in ['prepared','posting','posted','recovery_required'] else 'Pending' }}</strong></div>
             <div class="posting-step {{ 'done' if invoice.posting_status == 'posted' else ('current' if invoice.posting_status in ['prepared','recovery_required'] else '') }}"><span>3. Final Approval</span><strong>{{ 'Completed' if invoice.posting_status == 'posted' else 'Pending' }}</strong></div>
             <div class="posting-step {{ 'done' if invoice.payable_posted else '' }}"><span>4. Supplier Payable</span><strong>{{ 'Open · ₹' ~ invoice.outstanding_amount if invoice.payable_posted else 'Not Posted' }}</strong></div>
+            {% endif %}
         </div>
 
         <div class="posting-meta">
@@ -73,30 +78,23 @@
 
         {% if invoice.status in ['matched','matched_with_warnings'] and invoice.blocking_mismatch_count == 0 %}
             <div class="workflow" style="margin-top:15px">
-                {% if invoice.posting_status == 'not_posted' %}
-                    {% if session.get('role') in ['accounts','super_admin'] %}
-                        <form method="post" action="{{ url_for('admin.prepare_supplier_invoice_posting_view', invoice_id=invoice.id) }}">
+                {% if streamlined_workflows_enabled %}
+                    {% if invoice.posting_status == 'posted' %}
+                        <a class="btn dark" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print Official Purchase Invoice</a>
+                    {% elif invoice.posting_status != 'posting' %}
+                        <form method="post" action="{{ url_for('admin.post_supplier_invoice_purchase_view', invoice_id=invoice.id) }}" onsubmit="return confirm('Finalize this matched purchase and create the official invoice, accounting voucher and supplier payable?');">
                             <input type="hidden" name="expected_version" value="{{ invoice.version }}">
-                            <button class="btn primary" type="submit">Prepare Purchase</button>
+                            <button class="btn dark" type="submit">{{ 'Retry Finalization' if invoice.posting_status == 'recovery_required' else 'Finalize Purchase' }}</button>
                         </form>
-                    {% else %}
-                        <div class="notice info" style="margin:0"><strong>Next action:</strong> An Accounts user must prepare the purchase first. AVPL Admin then completes the final approval.</div>
                     {% endif %}
-                {% elif invoice.posting_status in ['prepared','recovery_required'] %}
-                    {% if session.get('role') in ['avpl_admin','super_admin'] %}
-                        {% if invoice.posting_prepared_by and invoice.posting_prepared_by == session.get('user_id')|string %}
-                            <div class="notice warning" style="margin:0"><strong>Approval required:</strong> The same person who prepared this purchase cannot perform the final approval. Use another authorized user.</div>
-                        {% else %}
-                            <form method="post" action="{{ url_for('admin.post_supplier_invoice_purchase_view', invoice_id=invoice.id) }}" onsubmit="return confirm('Post the official Purchase Invoice, Accounting voucher and supplier payable? Stock will not be increased again.');">
-                                <input type="hidden" name="expected_version" value="{{ invoice.version }}">
-                                <button class="btn dark" type="submit">{{ 'Retry Safe Posting' if invoice.posting_status == 'recovery_required' else 'Finalize Purchase & Payable' }}</button>
-                            </form>
-                        {% endif %}
-                    {% else %}
-                        <div class="notice info" style="margin:0"><strong>Next action:</strong> AVPL Admin must complete the purchase posting.</div>
-                    {% endif %}
-                {% elif invoice.posting_status == 'posted' %}
-                    <a class="btn dark" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print Official Purchase Invoice</a>
+                {% else %}
+                    {% if invoice.posting_status == 'not_posted' %}
+                        {% if session.get('role') in ['accounts','super_admin'] %}
+                            <form method="post" action="{{ url_for('admin.prepare_supplier_invoice_posting_view', invoice_id=invoice.id) }}"><input type="hidden" name="expected_version" value="{{ invoice.version }}"><button class="btn primary" type="submit">Prepare Purchase</button></form>
+                        {% else %}<div class="notice info" style="margin:0"><strong>Next action:</strong> Accounts must prepare the purchase first.</div>{% endif %}
+                    {% elif invoice.posting_status in ['prepared','recovery_required'] %}
+                        {% if session.get('role') in ['avpl_admin','super_admin'] %}<form method="post" action="{{ url_for('admin.post_supplier_invoice_purchase_view', invoice_id=invoice.id) }}"><input type="hidden" name="expected_version" value="{{ invoice.version }}"><button class="btn dark" type="submit">Finalize Purchase & Payable</button></form>{% else %}<div class="notice info" style="margin:0"><strong>Next action:</strong> AVPL Admin must complete posting.</div>{% endif %}
+                    {% elif invoice.posting_status == 'posted' %}<a class="btn dark" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print Official Purchase Invoice</a>{% endif %}
                 {% endif %}
             </div>
         {% endif %}

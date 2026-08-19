@@ -23,6 +23,7 @@ from app.services.accounting_product_mapping_service import (
     get_product_accounting_mapping_for_posting,
 )
 from app.utils.helpers import now_utc
+from app.services.workflow_policy_service import workflow_is_streamlined
 
 
 PURCHASE_ORDER_COLLECTION = "avpl_purchase_orders"
@@ -1086,7 +1087,10 @@ def create_purchase_order(accounting_entity_id, actor_user_id, raw_payload, auto
     )
     payload = _build_order_payload(entity, supplier, raw_payload)
 
-    can_auto_approve = actor.get("resolved_role") in CHECKER_ROLES and bool(auto_approve)
+    can_auto_approve = bool(auto_approve) and (
+        actor.get("resolved_role") in CHECKER_ROLES
+        or workflow_is_streamlined("avpl.purchase_order")
+    )
     status = STATUS_APPROVED if can_auto_approve else STATUS_DRAFT
     timestamp = now_utc()
     po_number = _next_po_number(payload["order_date"])
@@ -1181,7 +1185,10 @@ def update_purchase_order(order_id, actor_user_id, raw_payload, expected_version
     )
     payload = _build_order_payload(entity, supplier, raw_payload)
 
-    can_auto_approve = actor.get("resolved_role") in CHECKER_ROLES and bool(auto_approve)
+    can_auto_approve = bool(auto_approve) and (
+        actor.get("resolved_role") in CHECKER_ROLES
+        or workflow_is_streamlined("avpl.purchase_order")
+    )
     next_status = STATUS_APPROVED if can_auto_approve else STATUS_DRAFT
     timestamp = now_utc()
     updates = {
@@ -1290,8 +1297,11 @@ def submit_purchase_order(order_id, actor_user_id, expected_version):
 
 def approve_purchase_order(order_id, actor_user_id, expected_version, approval_note=""):
     actor = _get_actor(actor_user_id)
-    if actor.get("resolved_role") not in CHECKER_ROLES:
-        raise PermissionError("Only AVPL Admin can approve purchase orders.")
+    if (
+        actor.get("resolved_role") not in CHECKER_ROLES
+        and not workflow_is_streamlined("avpl.purchase_order")
+    ):
+        raise PermissionError("You are not authorized to approve purchase orders.")
 
     order = _get_order_document(order_id)
     if order.get("status") not in APPROVABLE_STATUSES:

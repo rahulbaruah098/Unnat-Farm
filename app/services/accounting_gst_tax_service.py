@@ -15,6 +15,7 @@ from app.services.accounting_permission_service import (
     has_accounting_permission,
 )
 from app.utils.helpers import now_utc
+from app.services.workflow_policy_service import workflow_is_streamlined
 
 
 AVPL_ENTITY_CODE = "AVPL"
@@ -1433,14 +1434,16 @@ def cancel_gst_tax_rate(rate_id, actor_user_id, expected_version, reason=""):
 
 
 def approve_gst_tax_rate(rate_id, actor_user_id, expected_version, approval_note=""):
-    actor = _get_actor(actor_user_id, allowed_roles={"avpl_admin", "super_admin"})
+    streamlined = workflow_is_streamlined("accounting.gst_tax")
+    actor = _get_actor(actor_user_id, allowed_roles={"accounts", "avpl_admin", "super_admin"} if streamlined else {"avpl_admin", "super_admin"})
     current = _get_rate(rate_id)
     entity = _assert_active_avpl_entity(current.get("accounting_entity_id"))
-    _require_permission(actor, entity["_id"], APPROVE_PERMISSION)
+    permission = SUBMIT_PERMISSION if streamlined and actor.get("resolved_role") == "accounts" else APPROVE_PERMISSION
+    _require_permission(actor, entity["_id"], permission)
 
     if current.get("status") != STATUS_PENDING_APPROVAL:
         raise ValueError("Only a pending GST rate can be approved.")
-    if str(current.get("created_by")) == str(actor["_id"]):
+    if str(current.get("created_by")) == str(actor["_id"]) and not streamlined:
         raise PermissionError("The GST rate maker cannot approve the same record.")
 
     try:
