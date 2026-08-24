@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import india_now
 
 from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -971,5 +972,5 @@ def get_purchase_invoice_print_context(
             if invoice.get("posting_status") == POSTING_STATUS_POSTED
             else "Supplier Invoice Matching Copy"
         ),
-        "generated_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
+        "generated_at": india_now().strftime("%d %b %Y, %I:%M %p"),
     }

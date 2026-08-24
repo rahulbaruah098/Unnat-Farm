@@ -1,70 +1,513 @@
 {% extends 'base.html' %}
+
 {% block title %}UFC Order Requests{% endblock %}
+
 {% block content %}
+
 <style>
-.s4-page{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.s4-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}.s4-head h2{margin:0;color:#17252a;font-size:1.75rem}.s4-head p{margin:5px 0 0;color:#64748b;max-width:760px;line-height:1.45}.head-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:999px;border:1px solid #cfe6d8;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.flow{margin-bottom:15px;padding:12px 14px;border:1px solid #b9dcca;border-radius:14px;background:#f3fbf6;color:#3e6850;line-height:1.45}.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:14px}.stat{padding:11px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.stat small{display:block;color:#64748b}.stat strong{display:block;margin-top:3px;color:#17252a;font-size:1.15rem}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;margin-bottom:14px}.toolbar input,.toolbar select{height:42px;border:1px solid #d6e5da;border-radius:999px;padding:0 13px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5fa878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.table-wrap{overflow:auto;border:1px solid #e2efe6;border-radius:16px}.tbl{width:100%;border-collapse:collapse;min-width:1050px}.tbl th{padding:10px;background:#eff7f1;color:#4b6255;text-align:left;font-size:.8rem;white-space:nowrap}.tbl td{padding:11px 10px;border-top:1px solid #edf3ef;color:#334155}.tbl strong{color:#17252a}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.76rem;font-weight:900;border:1px solid #dcece1;background:#f8fcf9}.requested{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.approved{background:#ecfdf5;border-color:#a7f3d0;color:#047857}.rejected,.cancelled{background:#fef2f2;border-color:#fecaca;color:#b91c1c}.dispatched{background:#fff7ed;border-color:#fed7aa;color:#c2410c}.received{background:#f0fdf4;border-color:#86efac;color:#166534}.view{display:inline-flex;padding:6px 11px;border-radius:999px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.empty{padding:30px;text-align:center;color:#64748b}.pagination{display:flex;justify-content:center;gap:8px;margin-top:16px}.pagination a{padding:7px 12px;border:1px solid #dceee2;border-radius:999px;color:#2f7a4c;text-decoration:none;font-weight:900}@media(max-width:950px){.stats{grid-template-columns:repeat(3,1fr)}.toolbar{grid-template-columns:1fr}}@media(max-width:620px){.s4-page{padding:15px;border-radius:18px}.stats{grid-template-columns:repeat(2,1fr)}.head-actions,.head-actions a{width:100%}}
+.s4-page{
+    width:100%;
+    max-width:1600px;
+    margin:0 auto;
+    padding:28px;
+    border:1px solid rgba(47,122,76,.11);
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 16px 40px rgba(28,72,43,.07);
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#435349;
+}
+
+.s4-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:18px;
+    flex-wrap:wrap;
+    margin-bottom:22px;
+}
+
+.s4-head h2{
+    margin:0;
+    color:#17251d;
+    font-size:clamp(1.5rem,2vw,2rem);
+    font-weight:800;
+    line-height:1.2;
+    letter-spacing:-.02em;
+}
+
+.s4-head p{
+    margin:7px 0 0;
+    max-width:760px;
+    color:#748279;
+    font-size:.82rem;
+    line-height:1.5;
+}
+
+.head-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:39px;
+    padding:8px 14px;
+    border:1px solid rgba(47,122,76,.14);
+    border-radius:9px;
+    background:#fff;
+    color:#526158;
+    text-decoration:none;
+    font-size:.74rem;
+    font-weight:800;
+    transition:background .18s ease,border-color .18s ease,color .18s ease;
+}
+
+.btn:hover{
+    background:#f7fbf8;
+    border-color:rgba(47,122,76,.26);
+    color:#2f6e46;
+}
+
+.flow{
+    margin-bottom:18px;
+    padding:13px 15px;
+    border:1px solid rgba(47,122,76,.14);
+    border-radius:11px;
+    background:#f7fbf8;
+    color:#526158;
+    font-size:.76rem;
+    line-height:1.5;
+}
+
+.flow strong{
+    color:#2f6e46;
+}
+
+.stats{
+    display:grid;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:10px;
+    margin-bottom:16px;
+}
+
+.stat{
+    min-width:0;
+    padding:13px;
+    border:1px solid rgba(47,122,76,.10);
+    border-radius:11px;
+    background:#fbfdfb;
+}
+
+.stat small{
+    display:block;
+    margin-bottom:6px;
+    color:#7b8a80;
+    font-size:.68rem;
+    font-weight:750;
+    line-height:1.35;
+}
+
+.stat strong{
+    display:block;
+    color:#22372a;
+    font-size:1.25rem;
+    font-weight:850;
+}
+
+.toolbar{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 220px auto;
+    gap:9px;
+    margin-bottom:16px;
+    padding:13px;
+    border:1px solid rgba(47,122,76,.09);
+    border-radius:11px;
+    background:#fbfdfb;
+}
+
+.toolbar input,
+.toolbar select{
+    width:100%;
+    min-width:0;
+    height:41px;
+    border:1px solid rgba(47,122,76,.14);
+    border-radius:9px;
+    padding:0 11px;
+    background:#fff;
+    color:#263b2f;
+    font:inherit;
+    font-size:.78rem;
+    outline:none;
+}
+
+.toolbar input::placeholder{
+    color:#94a098;
+    opacity:.85;
+}
+
+.toolbar input:focus,
+.toolbar select:focus{
+    border-color:rgba(47,122,76,.38);
+    box-shadow:0 0 0 4px rgba(47,122,76,.06);
+}
+
+.toolbar button{
+    height:41px;
+    border:1px solid #397e51;
+    border-radius:9px;
+    padding:0 17px;
+    background:#397e51;
+    color:#fff;
+    font:inherit;
+    font-size:.74rem;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.toolbar button:hover{
+    background:#2f6e46;
+    border-color:#2f6e46;
+}
+
+.table-wrap{
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    border:1px solid rgba(47,122,76,.09);
+    border-radius:11px;
+    background:#fff;
+}
+
+.tbl{
+    width:100%;
+    min-width:1050px;
+    border-collapse:collapse;
+}
+
+.tbl th,
+.tbl td{
+    padding:10px 11px;
+    border-bottom:1px solid #edf2ee;
+    text-align:left;
+    vertical-align:top;
+    font-size:.72rem;
+    line-height:1.4;
+}
+
+.tbl th{
+    background:#f6f9f7;
+    color:#6e7e74;
+    font-size:.63rem;
+    font-weight:800;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    white-space:nowrap;
+}
+
+.tbl td{
+    color:#435349;
+}
+
+.tbl tbody tr:last-child td{
+    border-bottom:none;
+}
+
+.tbl tbody tr:hover td{
+    background:#fbfdfb;
+}
+
+.tbl strong{
+    color:#304438;
+    font-weight:800;
+}
+
+.tbl small{
+    color:#829087;
+    font-size:.66rem;
+}
+
+.badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:25px;
+    padding:4px 8px;
+    border-radius:7px;
+    font-size:.63rem;
+    font-weight:800;
+    border:1px solid #dcece1;
+    background:#f8fcf9;
+    white-space:nowrap;
+}
+
+.requested{
+    background:#eff6ff;
+    border-color:#bfdbfe;
+    color:#1d4ed8;
+}
+
+.approved{
+    background:#ecfdf3;
+    border-color:#b7e4c7;
+    color:#237a43;
+}
+
+.rejected,
+.cancelled{
+    background:#fef2f2;
+    border-color:#fecaca;
+    color:#b91c1c;
+}
+
+.dispatched{
+    background:#fff7e6;
+    border-color:#f4d38a;
+    color:#8a5b00;
+}
+
+.received{
+    background:#f0fdf4;
+    border-color:#b7e4c7;
+    color:#166534;
+}
+
+.view{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:32px;
+    padding:6px 10px;
+    border:1px solid rgba(47,122,76,.14);
+    border-radius:8px;
+    background:#fff;
+    color:#2f6e46;
+    text-decoration:none;
+    font-size:.68rem;
+    font-weight:800;
+}
+
+.view:hover{
+    background:#f7fbf8;
+    border-color:rgba(47,122,76,.26);
+}
+
+.empty{
+    padding:30px !important;
+    text-align:center !important;
+    color:#829087 !important;
+}
+
+.pagination{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:18px;
+}
+
+.pagination a{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:35px;
+    padding:7px 11px;
+    border:1px solid rgba(47,122,76,.14);
+    border-radius:8px;
+    background:#fff;
+    color:#2f6e46;
+    text-decoration:none;
+    font-size:.7rem;
+    font-weight:800;
+}
+
+.pagination a:hover{
+    background:#f7fbf8;
+    border-color:rgba(47,122,76,.26);
+}
+
+@media(max-width:1100px){
+    .stats{
+        grid-template-columns:repeat(3,1fr);
+    }
+
+    .toolbar{
+        grid-template-columns:1fr 200px;
+    }
+
+    .toolbar button{
+        grid-column:1/-1;
+    }
+}
+
+@media(max-width:760px){
+    .s4-page{
+        padding:20px;
+        border-radius:18px;
+    }
+
+    .toolbar{
+        grid-template-columns:1fr;
+    }
+
+    .toolbar button{
+        grid-column:auto;
+    }
+}
+
+@media(max-width:620px){
+    .s4-page{
+        padding:15px;
+        border-radius:16px;
+    }
+
+    .stats{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .head-actions,
+    .head-actions a{
+        width:100%;
+    }
+}
+
+@media(max-width:380px){
+    .stats{
+        grid-template-columns:1fr;
+    }
+}
 </style>
+
 <div class="s4-page">
+
   <div class="s4-head">
+
     <div>
+
       <h2>UFC Order Requests</h2>
+
       <p>One simple queue for products requested by UFC Centres. Approving reserves stock; dispatching reduces physical AVPL stock.</p>
+
     </div>
+
     <div class="head-actions">
+
       <a class="btn" href="{{ url_for('admin.product_list') }}">Published Products</a>
+
       <a class="btn" href="{{ url_for('admin.current_stock') }}">Current Stock</a>
+
       <a class="btn" href="{{ url_for('admin.stock_movements') }}">Stock Movements</a>
+
       <a class="btn" href="{{ url_for('admin.ufc_sales') }}">Sales to UFC</a>
+
     </div>
+
   </div>
 
   <div class="flow"><strong>Workflow:</strong> UFC Request → AVPL Approve/Reject → Approved stock is reserved → Dispatch → UFC confirms receipt. Approval alone never reduces physical stock.</div>
 
   <div class="stats">
+
     {% for code,label in overview.get('statuses', {}).items() %}
+
       <div class="stat"><small>{{ label }}</small><strong>{{ overview.get('counts', {}).get(code, 0) }}</strong></div>
+
     {% endfor %}
+
   </div>
 
   <form class="toolbar" method="get">
+
     <input name="q" value="{{ overview.get('query','') }}" placeholder="Search order, UFC, product or SKU">
+
     <select name="status">
+
       <option value="all">All statuses</option>
+
       {% for code,label in overview.get('statuses', {}).items() %}<option value="{{ code }}" {% if overview.get('selected_status') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+
     </select>
+
     <button type="submit">Filter</button>
+
   </form>
 
   <div class="table-wrap">
+
     <table class="tbl">
-      <thead><tr><th>Order</th><th>UFC Centre</th><th>Product</th><th>Requested</th><th>Approved</th><th>Price</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+
+      <thead><tr><th>Order</th><th>UFC Centre</th><th>Product</th><th>Requested</th><th>Approved</th><th>Price</th><th>Total</th><th>Status</th><th>Invoice</th><th>Action</th></tr></thead>
+
       <tbody>
+
       {% for row in overview.get('rows', []) %}
+
         <tr>
-          <td><strong>{{ row.order_number }}</strong><br><small>{{ row.created_at.strftime('%d %b %Y %I:%M %p') if row.created_at else '-' }}</small></td>
+
+          <td><strong>{{ row.order_number }}</strong><br><small>{{ row.created_at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</small></td>
+
           <td><strong>{{ row.centre_name }}</strong><br><small>{{ row.centre_uid }}</small></td>
+
           <td><strong>{{ row.product_name }}</strong><br><small>{{ row.product_code or '-' }}</small></td>
+
           <td>{{ row.requested_quantity_display }} {{ row.unit_code }}</td>
+
           <td>{{ row.approved_quantity_display if row.approved_quantity else '-' }}</td>
+
           <td>{% if row.status in ['approved','dispatched','received','cancelled'] %}₹{{ row.unit_price_display }}{% else %}-{% endif %}</td>
+
           <td>{% if row.status in ['approved','dispatched','received','cancelled'] %}<strong>₹{{ row.total_amount_display }}</strong>{% else %}-{% endif %}</td>
+
           <td><span class="badge {{ row.status }}">{{ row.status_label }}</span></td>
-          <td><a class="view" href="{{ url_for('admin.ufc_order_request_detail', order_id=row.id) }}">View</a></td>
+
+          <td>
+            {% if row.avpl_sales_invoice_id_str %}
+              <a class="view" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=row.avpl_sales_invoice_id_str) }}" target="_blank" rel="noopener">
+                {{ row.avpl_sales_invoice_number or 'View / Print' }}
+              </a>
+            {% elif row.status in ['dispatched','received'] %}
+              <small style="color:#8a5b00;font-weight:800">Sync pending</small>
+            {% else %}
+              <span style="color:#94a3b8">-</span>
+            {% endif %}
+          </td>
+
+          <td><a class="view" href="{{ url_for('admin.ufc_order_request_detail', order_id=row.id) }}">View Order</a></td>
+
         </tr>
+
       {% else %}
-        <tr><td colspan="9" class="empty">No UFC order requests found.</td></tr>
+
+        <tr><td colspan="10" class="empty">No UFC order requests found.</td></tr>
+
       {% endfor %}
+
       </tbody>
+
     </table>
+
   </div>
 
   {% set pg = overview.get('pagination', {}) %}
+
   {% if pg.get('total_pages',1) > 1 %}
+
     <div class="pagination">
+
       {% if pg.get('has_prev') %}<a href="?page={{ pg.page-1 }}&status={{ overview.get('selected_status','all') }}&q={{ overview.get('query','') }}">Previous</a>{% endif %}
+
       <span style="padding:8px 10px;color:#64748b">Page {{ pg.page }} of {{ pg.total_pages }}</span>
+
       {% if pg.get('has_next') %}<a href="?page={{ pg.page+1 }}&status={{ overview.get('selected_status','all') }}&q={{ overview.get('query','') }}">Next</a>{% endif %}
+
     </div>
+
   {% endif %}
+
 </div>
+
 {% endblock %}

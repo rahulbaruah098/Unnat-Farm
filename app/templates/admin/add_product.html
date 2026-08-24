@@ -21,420 +21,25 @@
 {% if request.method != 'POST' and eligible_value is none %}{% set eligible_value = true %}{% endif %}
 
 <style>
-.product-master-page{
-    width:100%;
-    border:1px solid rgba(220,238,226,.95);
-    border-radius:24px;
-    padding:26px;
-    background:#fff;
-    box-shadow:0 18px 45px rgba(15,23,42,.08);
-    font-family:"Times New Roman", Georgia, serif;
+:root{
+    --uf-primary:#397e51;--uf-primary-dark:#2f6e46;--uf-primary-deep:#24583a;
+    --uf-soft:#f3f8f4;--uf-lighter:#f7fbf8;--uf-page:#fbfdfb;
+    --uf-heading:#17251d;--uf-text:#435349;--uf-muted:#748279;
+    --uf-border:rgba(47,122,76,.11);
 }
-
-.title-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:18px;
-    flex-wrap:wrap;
-    gap:14px;
-}
-
-.title-left{
-    display:flex;
-    align-items:center;
-    gap:10px;
-}
-
-.title-left h2{
-    margin:0;
-    font-size:1.6rem;
-    font-weight:700;
-    color:#0F172A;
-}
-
-.back-btn{
-    display:none;
-    width:40px;
-    height:40px;
-    border:none;
-    border-radius:12px;
-    background:#E4F7EA;
-    color:#3B7D55;
-    font-size:18px;
-    cursor:pointer;
-}
-
-.page-actions{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-}
-
-.page-actions a{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:8px 16px;
-    border-radius:999px;
-    text-decoration:none;
-    font-weight:600;
-    border:1px solid rgba(95,168,120,.25);
-    background:rgba(228,247,234,.82);
-    color:#3B7D55;
-}
-
-.page-actions a:first-child{
-    background:#5FA878;
-    color:#fff;
-}
-
-.batch-note{
-    margin:0 0 20px;
-    padding:14px 16px;
-    border:1px solid #CFE6D8;
-    border-radius:16px;
-    background:#F3FBF6;
-    color:#425466;
-    line-height:1.5;
-}
-
-.batch-note strong{ color:#24563B; }
-
-.form-section{
-    margin-top:18px;
-    padding:20px;
-    border:1px solid #E2EFE6;
-    border-radius:20px;
-    background:#FCFEFC;
-}
-
-.form-section:first-of-type{ margin-top:0; }
-
-.section-heading{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:12px;
-    margin-bottom:16px;
-    flex-wrap:wrap;
-}
-
-.section-heading h3{
-    margin:0;
-    color:#17252A;
-    font-size:1.12rem;
-}
-
-.section-heading p{
-    margin:4px 0 0;
-    color:#64748B;
-    font-size:.9rem;
-    line-height:1.45;
-}
-
-.legacy-pill{
-    display:inline-flex;
-    padding:6px 11px;
-    border-radius:999px;
-    background:#FFF7E6;
-    border:1px solid #F4D38A;
-    color:#8A5B00;
-    font-size:.78rem;
-    font-weight:800;
-}
-
-.form-grid{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:16px;
-}
-
-.full{ grid-column:1/-1; }
-
-label.field-label{
-    font-weight:700;
-    color:#334155;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-}
-
-.required-mark{ color:#B91C1C; }
-
-input,
-select,
-textarea{
-    width:100%;
-    border-radius:12px;
-    border:1px solid #E2E8F0;
-    padding:0 12px;
-    font-size:14px;
-    color:#27364A;
-    background:#fff;
-    font-family:"Times New Roman", Georgia, serif;
-}
-
-input,
-select{ height:44px; }
-
-textarea{
-    min-height:112px;
-    padding:12px;
-    resize:vertical;
-    line-height:1.45;
-}
-
-input:focus,
-select:focus,
-textarea:focus{
-    outline:none;
-    border-color:rgba(95,168,120,.65);
-    box-shadow:0 0 0 4px rgba(95,168,120,.12);
-}
-
-input[readonly]{
-    background:#F8FAFC;
-    color:#64748B;
-}
-
-.field-help{
-    display:block;
-    color:#64748B;
-    font-size:.84rem;
-    line-height:1.4;
-    font-weight:400;
-}
-
-.checkbox-card{
-    min-height:44px;
-    display:flex;
-    align-items:flex-start;
-    gap:10px;
-    padding:12px 14px;
-    border:1px solid #DCEEE2;
-    border-radius:14px;
-    background:#F6FCF8;
-    cursor:pointer;
-}
-
-.checkbox-card input{
-    width:18px;
-    height:18px;
-    min-width:18px;
-    margin-top:2px;
-    accent-color:#5FA878;
-}
-
-.checkbox-card span{
-    display:block;
-    color:#334155;
-    font-weight:700;
-}
-
-.checkbox-card small{
-    display:block;
-    margin-top:3px;
-    color:#64748B;
-    font-weight:400;
-    line-height:1.35;
-}
-
-.current-image{
-    display:flex;
-    align-items:center;
-    gap:14px;
-    padding:12px;
-    border:1px solid #E2E8F0;
-    border-radius:14px;
-    background:#F8FAFC;
-}
-
-.current-image img{
-    width:76px;
-    height:76px;
-    border-radius:12px;
-    object-fit:contain;
-    background:#EEF8F1;
-}
-
-.centre-dropdown{
-    position:relative;
-    width:100%;
-}
-
-.centre-select-display{
-    width:100%;
-    min-height:46px;
-    border:1px solid #E2E8F0;
-    border-radius:12px;
-    background:#fff;
-    padding:0 14px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    cursor:pointer;
-    color:#334155;
-    font-family:"Times New Roman", Georgia, serif;
-    font-weight:600;
-}
-
-.centre-select-display span{
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-}
-
-.centre-arrow{
-    color:#3B7D55;
-    font-size:16px;
-    transition:.2s ease;
-}
-
-.centre-dropdown.open .centre-arrow{ transform:rotate(180deg); }
-
-.centre-menu{
-    display:none;
-    position:absolute;
-    left:0;
-    right:0;
-    top:calc(100% + 8px);
-    z-index:9999;
-    border:1px solid #DCEEE2;
-    border-radius:16px;
-    background:#fff;
-    box-shadow:0 18px 40px rgba(15,23,42,.14);
-    padding:12px;
-    max-height:310px;
-    overflow-y:auto;
-    overscroll-behavior:contain;
-}
-
-.centre-dropdown.open .centre-menu{ display:block; }
-
-.centre-search{
-    height:40px;
-    margin-bottom:10px;
-}
-
-.centre-options{
-    max-height:205px;
-    overflow:auto;
-    display:grid;
-    gap:8px;
-    padding-right:4px;
-}
-
-.centre-option{
-    display:flex;
-    flex-direction:row;
-    align-items:center;
-    gap:10px;
-    padding:9px 10px;
-    border:1px solid #E2E8F0;
-    border-radius:12px;
-    background:#F8FAFC;
-    cursor:pointer;
-    color:#334155;
-    font-weight:600;
-}
-
-.centre-option:hover{
-    background:#E4F7EA;
-    border-color:rgba(95,168,120,.35);
-}
-
-.centre-option input{
-    width:18px;
-    height:18px;
-    min-width:18px;
-    accent-color:#5FA878;
-}
-
-.centre-menu-footer{
-    display:flex;
-    justify-content:flex-end;
-    gap:10px;
-    margin-top:12px;
-    padding-top:10px;
-    border-top:1px solid #E2E8F0;
-}
-
-.centre-ok-btn,
-.centre-clear-btn{
-    border:none;
-    border-radius:999px;
-    padding:8px 16px;
-    font-family:"Times New Roman", Georgia, serif;
-    font-weight:700;
-    cursor:pointer;
-}
-
-.centre-ok-btn{ background:#5FA878; color:#fff; }
-.centre-clear-btn{ background:#E4F7EA; color:#3B7D55; }
-
-.form-actions{
-    display:flex;
-    justify-content:flex-end;
-    gap:10px;
-    margin-top:20px;
-    flex-wrap:wrap;
-}
-
-.cancel-btn,
-.submit-btn{
-    min-height:46px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:999px;
-    padding:10px 20px;
-    font-family:"Times New Roman", Georgia, serif;
-    font-weight:700;
-    text-decoration:none;
-    cursor:pointer;
-}
-
-.cancel-btn{
-    border:1px solid #CFE6D8;
-    color:#3B7D55;
-    background:#F3FBF6;
-}
-
-.submit-btn{
-    border:none;
-    background:#5FA878;
-    color:#fff;
-    box-shadow:0 12px 26px rgba(95,168,120,.22);
-}
-
-.submit-btn:hover{ background:#3B7D55; }
-
-@media(max-width:900px){
-    .form-grid{ grid-template-columns:1fr; }
-    .back-btn{ display:flex; align-items:center; justify-content:center; }
-    .title-row{ align-items:stretch; flex-direction:column; }
-    .page-actions,
-    .page-actions a{ width:100%; }
-}
-
-@media(max-width:560px){
-    .product-master-page{ padding:16px; border-radius:20px; }
-    .form-section{ padding:15px; border-radius:16px; }
-    .title-left h2{ font-size:1.4rem; }
-    .form-actions,
-    .cancel-btn,
-    .submit-btn{ width:100%; }
-    .centre-menu{
-        position:fixed;
-        left:16px;
-        right:16px;
-        top:100px;
-        width:auto;
-        max-height:calc(100vh - 140px);
-    }
-}
+.product-master-page{width:100%;max-width:1600px;margin:0 auto;padding:28px;border:1px solid var(--uf-border);border-radius:22px;background:#fff;box-shadow:0 16px 40px rgba(28,72,43,.07);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--uf-text)}
+.title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:20px;flex-wrap:wrap}.title-left{display:flex;align-items:flex-start;gap:10px;min-width:0}.title-left h2{margin:0;color:var(--uf-heading);font-size:clamp(1.5rem,2vw,2rem);font-weight:800;line-height:1.2;letter-spacing:-.02em}.back-btn{display:none;width:39px;height:39px;flex:0 0 auto;border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#fff;color:var(--uf-primary-dark);font:inherit;font-size:17px;font-weight:800;cursor:pointer}.page-actions{display:flex;gap:8px;flex-wrap:wrap}.page-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:8px 14px;border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#fff;color:#526158;text-decoration:none;font-size:.74rem;font-weight:800}.page-actions a:first-child{background:var(--uf-primary);border-color:var(--uf-primary);color:#fff}.page-actions a:hover{border-color:rgba(47,122,76,.28);background:var(--uf-lighter);color:var(--uf-primary-dark)}.page-actions a:first-child:hover{background:var(--uf-primary-dark);border-color:var(--uf-primary-dark);color:#fff}
+.batch-note{margin:0 0 18px;padding:13px 15px;border:1px solid rgba(47,122,76,.14);border-radius:11px;background:var(--uf-soft);color:#526158;font-size:.78rem;line-height:1.55}.batch-note strong{color:var(--uf-primary-deep)}
+.form-section{margin-top:16px;padding:18px;border:1px solid rgba(47,122,76,.09);border-radius:14px;background:#fff}.form-section:first-of-type{margin-top:0}.section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:15px;flex-wrap:wrap}.section-heading h3{margin:0;color:#263b2f;font-size:.98rem;font-weight:800}.section-heading p{margin:5px 0 0;max-width:800px;color:var(--uf-muted);font-size:.75rem;line-height:1.5}.legacy-pill{display:inline-flex;align-items:center;min-height:25px;padding:4px 8px;border:1px solid #f4d38a;border-radius:7px;background:#fff7e6;color:#8a5b00;font-size:.64rem;font-weight:800;white-space:nowrap}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.full{grid-column:1/-1}label.field-label{display:flex;flex-direction:column;gap:7px;min-width:0;color:#4c5f53;font-size:.74rem;font-weight:800}.required-mark{color:#b91c1c}
+.product-master-page input,.product-master-page select,.product-master-page textarea{width:100%;min-width:0;padding:9px 11px;border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#fff;color:#263b2f;font:inherit;font-size:.78rem;outline:none}.product-master-page input,.product-master-page select{min-height:41px}.product-master-page textarea{min-height:105px;resize:vertical;line-height:1.5}.product-master-page input:focus,.product-master-page select:focus,.product-master-page textarea:focus{border-color:rgba(47,122,76,.38);box-shadow:0 0 0 4px rgba(47,122,76,.06)}.product-master-page input[readonly]{background:#f6f9f7;color:#748279}.field-help{display:block;color:var(--uf-muted);font-size:.68rem;line-height:1.4;font-weight:500}
+.checkbox-card{min-height:58px;display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border:1px solid rgba(47,122,76,.10);border-radius:10px;background:var(--uf-page);cursor:pointer}.checkbox-card input{width:17px;height:17px;min-width:17px;min-height:17px;margin-top:1px;padding:0;accent-color:var(--uf-primary)}.checkbox-card span{display:block;color:#304438;font-size:.74rem;font-weight:800}.checkbox-card small{display:block;margin-top:3px;color:var(--uf-muted);font-size:.66rem;font-weight:500;line-height:1.4}
+.current-image{display:flex;align-items:center;gap:14px;padding:12px;border:1px solid rgba(47,122,76,.10);border-radius:10px;background:var(--uf-page)}.current-image img{width:76px;height:76px;border-radius:9px;object-fit:contain;background:var(--uf-soft)}
+.centre-dropdown{position:relative;width:100%}.centre-select-display{width:100%;min-height:41px;padding:0 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#fff;color:#304438;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}.centre-select-display span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.centre-arrow{color:var(--uf-primary-dark);font-size:14px;transition:.2s ease}.centre-dropdown.open .centre-arrow{transform:rotate(180deg)}.centre-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 7px);z-index:9999;max-height:310px;padding:11px;overflow-y:auto;overscroll-behavior:contain;border:1px solid rgba(47,122,76,.12);border-radius:11px;background:#fff;box-shadow:0 16px 36px rgba(15,23,42,.14)}.centre-dropdown.open .centre-menu{display:block}.centre-search{height:40px;margin-bottom:9px}.centre-options{max-height:205px;overflow:auto;display:grid;gap:7px;padding-right:3px}.centre-option{display:flex;flex-direction:row;align-items:center;gap:9px;padding:8px 9px;border:1px solid rgba(47,122,76,.10);border-radius:8px;background:#fbfdfb;color:#304438;font-size:.73rem;font-weight:700;cursor:pointer}.centre-option:hover{background:var(--uf-soft);border-color:rgba(47,122,76,.24)}.centre-option input{width:17px;height:17px;min-width:17px;min-height:17px;padding:0;accent-color:var(--uf-primary)}.centre-menu-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf2ee}.centre-ok-btn,.centre-clear-btn{min-height:36px;padding:7px 12px;border-radius:8px;font:inherit;font-size:.7rem;font-weight:800;cursor:pointer}.centre-ok-btn{border:1px solid var(--uf-primary);background:var(--uf-primary);color:#fff}.centre-clear-btn{border:1px solid rgba(47,122,76,.14);background:#fff;color:#526158}
+.form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;flex-wrap:wrap}.cancel-btn,.submit-btn{min-height:41px;display:inline-flex;align-items:center;justify-content:center;padding:8px 15px;border-radius:9px;font:inherit;font-size:.76rem;font-weight:800;text-decoration:none;cursor:pointer}.cancel-btn{border:1px solid rgba(47,122,76,.14);background:#fff;color:#526158}.submit-btn{border:1px solid var(--uf-primary);background:var(--uf-primary);color:#fff}.submit-btn:hover{background:var(--uf-primary-dark);border-color:var(--uf-primary-dark)}
+@media(max-width:1100px){.product-master-page{padding:22px}}
+@media(max-width:720px){.product-master-page{padding:18px;border-radius:18px}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.back-btn{display:flex;align-items:center;justify-content:center}.title-row{align-items:stretch;flex-direction:column}.page-actions,.page-actions a{width:100%}.form-section{padding:15px}.centre-menu{position:fixed;left:16px;right:16px;top:90px;width:auto;max-height:calc(100vh - 120px)}}
+@media(max-width:560px){.product-master-page{padding:15px;border-radius:16px}.form-actions,.cancel-btn,.submit-btn{width:100%}.centre-menu-footer{flex-direction:column-reverse}.centre-ok-btn,.centre-clear-btn{width:100%}}
 </style>
 
 <div class="product-master-page">
@@ -458,10 +63,16 @@ input[readonly]{
     <div class="batch-note">
         <strong>Product Master:</strong>
         Define the product once. HSN, GST, unit and Accounting mapping stay attached to the Product Master.
-        Stock comes from Goods Receipt, not from this form. After saving, use View Products to publish selected products to all active UFC Centres.
+        Stock comes from Goods Receipt, not from this form. Supplier pack/code/barcode details are intentionally not required here; keep this page focused on the core product.
     </div>
 
     <form method="post" enctype="multipart/form-data" id="productMasterForm">
+        {# Keep legacy procurement/packaging metadata intact without asking the user
+           to decide supplier-specific packaging details at Product Master time. #}
+        <input type="hidden" name="supplier_product_code" value="{{ values.get('supplier_product_code', '') }}">
+        <input type="hidden" name="metadata_source" value="{{ values.get('metadata_source', 'manual_entry') or 'manual_entry' }}">
+        <input type="hidden" name="pack_size" value="{{ values.get('pack_size', 1) or 1 }}">
+        <input type="hidden" name="barcode" value="{{ values.get('barcode', '') }}">
         <section class="form-section">
             <div class="section-heading">
                 <div>
@@ -498,23 +109,13 @@ input[readonly]{
                 </label>
 
                 <label class="field-label">Brand
-                    <input type="text" name="brand" maxlength="160" value="{{ values.get('brand', '') }}" placeholder="Example: AVPL, Local Brand">
+                    <input type="text" name="brand" maxlength="160" value="{{ values.get('brand', '') }}" placeholder="Optional — leave blank if not decided yet">
+                    <small class="field-help">Use only when this core product already has a known brand.</small>
                 </label>
 
                 <label class="field-label">Manufacturer
-                    <input type="text" name="manufacturer" maxlength="200" value="{{ values.get('manufacturer', '') }}" placeholder="Manufacturer or producer name">
-                </label>
-
-                <label class="field-label">Supplier Product Code
-                    <input type="text" name="supplier_product_code" maxlength="120" value="{{ values.get('supplier_product_code', '') }}" placeholder="Code printed on supplier invoice/label">
-                </label>
-
-                <label class="field-label">Metadata Source <span class="required-mark">*</span>
-                    <select name="metadata_source" required>
-                        {% for source_value, source_label in metadata_sources %}
-                            <option value="{{ source_value }}" {% if selected_source == source_value %}selected{% endif %}>{{ source_label }}</option>
-                        {% endfor %}
-                    </select>
+                    <input type="text" name="manufacturer" maxlength="200" value="{{ values.get('manufacturer', '') }}" placeholder="Optional — manufacturer / producer if known">
+                    <small class="field-help">This can stay blank at Product Master stage.</small>
                 </label>
 
                 <label class="field-label">Base Unit <span class="required-mark">*</span>
@@ -529,15 +130,6 @@ input[readonly]{
                     {% if not units %}
                         <small class="field-help">No active AVPL Accounting units are available. Activate the unit foundation before saving.</small>
                     {% endif %}
-                </label>
-
-                <label class="field-label">Pack Size <span class="required-mark">*</span>
-                    <input type="number" name="pack_size" min="0.0001" step="0.0001" value="{{ values.get('pack_size', 1) }}" required>
-                    <small class="field-help">Example: 1 BAG, 25 KGS, 12 NOS.</small>
-                </label>
-
-                <label class="field-label">Barcode / GTIN / Internal Code
-                    <input type="text" name="barcode" maxlength="120" value="{{ values.get('barcode', '') }}" placeholder="Optional; must be unique when provided">
                 </label>
 
                 <label class="field-label">Reorder Level

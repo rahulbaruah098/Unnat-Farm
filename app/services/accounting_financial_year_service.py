@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta
 from uuid import uuid4
@@ -273,7 +274,7 @@ def _financial_year_identity(start_date, end_date):
 
 
 def get_default_financial_year_values(reference_date=None):
-    reference = reference_date or date.today()
+    reference = reference_date or business_today()
 
     if isinstance(reference, datetime):
         reference = reference.date()
@@ -1177,7 +1178,7 @@ def get_open_financial_year_for_date(entity_id, transaction_date=None):
         return None
 
     target_date = _parse_date(
-        transaction_date or date.today(),
+        transaction_date or business_today(),
         "Transaction date",
     )
 

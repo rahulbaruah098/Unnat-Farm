@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today
 import os
 import re
 from bson import ObjectId
@@ -238,7 +239,7 @@ def _published_avpl_products_for_ufc():
                     if hasattr(expiry_value, "date")
                     else datetime.strptime(str(expiry_value)[:10], "%Y-%m-%d").date()
                 )
-                if expiry_date < datetime.utcnow().date():
+                if expiry_date < business_today():
                     row["expired"] += physical
             except Exception:
                 pass
@@ -4037,7 +4038,7 @@ def ufc_payments():
         overview = get_ufc_payment_overview(session.get("user_id"))
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), "danger")
-        overview = {"centre_uid": session.get("centre_uid") or "", "avpl_payables": [], "farmer_receivables": [], "recent_payments": [], "payment_modes": {}, "summary": {"avpl_due": "0.00", "farmer_due": "0.00", "recent_count": 0}}
+        overview = {"centre_uid": session.get("centre_uid") or "", "avpl_payables": [], "pending_avpl_payments": [], "farmer_receivables": [], "farmer_produce_payables": [], "recent_payments": [], "payment_modes": {}, "summary": {"avpl_due": "0.00", "avpl_pending_confirmation": "0.00", "avpl_pending_count": 0, "farmer_due": "0.00", "farmer_produce_due": "0.00", "recent_count": 0}}
     return render_template("modules/ufc_payments.html", overview=overview)
 
 
@@ -4180,7 +4181,7 @@ def farmer_external_purchase_new():
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), "danger")
         context = {
-            "farmer": {}, "unit_choices": {}, "today": datetime.utcnow().date().isoformat(),
+            "farmer": {}, "unit_choices": {}, "today": business_today().isoformat(),
             "purchase_token": f"FPUR-{uuid4().hex.upper()}", "payment_token": f"FPAY-{uuid4().hex.upper()}",
         }
     return render_template("modules/farmer_external_purchase_form.html", **context)
@@ -4252,7 +4253,7 @@ def farmer_production():
         flash(str(exc), "danger")
         overview = {
             "farmer": {}, "product_choices": [], "unit_choices": {}, "expense_categories": {},
-            "productions": [], "stock_rows": [], "expenses": [], "query": "", "today": datetime.utcnow().date().isoformat(),
+            "productions": [], "stock_rows": [], "expenses": [], "query": "", "today": business_today().isoformat(),
             "production_token": f"PROD-{uuid4().hex.upper()}", "expense_token": f"EXP-{uuid4().hex.upper()}",
             "summary": {"production_batches": 0, "products_in_stock": 0, "sales_value": "0.00", "cash_received": "0.00", "input_cost": "0.00", "other_expenses": "0.00", "estimated_balance": "0.00", "estimated_balance_raw": 0},
         }
@@ -4377,7 +4378,7 @@ def farmer_sales_new():
         context = stage9_get_sale_form_context(session.get("user_id"))
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), "danger")
-        context = {"farmer": {}, "stock_rows": [], "buyer_types": {}, "payment_terms": {}, "mapped_ufc": {}, "today": datetime.utcnow().date().isoformat(), "sale_token": f"FSALE-{uuid4().hex.upper()}", "payment_token": f"FPAY-{uuid4().hex.upper()}"}
+        context = {"farmer": {}, "stock_rows": [], "buyer_types": {}, "payment_terms": {}, "mapped_ufc": {}, "today": business_today().isoformat(), "sale_token": f"FSALE-{uuid4().hex.upper()}", "payment_token": f"FPAY-{uuid4().hex.upper()}"}
     return render_template("modules/farmer_sale_form.html", **context)
 
 
@@ -4912,19 +4913,16 @@ def ufc_avpl_order_detail(order_id):
 @login_required
 @roles_required('ufc_admin')
 def receive_avpl_order(order_id):
-    receipt_succeeded = False
-    result = None
     try:
-        # Physical receipt is always completed first. Payment is a separate,
-        # idempotent Stage 8 settlement so a settlement error can never cause
-        # the operator to receive the same stock twice.
+        # Physical receipt and money settlement are deliberately separate.
+        # This action only confirms goods and increases UFC stock. Pay Later,
+        # partial payment or payment reporting are handled from Payments.
         result = receive_ufc_order(
             session.get('user_id'),
             session.get('centre_uid'),
             order_id,
             receipt_note=request.form.get('receipt_note', ''),
         )
-        receipt_succeeded = True
         received_order = result.get('order') or {}
 
         if wants_json_response():
@@ -4936,49 +4934,10 @@ def receive_avpl_order(order_id):
             }))
 
         flash(result.get('message') or 'Goods received and added to UFC stock.', 'success')
-
-        # Optional Pay-on-Receipt collection. Credit orders normally keep the
-        # amount outstanding and are settled later from Payments & Settlement.
-        collection_option = str(request.form.get('collection_option') or 'none').strip().lower()
-        if collection_option in {'full', 'partial'}:
-            invoice_id = received_order.get('avpl_sales_invoice_id_str')
-            if not invoice_id:
-                raise RuntimeError(
-                    'Receipt and UFC stock update succeeded, but the AVPL Sales Invoice is not ready for settlement yet. '
-                    'Use Payments & Settlement after the invoice is repaired/synchronized.'
-                )
-
-            if collection_option == 'full':
-                amount_to_record = (
-                    received_order.get('outstanding_amount')
-                    if received_order.get('outstanding_amount') not in (None, '')
-                    else received_order.get('invoice_grand_total') or received_order.get('total_amount')
-                )
-            else:
-                amount_to_record = request.form.get('amount_paid_now')
-
-            payment_result = stage8_record_payment(
-                session.get('user_id'),
-                'avpl_ufc_invoice',
-                invoice_id,
-                amount_to_record,
-                request.form.get('payment_mode') or 'cash',
-                reference=request.form.get('payment_reference', ''),
-                note='Recorded when UFC confirmed AVPL goods receipt. ' + str(request.form.get('payment_note') or ''),
-                idempotency_key=request.form.get('payment_token') or f'AVPLRECEIPTPAY-{order_id}',
-            )
-            flash(payment_result.get('message') or 'Payment recorded successfully.', 'success')
-
     except (ValueError, PermissionError, RuntimeError) as exc:
         if wants_json_response():
             return json_error(str(exc), 400)
-        if receipt_succeeded:
-            flash(
-                'Goods receipt and UFC stock update are complete; only payment recording needs attention: ' + str(exc),
-                'warning',
-            )
-        else:
-            flash(str(exc), 'danger')
+        flash(str(exc), 'danger')
     return redirect(url_for('modules.ufc_avpl_order_detail', order_id=order_id))
 
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from datetime import date, datetime
 from bson import ObjectId
@@ -40,7 +41,7 @@ def _lot_is_expired(row):
             expiry = expiry.date()
         elif not isinstance(expiry, date):
             expiry = datetime.strptime(str(expiry)[:10], "%Y-%m-%d").date()
-        return expiry < date.today()
+        return expiry < business_today()
     except (TypeError, ValueError):
         return False
 

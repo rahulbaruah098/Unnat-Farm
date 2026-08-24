@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -530,6 +531,73 @@ def _mismatch(
     }
 
 
+def _source_grn_for_invoice(purchase_order_id, source_grn_id, existing=None):
+    if not source_grn_id:
+        return None
+    grn_id = _to_object_id(source_grn_id)
+    if not grn_id:
+        raise ValueError("Select a valid Goods Receipt for the supplier invoice.")
+    grn = mongo.db[GOODS_RECEIPT_COLLECTION].find_one({
+        "_id": grn_id,
+        "purchase_order_id": purchase_order_id,
+        "status": GRN_STATUS_POSTED,
+        "stock_posted": True,
+    })
+    if not grn:
+        raise ValueError(
+            "The selected Goods Receipt is not a posted receipt for this Purchase Order."
+        )
+    linked_id = grn.get("supplier_invoice_record_id")
+    existing_id = (existing or {}).get("_id")
+    if linked_id and str(linked_id) != str(existing_id or ""):
+        linked_invoice_id = _to_object_id(linked_id)
+        linked_invoice = (
+            mongo.db[SUPPLIER_INVOICE_COLLECTION].find_one({"_id": linked_invoice_id})
+            if linked_invoice_id
+            else None
+        )
+        if linked_invoice and linked_invoice.get("status") != STATUS_CANCELLED:
+            raise ValueError(
+                "This Goods Receipt is already linked to a Purchase Invoice. Open the existing invoice instead of recording it again."
+            )
+    return grn
+
+
+def _link_invoice_to_source_grn(invoice, previous_source_grn_id=None):
+    source_grn_id = _to_object_id(invoice.get("source_grn_id"))
+    previous_id = _to_object_id(previous_source_grn_id)
+    if previous_id and str(previous_id) != str(source_grn_id or ""):
+        mongo.db[GOODS_RECEIPT_COLLECTION].update_one(
+            {"_id": previous_id, "supplier_invoice_record_id": invoice.get("_id")},
+            {
+                "$unset": {
+                    "supplier_invoice_record_id": "",
+                    "supplier_invoice_record_id_str": "",
+                    "supplier_invoice_record_number": "",
+                    "supplier_invoice_linked_at": "",
+                },
+                "$set": {"updated_at": now_utc()},
+            },
+        )
+    if not source_grn_id:
+        return
+    mongo.db[GOODS_RECEIPT_COLLECTION].update_one(
+        {"_id": source_grn_id},
+        {
+            "$set": {
+                "supplier_invoice_record_id": invoice.get("_id"),
+                "supplier_invoice_record_id_str": str(invoice.get("_id") or ""),
+                "supplier_invoice_record_number": invoice.get("official_purchase_invoice_number")
+                or invoice.get("internal_reference")
+                or invoice.get("supplier_invoice_number")
+                or "",
+                "supplier_invoice_linked_at": now_utc(),
+                "updated_at": now_utc(),
+            }
+        },
+    )
+
+
 def _build_invoice_payload(entity, actor, raw_payload, existing=None):
     order = _get_purchase_order(
         entity["_id"],
@@ -562,6 +630,11 @@ def _build_invoice_payload(entity, actor, raw_payload, existing=None):
         raise ValueError("Due date cannot be before the invoice date.")
 
     posted_grns, accepted_totals = _posted_grn_context(order["_id"])
+    source_grn = _source_grn_for_invoice(
+        order["_id"],
+        raw_payload.get("source_grn_id"),
+        existing=existing,
+    )
     existing_id = existing.get("_id") if existing else None
     already_invoiced = _already_invoiced_totals(
         order["_id"],
@@ -609,7 +682,7 @@ def _build_invoice_payload(entity, actor, raw_payload, existing=None):
                 actual=invoice_date.strftime("%Y-%m-%d"),
             )
         )
-    if invoice_date.date() > date.today():
+    if invoice_date.date() > business_today():
         mismatches.append(
             _mismatch(
                 "FUTURE_INVOICE_DATE",
@@ -951,6 +1024,12 @@ def _build_invoice_payload(entity, actor, raw_payload, existing=None):
         "supplier_invoice_number": supplier_invoice_number,
         "supplier_invoice_number_normalized": normalized_number,
         "supplier_invoice_identity_key": identity_key,
+        "source_grn_id": source_grn.get("_id") if source_grn else None,
+        "source_grn_id_str": str(source_grn.get("_id") or "") if source_grn else "",
+        "source_grn_number": source_grn.get("grn_number") or "" if source_grn else "",
+        "supplier_invoice_attachment_document_id": source_grn.get("supplier_invoice_attachment_document_id") if source_grn else None,
+        "supplier_invoice_attachment_document_id_str": str(source_grn.get("supplier_invoice_attachment_document_id") or "") if source_grn else "",
+        "supplier_invoice_attachment_filename": source_grn.get("supplier_invoice_attachment_filename") or "" if source_grn else "",
         "invoice_date": invoice_date,
         "due_date": due_date,
         "document_reference": _clean_text(
@@ -1072,6 +1151,10 @@ def serialize_supplier_invoice(invoice):
         "supplier_invoice_number": invoice.get(
             "supplier_invoice_number"
         ) or "",
+        "source_grn_id": str(invoice.get("source_grn_id") or ""),
+        "source_grn_number": invoice.get("source_grn_number") or "",
+        "supplier_invoice_attachment_document_id": str(invoice.get("supplier_invoice_attachment_document_id") or ""),
+        "supplier_invoice_attachment_filename": invoice.get("supplier_invoice_attachment_filename") or "",
         "invoice_date": _date_string(invoice.get("invoice_date")),
         "due_date": _date_string(invoice.get("due_date")),
         "document_reference": invoice.get("document_reference") or "",
@@ -1153,11 +1236,21 @@ def serialize_supplier_invoice(invoice):
             .replace("_", " ")
             .title(),
         ),
-        "paid_amount": invoice.get("paid_amount") or "0.00",
+        "paid_amount": (
+            invoice.get("paid_amount")
+            if invoice.get("paid_amount") not in (None, "")
+            else invoice.get("amount_paid")
+            if invoice.get("amount_paid") not in (None, "")
+            else "0.00"
+        ),
+        # 0.00 is a valid settled balance. Do not use truthiness here or a
+        # fully paid invoice incorrectly falls back to grand_total.
         "outstanding_amount": (
             invoice.get("outstanding_amount")
-            or invoice.get("grand_total")
-            or "0.00"
+            if invoice.get("outstanding_amount") not in (None, "")
+            else invoice.get("grand_total")
+            if invoice.get("grand_total") not in (None, "")
+            else "0.00"
         )
         if invoice.get("payable_posted") is True
         else "0.00",
@@ -1224,6 +1317,24 @@ def _purchase_order_invoice_catalog_row(order):
         )
 
     supplier_snapshot = order.get("supplier_snapshot") or {}
+    invoice_captures = []
+    for grn in grns:
+        if not (
+            grn.get("supplier_invoice_received")
+            or grn.get("supplier_invoice_number_capture")
+            or grn.get("supplier_invoice_attachment_filename")
+        ):
+            continue
+        invoice_captures.append({
+            "grn_id": str(grn.get("_id") or ""),
+            "grn_number": grn.get("grn_number") or "",
+            "supplier_invoice_number": grn.get("supplier_invoice_number_capture") or "",
+            "supplier_invoice_date": _date_string(grn.get("supplier_invoice_date_capture")),
+            "attachment_filename": grn.get("supplier_invoice_attachment_filename") or "",
+            "linked_invoice_id": str(grn.get("supplier_invoice_record_id") or ""),
+            "linked_invoice_number": grn.get("supplier_invoice_record_number") or "",
+            "is_available": not bool(grn.get("supplier_invoice_record_id")),
+        })
     return {
         "id": str(order["_id"]),
         "po_number": order.get("po_number") or "",
@@ -1244,6 +1355,7 @@ def _purchase_order_invoice_catalog_row(order):
         "posted_grn_count": len(grns),
         "total_accepted_quantity": _quantity_string(total_accepted),
         "total_available_to_invoice_quantity": _quantity_string(total_available),
+        "invoice_captures": invoice_captures,
         "items": items,
     }
 
@@ -1252,6 +1364,8 @@ def get_supplier_invoice_form_catalog(
     accounting_entity_id,
     actor_user_id,
     purchase_order_id=None,
+    source_grn_id=None,
+    include_fully_invoiced=False,
 ):
     _get_actor(actor_user_id)
     entity = _active_avpl_entity(accounting_entity_id)
@@ -1283,10 +1397,16 @@ def get_supplier_invoice_form_catalog(
             "state_code": entity.get("state_code") or "",
         },
         "purchase_orders": [
-            _purchase_order_invoice_catalog_row(order) for order in orders
+            row
+            for row in (
+                _purchase_order_invoice_catalog_row(order) for order in orders
+            )
+            if include_fully_invoiced
+            or Decimal(str(row.get("total_available_to_invoice_quantity") or 0)) > Decimal("0")
         ],
         "selected_purchase_order_id": str(selected_id or ""),
-        "today": date.today().strftime("%Y-%m-%d"),
+        "selected_source_grn_id": str(source_grn_id or ""),
+        "today": business_today().strftime("%Y-%m-%d"),
         "status_labels": dict(STATUS_LABELS),
     }
 
@@ -1507,6 +1627,7 @@ def create_supplier_invoice(
             "This supplier invoice number is already recorded for the selected supplier."
         ) from exc
 
+    _link_invoice_to_source_grn(document)
     _refresh_purchase_order_invoice_summary(document["purchase_order_id"])
     _record_audit(
         document,
@@ -1604,6 +1725,10 @@ def update_supplier_invoice(
         )
 
     updated = _get_invoice_document(invoice_id)
+    _link_invoice_to_source_grn(
+        updated,
+        previous_source_grn_id=invoice.get("source_grn_id"),
+    )
     _refresh_purchase_order_invoice_summary(updated["purchase_order_id"])
     _record_audit(
         updated,
@@ -1695,6 +1820,23 @@ def cancel_supplier_invoice(
         )
 
     updated = _get_invoice_document(invoice_id)
+    source_grn_id = _to_object_id(updated.get("source_grn_id"))
+    if source_grn_id:
+        mongo.db[GOODS_RECEIPT_COLLECTION].update_one(
+            {"_id": source_grn_id, "supplier_invoice_record_id": updated["_id"]},
+            {
+                "$unset": {
+                    "supplier_invoice_record_id": "",
+                    "supplier_invoice_record_id_str": "",
+                    "supplier_invoice_record_number": "",
+                    "supplier_invoice_linked_at": "",
+                },
+                "$set": {
+                    "supplier_invoice_last_cancelled_id": updated["_id"],
+                    "updated_at": now_utc(),
+                },
+            },
+        )
     _refresh_purchase_order_invoice_summary(updated["purchase_order_id"])
     _record_audit(
         updated,

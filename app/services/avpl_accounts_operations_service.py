@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -219,7 +220,7 @@ def _invoice_financials(invoice):
         status = "unpaid"
 
     due_date = _date_value(invoice.get("due_date"))
-    is_overdue = bool(due_date and outstanding > Decimal("0.004") and due_date.date() < date.today())
+    is_overdue = bool(due_date and outstanding > Decimal("0.004") and due_date.date() < business_today())
 
     return {
         "total": total,

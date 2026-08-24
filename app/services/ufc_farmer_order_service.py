@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -91,7 +92,7 @@ def _date_iso(value):
     try:
         return datetime.strptime(text, "%Y-%m-%d").date().isoformat()
     except ValueError:
-        return date.today().isoformat()
+        return business_today().isoformat()
 
 
 def _active_user(user):
@@ -216,7 +217,7 @@ def _resolve_ufc_admin(actor_user_id, centre_uid_hint=None):
 
 
 def _next_number(counter_key, prefix, digits=5):
-    year = date.today().year
+    year = business_today().year
     counter = mongo.db.system_counters.find_one_and_update(
         {"_id": f"{counter_key}:{year}"},
         {"$inc": {"sequence": 1}, "$setOnInsert": {"created_at": now_utc()}},
@@ -228,7 +229,7 @@ def _next_number(counter_key, prefix, digits=5):
 
 
 def _next_centre_number(counter_key, centre_uid, prefix, digits=5):
-    year = date.today().year
+    year = business_today().year
     safe_centre = "".join(ch for ch in str(centre_uid or "UFC").upper() if ch.isalnum())[:14] or "UFC"
     counter = mongo.db.system_counters.find_one_and_update(
         {"_id": f"{counter_key}:{safe_centre}:{year}"},
@@ -251,7 +252,7 @@ def _lot_expired(lot):
             expiry_date = expiry
         else:
             expiry_date = datetime.strptime(str(expiry)[:10], "%Y-%m-%d").date()
-        return expiry_date < date.today()
+        return expiry_date < business_today()
     except Exception:
         return False
 
@@ -557,7 +558,7 @@ def _reserve_stock(order, approved_quantity, actor):
     needed = _decimal(approved_quantity)
     allocations = []
     reserved_updates = []
-    today_iso = date.today().isoformat()
+    today_iso = business_today().isoformat()
 
     for lot in _candidate_ufc_lots(order.get("centre_uid"), order.get("source_product_id")):
         if needed <= 0:
@@ -649,7 +650,7 @@ def _reserve_stock(order, approved_quantity, actor):
                 "barcode": allocation.get("barcode") or "",
                 "manufacturing_date": allocation.get("manufacturing_date") or "",
                 "expiry_date": allocation.get("expiry_date") or "",
-                "movement_date": date.today().isoformat(),
+                "movement_date": business_today().isoformat(),
                 "reason": f"Reserved for Farmer order {order.get('order_number') or ''} ({order.get('farmer_name') or 'Farmer'}).",
                 "posted_by": actor.get("_id"),
                 "posted_by_name": actor.get("resolved_name") or "",
@@ -782,7 +783,7 @@ def _release_reservation(order, actor, reason=""):
                     "unit_code": allocation.get("unit_code") or order.get("unit_code") or "Unit",
                     "batch_number": allocation.get("batch_number") or "",
                     "expiry_date": allocation.get("expiry_date") or "",
-                    "movement_date": date.today().isoformat(),
+                    "movement_date": business_today().isoformat(),
                     "reason": _clean(reason, 500) or f"Reservation released for Farmer order {order.get('order_number') or ''}.",
                     "posted_by": actor.get("_id"),
                     "posted_by_name": actor.get("resolved_name") or "",
@@ -834,7 +835,7 @@ def _apply_delivery_stock(order, actor):
     if not allocations:
         raise RuntimeError("No reserved UFC stock allocation exists for this order.")
     moved = []
-    today_iso = date.today().isoformat()
+    today_iso = business_today().isoformat()
     try:
         for allocation in allocations:
             lot_id = _to_object_id(allocation.get("inventory_lot_id"))
@@ -894,7 +895,7 @@ def _apply_delivery_stock(order, actor):
                 "barcode": allocation.get("barcode") or "",
                 "manufacturing_date": allocation.get("manufacturing_date") or "",
                 "expiry_date": allocation.get("expiry_date") or "",
-                "movement_date": date.today().isoformat(),
+                "movement_date": business_today().isoformat(),
                 "reason": f"Delivered to {order.get('farmer_name') or 'Farmer'} against order {order.get('order_number') or ''}.",
                 "posted_by": actor.get("_id"),
                 "posted_by_name": actor.get("resolved_name") or "",
@@ -933,7 +934,7 @@ def _financial_snapshot(order, centre):
             mapping = get_product_accounting_mapping_for_posting(
                 entity["_id"],
                 order.get("source_product_id"),
-                transaction_date=_date_iso(order.get("delivered_at") or date.today()),
+                transaction_date=_date_iso(order.get("delivered_at") or business_today()),
                 operation="sales",
             )
             hsn = mapping.get("hsn") or {}
@@ -1156,10 +1157,10 @@ def _upsert_invoice(order, sale, purchase, actor, centre, financial):
                 "outstanding_amount": float(new_total),
                 "payment_status": "unpaid",
                 "due_date": (
-                    (datetime.strptime(_date_iso(order.get("delivered_at") or date.today()), "%Y-%m-%d").date()
+                    (datetime.strptime(_date_iso(order.get("delivered_at") or business_today()), "%Y-%m-%d").date()
                      + timedelta(days=max(int(order.get("payment_due_days") or 0), 0))).isoformat()
                     if str(order.get("payment_term") or "cod") == "credit"
-                    else _date_iso(order.get("delivered_at") or date.today())
+                    else _date_iso(order.get("delivered_at") or business_today())
                 ),
                 "tax_hardened_at": now_utc(),
             })
@@ -1210,12 +1211,12 @@ def _upsert_invoice(order, sale, purchase, actor, centre, financial):
         "document_warning": financial.get("document_warning") or "",
         "payment_term": order.get("payment_term") or "cod",
         "payment_term_label": PAYMENT_TERM_LABELS.get(order.get("payment_term") or "cod", "Pay on Delivery"),
-        "invoice_date": _date_iso(order.get("delivered_at") or date.today()),
+        "invoice_date": _date_iso(order.get("delivered_at") or business_today()),
         "due_date": (
-            (datetime.strptime(_date_iso(order.get("delivered_at") or date.today()), "%Y-%m-%d").date()
+            (datetime.strptime(_date_iso(order.get("delivered_at") or business_today()), "%Y-%m-%d").date()
              + timedelta(days=max(int(order.get("payment_due_days") or 0), 0))).isoformat()
             if str(order.get("payment_term") or "cod") == "credit"
-            else _date_iso(order.get("delivered_at") or date.today())
+            else _date_iso(order.get("delivered_at") or business_today())
         ),
         "payment_due_days": max(int(order.get("payment_due_days") or 0), 0),
         "payment_status": "unpaid",

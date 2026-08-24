@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -85,7 +86,7 @@ def _to_object_id(value):
 
 
 def _date_iso(value, fallback=None):
-    fallback = fallback or date.today()
+    fallback = fallback or business_today()
     if isinstance(value, datetime):
         return value.date().isoformat()
     if isinstance(value, date):
@@ -100,7 +101,7 @@ def _date_iso(value, fallback=None):
 
 
 def _next_number(counter_key, prefix, digits=6):
-    year = date.today().year
+    year = business_today().year
     counter = mongo.db.system_counters.find_one_and_update(
         {"_id": f"{counter_key}:{year}"},
         {"$inc": {"sequence": 1}, "$setOnInsert": {"created_at": now_utc()}},
@@ -407,7 +408,7 @@ def get_listing_form_context(actor_user_id, listing_id=None):
         "farmer": profile,
         "stock_rows": stock_rows,
         "listing": listing,
-        "today": date.today().isoformat(),
+        "today": business_today().isoformat(),
     }
 
 
@@ -1113,7 +1114,7 @@ def _ensure_sale_documents(order):
             "amount_paid": 0.0,
             "outstanding_amount": float(_decimal(order.get("total_amount"))),
             "status": "completed",
-            "sale_date": date.today().isoformat(),
+            "sale_date": business_today().isoformat(),
             "created_at": now_utc(),
             "updated_at": now_utc(),
         }
@@ -1126,7 +1127,7 @@ def _ensure_sale_documents(order):
     invoice = mongo.db[INVOICE_COLLECTION].find_one({"farmer_marketplace_order_id": order["_id"]})
     if not invoice:
         total = _decimal(order.get("total_amount"))
-        due = date.today()
+        due = business_today()
         if order.get("payment_term") == "credit":
             due = due + timedelta(days=max(int(order.get("credit_days") or 0), 0))
         invoice = {

@@ -1,26 +1,646 @@
 {% extends 'base.html' %}
-{% block title %}Supplier Invoices{% endblock %}
+
+{% block title %}Purchase Invoices{% endblock %}
+
 {% block content %}
+
 <style>
-.invoice-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.invoice-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.invoice-head h2{margin:0;color:#17252A}.invoice-head p{margin:5px 0 0;color:#64748B}.head-actions{display:flex;gap:9px;flex-wrap:wrap}.btn-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 16px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C}.btn-link.primary{background:#5FA878;color:#fff;border-color:#5FA878}.tip{margin-bottom:17px;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:17px}.summary a{display:block;padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC;text-decoration:none;color:#17252A}.summary small{display:block;color:#64748B;margin-bottom:3px}.summary strong{font-size:1.2rem}.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:15px}.toolbar input,.toolbar select{height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 14px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5FA878;color:#fff;font:inherit;font-weight:800;cursor:pointer}.invoice-list{display:grid;gap:12px}.invoice-card{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(4,minmax(110px,.65fr)) auto;gap:12px;align-items:center;padding:15px;border:1px solid #E2EFE6;border-radius:17px;background:#fff}.invoice-card h3{margin:0 0 4px;color:#17252A;font-size:1.03rem}.muted{color:#64748B;font-size:.86rem}.cell small{display:block;color:#64748B;margin-bottom:3px}.cell strong{color:#263B31}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.78rem;font-weight:900;border:1px solid}.status.matched,.status.posted,.status.paid{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.matched_with_warnings,.status.prepared,.status.partially_paid{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.mismatch,.status.recovery_required{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.status.cancelled,.status.not_posted,.status.unpaid,.status.na{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.actions{display:flex;gap:7px;flex-wrap:wrap}.view-btn{display:inline-flex;justify-content:center;padding:8px 13px;border-radius:999px;background:#F3FBF6;border:1px solid #CFE6D8;color:#2F7A4C;text-decoration:none;font-weight:800}.view-btn.print{background:#fff;color:#425466}.empty{padding:28px;text-align:center;border:1px dashed #BFDCC8;border-radius:16px;background:#F6FCF8;color:#64748B}
-@media(max-width:1150px){.summary{grid-template-columns:repeat(2,1fr)}.invoice-card{grid-template-columns:1fr 1fr 1fr}.invoice-main{grid-column:1/-1}.actions{grid-column:1/-1}}@media(max-width:680px){.invoice-page{padding:15px;border-radius:18px}.summary,.toolbar,.invoice-card{grid-template-columns:1fr}.head-actions,.head-actions a,.actions,.actions a{width:100%}.invoice-main,.actions{grid-column:auto}.view-btn{width:100%}}
+.invoice-page {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 28px;
+    border: 1px solid rgba(47, 122, 76, 0.11);
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 16px 40px rgba(28, 72, 43, 0.07);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #435349;
+}
+
+.invoice-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.invoice-title-wrap {
+    min-width: 0;
+}
+
+.invoice-head h2 {
+    margin: 0;
+    color: #17251d;
+    font-size: clamp(1.55rem, 2vw, 2rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.invoice-head p {
+    max-width: 760px;
+    margin: 7px 0 0;
+    color: #748279;
+    font-size: 0.86rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.head-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.btn-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid rgba(47, 122, 76, 0.13);
+    border-radius: 10px;
+    background: #f3f8f4;
+    color: #2f7a4c;
+    font-size: 0.77rem;
+    font-weight: 800;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.btn-link:hover {
+    background: #2f7a4c;
+    border-color: #2f7a4c;
+    color: #ffffff;
+}
+
+.btn-link.primary {
+    background: #397e51;
+    border-color: #397e51;
+    color: #ffffff;
+}
+
+.btn-link.primary:hover {
+    background: #2f6e46;
+    border-color: #2f6e46;
+}
+
+.tip {
+    margin-bottom: 18px;
+    padding: 13px 15px;
+    border: 1px solid rgba(47, 122, 76, 0.12);
+    border-radius: 12px;
+    background: #f5faf7;
+    color: #5b6e62;
+    font-size: 0.79rem;
+    line-height: 1.5;
+}
+
+.tip strong {
+    color: #2f6945;
+}
+
+.summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.summary a {
+    min-height: 88px;
+    padding: 14px;
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 14px;
+    background: #fbfdfb;
+    color: #22372a;
+    text-decoration: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.summary a:hover {
+    transform: translateY(-1px);
+    border-color: rgba(47, 122, 76, 0.20);
+    box-shadow: 0 9px 22px rgba(28, 72, 43, 0.05);
+}
+
+.summary small {
+    display: block;
+    margin-bottom: 8px;
+    color: #7b8a80;
+    font-size: 0.69rem;
+    font-weight: 750;
+    line-height: 1.35;
+}
+
+.summary strong {
+    display: block;
+    color: #22372a;
+    font-size: 1.35rem;
+    font-weight: 850;
+    line-height: 1.1;
+}
+
+.toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 12px;
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 14px;
+    background: #fafcfa;
+}
+
+.toolbar input,
+.toolbar select {
+    height: 40px;
+    border: 1px solid rgba(47, 122, 76, 0.13);
+    border-radius: 10px;
+    background: #ffffff;
+    color: #34483c;
+    font-family: inherit;
+    font-size: 0.79rem;
+    outline: none;
+}
+
+.toolbar input {
+    width: 100%;
+    padding: 0 12px;
+}
+
+.toolbar select {
+    min-width: 180px;
+    padding: 0 11px;
+}
+
+.toolbar input:focus,
+.toolbar select:focus {
+    border-color: rgba(47, 122, 76, 0.32);
+    box-shadow: 0 0 0 4px rgba(47, 122, 76, 0.06);
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.toolbar button {
+    height: 40px;
+    padding: 0 15px;
+    border: 1px solid #397e51;
+    border-radius: 10px;
+    background: #397e51;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.toolbar button:hover {
+    background: #2f6e46;
+    border-color: #2f6e46;
+}
+
+.invoice-list {
+    display: grid;
+    gap: 10px;
+}
+
+.invoice-card {
+    display: grid;
+    grid-template-columns:
+        minmax(230px, 1.6fr)
+        minmax(110px, 0.65fr)
+        minmax(110px, 0.65fr)
+        minmax(120px, 0.75fr)
+        minmax(150px, 0.85fr)
+        auto;
+    gap: 14px;
+    align-items: center;
+    padding: 15px 16px;
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 14px;
+    background: #ffffff;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.invoice-card:hover {
+    border-color: rgba(47, 122, 76, 0.18);
+    box-shadow: 0 8px 20px rgba(28, 72, 43, 0.05);
+}
+
+.invoice-main {
+    min-width: 0;
+}
+
+.invoice-card h3 {
+    margin: 0 0 5px;
+    color: #22372a;
+    font-size: 0.96rem;
+    font-weight: 800;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.muted {
+    color: #7b8a80;
+    font-size: 0.73rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.cell {
+    min-width: 0;
+}
+
+.cell small {
+    display: block;
+    margin-bottom: 4px;
+    color: #839087;
+    font-size: 0.65rem;
+    font-weight: 750;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.cell strong {
+    color: #31463a;
+    font-size: 0.79rem;
+    font-weight: 750;
+    overflow-wrap: anywhere;
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 5px 9px;
+    border: 1px solid;
+    border-radius: 999px;
+    font-size: 0.67rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.status.matched,
+.status.posted,
+.status.paid {
+    background: #ecfdf3;
+    border-color: #b7e4c7;
+    color: #237a43;
+}
+
+.status.matched_with_warnings,
+.status.prepared,
+.status.partially_paid {
+    background: #fff7e6;
+    border-color: #f4d38a;
+    color: #8a5b00;
+}
+
+.status.mismatch,
+.status.recovery_required {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.status.cancelled,
+.status.not_posted,
+.status.unpaid,
+.status.na {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #64748b;
+}
+
+.actions {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.view-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid rgba(47, 122, 76, 0.13);
+    border-radius: 9px;
+    background: #f3f8f4;
+    color: #2f7a4c;
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.view-btn:hover {
+    background: #2f7a4c;
+    border-color: #2f7a4c;
+    color: #ffffff;
+}
+
+.view-btn.print {
+    background: #ffffff;
+    color: #516158;
+}
+
+.view-btn.print:hover {
+    background: #516158;
+    border-color: #516158;
+    color: #ffffff;
+}
+
+.empty {
+    padding: 30px 20px;
+    border: 1px dashed rgba(47, 122, 76, 0.20);
+    border-radius: 14px;
+    background: #fafdfa;
+    color: #7b8a80;
+    font-size: 0.78rem;
+    font-weight: 650;
+    text-align: center;
+}
+
+@media (max-width: 1180px) {
+    .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .invoice-card {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .invoice-main {
+        grid-column: 1 / -1;
+    }
+
+    .actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 860px) {
+    .invoice-page {
+        padding: 20px;
+        border-radius: 18px;
+    }
+
+    .invoice-head {
+        align-items: stretch;
+    }
+
+    .head-actions {
+        width: 100%;
+    }
+
+    .head-actions a {
+        flex: 1 1 150px;
+    }
+
+    .toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .toolbar-actions {
+        width: 100%;
+    }
+
+    .toolbar select,
+    .toolbar button {
+        flex: 1;
+    }
+}
+
+@media (max-width: 680px) {
+    .invoice-page {
+        padding: 15px;
+        border-radius: 16px;
+    }
+
+    .invoice-head h2 {
+        font-size: 1.3rem;
+    }
+
+    .summary {
+        grid-template-columns: 1fr;
+    }
+
+    .toolbar-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .toolbar select,
+    .toolbar button {
+        width: 100%;
+    }
+
+    .invoice-card {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 14px;
+    }
+
+    .invoice-main,
+    .actions {
+        grid-column: auto;
+    }
+
+    .cell {
+        padding-top: 9px;
+        border-top: 1px solid rgba(47, 122, 76, 0.07);
+    }
+
+    .actions {
+        justify-content: stretch;
+    }
+
+    .view-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    .head-actions {
+        flex-direction: column;
+    }
+
+    .head-actions a {
+        width: 100%;
+    }
+}
+
+@media(max-width:1150px){.invoice-card{grid-template-columns:minmax(220px,1.5fr) repeat(3,minmax(110px,.7fr)) minmax(150px,.9fr)}.invoice-page{max-width:100%}}
+@media(max-width:760px){.invoice-page{padding:14px}.invoice-head h2{font-size:clamp(1.25rem,6vw,1.6rem)}.head-actions,.head-actions a{width:100%}.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}}
 </style>
+
 <div class="invoice-page">
-    <div class="invoice-head"><div><h2>Supplier Invoices</h2><p>Record supplier bills and let the system check them against the Purchase Order and received goods.</p></div><div class="head-actions"><a class="btn-link" href="{{ url_for('admin.procurement_home') }}">AVPL Purchases</a><a class="btn-link" href="{{ url_for('admin.goods_receipts') }}">Receive Goods</a><a class="btn-link primary" href="{{ url_for('admin.create_supplier_invoice_view') }}">+ Record Invoice</a></div></div>
-    <div class="tip"><strong>Matched</strong> means the important PO, received quantity and supplier-invoice values agree. Final Accounting posting still follows the existing authorized workflow.</div>
-    <div class="summary">{% for key, label in overview.get('status_labels', {}).items() %}<a href="{{ url_for('admin.supplier_invoices', status=key) }}"><small>{{ label }}</small><strong>{{ overview.get('counts', {}).get(key, 0) }}</strong></a>{% endfor %}</div>
-    <form class="toolbar" method="get"><input name="q" value="{{ overview.get('query', '') }}" placeholder="Search invoice, PO, supplier or product"><div style="display:flex;gap:8px"><select name="status"><option value="">All match statuses</option>{% for key, label in overview.get('status_labels', {}).items() %}<option value="{{ key }}" {% if overview.get('selected_status') == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button>Filter</button></div></form>
-    <div class="invoice-list">
-        {% for invoice in overview.get('rows', []) %}
-        <article class="invoice-card">
-            <div class="invoice-main"><h3>{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}</h3><div class="muted">{{ invoice.supplier_name }} · PO {{ invoice.po_number }}{% if invoice.official_purchase_invoice_number %} · Supplier Invoice {{ invoice.supplier_invoice_number }}{% endif %}</div></div>
-            <div class="cell"><small>Invoice Date</small><strong>{{ invoice.invoice_date }}</strong></div>
-            <div class="cell"><small>Total</small><strong>₹{{ invoice.grand_total }}</strong></div>
-            <div class="cell"><small>Check</small><span class="status {{ invoice.status }}">{{ invoice.status_display }}</span></div>
-            <div class="cell"><small>Payment</small>{% if invoice.payable_posted %}<span class="status {{ invoice.payment_status }}">{{ invoice.payment_status_display }}</span><div class="muted" style="margin-top:4px">Due ₹{{ invoice.outstanding_amount }}</div>{% else %}<span class="status na">Not Applicable</span><div class="muted" style="margin-top:4px">Posting not completed</div>{% endif %}</div>
-            <div class="actions"><a class="view-btn" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=invoice.id) }}">View</a>{% if invoice.posting_status == 'posted' %}<a class="view-btn print" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print</a>{% endif %}</div>
-        </article>
-        {% else %}<div class="empty">No Supplier Invoices match this filter.</div>{% endfor %}
+
+    <div class="invoice-head">
+
+        <div class="invoice-title-wrap">
+            <h2>Purchase Invoices</h2>
+
+            <p>
+                AVPL purchase records linked to the supplier's GST/tax invoice,
+                Purchase Order, Goods Receipt and payment status.
+            </p>
+        </div>
+
+        <div class="head-actions">
+            <a class="btn-link" href="{{ url_for('admin.procurement_home') }}">
+                AVPL Purchases
+            </a>
+
+            <a class="btn-link" href="{{ url_for('admin.goods_receipts') }}">
+                Receive Goods
+            </a>
+
+            <a class="btn-link primary" href="{{ url_for('admin.create_supplier_invoice_view') }}">
+                + Record Purchase Invoice
+            </a>
+        </div>
+
     </div>
+
+    <div class="tip">
+        <strong>Purchase Invoice</strong> is AVPL's internal purchase record. The supplier's original GST/tax invoice remains linked as supporting evidence. Matched means PO, accepted receipt and supplier bill values agree.
+    </div>
+
+    <div class="summary">
+        {% for key, label in overview.get('status_labels', {}).items() %}
+
+        <a href="{{ url_for('admin.supplier_invoices', status=key) }}">
+            <small>{{ label }}</small>
+            <strong>{{ overview.get('counts', {}).get(key, 0) }}</strong>
+        </a>
+
+        {% endfor %}
+    </div>
+
+    <form class="toolbar" method="get">
+
+        <input
+            name="q"
+            value="{{ overview.get('query', '') }}"
+            placeholder="Search purchase invoice, supplier invoice, PO, supplier or product"
+        >
+
+        <div class="toolbar-actions">
+
+            <select name="status">
+                <option value="">All match statuses</option>
+
+                {% for key, label in overview.get('status_labels', {}).items() %}
+                <option
+                    value="{{ key }}"
+                    {% if overview.get('selected_status') == key %}selected{% endif %}
+                >
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <button type="submit">Filter</button>
+        </div>
+
+    </form>
+
+    <div class="invoice-list">
+
+        {% for invoice in overview.get('rows', []) %}
+
+        <article class="invoice-card">
+
+            <div class="invoice-main">
+                <h3>
+                    {{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}
+                </h3>
+
+                <div class="muted">
+                    {{ invoice.supplier_name }} · PO {{ invoice.po_number }}
+                    {% if invoice.official_purchase_invoice_number %}
+                        · Supplier Bill {{ invoice.supplier_invoice_number }}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="cell">
+                <small>Invoice Date</small>
+                <strong>{{ invoice.invoice_date }}</strong>
+            </div>
+
+            <div class="cell">
+                <small>Total</small>
+                <strong>₹{{ invoice.grand_total }}</strong>
+            </div>
+
+            <div class="cell">
+                <small>Check</small>
+                <span class="status {{ invoice.status }}">
+                    {{ invoice.status_display }}
+                </span>
+            </div>
+
+            <div class="cell">
+                <small>Payment</small>
+
+                {% if invoice.payable_posted %}
+                    <span class="status {{ invoice.payment_status }}">
+                        {{ invoice.payment_status_display }}
+                    </span>
+
+                    <div class="muted" style="margin-top: 4px;">
+                        {% if invoice.payment_status == 'paid' or invoice.outstanding_amount|float <= 0 %}Settled · ₹0.00 outstanding{% else %}Outstanding ₹{{ invoice.outstanding_amount }}{% endif %}
+                    </div>
+                {% else %}
+                    <span class="status na">Not Applicable</span>
+
+                    <div class="muted" style="margin-top: 4px;">
+                        Posting not completed
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="actions">
+                <a class="view-btn" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=invoice.id) }}">View</a>
+                <a class="view-btn" href="{{ url_for('admin.purchase_order_detail', order_id=invoice.purchase_order_id) }}">PO</a>
+                {% if invoice.supplier_invoice_attachment_filename %}<a class="view-btn" target="_blank" href="{{ url_for('documents.serve', filename=invoice.supplier_invoice_attachment_filename) }}">Supplier Bill</a>{% endif %}
+
+                {% if invoice.posting_status == 'posted' %}
+                <a
+                    class="view-btn print"
+                    target="_blank"
+                    href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}"
+                >
+                    Print
+                </a>
+                {% endif %}
+            </div>
+
+        </article>
+
+        {% else %}
+
+        <div class="empty">
+            No Purchase Invoices match this filter.
+        </div>
+
+        {% endfor %}
+
+    </div>
+
 </div>
+
 {% endblock %}

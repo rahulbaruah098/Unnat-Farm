@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
@@ -1372,7 +1373,7 @@ def get_product_accounting_mapping_for_posting(
         effective_rate = get_effective_gst_tax_rate(
             entity["_id"],
             rate_code=hsn.get("gst_rate_code"),
-            transaction_date=transaction_date or date.today(),
+            transaction_date=transaction_date or business_today(),
         )
         if not effective_rate:
             raise ValueError(
@@ -1495,7 +1496,7 @@ def get_product_readiness_snapshot(
             get_product_accounting_mapping_for_posting(
                 entity["_id"],
                 product["_id"],
-                transaction_date=transaction_date or date.today(),
+                transaction_date=transaction_date or business_today(),
             )
             accounting_ready = True
         except Exception as exc:

@@ -4,8 +4,62 @@
 {% set values = form_data or order or {} %}
 {% set is_edit = order is not none %}
 <style>
-.po-form-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B}.link{display:inline-flex;padding:9px 16px;border-radius:999px;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C;text-decoration:none;font-weight:800}.tip{margin-bottom:17px;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.section{margin-top:16px;padding:18px;border:1px solid #E2EFE6;border-radius:19px;background:#FCFEFC}.section h3{margin:0 0 14px;color:#17252A}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.field{display:flex;flex-direction:column;gap:6px;color:#334155;font-weight:700}.field.full{grid-column:1/-1}.field input,.field select,.field textarea{width:100%;border:1px solid #D6E5DA;border-radius:12px;background:#fff;color:#17252A;font:inherit;padding:10px 12px}.field input,.field select{height:43px}.field textarea{min-height:76px;resize:vertical}.field small{font-weight:400;color:#64748B}.items-wrap{overflow-x:auto}.items-table{width:100%;border-collapse:separate;border-spacing:0 9px;min-width:760px}.items-table th{text-align:left;color:#64748B;font-size:.85rem;padding:0 7px}.items-table td{padding:9px 7px;background:#fff;border-top:1px solid #E2EFE6;border-bottom:1px solid #E2EFE6;vertical-align:top}.items-table td:first-child{border-left:1px solid #E2EFE6;border-radius:12px 0 0 12px}.items-table td:last-child{border-right:1px solid #E2EFE6;border-radius:0 12px 12px 0}.items-table select,.items-table input{width:100%;height:39px;border:1px solid #D6E5DA;border-radius:10px;padding:0 9px;font:inherit}.meta{font-size:.78rem;color:#64748B;line-height:1.35;margin-top:4px}.remove{width:36px;height:36px;border:0;border-radius:50%;background:#FEF2F2;color:#B91C1C;font-weight:900;cursor:pointer}.add-line{border:1px solid #CFE6D8;border-radius:999px;padding:8px 15px;background:#F3FBF6;color:#2F7A4C;font:inherit;font-weight:800;cursor:pointer}.totals{margin-left:auto;width:min(430px,100%);display:grid;gap:7px}.total-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #EDF3EF;color:#425466}.total-row.grand{font-size:1.13rem;font-weight:900;color:#17252A;border-bottom:0}.actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:18px}.btn{border:1px solid #CFE2D5;border-radius:999px;padding:10px 18px;background:#fff;color:#425466;font:inherit;font-weight:800;cursor:pointer;text-decoration:none}.btn.primary{background:#5FA878;border-color:#5FA878;color:#fff}.btn.approve{background:#2F7A4C;border-color:#2F7A4C;color:#fff}.empty-warning{padding:14px;border:1px solid #F4D38A;border-radius:14px;background:#FFF8E8;color:#6B5316}.advanced{margin-top:14px;border:1px solid #DCECE1;border-radius:14px;background:#fff}.advanced summary{padding:12px 14px;cursor:pointer;font-weight:900;color:#2F7A4C}.advanced-body{padding:0 14px 14px}
-@media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.po-form-page{padding:15px;border-radius:18px}.grid{grid-template-columns:1fr}.actions,.actions .btn,.head .link{width:100%}}
+.po-form-page{
+    --po-ink:#17251d;--po-text:#435349;--po-muted:#7b8a80;--po-green:#2f7a4c;
+    --po-line:rgba(47,122,76,.12);--po-shadow:0 22px 60px rgba(28,72,43,.10);
+    width:100%;max-width:1600px;margin:0 auto;padding:0;overflow:hidden;
+    border:1px solid rgba(47,122,76,.11);border-radius:30px;
+    background:radial-gradient(circle at 94% 2%,rgba(96,176,122,.10),transparent 22%),
+               linear-gradient(180deg,#fff,#f9fcfa);
+    box-shadow:var(--po-shadow);
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:var(--po-text);position:relative
+}
+.po-form-page::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,#2f7a4c,#67b27e,#badfc6)}
+.head{display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap;margin:0;padding:30px 32px 23px;border-bottom:1px solid rgba(47,122,76,.09)}
+.head h2{margin:0;color:var(--po-ink);font-size:clamp(1.6rem,2vw,2.15rem);font-weight:830;letter-spacing:-.025em}
+.head h2::before{content:"AVPL PROCUREMENT";display:block;margin-bottom:5px;color:#7d8b82;font-size:.68rem;font-weight:850;letter-spacing:.12em}
+.head p{margin:7px 0 0;color:#718078;font-size:.84rem;line-height:1.5}
+.link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 15px;border-radius:11px;border:1px solid rgba(47,122,76,.13);background:#edf8f1;color:#2f7a4c;text-decoration:none;font-size:.78rem;font-weight:850;transition:.18s}
+.link:hover{background:#2f7a4c;color:#fff;transform:translateY(-1px)}
+.tip,.empty-warning{margin:22px 32px 0;padding:14px 16px;border-radius:15px;font-size:.79rem;line-height:1.55}
+.tip{border:1px solid rgba(47,122,76,.13);background:linear-gradient(180deg,#f5fbf7,#eef8f1);color:#53665a}
+.tip strong{color:#24563b}.empty-warning{border:1px solid #eed69c;background:#fff9eb;color:#715a20}
+.empty-warning a{color:#2f7a4c;font-weight:800}
+#poForm{padding:8px 32px 34px}
+.section{margin-top:16px;padding:19px;border:1px solid rgba(47,122,76,.11);border-radius:19px;background:linear-gradient(180deg,#fff,#f9fcfa);box-shadow:0 9px 26px rgba(28,72,43,.055)}
+.section h3{display:flex;align-items:center;gap:9px;margin:0 0 15px;color:#22372a;font-size:1rem;font-weight:830}
+.section h3::before{content:"";width:8px;height:8px;border-radius:50%;background:#4ea36a;box-shadow:0 0 0 5px rgba(78,163,106,.10)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.field{display:flex;flex-direction:column;gap:7px;color:#304337;font-size:.77rem;font-weight:800;min-width:0}
+.field.full{grid-column:1/-1}
+.field input,.field select,.field textarea{width:100%;border:1px solid rgba(47,122,76,.13);border-radius:10px;background:#fff;color:#34483c;font-family:inherit;font-size:.80rem;padding:9px 11px;outline:none;transition:.18s}
+.field input,.field select{height:42px}.field textarea{min-height:88px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:rgba(47,122,76,.35);box-shadow:0 0 0 4px rgba(47,122,76,.07)}
+.field small{font-weight:500;color:#75847a;font-size:.72rem;line-height:1.45}
+.items-wrap{overflow-x:auto;margin-top:14px;border:1px solid rgba(47,122,76,.10);border-radius:15px;background:#fff}
+.items-table{width:100%;border-collapse:collapse;min-width:850px}
+.items-table th{text-align:left;color:#697970;background:#f0f7f2;font-size:.67rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;padding:11px 10px;border-bottom:1px solid rgba(47,122,76,.10)}
+.items-table td{padding:10px;background:#fff;border-bottom:1px solid rgba(47,122,76,.07);vertical-align:top}
+.items-table tbody tr:last-child td{border-bottom:0}.items-table tbody tr:hover td{background:#fbfdfb}
+.items-table select,.items-table input{width:100%;height:39px;border:1px solid rgba(47,122,76,.13);border-radius:9px;padding:0 9px;font-family:inherit;font-size:.77rem;outline:none}
+.items-table select:focus,.items-table input:focus{border-color:rgba(47,122,76,.35);box-shadow:0 0 0 3px rgba(47,122,76,.06)}
+.meta{font-size:.69rem;color:#7a897f;line-height:1.35;margin-top:5px}
+.remove{width:34px;height:34px;border:1px solid rgba(185,28,28,.10);border-radius:10px;background:#fff1f1;color:#b91c1c;font-weight:900;cursor:pointer;transition:.18s}
+.remove:hover{background:#b91c1c;color:#fff}
+.add-line{border:1px solid rgba(47,122,76,.13);border-radius:10px;padding:8px 13px;background:#edf8f1;color:#2f7a4c;font-family:inherit;font-size:.76rem;font-weight:850;cursor:pointer}
+.add-line:hover{background:#2f7a4c;color:#fff}
+.totals{margin:18px 0 0 auto;width:min(440px,100%);padding:15px 17px;border:1px solid rgba(47,122,76,.10);border-radius:15px;background:#f8fbf9}
+.total-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid rgba(47,122,76,.08);color:#5a6a60;font-size:.78rem}
+.total-row.grand{padding-top:11px;font-size:1rem;font-weight:900;color:#22372a;border-bottom:0}
+.advanced{margin-top:17px;border:1px solid rgba(47,122,76,.11);border-radius:14px;background:#fff;overflow:hidden}
+.advanced summary{padding:12px 14px;cursor:pointer;font-size:.78rem;font-weight:850;color:#2f7a4c;background:#f6faf7}
+.advanced-body{padding:15px}
+.actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:41px;border:1px solid rgba(47,122,76,.13);border-radius:11px;padding:9px 16px;background:#fff;color:#526258;font-family:inherit;font-size:.78rem;font-weight:850;cursor:pointer;text-decoration:none;transition:.18s}
+.btn:hover{transform:translateY(-1px)}.btn.primary{background:#397f51;border-color:#397f51;color:#fff}.btn.approve{background:linear-gradient(135deg,#397f51,#2f6e46);border-color:#2f6e46;color:#fff;box-shadow:0 9px 20px rgba(47,122,76,.17)}
+@media(max-width:900px){.grid{grid-template-columns:1fr 1fr}.head{padding:23px 18px 18px}.tip,.empty-warning{margin-left:18px;margin-right:18px}#poForm{padding-left:18px;padding-right:18px}}
+@media(max-width:600px){.po-form-page{border-radius:22px}.grid{grid-template-columns:1fr}.head{align-items:stretch}.head .link{width:100%}.tip,.empty-warning{margin-left:14px;margin-right:14px}#poForm{padding-left:14px;padding-right:14px}.section{padding:14px}.actions{flex-direction:column}.actions .btn{width:100%}}
 </style>
 <div class="po-form-page">
     <div class="head"><div><h2>{{ 'Edit ' ~ order.po_number if is_edit else 'Create Purchase Order' }}</h2><p>Choose who AVPL is buying from, what products are being ordered, the quantity and purchase rate.</p></div><a class="link" href="{{ url_for('admin.procurement_home') }}">AVPL Purchases</a></div>
@@ -56,7 +110,7 @@
     function addRow(item={}){const tr=document.createElement('tr');tr.innerHTML=`<td><select class="product" required>${optionHtml(item.product_id)}</select><div class="meta product-meta"></div></td><td><input class="qty" type="number" min="0.0001" step="0.0001" value="${item.quantity||1}" required></td><td><input class="rate" type="number" min="0.01" step="0.01" value="${item.rate||''}" required></td><td><input class="discount" type="number" min="0" max="100" step="0.01" value="${item.discount_percent||0}"></td><td><strong class="line-total">₹0.00</strong><div class="meta gst-meta"></div><span class="taxable" hidden></span><span class="gst" hidden></span><span class="unit" hidden></span></td><td><button class="remove" type="button">×</button></td>`;body.appendChild(tr);tr.querySelectorAll('select,input').forEach(el=>el.addEventListener('input',recalc));tr.querySelector('.remove').addEventListener('click',()=>{tr.remove();if(!body.children.length)addRow();recalc();});recalc();}
     function rowsData(){return Array.from(body.querySelectorAll('tr')).map(tr=>({product_id:tr.querySelector('.product').value,quantity:tr.querySelector('.qty').value,rate:tr.querySelector('.rate').value,discount_percent:tr.querySelector('.discount').value}));}
     function recalc(){let subtotal=0,discount=0,tax=0,total=0;Array.from(body.querySelectorAll('tr')).forEach(tr=>{const p=productMap[tr.querySelector('.product').value]||{};const qty=money(parseFloat(tr.querySelector('.qty').value));const rate=money(parseFloat(tr.querySelector('.rate').value));const disc=Math.min(100,Math.max(0,money(parseFloat(tr.querySelector('.discount').value))));const lineSub=qty*rate;const lineDisc=lineSub*disc/100;const taxable=lineSub-lineDisc;const productTaxable=String(p.taxability_code||'').toUpperCase()==='TAXABLE';const normalSupplierGst=supplierCanPassInputGst();const lineTax=(productTaxable&&normalSupplierGst)?taxable*gstRate(p.gst_rate_code)/100:0;const lineTotal=taxable+lineTax;subtotal+=lineSub;discount+=lineDisc;tax+=lineTax;total+=lineTotal;let gstMeta='';if(p.id){gstMeta=`${p.unit_code||p.unit_name||'Unit'} · HSN ${p.hsn_code||'-'}`;if(productTaxable&&normalSupplierGst)gstMeta+=` · ${p.gst_rate_code||'GST auto'}`;else if(productTaxable)gstMeta+=' · GST ₹0 for this supplier';}tr.querySelector('.product-meta').textContent=gstMeta;tr.querySelector('.taxable').textContent='₹'+taxable.toFixed(2);tr.querySelector('.gst').textContent='₹'+lineTax.toFixed(2);tr.querySelector('.gst-meta').textContent=lineTax>0?`Includes estimated GST ₹${lineTax.toFixed(2)}`:'Tax handled automatically';tr.querySelector('.line-total').textContent='₹'+lineTotal.toFixed(2);});const charges=money(parseFloat(document.getElementById('freightAmount').value))+money(parseFloat(document.getElementById('otherCharges').value));document.getElementById('subtotalPreview').textContent='₹'+subtotal.toFixed(2);document.getElementById('discountPreview').textContent='₹'+discount.toFixed(2);document.getElementById('taxPreview').textContent='₹'+tax.toFixed(2);document.getElementById('chargesPreview').textContent='₹'+charges.toFixed(2);document.getElementById('grandPreview').textContent='₹'+(total+charges).toFixed(2);itemsJson.value=JSON.stringify(rowsData());}
-    document.getElementById('addLine').addEventListener('click',()=>addRow());document.getElementById('freightAmount').addEventListener('input',recalc);document.getElementById('otherCharges').addEventListener('input',recalc);if(supplierSelect)supplierSelect.addEventListener('change',()=>{updateSupplierTaxHelp();recalc();});form.addEventListener('submit',recalc);updateSupplierTaxHelp();(initial.length?initial:[{}]).forEach(addRow);const orderDate=document.querySelector('[name="order_date"]');if(orderDate&&!orderDate.value)orderDate.value=new Date().toISOString().slice(0,10);
+    document.getElementById('addLine').addEventListener('click',()=>addRow());document.getElementById('freightAmount').addEventListener('input',recalc);document.getElementById('otherCharges').addEventListener('input',recalc);if(supplierSelect)supplierSelect.addEventListener('change',()=>{updateSupplierTaxHelp();recalc();});form.addEventListener('submit',recalc);updateSupplierTaxHelp();(initial.length?initial:[{}]).forEach(addRow);const orderDate=document.querySelector('[name="order_date"]');if(orderDate&&!orderDate.value)orderDate.value={{ business_today_iso|tojson }};
 })();
 </script>
 {% endblock %}

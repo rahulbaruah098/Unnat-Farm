@@ -191,22 +191,9 @@ PERMISSION_SCHEMA_ADDITIONS = {
             "accounting.product_tracking.cancel",
             "accounting.product_tracking.validate",
         },
-    },
-    14: {
+    },    14: {
         "avpl_admin": {
-            "accounting.voucher.view",
-            "accounting.voucher.validate",
-            "accounting.voucher.post",
-            "accounting.voucher.reverse",
-            "accounting.voucher.audit.view",
-        },
-        "accounts": {
-            "accounting.voucher.view",
-            "accounting.voucher.create",
-            "accounting.voucher.edit",
-            "accounting.voucher.validate",
-            "accounting.voucher.cancel",
-            "accounting.voucher.audit.view",
+            "accounting.unit.bootstrap",
         },
     },
 }
@@ -230,6 +217,7 @@ ROLE_DEFAULT_PERMISSIONS = {
         "accounting.gst_tax.return",
         "accounting.gst_tax.retire",
         "accounting.unit.view",
+        "accounting.unit.bootstrap",
         "accounting.unit.approve",
         "accounting.unit.return",
         "accounting.unit.deactivate",
@@ -252,11 +240,6 @@ ROLE_DEFAULT_PERMISSIONS = {
         "accounting.product_tracking.deactivate",
         "accounting.product_tracking.reactivate",
         "accounting.product_tracking.validate",
-        "accounting.voucher.view",
-        "accounting.voucher.validate",
-        "accounting.voucher.post",
-        "accounting.voucher.reverse",
-        "accounting.voucher.audit.view",
         "accounting.financial_year.view",
         "accounting.financial_year.create",
         "accounting.financial_year.edit",
@@ -330,12 +313,6 @@ ROLE_DEFAULT_PERMISSIONS = {
         "accounting.product_tracking.withdraw",
         "accounting.product_tracking.cancel",
         "accounting.product_tracking.validate",
-        "accounting.voucher.view",
-        "accounting.voucher.create",
-        "accounting.voucher.edit",
-        "accounting.voucher.validate",
-        "accounting.voucher.cancel",
-        "accounting.voucher.audit.view",
         "accounting.financial_year.view",
         "accounting.financial_year.use",
         "accounting.financial_year.control.view",
@@ -507,7 +484,7 @@ PERMISSION_LABELS = {
     },
     "accounting.unit.bootstrap": {
         "label": "Initialize protected UQC units",
-        "description": "Allows Super Admin to seed or repair the protected official UQC unit foundation.",
+        "description": "Allows Super Admin or AVPL Admin to seed or repair the protected official UQC unit foundation.",
         "group": "Units master",
     },
     "accounting.unit.create": {
@@ -719,51 +696,6 @@ PERMISSION_LABELS = {
         "label": "Validate product tracking controls",
         "description": "Allows a non-posting preview of barcode, batch, manufacturing-date, expiry and shelf-life rules.",
         "group": "Product tracking controls",
-    },
-    "accounting.voucher.view": {
-        "label": "View Accounting vouchers",
-        "description": "Allows visibility of voucher headers, lifecycle state, linked business events and audit history.",
-        "group": "Core voucher engine",
-    },
-    "accounting.voucher.create": {
-        "label": "Create voucher drafts",
-        "description": "Allows Accounts to create idempotent voucher-header drafts without consuming official numbers.",
-        "group": "Core voucher engine",
-    },
-    "accounting.voucher.edit": {
-        "label": "Edit voucher drafts",
-        "description": "Allows the original maker to edit an unposted voucher header with optimistic version control.",
-        "group": "Core voucher engine",
-    },
-    "accounting.voucher.validate": {
-        "label": "Validate voucher drafts",
-        "description": "Allows controlled double-entry and posting-readiness validation in Stage 5 Batch 2.",
-        "group": "Core voucher engine",
-    },
-    "accounting.voucher.cancel": {
-        "label": "Cancel voucher drafts",
-        "description": "Allows the original maker to cancel an unposted voucher without hard deletion.",
-        "group": "Core voucher engine",
-    },
-    "accounting.voucher.post": {
-        "label": "Post Accounting vouchers",
-        "description": "Allows AVPL Admin to post a validated maker-created voucher after all financial controls pass.",
-        "group": "Core voucher engine",
-    },
-    "accounting.voucher.reverse": {
-        "label": "Reverse posted vouchers",
-        "description": "Allows AVPL Admin to create a controlled opposite voucher instead of editing posted history.",
-        "group": "Core voucher engine",
-    },
-    "accounting.voucher.audit.view": {
-        "label": "View voucher audit history",
-        "description": "Allows visibility of voucher creation, validation, posting, cancellation, reversal and recovery events.",
-        "group": "Core voucher engine",
-    },
-    "accounting.voucher.recovery": {
-        "label": "Recover interrupted voucher posting",
-        "description": "Allows Super Admin to resume a partially completed idempotent posting without reusing numbers or duplicating lines.",
-        "group": "Core voucher engine",
     },
     "accounting.financial_year.view": {
         "label": "View Financial Years",

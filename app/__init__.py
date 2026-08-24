@@ -5,6 +5,12 @@ from flask import Flask, app, session, request, redirect, url_for
 from app.extensions import mongo
 from app.utils.db import init_indexes
 from app.utils.security import ensure_upload_folder
+from app.utils.timezone import (
+    APP_TIMEZONE_NAME,
+    business_today,
+    format_ist_date,
+    format_ist_datetime,
+)
 
 from app.blueprints.auth.routes import auth_bp
 from app.blueprints.dashboard.routes import dashboard_bp
@@ -69,6 +75,11 @@ def create_app():
 
     mongo.init_app(app)
     ensure_upload_folder(app)
+
+    # One timezone policy for the entire MIS: UTC in storage, IST in UI/business dates.
+    app.config["APP_TIMEZONE"] = os.getenv("APP_TIMEZONE", APP_TIMEZONE_NAME)
+    app.jinja_env.filters["ist_datetime"] = format_ist_datetime
+    app.jinja_env.filters["ist_date"] = format_ist_date
 
     with app.app_context():
         init_indexes(mongo.db)
@@ -186,6 +197,8 @@ def create_app():
         return {
             "current_display_name": display_name,
             "streamlined_workflows_enabled": streamlined_workflows_enabled(),
+            "app_timezone": app.config.get("APP_TIMEZONE", APP_TIMEZONE_NAME),
+            "business_today_iso": business_today().isoformat(),
         }
 
     return app

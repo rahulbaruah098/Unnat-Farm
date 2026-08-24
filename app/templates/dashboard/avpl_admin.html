@@ -1,157 +1,284 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<style>
-    .page-card {
-        width: 100%;
-        border: 1px solid rgba(220, 238, 226, .95);
-        border-radius: 26px;
-        padding: 28px;
-        background: rgba(255, 255, 255, .92);
-        box-shadow: 0 22px 55px rgba(23, 37, 42, .10);
-        backdrop-filter: blur(14px);
-        font-family: "Times New Roman", Georgia, serif;
-    }
 
-    .page-card h2 {
-        margin: 0 0 22px;
-        color: #17252A;
-        font-size: clamp(1.45rem, 2.1vw, 1.9rem);
-        font-weight: 700;
-        line-height: 1.25;
-        letter-spacing: .2px;
+<style>
+.avpl-dashboard {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 28px;
+    border: 1px solid rgba(47, 122, 76, 0.11);
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 16px 40px rgba(28, 72, 43, 0.07);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #435349;
+}
+
+.dashboard-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.dashboard-title {
+    min-width: 0;
+}
+
+.dashboard-title h2 {
+    margin: 0;
+    color: #17251d;
+    font-size: clamp(1.55rem, 2vw, 2rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.dashboard-title p {
+    max-width: 760px;
+    margin: 7px 0 0;
+    color: #748279;
+    font-size: 0.86rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.dashboard-section {
+    margin-top: 4px;
+}
+
+.section-heading {
+    margin: 0 0 12px;
+    color: #58695f;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.stat-card {
+    min-height: 108px;
+    padding: 16px;
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 14px;
+    background: #fbfdfb;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(47, 122, 76, 0.20);
+    box-shadow: 0 9px 22px rgba(28, 72, 43, 0.055);
+}
+
+.stat-label {
+    display: block;
+    margin-bottom: 12px;
+    color: #7b8a80;
+    font-size: 0.71rem;
+    font-weight: 750;
+    line-height: 1.4;
+}
+
+.stat-value {
+    display: block;
+    color: #22372a;
+    font-size: clamp(1.28rem, 1.8vw, 1.7rem);
+    font-weight: 850;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+}
+
+.stat-card.priority {
+    background: #f7fbf8;
+    border-color: rgba(47, 122, 76, 0.14);
+}
+
+.stat-card.financial .stat-value {
+    color: #2b6f47;
+}
+
+@media (max-width: 1180px) {
+    .stat-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 860px) {
+    .avpl-dashboard {
+        padding: 20px;
+        border-radius: 18px;
     }
 
     .stat-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-
-    .stat {
-        min-height: 132px;
-        padding: 22px;
-        border: 1px solid rgba(220, 238, 226, .95);
-        border-radius: 22px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(246, 251, 247, .92));
-        box-shadow: 0 14px 32px rgba(23, 37, 42, .06);
-        transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
-        font-family: "Times New Roman", Georgia, serif;
-    }
-
-    .stat:hover {
-        transform: translateY(-3px);
-        border-color: rgba(95, 168, 120, .38);
-        box-shadow: 0 18px 40px rgba(23, 37, 42, .10);
-    }
-
-    .stat span {
-        display: block;
-        margin-bottom: 18px;
-        color: #64748B;
-        font-size: 1rem;
-        font-weight: 600;
-        line-height: 1.35;
-    }
-
-    .stat strong {
-        display: block;
-        color: #334155;
-        font-size: clamp(2rem, 3vw, 2.6rem);
-        font-weight: 800;
-        line-height: 1;
-        letter-spacing: -.4px;
-    }
-
-    @media (max-width: 1180px) {
-        .stat-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 760px) {
-        .page-card {
-            padding: 20px;
-            border-radius: 22px;
-        }
-
-        .stat-grid {
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-        }
-
-        .stat {
-            min-height: 120px;
-            padding: 20px;
-        }
-
-        .muted {
-            font-size: .95rem;
-        }
-    }
-
-    @media (max-width: 420px) {
-        .page-card {
-            padding: 16px;
-            border-radius: 18px;
-        }
-
-        .stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
 }
 
-.stat {
-    min-height: 105px;
-    padding: 14px;
-}
-
-.stat span {
-    margin-bottom: 12px;
-    font-size: .88rem;
-    line-height: 1.25;
-}
-
-.stat strong {
-    font-size: 1.75rem;
-}
+@media (max-width: 560px) {
+    .stat-grid {
+        grid-template-columns: 1fr;
     }
+
+    .stat-card {
+        min-height: auto;
+    }
+}
+
+@media (max-width: 420px) {
+    .avpl-dashboard {
+        padding: 15px;
+        border-radius: 16px;
+    }
+
+    .dashboard-title h2 {
+        font-size: 1.3rem;
+    }
+
+    .dashboard-title p {
+        font-size: 0.80rem;
+    }
+
+    .stat-card {
+        padding: 14px;
+    }
+
+    .stat-value {
+        font-size: 1.45rem;
+    }
+}
 </style>
 
-<div class="page-card">
-    <h2>AVPL Admin Dashboard</h2>
+<div class="avpl-dashboard">
 
-    <div class="stat-grid">
-        <div class="stat">
-            <span>Centre-wise UFC Stats</span>
-            <strong>{{ stats.total_ufc_admins }}</strong>
+    <div class="dashboard-header">
+        <div class="dashboard-title">
+            <h2>AVPL Admin Dashboard</h2>
+            <p>
+                Operational overview of centres, users, procurement,
+                stock, orders, receivables and farmer marketplace activity.
+            </p>
         </div>
-
-        <div class="stat">
-            <span>Centre-wise Mitra Stats</span>
-            <strong>{{ stats.total_ufc_mitras }}</strong>
-        </div>
-
-        <div class="stat">
-            <span>Centre-wise Farmer Stats</span>
-            <strong>{{ stats.total_farmers }}</strong>
-        </div>
-
-        <div class="stat">
-            <span>Pending Validations</span>
-            <strong>{{ stats.pending_validations }}</strong>
-        </div>
-
-        <div class="stat"><span>Supplier Purchase Orders</span><strong>{{ stats.supplier_order_count }}</strong></div>
-        <div class="stat"><span>UFC Distribution Orders</span><strong>{{ stats.avpl_ufc_order_count }}</strong></div>
-        <div class="stat"><span>Farmer Input Orders</span><strong>{{ stats.farmer_input_order_count }}</strong></div>
-        <div class="stat"><span>Farmer Produce Orders</span><strong>{{ stats.produce_order_count }}</strong></div>
-        <div class="stat"><span>AVPL Physical Stock</span><strong>{{ stats.avpl_stock_physical }}</strong></div>
-        <div class="stat"><span>AVPL Reserved Stock</span><strong>{{ stats.avpl_stock_reserved }}</strong></div>
-        <div class="stat"><span>AVPL Saleable Stock</span><strong>{{ stats.avpl_stock_saleable }}</strong></div>
-        <div class="stat"><span>Pending / In-Progress Orders</span><strong>{{ stats.pending_orders }}</strong></div>
-        <div class="stat"><span>UFC Receivable</span><strong>₹{{ "%.2f"|format(stats.ufc_receivable|float) }}</strong></div>
-        <div class="stat"><span>Active Farmer Listings</span><strong>{{ stats.active_farmer_listings }}</strong></div>
     </div>
+
+    <section class="dashboard-section">
+        <h3 class="section-heading">Network Overview</h3>
+
+        <div class="stat-grid">
+
+            <div class="stat-card priority">
+                <span class="stat-label">Centre-wise UFC Stats</span>
+                <strong class="stat-value">{{ stats.total_ufc_admins }}</strong>
+            </div>
+
+            <div class="stat-card priority">
+                <span class="stat-label">Centre-wise Mitra Stats</span>
+                <strong class="stat-value">{{ stats.total_ufc_mitras }}</strong>
+            </div>
+
+            <div class="stat-card priority">
+                <span class="stat-label">Centre-wise Farmer Stats</span>
+                <strong class="stat-value">{{ stats.total_farmers }}</strong>
+            </div>
+
+            <div class="stat-card priority">
+                <span class="stat-label">Pending Validations</span>
+                <strong class="stat-value">{{ stats.pending_validations }}</strong>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="dashboard-section" style="margin-top: 24px;">
+        <h3 class="section-heading">Orders & Distribution</h3>
+
+        <div class="stat-grid">
+
+            <div class="stat-card">
+                <span class="stat-label">Supplier Purchase Orders</span>
+                <strong class="stat-value">{{ stats.supplier_order_count }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">UFC Distribution Orders</span>
+                <strong class="stat-value">{{ stats.avpl_ufc_order_count }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">Farmer Input Orders</span>
+                <strong class="stat-value">{{ stats.farmer_input_order_count }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">Farmer Produce Orders</span>
+                <strong class="stat-value">{{ stats.produce_order_count }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">Pending / In-Progress Orders</span>
+                <strong class="stat-value">{{ stats.pending_orders }}</strong>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="dashboard-section" style="margin-top: 24px;">
+        <h3 class="section-heading">AVPL Stock</h3>
+
+        <div class="stat-grid">
+
+            <div class="stat-card">
+                <span class="stat-label">AVPL Physical Stock</span>
+                <strong class="stat-value">{{ stats.avpl_stock_physical }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">AVPL Reserved Stock</span>
+                <strong class="stat-value">{{ stats.avpl_stock_reserved }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">AVPL Saleable Stock</span>
+                <strong class="stat-value">{{ stats.avpl_stock_saleable }}</strong>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="dashboard-section" style="margin-top: 24px;">
+        <h3 class="section-heading">Finance & Farmer Marketplace</h3>
+
+        <div class="stat-grid">
+
+            <div class="stat-card financial">
+                <span class="stat-label">UFC Receivable</span>
+                <strong class="stat-value">
+                    ₹{{ "%.2f"|format(stats.ufc_receivable|float) }}
+                </strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">Active Farmer Listings</span>
+                <strong class="stat-value">{{ stats.active_farmer_listings }}</strong>
+            </div>
+
+        </div>
+    </section>
+
 </div>
+
 {% endblock %}

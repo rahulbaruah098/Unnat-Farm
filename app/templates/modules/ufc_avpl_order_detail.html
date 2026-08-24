@@ -2,7 +2,19 @@
 {% block title %}{{ order.order_number }}{% endblock %}
 {% block content %}
 <style>
-.od{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.head p{margin:5px 0 0;color:#64748b}.back{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border:1px solid #cfe6d8;border-radius:999px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.badge{display:inline-flex;padding:6px 10px;border-radius:999px;font-weight:900;border:1px solid #dcece1}.requested{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.approved{background:#ecfdf5;border-color:#a7f3d0;color:#047857}.rejected,.cancelled{background:#fef2f2;border-color:#fecaca;color:#b91c1c}.dispatched{background:#fff7ed;border-color:#fed7aa;color:#c2410c}.received{background:#f0fdf4;border-color:#86efac;color:#166534}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:18px 0}.info{padding:12px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.info small{display:block;color:#64748b}.info strong{display:block;margin-top:4px;color:#17252a}.section{margin-top:15px;padding:15px;border:1px solid #e2efe6;border-radius:16px;background:#fbfefc}.section h3{margin:0 0 10px;color:#17252a}.receive{max-width:760px}.receive textarea,.receive input,.receive select{width:100%;box-sizing:border-box;border:1px solid #d6e5da;border-radius:12px;padding:10px 12px;font:inherit;background:#fff;color:#17252a}.receive textarea{min-height:78px;resize:vertical}.receive button{margin-top:12px;border:0;border-radius:999px;padding:11px 18px;background:#5fa878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.receive button:hover{filter:brightness(.97)}.payment-box{margin-top:14px;padding:14px;border:1px solid #cfe6d8;border-radius:15px;background:#f7fcf8}.payment-box h4{margin:0 0 5px;color:#234d33}.payment-box>p{margin:0 0 12px;color:#64748b}.pay-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}.pay-option{display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid #dcebe0;border-radius:12px;background:#fff;cursor:pointer}.pay-option input{width:auto;margin-top:3px}.pay-option strong{display:block;color:#17252a}.pay-option small{display:block;color:#64748b;margin-top:2px}.pay-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.field label{display:block;font-weight:800;color:#3e5e49;margin-bottom:5px}.field small{display:block;color:#718096;margin-top:4px}.wide{grid-column:1/-1}.soft-note{margin-top:10px;padding:10px 12px;border-radius:12px;background:#eef8f1;color:#41624c}.warn-note{margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff8e7;color:#805d18;border:1px solid #f1dfaf}.timeline{display:grid;gap:8px}.event{padding:10px 12px;border-left:3px solid #8cc79e;background:#f8fcf9;border-radius:0 12px 12px 0}.event strong{color:#17252a}.event small{display:block;color:#64748b;margin-top:3px}.payment-summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.payment-pill{display:inline-flex;padding:7px 10px;border-radius:999px;background:#f4f8f5;border:1px solid #dcebe0;color:#31543c;font-weight:800}.payment-pill.paid{background:#ecfdf5;border-color:#a7f3d0;color:#047857}.payment-pill.partial{background:#fff7ed;border-color:#fed7aa;color:#c2410c}.payment-pill.unpaid{background:#fff7ed;border-color:#fed7aa;color:#9a4b08}@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.pay-options{grid-template-columns:1fr}.pay-fields{grid-template-columns:1fr}.wide{grid-column:auto}}@media(max-width:560px){.od{padding:15px;border-radius:18px}.grid{grid-template-columns:1fr}}
+.od{width:100%;max-width:1600px;margin:0 auto;padding:28px;border:1px solid rgba(47,122,76,.11);border-radius:22px;background:#fff;box-shadow:0 16px 40px rgba(28,72,43,.07);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#435349}
+.head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}.head h2{margin:0;color:#17251d;font-size:clamp(1.5rem,2vw,2rem);font-weight:800;line-height:1.2;letter-spacing:-.02em}.head p{margin:6px 0 0;color:#748279;font-size:.8rem}
+.back{display:inline-flex;align-items:center;justify-content:center;min-height:37px;padding:7px 12px;border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#fff;color:#2f6e46;text-decoration:none;font-size:.7rem;font-weight:800}.back:hover{background:#f7fbf8;border-color:rgba(47,122,76,.26)}
+.badge{display:inline-flex;align-items:center;min-height:25px;padding:4px 8px;border-radius:7px;font-size:.64rem;font-weight:800;border:1px solid #dcece1;white-space:nowrap}.requested{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.approved{background:#ecfdf3;border-color:#b7e4c7;color:#237a43}.rejected,.cancelled{background:#fef2f2;border-color:#fecaca;color:#b91c1c}.dispatched{background:#fff7e6;border-color:#f4d38a;color:#8a5b00}.received{background:#f0fdf4;border-color:#b7e4c7;color:#166534}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}.info{padding:13px;border:1px solid rgba(47,122,76,.10);border-radius:11px;background:#fbfdfb}.info small{display:block;color:#7b8a80;font-size:.67rem}.info strong{display:block;margin-top:5px;color:#22372a;font-size:.8rem;font-weight:800;overflow-wrap:anywhere}
+.section{margin-top:15px;padding:16px;border:1px solid rgba(47,122,76,.10);border-radius:12px;background:#fbfdfb}.section h3{margin:0 0 10px;color:#263b2f;font-size:.9rem;font-weight:800}.section p{font-size:.74rem;line-height:1.5}
+.receive{max-width:800px}.receive textarea,.receive input,.receive select{width:100%;box-sizing:border-box;border:1px solid rgba(47,122,76,.14);border-radius:9px;padding:9px 11px;font:inherit;font-size:.76rem;background:#fff;color:#263b2f;outline:none}.receive textarea:focus,.receive input:focus,.receive select:focus{border-color:rgba(47,122,76,.38);box-shadow:0 0 0 4px rgba(47,122,76,.06)}.receive textarea{min-height:78px;resize:vertical}
+.receive button{margin-top:12px;border:1px solid #397e51;border-radius:9px;padding:10px 16px;background:#397e51;color:#fff;font:inherit;font-size:.74rem;font-weight:800;cursor:pointer}.receive button:hover{background:#2f6e46;border-color:#2f6e46}
+.soft-note{margin-top:10px;padding:10px 12px;border-radius:9px;background:#eef8f1;color:#526158;font-size:.68rem;line-height:1.45}.warn-note{margin-top:10px;padding:10px 12px;border-radius:9px;background:#fff8e7;color:#805d18;border:1px solid #f1dfaf;font-size:.7rem}
+.timeline{display:grid;gap:8px}.event{padding:10px 12px;border-left:3px solid #79ad8a;background:#fff;border-radius:0 9px 9px 0;color:#526158;font-size:.72rem}.event strong{color:#304438}.event small{display:block;color:#829087;margin-top:3px;font-size:.65rem}
+.payment-summary{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.payment-pill{display:inline-flex;padding:6px 9px;border-radius:7px;background:#f4f8f5;border:1px solid rgba(47,122,76,.11);color:#31543c;font-size:.67rem;font-weight:800}.payment-pill.paid{background:#ecfdf3;border-color:#b7e4c7;color:#237a43}.payment-pill.partial,.payment-pill.unpaid{background:#fff7e6;border-color:#f4d38a;color:#8a5b00}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.od{padding:20px}}
+@media(max-width:560px){.od{padding:15px;border-radius:16px}.grid{grid-template-columns:1fr}}
 </style>
 <div class="od">
   <div class="head">
@@ -17,7 +29,7 @@
     <div class="info"><small>Dispatched</small><strong>{{ order.dispatched_quantity_display if order.dispatched_quantity else '-' }}</strong></div>
     {% if order.approved_quantity %}<div class="info"><small>AVPL Sale Price</small><strong>₹{{ order.unit_price_display }} / {{ order.unit_code }}</strong></div><div class="info"><small>Order Value</small><strong>₹{{ order.total_amount_display }}</strong></div>{% endif %}
     <div class="info"><small>Payment Term</small><strong>{{ order.payment_term_label or 'Credit / Pay Later' }}</strong></div>
-    <div class="info"><small>Order Date</small><strong>{{ order.created_at.strftime('%d %b %Y') if order.created_at else '-' }}</strong></div>
+    <div class="info"><small>Order Date</small><strong>{{ order.created_at|ist_date('%d %b %Y', '-') }}</strong></div>
     <div class="info"><small>Centre</small><strong>{{ order.centre_uid }}</strong></div>
   </div>
 
@@ -30,8 +42,8 @@
 
   {% if order.avpl_sales_invoice_id_str %}
   <div class="section">
-    <h3>AVPL Sales Invoice</h3>
-    <p style="margin:0 0 10px;color:#3e6850">Invoice <strong>{{ order.avpl_sales_invoice_number }}</strong> was generated automatically when AVPL dispatched this order.{% if order.invoice_grand_total %} Invoice Total: <strong>₹{{ order.invoice_grand_total_display }}</strong>.{% endif %}</p>
+    <h3>AVPL Invoice</h3>
+    <p style="margin:0 0 10px;color:#3e6850">Invoice <strong>{{ order.avpl_sales_invoice_number }}</strong> was generated automatically when AVPL dispatched this order. You can view, print or save it as PDF and use it as the supplier document for this UFC purchase.{% if order.invoice_grand_total %} Invoice Total: <strong>₹{{ order.invoice_grand_total_display }}</strong>.{% endif %}</p>
     <a class="back" href="{{ url_for('modules.ufc_avpl_sales_invoice_print', invoice_id=order.avpl_sales_invoice_id_str) }}" target="_blank">View / Print Invoice</a>
   </div>
   {% elif order.status in ['dispatched','received'] %}
@@ -40,28 +52,11 @@
 
   {% if order.status == 'dispatched' %}
   <div class="section">
-    <h3>Confirm Receipt & Payment</h3>
-    <p style="color:#64748b;margin-top:0">Confirm only after the goods have physically reached your UFC. Receipt creates the UFC Purchase Entry and increases UFC stock. Payment is recorded separately against the linked AVPL invoice.</p>
+    <h3>Confirm Goods Received</h3>
+    <p style="color:#64748b;margin-top:0">Confirm only after the products have physically arrived. This action creates the UFC Purchase Entry and adds the received quantity to UFC stock.</p>
     <form class="receive" method="post" action="{{ url_for('modules.receive_avpl_order', order_id=order.id) }}" onsubmit="return confirmAvplReceipt();">
       <textarea name="receipt_note" placeholder="Receipt / quality note (optional)"></textarea>
-
-      <div class="payment-box">
-        <h4>Payment at Receipt</h4>
-        <p>{{ 'This order was marked Pay on Delivery. Choose what was actually paid now.' if order.payment_term == 'cod' else 'This is a Credit / Pay Later order. You may keep it outstanding or record any payment collected now.' }}</p>
-        <div class="pay-options">
-          <label class="pay-option"><input type="radio" name="collection_option" value="none" {% if order.payment_term != 'cod' %}checked{% endif %}><span><strong>No payment now</strong><small>Keep the invoice outstanding</small></span></label>
-          <label class="pay-option"><input type="radio" name="collection_option" value="full" {% if order.payment_term == 'cod' %}checked{% endif %}><span><strong>Full payment</strong><small>Settle the full outstanding invoice</small></span></label>
-          <label class="pay-option"><input type="radio" name="collection_option" value="partial"><span><strong>Partial payment</strong><small>Record part now; balance stays due</small></span></label>
-        </div>
-        <div class="pay-fields" id="avplPaymentFields">
-          <div class="field" id="partialAmountField" style="display:none"><label>Amount Paid Now (₹)</label><input type="number" name="amount_paid_now" min="0.01" step="0.01" placeholder="Enter amount received by AVPL"><small>Cannot exceed the invoice outstanding.</small></div>
-          <div class="field"><label>Payment Mode</label><select name="payment_mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option></select></div>
-          <div class="field"><label>Reference</label><input type="text" name="payment_reference" maxlength="160" placeholder="UPI / Bank / Cheque reference"><small>Required for UPI, Bank Transfer and Cheque.</small></div>
-          <div class="field wide"><label>Payment Note</label><input type="text" name="payment_note" maxlength="500" placeholder="Optional payment note"></div>
-        </div>
-        <input type="hidden" name="payment_token" value="AVPLRECEIPTPAY-{{ order.id }}">
-        <div class="soft-note">If payment recording fails after receipt, your UFC stock will still be correct. Use <strong>Payments & Settlement</strong> to finish only the payment—do not receive the order again.</div>
-      </div>
+      <div class="soft-note"><strong>Payment is separate from goods receipt.</strong> If payment is due now or later, use <a href="{{ url_for('modules.ufc_payments') }}" style="color:#2f6e46;font-weight:800">Payments & Settlement</a>. Receiving goods never marks the invoice as paid.</div>
       <button type="submit">Confirm Received & Add to UFC Stock</button>
     </form>
   </div>
@@ -80,29 +75,11 @@
   </div>
   {% endif %}
 
-  <div class="section"><h3>Order Timeline</h3><div class="timeline">{% for e in (order.history or [])|reverse %}<div class="event"><strong>{{ (e.action or 'Update')|replace('_',' ')|title }}</strong>{% if e.note %} — {{ e.note }}{% endif %}<small>{{ e.actor_name or 'System' }} · {{ e.at.strftime('%d %b %Y %I:%M %p') if e.at else '-' }}</small></div>{% else %}<div class="event">No history recorded.</div>{% endfor %}</div></div>
+  <div class="section"><h3>Order Timeline</h3><div class="timeline">{% for e in (order.history or [])|reverse %}<div class="event"><strong>{{ (e.action or 'Update')|replace('_',' ')|title }}</strong>{% if e.note %} — {{ e.note }}{% endif %}<small>{{ e.actor_name or 'System' }} · {{ e.at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</small></div>{% else %}<div class="event">No history recorded.</div>{% endfor %}</div></div>
 </div>
 <script>
-(function(){
-  const radios = document.querySelectorAll('input[name="collection_option"]');
-  const fields = document.getElementById('avplPaymentFields');
-  const partial = document.getElementById('partialAmountField');
-  function syncPaymentFields(){
-    const selected = document.querySelector('input[name="collection_option"]:checked');
-    const value = selected ? selected.value : 'none';
-    if(fields){ fields.style.display = value === 'none' ? 'none' : 'grid'; }
-    if(partial){ partial.style.display = value === 'partial' ? 'block' : 'none'; }
-  }
-  radios.forEach(r => r.addEventListener('change', syncPaymentFields));
-  syncPaymentFields();
-})();
 function confirmAvplReceipt(){
-  const selected = document.querySelector('input[name="collection_option"]:checked');
-  const value = selected ? selected.value : 'none';
-  const message = value === 'none'
-    ? 'Confirm that the full dispatched quantity has physically arrived? No payment will be recorded now.'
-    : 'Confirm that the goods physically arrived and the selected payment details are correct?';
-  return confirm(message);
+  return confirm('Confirm that the dispatched goods have physically arrived? This will add them to UFC stock. Payment will remain separate.');
 }
 </script>
 {% endblock %}

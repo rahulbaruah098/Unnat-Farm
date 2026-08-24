@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today, format_ist_datetime
 
 import re
 from collections import defaultdict
@@ -188,7 +189,7 @@ def _is_expired(lot, on_date=None):
     expiry = _date_value(lot.get("expiry_date"))
     if not expiry:
         return False
-    return expiry < (on_date or date.today())
+    return expiry < (on_date or business_today())
 
 
 def _lot_quantities(lot, on_date=None):
@@ -262,7 +263,7 @@ def synchronize_expired_lots(accounting_entity_id):
     """
     entity_id = _entity_id(accounting_entity_id)
     _ensure_indexes()
-    today = date.today()
+    today = business_today()
     today_iso = today.strftime("%Y-%m-%d")
     lots = list(
         mongo.db[INVENTORY_LOT_COLLECTION].find(
@@ -354,7 +355,7 @@ def get_product_inventory_snapshot_map(accounting_entity_id, product_ids=None):
             "warehouses": set(),
         }
     )
-    today = date.today()
+    today = business_today()
     for lot in mongo.db[INVENTORY_LOT_COLLECTION].find(query):
         product_id = str(lot.get("source_product_id") or "")
         if not product_id:
@@ -465,7 +466,7 @@ def get_current_stock_overview(accounting_entity_id, query_text="", warehouse_co
     publications = get_marketplace_publication_map(entity_id, product_ids)
     costs = _purchase_cost_by_product(entity_id)
 
-    today = date.today()
+    today = business_today()
     grouped = {}
     warehouse_codes = set()
 
@@ -620,7 +621,7 @@ def get_batch_expiry_overview(
         else {}
     )
 
-    today = date.today()
+    today = business_today()
     rows = []
     search = str(query_text or "").strip().lower()
     warehouse_codes = set()
@@ -767,7 +768,7 @@ def get_stock_movement_overview(
             {
                 "id": str(row["_id"]),
                 "date": (
-                    posted_at.strftime("%d %b %Y %I:%M %p")
+                    format_ist_datetime(posted_at, "%d %b %Y %I:%M %p", "-")
                     if isinstance(posted_at, datetime)
                     else movement_day.strftime("%d %b %Y") if movement_day else "-"
                 ),
@@ -811,7 +812,7 @@ def get_stock_movement_overview(
 
 
 def _next_adjustment_number():
-    year = date.today().year
+    year = business_today().year
     counter = mongo.db.system_counters.find_one_and_update(
         {"_id": f"avpl_stock_adjustment:{year}"},
         {"$inc": {"sequence": 1}, "$setOnInsert": {"created_at": now_utc()}},
@@ -1075,7 +1076,7 @@ def _record_adjustment_movement(adjustment, actor):
                 "warehouse_bin": adjustment.get("warehouse_bin") or "",
                 "batch_number": adjustment.get("batch_number") or "",
                 "expiry_date": adjustment.get("expiry_date") or "",
-                "movement_date": date.today().strftime("%Y-%m-%d"),
+                "movement_date": business_today().strftime("%Y-%m-%d"),
                 "reason": adjustment.get("reason") or adjustment.get("reason_label") or "Stock adjustment",
                 "posted_by": actor["_id"],
                 "posted_by_name": actor["resolved_name"],
@@ -1188,7 +1189,7 @@ def get_stock_adjustment_overview(accounting_entity_id, actor_user_id, status_fi
             {
                 **row,
                 "id": str(row["_id"]),
-                "created_display": created.strftime("%d %b %Y %I:%M %p") if isinstance(created, datetime) else "-",
+                "created_display": format_ist_datetime(created, "%d %b %Y %I:%M %p", "-") if isinstance(created, datetime) else "-",
                 "can_approve": can_approve,
                 "status_label": str(row.get("status") or "submitted").replace("_", " ").title(),
             }

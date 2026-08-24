@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta
@@ -29,6 +30,7 @@ from app.services.workflow_policy_service import workflow_is_streamlined
 
 
 GOODS_RECEIPT_COLLECTION = "avpl_goods_receipts"
+SUPPLIER_INVOICE_COLLECTION = "avpl_supplier_invoices"
 INVENTORY_LOT_COLLECTION = "avpl_inventory_lots"
 STOCK_MOVEMENT_COLLECTION = "avpl_stock_movements"
 LOCK_COLLECTION = "avpl_procurement_locks"
@@ -821,6 +823,39 @@ def _build_receipt_payload(entity, actor, raw_payload, existing=None):
             f"{normalized_note}"
         )
 
+    # A supplier may send its GST/tax invoice together with the physical goods.
+    # Capture the reference at GRN time without making stock posting depend on
+    # accounting finalization. The uploaded file itself is stored by the route
+    # after the GRN exists and linked back to this record.
+    supplier_invoice_number_capture = _clean_text(
+        raw_payload.get("supplier_invoice_number_capture"),
+        "Supplier invoice number",
+        maximum=80,
+    )
+    supplier_invoice_date_capture = _parse_date(
+        raw_payload.get("supplier_invoice_date_capture"),
+        "Supplier invoice date",
+        required=False,
+    )
+    supplier_invoice_received = str(
+        raw_payload.get("supplier_invoice_received") or ""
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    if supplier_invoice_number_capture or supplier_invoice_date_capture:
+        supplier_invoice_received = True
+    if supplier_invoice_received and not supplier_invoice_number_capture:
+        raise ValueError(
+            "Enter the supplier invoice number when an invoice was received with the goods."
+        )
+    if supplier_invoice_received and not supplier_invoice_date_capture:
+        raise ValueError(
+            "Enter the supplier invoice date when an invoice was received with the goods."
+        )
+    if (
+        supplier_invoice_date_capture
+        and supplier_invoice_date_capture.date() > business_today()
+    ):
+        raise ValueError("Supplier invoice date cannot be in the future.")
+
     return {
         "accounting_entity_id": entity["_id"],
         "accounting_entity_id_str": str(entity["_id"]),
@@ -841,6 +876,9 @@ def _build_receipt_payload(entity, actor, raw_payload, existing=None):
         "receipt_date": receipt_date,
         "supplier_delivery_note": supplier_delivery_note,
         "supplier_delivery_note_key": supplier_delivery_note_key,
+        "supplier_invoice_received": supplier_invoice_received,
+        "supplier_invoice_number_capture": supplier_invoice_number_capture,
+        "supplier_invoice_date_capture": supplier_invoice_date_capture,
         "transporter_name": _clean_text(
             raw_payload.get("transporter_name"),
             "Transporter name",
@@ -952,6 +990,13 @@ def serialize_goods_receipt(receipt):
         ) or "",
         "receipt_date": _date_string(receipt.get("receipt_date")),
         "supplier_delivery_note": receipt.get("supplier_delivery_note") or "",
+        "supplier_invoice_received": receipt.get("supplier_invoice_received") is True,
+        "supplier_invoice_number_capture": receipt.get("supplier_invoice_number_capture") or "",
+        "supplier_invoice_date_capture": _date_string(receipt.get("supplier_invoice_date_capture")),
+        "supplier_invoice_attachment_document_id": str(receipt.get("supplier_invoice_attachment_document_id") or ""),
+        "supplier_invoice_attachment_filename": receipt.get("supplier_invoice_attachment_filename") or "",
+        "supplier_invoice_record_id": str(receipt.get("supplier_invoice_record_id") or ""),
+        "supplier_invoice_record_number": receipt.get("supplier_invoice_record_number") or "",
         "transporter_name": receipt.get("transporter_name") or "",
         "vehicle_number": receipt.get("vehicle_number") or "",
         "warehouse_code": receipt.get("warehouse_code") or "",
@@ -1095,7 +1140,7 @@ def get_goods_receipt_form_catalog(
         },
         "purchase_orders": catalog_orders,
         "selected_purchase_order_id": str(selected_id or ""),
-        "today": date.today().strftime("%Y-%m-%d"),
+        "today": business_today().strftime("%Y-%m-%d"),
         "warehouse_defaults": {
             "warehouse_code": "AVPL-MAIN",
             "warehouse_name": "AVPL Main Warehouse",
@@ -1103,6 +1148,154 @@ def get_goods_receipt_form_catalog(
         },
         "status_labels": dict(STATUS_LABELS),
     }
+
+
+
+def _enrich_receipt_invoice_actions(entity_id, serialized_rows):
+    """Attach safe Purchase Invoice actions to Goods Receipt list rows.
+
+    A posted GRN must not automatically offer "Record Purchase Invoice".
+    The action depends on the actual active Purchase Invoice records and the
+    remaining accepted-but-uninvoiced quantity for the PO.
+
+    Existing/legacy invoices are associated to a GRN through either:
+      1) the explicit source_grn_id link added by the refinement, or
+      2) posted_grn_snapshots captured on the Purchase Invoice.
+
+    This keeps older Purchase Invoices navigable without rewriting them.
+    """
+    if not serialized_rows:
+        return serialized_rows
+
+    receipt_ids = {
+        str(row.get("id") or "")
+        for row in serialized_rows
+        if row.get("id")
+    }
+    po_ids = {
+        _to_object_id(row.get("purchase_order_id"))
+        for row in serialized_rows
+        if _to_object_id(row.get("purchase_order_id"))
+    }
+
+    # Active Purchase Invoices only. Cancelled invoices must not block a
+    # replacement invoice or appear as the current document.
+    invoice_query = {
+        "accounting_entity_id": entity_id,
+        "status": {"$ne": "cancelled"},
+    }
+    if po_ids:
+        invoice_query["purchase_order_id"] = {"$in": list(po_ids)}
+
+    invoices = list(
+        mongo.db[SUPPLIER_INVOICE_COLLECTION]
+        .find(invoice_query)
+        .sort([("invoice_date", DESCENDING), ("created_at", DESCENDING)])
+    )
+
+    # Map every GRN referenced by an invoice to that Purchase Invoice.
+    # Explicit source_grn_id wins naturally because the invoices are newest first.
+    invoice_by_grn = {}
+    for invoice in invoices:
+        invoice_id = str(invoice.get("_id") or "")
+        invoice_number = (
+            invoice.get("official_purchase_invoice_number")
+            or invoice.get("internal_reference")
+            or invoice.get("supplier_invoice_number")
+            or ""
+        )
+        refs = set()
+
+        source_grn_id = str(invoice.get("source_grn_id") or "")
+        if source_grn_id:
+            refs.add(source_grn_id)
+
+        for snapshot in invoice.get("posted_grn_snapshots") or []:
+            snapshot_id = str((snapshot or {}).get("id") or "")
+            if snapshot_id:
+                refs.add(snapshot_id)
+
+        for ref in refs:
+            if ref in receipt_ids and ref not in invoice_by_grn:
+                invoice_by_grn[ref] = {
+                    "id": invoice_id,
+                    "number": invoice_number,
+                }
+
+    # Compute actual remaining quantity per PO from posted GRNs minus active
+    # Purchase Invoice quantities. This mirrors the Purchase Invoice form's
+    # eligibility rule, so the two screens cannot contradict each other.
+    posted_accepted_by_po_line = {}
+    if po_ids:
+        for grn in mongo.db[GOODS_RECEIPT_COLLECTION].find(
+            {
+                "accounting_entity_id": entity_id,
+                "purchase_order_id": {"$in": list(po_ids)},
+                "status": STATUS_POSTED,
+                "stock_posted": True,
+            },
+            {"purchase_order_id": 1, "items": 1},
+        ):
+            po_key = str(grn.get("purchase_order_id") or "")
+            bucket = posted_accepted_by_po_line.setdefault(po_key, {})
+            for index, item in enumerate(grn.get("items") or [], start=1):
+                line_no = int(item.get("po_line_no") or item.get("line_no") or index)
+                accepted = Decimal(str(item.get("accepted_quantity") or 0))
+                bucket[line_no] = bucket.get(line_no, Decimal("0")) + accepted
+
+    invoiced_by_po_line = {}
+    for invoice in invoices:
+        po_key = str(invoice.get("purchase_order_id") or "")
+        bucket = invoiced_by_po_line.setdefault(po_key, {})
+        for index, item in enumerate(invoice.get("items") or [], start=1):
+            line_no = int(item.get("po_line_no") or item.get("line_no") or index)
+            qty = Decimal(
+                str(
+                    item.get("invoice_quantity")
+                    or item.get("quantity")
+                    or 0
+                )
+            )
+            bucket[line_no] = bucket.get(line_no, Decimal("0")) + qty
+
+    po_has_remaining = {}
+    for po_key, accepted_lines in posted_accepted_by_po_line.items():
+        invoice_lines = invoiced_by_po_line.get(po_key, {})
+        remaining = sum(
+            (
+                max(
+                    accepted_qty - invoice_lines.get(line_no, Decimal("0")),
+                    Decimal("0"),
+                )
+                for line_no, accepted_qty in accepted_lines.items()
+            ),
+            Decimal("0"),
+        )
+        po_has_remaining[po_key] = remaining > Decimal("0.0000")
+
+    for row in serialized_rows:
+        receipt_id = str(row.get("id") or "")
+        po_key = str(row.get("purchase_order_id") or "")
+        linked = invoice_by_grn.get(receipt_id)
+
+        if linked:
+            row["purchase_invoice_id"] = linked["id"]
+            row["purchase_invoice_number"] = linked["number"]
+            row["purchase_invoice_action"] = "view"
+        elif (
+            row.get("status") == STATUS_POSTED
+            and row.get("stock_posted") is True
+            and po_has_remaining.get(po_key, False)
+        ):
+            row["purchase_invoice_id"] = ""
+            row["purchase_invoice_number"] = ""
+            row["purchase_invoice_action"] = "record"
+        else:
+            row["purchase_invoice_id"] = ""
+            row["purchase_invoice_number"] = ""
+            row["purchase_invoice_action"] = "none"
+
+    return serialized_rows
 
 
 def get_goods_receipt_overview(
@@ -1148,8 +1341,14 @@ def get_goods_receipt_overview(
         key = row.get("status") or STATUS_DRAFT
         counts[key] = counts.get(key, 0) + 1
 
+    serialized_rows = [serialize_goods_receipt(row) for row in rows]
+    serialized_rows = _enrich_receipt_invoice_actions(
+        entity["_id"],
+        serialized_rows,
+    )
+
     return {
-        "rows": [serialize_goods_receipt(row) for row in rows],
+        "rows": serialized_rows,
         "counts": counts,
         "status_labels": dict(STATUS_LABELS),
         "selected_status": status or "",
@@ -1189,6 +1388,99 @@ def get_goods_receipts_for_purchase_order(
         .sort([("receipt_date", DESCENDING), ("created_at", DESCENDING)])
     )
     return [serialize_goods_receipt(row) for row in rows]
+
+
+def attach_goods_receipt_supplier_invoice_document(
+    receipt_id,
+    actor_user_id,
+    document_id,
+    filename,
+    *,
+    supplier_invoice_number="",
+    supplier_invoice_date="",
+):
+    """Attach/replace the supplier GST/tax invoice captured with a GRN.
+
+    The supplier invoice reference may be added after the GRN has already been
+    posted (for example, when the supplier sends the tax invoice later). This
+    action changes document/reference metadata only; it never reposts receipt
+    quantities, stock movements, invoice matching, or Accounting entries.
+    """
+    actor = _get_actor(actor_user_id)
+    receipt = _get_receipt_document(receipt_id)
+    document_object_id = _to_object_id(document_id)
+    clean_filename = _clean_text(
+        filename,
+        "Supplier invoice attachment",
+        maximum=260,
+        required=True,
+    )
+    if not document_object_id:
+        raise ValueError("The supplier invoice attachment reference is invalid.")
+
+    clean_invoice_number = _clean_text(
+        supplier_invoice_number,
+        "Supplier invoice number",
+        maximum=80,
+    ) or _clean_text(
+        receipt.get("supplier_invoice_number_capture"),
+        "Supplier invoice number",
+        maximum=80,
+    )
+    parsed_invoice_date = _parse_date(
+        supplier_invoice_date,
+        "Supplier invoice date",
+        required=False,
+    ) or receipt.get("supplier_invoice_date_capture")
+
+    if not clean_invoice_number:
+        raise ValueError("Enter the supplier invoice number before attaching the supplier bill.")
+    if not parsed_invoice_date:
+        raise ValueError("Enter the supplier invoice date before attaching the supplier bill.")
+    if isinstance(parsed_invoice_date, date) and not isinstance(parsed_invoice_date, datetime):
+        parsed_invoice_date = datetime.combine(parsed_invoice_date, time.min)
+    if parsed_invoice_date.date() > business_today():
+        raise ValueError("Supplier invoice date cannot be in the future.")
+
+    timestamp = now_utc()
+    mongo.db[GOODS_RECEIPT_COLLECTION].update_one(
+        {"_id": receipt["_id"]},
+        {
+            "$set": {
+                "supplier_invoice_received": True,
+                "supplier_invoice_number_capture": clean_invoice_number,
+                "supplier_invoice_date_capture": parsed_invoice_date,
+                "supplier_invoice_attachment_document_id": document_object_id,
+                "supplier_invoice_attachment_document_id_str": str(document_object_id),
+                "supplier_invoice_attachment_filename": clean_filename,
+                "supplier_invoice_attachment_updated_at": timestamp,
+                "supplier_invoice_attachment_updated_by": actor["_id"],
+                "supplier_invoice_attachment_updated_by_name": actor.get("resolved_name") or "",
+                "updated_at": timestamp,
+            },
+            "$push": {
+                "change_history": _history_event(
+                    "attach_supplier_invoice_document",
+                    actor,
+                    previous_status=receipt.get("status"),
+                    new_status=receipt.get("status"),
+                    reason=f"Supplier invoice {clean_invoice_number} attached to Goods Receipt.",
+                )
+            },
+        },
+    )
+    updated = _get_receipt_document(receipt_id)
+    _record_audit(
+        updated,
+        actor,
+        "attach_supplier_invoice_document",
+        previous_status=receipt.get("status"),
+        reason=f"Supplier invoice {clean_invoice_number} attached to Goods Receipt.",
+    )
+    return {
+        "receipt": serialize_goods_receipt(updated),
+        "message": "Supplier invoice reference and attachment saved.",
+    }
 
 
 def create_goods_receipt(

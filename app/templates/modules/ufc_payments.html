@@ -2,14 +2,91 @@
 {% block title %}UFC Payments{% endblock %}
 {% block content %}
 <style>
-.pay{width:100%;padding:24px;background:#fff;border:1px solid #dceee2;border-radius:24px;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.head-actions{display:flex;gap:8px;flex-wrap:wrap}.head-actions button,.head-actions a{display:inline-flex;align-items:center;justify-content:center;border:1px solid #cde5d5;border-radius:999px;padding:8px 12px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.muted{color:#64748b}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}.sum{padding:13px;border:1px solid #e2efe6;border-radius:14px;background:#fbfefc}.sum small{display:block;color:#64748b}.sum strong{display:block;margin-top:4px;font-size:1.18rem}.note{padding:12px 14px;border:1px solid #b9dcca;border-radius:14px;background:#f3fbf6;color:#315e43;line-height:1.45}.section{margin-top:18px}.section h3{margin:0 0 10px}.table{overflow:auto;border:1px solid #e2efe6;border-radius:16px}.table table{width:100%;border-collapse:collapse;min-width:1100px}.table th,.table td{padding:10px;border-bottom:1px solid #edf3ef;text-align:left;vertical-align:top}.table th{background:#f3fbf6}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-weight:900;font-size:.76rem}.unpaid,.partially_paid{background:#fff7ed;color:#c2410c}.paid{background:#ecfdf5;color:#047857}.form{display:grid;grid-template-columns:95px 125px 125px 1fr auto;gap:6px}.form input,.form select{height:36px;border:1px solid #d6e5da;border-radius:9px;padding:0 8px;font:inherit;min-width:0}.form button{height:36px;border:0;border-radius:9px;background:#5fa878;color:#fff;padding:0 11px;font:inherit;font-weight:900}.receipt{color:#2f7a4c;font-weight:900;text-decoration:none}.small{font-size:.84rem;color:#64748b}.reverse{display:flex;gap:5px;margin-top:5px}.reverse input{height:30px;border:1px solid #d6e5da;border-radius:8px;padding:0 8px}.reverse button{height:30px;border:0;border-radius:8px;background:#b45309;color:#fff;font-weight:800}.empty{padding:22px;text-align:center;color:#64748b}@media(max-width:700px){.pay{padding:15px}.summary{grid-template-columns:1fr}.form{grid-template-columns:1fr}}
+.pay{
+    width:100%;
+    max-width:1600px;
+    margin:0 auto;
+    padding:28px;
+    background:#fff;
+    border:1px solid rgba(47,122,76,.11);
+    border-radius:22px;
+    box-shadow:0 16px 40px rgba(28,72,43,.07);
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#435349;
+}
+.head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}
+.head h2{margin:0;color:#17251d;font-size:clamp(1.5rem,2vw,2rem);font-weight:800;line-height:1.2;letter-spacing:-.02em}
+.head-actions{display:flex;gap:8px;flex-wrap:wrap}
+.head-actions form{margin:0}
+.head-actions button,.head-actions a{
+    display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:8px 14px;
+    border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#fff;color:#526158;
+    text-decoration:none;font:inherit;font-size:.74rem;font-weight:800;cursor:pointer;transition:.18s ease
+}
+.head-actions button:hover,.head-actions a:hover{background:#f7fbf8;border-color:rgba(47,122,76,.26);color:#2f6e46}
+.muted{margin-top:6px;color:#748279;font-size:.8rem;line-height:1.45}
+.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:18px 0}
+.sum{padding:14px;border:1px solid rgba(47,122,76,.10);border-radius:11px;background:#fbfdfb}
+.sum small{display:block;margin-bottom:7px;color:#7b8a80;font-size:.68rem;font-weight:750}
+.sum strong{display:block;color:#22372a;font-size:1.2rem;font-weight:850;overflow-wrap:anywhere}
+.note{
+    padding:13px 15px;border:1px solid rgba(47,122,76,.14);border-radius:11px;background:#f7fbf8;
+    color:#526158;font-size:.75rem;line-height:1.5
+}
+.note strong{color:#2f6e46}
+.section{margin-top:20px}
+.section h3{margin:0 0 10px;color:#263b2f;font-size:.9rem;font-weight:800}
+.table{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid rgba(47,122,76,.09);border-radius:11px;background:#fff}
+.table table{width:100%;min-width:1100px;border-collapse:collapse}
+.table th,.table td{padding:10px 11px;border-bottom:1px solid #edf2ee;text-align:left;vertical-align:top;font-size:.72rem;line-height:1.4}
+.table th{background:#f6f9f7;color:#6e7e74;font-size:.63rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+.table td{color:#435349}.table tbody tr:last-child td{border-bottom:none}.table tbody tr:hover td{background:#fbfdfb}
+.table strong{color:#304438;font-weight:800}
+.pill{
+    display:inline-flex;align-items:center;min-height:25px;padding:4px 8px;border-radius:7px;font-weight:800;font-size:.63rem;
+    border:1px solid #e2e8f0;background:#f1f5f9;color:#64748b;white-space:nowrap
+}
+.unpaid,.partially_paid{background:#fff7e6;border-color:#f4d38a;color:#8a5b00}
+.paid{background:#ecfdf3;border-color:#b7e4c7;color:#237a43}.pending_confirmation{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.rejected{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+.form{display:grid;grid-template-columns:105px 125px 145px minmax(180px,1fr) auto;gap:6px}
+.form input,.form select{
+    width:100%;min-width:0;height:36px;border:1px solid rgba(47,122,76,.14);border-radius:8px;
+    padding:0 8px;background:#fff;color:#263b2f;font:inherit;font-size:.7rem;outline:none
+}
+.form input:focus,.form select:focus{border-color:rgba(47,122,76,.38);box-shadow:0 0 0 3px rgba(47,122,76,.05)}
+.form button{
+    height:36px;border:1px solid #397e51;border-radius:8px;background:#397e51;color:#fff;
+    padding:0 11px;font:inherit;font-size:.7rem;font-weight:800;cursor:pointer
+}
+.form button:hover{background:#2f6e46;border-color:#2f6e46}
+.receipt{
+    display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:5px 9px;
+    border:1px solid rgba(47,122,76,.14);border-radius:8px;background:#fff;color:#2f6e46;
+    font-size:.67rem;font-weight:800;text-decoration:none
+}
+.receipt:hover{background:#f7fbf8}
+.small{font-size:.66rem;color:#829087;line-height:1.4}
+.reverse{display:flex;gap:5px;margin-top:6px}
+.reverse input{height:30px;border:1px solid rgba(47,122,76,.14);border-radius:8px;padding:0 8px;font-size:.67rem}
+.reverse button{height:30px;border:1px solid #b45309;border-radius:8px;background:#b45309;color:#fff;font-size:.67rem;font-weight:800}
+.empty{padding:24px!important;text-align:center!important;color:#829087!important}
+@media(max-width:1100px){.form{grid-template-columns:1fr 1fr}.form button{grid-column:1/-1}}
+@media(max-width:700px){
+    .pay{padding:15px;border-radius:16px}
+    .summary{grid-template-columns:1fr}
+    .form{grid-template-columns:1fr}
+    .form button{grid-column:auto}
+    .head-actions,.head-actions form,.head-actions button,.head-actions a{width:100%}
+}
 </style>
 <div class="pay">
   <div class="head"><div><h2>Payments & Settlement</h2><div class="muted">{{ overview.get('centre_uid') }} · pay AVPL and collect from Farmers without duplicate entries.</div></div><div class="head-actions"><form method="post" action="{{ url_for('modules.refresh_ufc_tax_documents') }}" onsubmit="return confirm('Refresh HSN/GST classification for delivered Farmer invoices? Stock and paid invoice totals will not be changed.');"><button type="submit">Refresh HSN / GST</button></form><a href="{{ url_for('modules.ufc_farmer_sales') }}">Sales to Farmers</a></div></div>
-  <div class="summary"><div class="sum"><small>Payable to AVPL</small><strong>₹{{ overview.get('summary',{}).get('avpl_due','0.00') }}</strong></div><div class="sum"><small>Receivable from Farmers</small><strong>₹{{ overview.get('summary',{}).get('farmer_due','0.00') }}</strong></div><div class="sum"><small>Farmer Produce Payable</small><strong>₹{{ overview.get('summary',{}).get('farmer_produce_due','0.00') }}</strong></div><div class="sum"><small>Recent Payments</small><strong>{{ overview.get('summary',{}).get('recent_count',0) }}</strong></div></div>
-  <div class="note"><strong>One payment, both sides updated.</strong> Paying an AVPL invoice automatically reduces your UFC payable and AVPL's receivable. Collecting from a Farmer updates the UFC sale, Farmer purchase and invoice together. UPI, Bank and Cheque entries require a transaction/reference number; Cash does not.</div>
+  <div class="summary"><div class="sum"><small>Money to Pay AVPL</small><strong>₹{{ overview.get('summary',{}).get('avpl_due','0.00') }}</strong></div><div class="sum"><small>Awaiting AVPL Confirmation</small><strong>₹{{ overview.get('summary',{}).get('avpl_pending_confirmation','0.00') }}</strong></div><div class="sum"><small>Receivable from Farmers</small><strong>₹{{ overview.get('summary',{}).get('farmer_due','0.00') }}</strong></div><div class="sum"><small>Farmer Produce Payable</small><strong>₹{{ overview.get('summary',{}).get('farmer_produce_due','0.00') }}</strong></div><div class="sum"><small>Recent Confirmed Payments</small><strong>{{ overview.get('summary',{}).get('recent_count',0) }}</strong></div></div>
+  <div class="note"><strong>Goods and payment are separate.</strong> For an AVPL invoice, enter only the amount you actually paid. It may be the full amount or any part of it. The payment is first <strong>reported to AVPL</strong>; the invoice remains outstanding until AVPL confirms the money was received. This never changes UFC stock. UPI, Bank and Cheque require a reference number; Cash does not.</div>
 
-  <div class="section"><h3>Money to Pay — AVPL</h3><div class="table"><table><thead><tr><th>Invoice</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Record Payment</th></tr></thead><tbody>{% for r in overview.get('avpl_payables',[]) %}<tr><td><strong>{{ r.invoice_number }}</strong><div class="small">{{ r.reference }}</div>{% if r.due_date %}<div class="small"{% if r.is_overdue %} style="color:#b91c1c;font-weight:900"{% endif %}>{{ 'Overdue · ' if r.is_overdue else 'Due · ' }}{{ r.due_date }}</div>{% endif %}</td><td>₹{{ r.total_display }}</td><td>₹{{ r.paid_display }}</td><td><strong>₹{{ r.outstanding_display }}</strong></td><td><span class="pill {{ r.payment_status }}">{{ r.payment_status_label }}</span></td><td>{% if r.can_pay %}<form class="form" method="post" action="{{ url_for('modules.record_ufc_payment') }}" onsubmit="this.querySelector('button').disabled=true;"><input type="hidden" name="source_type" value="avpl_ufc_invoice"><input type="hidden" name="invoice_id" value="{{ r.id }}"><input type="hidden" name="payment_token" value="{{ r.payment_token }}"><input type="number" name="amount" min="0.01" max="{{ r.outstanding_display }}" step="0.01" value="{{ r.outstanding_display }}" required><select name="payment_mode">{% for v,l in overview.get('payment_modes',{}).items() %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select><input name="reference" placeholder="Reference (required except Cash)"><input name="note" placeholder="Note (optional)"><button>Pay</button></form>{% else %}<span class="small">Fully paid</span>{% endif %}</td></tr>{% else %}<tr><td colspan="6" class="empty">No AVPL payables yet.</td></tr>{% endfor %}</tbody></table></div></div>
+  <div class="section"><h3>Money to Pay — AVPL</h3><div class="table"><table><thead><tr><th>Invoice</th><th>Total</th><th>Confirmed Paid</th><th>Reported / Waiting</th><th>Outstanding</th><th>Status</th><th>Report Payment</th></tr></thead><tbody>{% for r in overview.get('avpl_payables',[]) %}<tr><td><strong>{{ r.invoice_number }}</strong><div class="small">{{ r.reference }}</div>{% if r.due_date %}<div class="small"{% if r.is_overdue %} style="color:#b91c1c;font-weight:900"{% endif %}>{{ 'Overdue · ' if r.is_overdue else 'Due · ' }}{{ r.due_date }}</div>{% endif %}</td><td>₹{{ r.total_display }}</td><td>₹{{ r.paid_display }}</td><td>₹{{ r.reported_pending_display or '0.00' }}</td><td><strong>₹{{ r.outstanding_display }}</strong></td><td><span class="pill {{ r.payment_status }}">{{ r.payment_status_label }}</span>{% if r.has_pending_report %}<div class="small" style="margin-top:4px;color:#1d4ed8;font-weight:800">Payment reported</div>{% endif %}</td><td>{% if r.can_pay %}<form class="form" method="post" action="{{ url_for('modules.record_ufc_payment') }}" onsubmit="this.querySelector('button').disabled=true;"><input type="hidden" name="source_type" value="avpl_ufc_invoice"><input type="hidden" name="invoice_id" value="{{ r.id }}"><input type="hidden" name="payment_token" value="{{ r.payment_token }}"><input type="number" name="amount" min="0.01" max="{{ r.reportable_outstanding_display }}" step="0.01" value="{{ r.reportable_outstanding_display }}" required><select name="payment_mode">{% for v,l in overview.get('payment_modes',{}).items() %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select><input name="reference" placeholder="UPI / Bank / Cheque reference"><input name="note" placeholder="Note (optional)"><button>Report Payment</button></form>{% elif r.has_pending_report and r.payment_status != 'paid' %}<span class="small" style="color:#1d4ed8;font-weight:800">Awaiting AVPL confirmation</span>{% else %}<span class="small">Fully paid</span>{% endif %}</td></tr>{% else %}<tr><td colspan="7" class="empty">No AVPL invoices waiting for payment.</td></tr>{% endfor %}</tbody></table></div></div>
+
+  <div class="section"><h3>Payments Awaiting AVPL Confirmation</h3><div class="small" style="margin-bottom:8px">These amounts were reported by your UFC but are not treated as paid until AVPL confirms receipt.</div><div class="table"><table><thead><tr><th>Payment</th><th>Invoice</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Reported</th><th>Status</th></tr></thead><tbody>{% for p in overview.get('pending_avpl_payments',[]) %}<tr><td><strong>{{ p.payment_number }}</strong></td><td>{{ p.invoice_number }}</td><td><strong>₹{{ p.amount_display }}</strong></td><td>{{ p.payment_mode_label }}</td><td>{{ p.reference or '-' }}</td><td>{{ p.reported_at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</td><td><span class="pill pending_confirmation">Awaiting AVPL Confirmation</span></td></tr>{% else %}<tr><td colspan="7" class="empty">No payments are waiting for AVPL confirmation.</td></tr>{% endfor %}</tbody></table></div></div>
 
   <div class="section"><h3>Money to Pay — Farmer Produce</h3><div class="small" style="margin-bottom:8px">Produce your Centre bought from Farmers assigned to this UFC through Farmer Produce Market.</div><div class="table"><table><thead><tr><th>Receipt</th><th>Farmer</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th>Payment</th></tr></thead><tbody>{% for r in overview.get('farmer_produce_payables',[]) %}<tr><td><strong>{{ r.invoice_number }}</strong><div class="small">{{ r.reference }}</div>{% if r.due_date %}<div class="small"{% if r.is_overdue %} style="color:#b91c1c;font-weight:900"{% endif %}>{{ 'Overdue · ' if r.is_overdue else 'Due · ' }}{{ r.due_date }}</div>{% endif %}</td><td>{{ r.party_name }}</td><td>₹{{ r.total_display }}</td><td>₹{{ r.paid_display }}</td><td><strong>₹{{ r.outstanding_display }}</strong></td><td><span class="pill {{ r.payment_status }}">{{ r.payment_status_label }}</span></td><td>{% if r.can_pay %}<form class="form" method="post" action="{{ url_for('modules.record_ufc_payment') }}" onsubmit="this.querySelector('button').disabled=true;"><input type="hidden" name="source_type" value="farmer_marketplace_invoice"><input type="hidden" name="invoice_id" value="{{ r.id }}"><input type="hidden" name="payment_token" value="{{ r.payment_token }}"><input type="number" name="amount" min="0.01" max="{{ r.outstanding_display }}" step="0.01" value="{{ r.outstanding_display }}" required><select name="payment_mode">{% for v,l in overview.get('payment_modes',{}).items() %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select><input name="reference" placeholder="Reference (required except Cash)"><input name="note" placeholder="Note (optional)"><button>Pay Farmer</button></form>{% else %}<span class="small">Fully paid</span>{% endif %}</td></tr>{% else %}<tr><td colspan="7" class="empty">No Farmer-produce payables yet.</td></tr>{% endfor %}</tbody></table></div></div>
 

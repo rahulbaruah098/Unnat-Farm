@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -71,7 +72,7 @@ def _lot_expired(lot):
             expiry_date = expiry
         else:
             expiry_date = datetime.strptime(str(expiry)[:10], "%Y-%m-%d").date()
-        return expiry_date < date.today()
+        return expiry_date < business_today()
     except Exception:
         return False
 

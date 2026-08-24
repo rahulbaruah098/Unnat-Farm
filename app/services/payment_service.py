@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -61,6 +62,14 @@ PAYMENT_STATUS_LABELS = {
     "partially_paid": "Partially Paid",
     "paid": "Paid",
 }
+PAYMENT_RECORD_STATUS_LABELS = {
+    "processing": "Processing",
+    "pending_confirmation": "Awaiting AVPL Confirmation",
+    "completed": "Confirmed",
+    "rejected": "Returned by AVPL",
+    "reversed": "Reversed",
+    "failed": "Failed",
+}
 SOURCE_LABELS = {
     "supplier_invoice": "Supplier Payment",
     "avpl_ufc_invoice": "UFC Payment to AVPL",
@@ -103,6 +112,7 @@ def _ensure_indexes():
         (PAYMENT_COLLECTION, [("payment_number", ASCENDING)], {"unique": True, "name": "payment_number_unique"}),
         (PAYMENT_COLLECTION, [("idempotency_key", ASCENDING)], {"unique": True, "name": "payment_idempotency_unique"}),
         (PAYMENT_COLLECTION, [("source_type", ASCENDING), ("invoice_id", ASCENDING), ("created_at", DESCENDING)], {"name": "payment_invoice_history_idx"}),
+        (PAYMENT_COLLECTION, [("source_type", ASCENDING), ("status", ASCENDING), ("invoice_id", ASCENDING), ("created_at", DESCENDING)], {"name": "payment_confirmation_queue_idx"}),
         (PAYMENT_COLLECTION, [("payer_key", ASCENDING), ("created_at", DESCENDING)], {"name": "payment_payer_idx"}),
         (PAYMENT_COLLECTION, [("payee_key", ASCENDING), ("created_at", DESCENDING)], {"name": "payment_payee_idx"}),
         (RECEIPT_COLLECTION, [("payment_id", ASCENDING)], {"unique": True, "name": "payment_receipt_payment_unique"}),
@@ -148,7 +158,7 @@ def _safe_next_number(counter_key, prefix, digits=6):
     # pymongo accepts ReturnDocument.AFTER; importing it here keeps this service
     # isolated from older project snapshots where ReturnDocument may differ.
     from pymongo import ReturnDocument
-    year = date.today().year
+    year = business_today().year
     counter = mongo.db.system_counters.find_one_and_update(
         {"_id": f"{counter_key}:{year}"},
         {"$inc": {"sequence": 1}, "$setOnInsert": {"created_at": now_utc()}},
@@ -512,7 +522,11 @@ def serialize_payment(payment):
     row["outstanding_after_display"] = _money(row.get("outstanding_after"))
     row["payment_mode_label"] = PAYMENT_MODES.get(row.get("payment_mode"), str(row.get("payment_mode") or "").replace("_", " ").title())
     row["source_label"] = SOURCE_LABELS.get(row.get("source_type"), row.get("source_type"))
-    row["status_label"] = str(row.get("status") or "completed").replace("_", " ").title()
+    row["status_label"] = PAYMENT_RECORD_STATUS_LABELS.get(
+        str(row.get("status") or "completed"),
+        str(row.get("status") or "completed").replace("_", " ").title(),
+    )
+    row["is_pending_confirmation"] = row.get("status") == "pending_confirmation"
     return row
 
 
@@ -524,6 +538,57 @@ def _payment_matches_request(payment, source_type, invoice, value, mode):
         and _decimal(payment.get("amount")) == _decimal(value)
         and str(payment.get("payment_mode") or "") == str(mode or "")
     )
+
+
+def _pending_reported_totals(invoice_ids):
+    """Return pending UFC->AVPL reported-payment totals keyed by invoice id.
+
+    Reported payments do not settle invoices until AVPL confirms actual receipt.
+    Aggregating once avoids N+1 queries on the payment dashboards.
+    """
+    ids = []
+    for value in invoice_ids or []:
+        oid = _to_object_id(value)
+        if oid and oid not in ids:
+            ids.append(oid)
+    if not ids:
+        return {}
+    rows = mongo.db[PAYMENT_COLLECTION].aggregate([
+        {"$match": {
+            "source_type": "avpl_ufc_invoice",
+            "status": "pending_confirmation",
+            "invoice_id": {"$in": ids},
+        }},
+        {"$group": {"_id": "$invoice_id", "amount": {"$sum": "$amount"}}},
+    ])
+    return {str(row.get("_id")): _decimal(row.get("amount")) for row in rows}
+
+
+def _annotate_avpl_ufc_invoice_rows(rows, pending_totals):
+    for row in rows or []:
+        pending = max(_decimal((pending_totals or {}).get(str(row.get("id"))) or 0), Decimal("0"))
+        outstanding = max(_decimal(row.get("outstanding_display")), Decimal("0"))
+        available = max(outstanding - pending, Decimal("0"))
+        row["reported_pending_display"] = _money(pending)
+        row["reportable_outstanding_display"] = _money(available)
+        row["has_pending_report"] = pending > Decimal("0.004")
+        # Both UFC reporting and AVPL direct collection should avoid double-counting
+        # money that is already waiting for AVPL confirmation.
+        row["can_pay"] = available > Decimal("0.004")
+    return rows
+
+
+def _pending_payment_rows(query=None, limit=100):
+    base = {
+        "source_type": "avpl_ufc_invoice",
+        "status": "pending_confirmation",
+    }
+    if query:
+        base.update(query)
+    return [
+        serialize_payment(row)
+        for row in mongo.db[PAYMENT_COLLECTION].find(base).sort("created_at", DESCENDING).limit(limit)
+    ]
 
 
 def _ensure_payment_receipt(payment, invoice, parties, final_total, final_paid, final_outstanding, final_status):
@@ -579,6 +644,8 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
     source_type = str(source_type or "").strip().lower()
     collection_name, invoice = _source_invoice(source_type, invoice_id)
     _assert_access(actor, source_type, invoice, write=True)
+    actor_role = actor.get("resolved_role")
+    ufc_reports_avpl_payment = source_type == "avpl_ufc_invoice" and actor_role == "ufc_admin"
 
     mode = str(payment_mode or "").strip().lower()
     if mode not in PAYMENT_MODES:
@@ -592,58 +659,126 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
     token = _clean(idempotency_key, 160) or f"PAY-{uuid4().hex.upper()}"
     existing = mongo.db[PAYMENT_COLLECTION].find_one({"idempotency_key": token})
     resume_payment = None
+    confirming_report = False
     if existing:
+        if not _payment_matches_request(existing, source_type, invoice, value, mode):
+            raise RuntimeError("This payment request token is already linked to a different settlement. Refresh and try again.")
         if existing.get("status") == "completed":
-            if not _payment_matches_request(existing, source_type, invoice, value, mode):
-                raise RuntimeError("This payment request token is already linked to a different settlement. Refresh and try again.")
             accounting_warning = _ensure_accounting_handoff(existing, invoice)
-            message = "This payment was already recorded safely."
+            message = "This payment was already confirmed safely."
             if accounting_warning:
                 message += " Payment is settled, but the Accounting handoff needs attention."
             return {"payment": serialize_payment(existing), "message": message, "idempotent_replay": True, "accounting_warning": accounting_warning}
-        if existing.get("status") == "reversed":
+        if existing.get("status") == "pending_confirmation":
+            if ufc_reports_avpl_payment:
+                return {
+                    "payment": serialize_payment(existing),
+                    "message": "This payment is already reported and is awaiting AVPL confirmation.",
+                    "idempotent_replay": True,
+                }
+            if source_type != "avpl_ufc_invoice" or actor_role not in {"super_admin", "avpl_admin", "accounts"}:
+                raise PermissionError("Only AVPL authorized users can confirm this reported payment.")
+            result = mongo.db[PAYMENT_COLLECTION].update_one(
+                {"_id": existing["_id"], "status": "pending_confirmation"},
+                {"$set": {
+                    "status": "processing",
+                    "confirmation_started_by": actor["_id"],
+                    "confirmation_started_by_name": actor.get("resolved_name") or "",
+                    "confirmation_started_at": now_utc(),
+                    "updated_at": now_utc(),
+                }},
+            )
+            if result.modified_count != 1:
+                latest_existing = mongo.db[PAYMENT_COLLECTION].find_one({"_id": existing["_id"]})
+                if latest_existing and latest_existing.get("status") == "completed":
+                    return {"payment": serialize_payment(latest_existing), "message": "This payment was already confirmed.", "idempotent_replay": True}
+                raise RuntimeError("This reported payment changed in another session. Refresh before confirming it.")
+            resume_payment = mongo.db[PAYMENT_COLLECTION].find_one({"_id": existing["_id"]})
+            confirming_report = True
+        elif existing.get("status") == "rejected":
+            raise ValueError("This payment report was returned by AVPL. Use a new payment entry after correcting the details.")
+        elif existing.get("status") == "reversed":
             raise ValueError("This payment request token belongs to a reversed payment. Refresh and try again.")
-        if existing.get("status") == "failed":
+        elif existing.get("status") == "failed":
             raise ValueError("A previous attempt with this payment token failed. Refresh the page and record it again after reviewing the outstanding balance.")
-        if existing.get("status") == "processing":
-            # Crash/timeout recovery: resume the same payment record instead of
-            # attempting to insert a duplicate or asking the operator to guess
-            # whether money was already applied.
+        elif existing.get("status") == "processing":
             if (
-                existing.get("source_type") != source_type
+                str(existing.get("source_type") or "") != source_type
                 or str(existing.get("invoice_id")) != str(invoice.get("_id"))
                 or _decimal(existing.get("amount")) != value
                 or str(existing.get("payment_mode") or "") != mode
             ):
                 raise RuntimeError("This payment token is already being used for a different settlement. Refresh and try again.")
             resume_payment = existing
+            confirming_report = bool(existing.get("reported_by_role") == "ufc_admin" and source_type == "avpl_ufc_invoice")
 
     total, paid, outstanding = _current_paid_outstanding(invoice)
     already_applied = bool(resume_payment and resume_payment.get("_id") in (invoice.get("payment_ids") or []))
     if outstanding <= 0 and not already_applied:
+        if confirming_report and resume_payment:
+            mongo.db[PAYMENT_COLLECTION].update_one(
+                {"_id": resume_payment["_id"], "status": "processing"},
+                {"$set": {"status": "pending_confirmation", "confirmation_error": "Invoice is already fully settled.", "updated_at": now_utc()}},
+            )
         raise ValueError("This invoice is already fully paid.")
     if value > outstanding + Decimal("0.004") and not already_applied:
+        if confirming_report and resume_payment:
+            mongo.db[PAYMENT_COLLECTION].update_one(
+                {"_id": resume_payment["_id"], "status": "processing"},
+                {"$set": {"status": "pending_confirmation", "confirmation_error": "Outstanding changed before confirmation.", "updated_at": now_utc()}},
+            )
         raise ValueError(f"Payment cannot exceed the outstanding amount of ₹{_money(outstanding)}.")
+
+    # UFC may report only the portion not already waiting for AVPL confirmation.
+    # This prevents several accidental clicks/reports from exceeding one invoice.
+    if ufc_reports_avpl_payment:
+        pending_map = _pending_reported_totals([invoice["_id"]])
+        already_reported = max(_decimal(pending_map.get(str(invoice["_id"])) or 0), Decimal("0"))
+        reportable = max(outstanding - already_reported, Decimal("0"))
+        if reportable <= Decimal("0.004"):
+            raise ValueError("The full outstanding amount is already reported and awaiting AVPL confirmation.")
+        if value > reportable + Decimal("0.004"):
+            raise ValueError(f"You can report at most ₹{_money(reportable)} now because ₹{_money(already_reported)} is already awaiting AVPL confirmation.")
+
+    # If AVPL records money directly, do not let that manual collection overlap
+    # an amount already reported by the UFC. AVPL must confirm or return the
+    # reported payment first; any genuinely additional amount can still be recorded.
+    if (
+        source_type == "avpl_ufc_invoice"
+        and actor_role in {"super_admin", "avpl_admin", "accounts"}
+        and not confirming_report
+    ):
+        pending_map = _pending_reported_totals([invoice["_id"]])
+        already_reported = max(_decimal(pending_map.get(str(invoice["_id"])) or 0), Decimal("0"))
+        directly_collectable = max(outstanding - already_reported, Decimal("0"))
+        if value > directly_collectable + Decimal("0.004"):
+            raise ValueError(
+                f"₹{_money(already_reported)} is already reported by the UFC and awaiting confirmation. "
+                "Confirm or return that report first, or record only the additional unreported amount."
+            )
 
     clean_reference = _clean(reference, 160)
     if mode in {"upi", "bank_transfer", "cheque"} and not clean_reference:
         raise ValueError(f"{PAYMENT_MODES[mode]} reference is required for audit and reconciliation.")
     if clean_reference:
-        # A bank/UPI/cheque reference normally identifies one real-world transfer.
-        # Reusing the exact same reference+amount against the same invoice is
-        # treated as a replay rather than creating a second settlement.
         duplicate_reference = mongo.db[PAYMENT_COLLECTION].find_one({
             "source_type": source_type,
             "invoice_id": invoice["_id"],
             "payment_mode": mode,
             "reference": clean_reference,
             "amount": float(value),
-            "status": "completed",
+            "status": {"$in": ["completed", "pending_confirmation"]},
         })
-        if duplicate_reference:
+        if duplicate_reference and (not resume_payment or duplicate_reference.get("_id") != resume_payment.get("_id")):
+            if duplicate_reference.get("status") == "pending_confirmation":
+                return {
+                    "payment": serialize_payment(duplicate_reference),
+                    "message": "This payment reference and amount are already reported and awaiting AVPL confirmation.",
+                    "idempotent_replay": True,
+                }
             return {
                 "payment": serialize_payment(duplicate_reference),
-                "message": "A payment with this reference and amount is already recorded against this invoice.",
+                "message": "A payment with this reference and amount is already confirmed against this invoice.",
                 "idempotent_replay": True,
             }
 
@@ -666,38 +801,54 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             "payment_mode": mode,
             "reference": clean_reference,
             "note": _clean(note, 1000),
-            # Reserved provider fields keep the schema ready for Razorpay/other
-            # prepaid gateways without changing the manual settlement model later.
             "payment_provider": None,
             "provider_order_id": None,
             "provider_payment_id": None,
             "provider_signature": None,
             "provider_status": None,
             **parties,
-            "status": "processing",
+            "status": "pending_confirmation" if ufc_reports_avpl_payment else "processing",
             "recorded_by": actor["_id"],
             "recorded_by_name": actor.get("resolved_name") or "",
-            "recorded_by_role": actor.get("resolved_role") or "",
-            "payment_date": date.today().isoformat(),
+            "recorded_by_role": actor_role or "",
+            "payment_date": business_today().isoformat(),
             "created_at": timestamp,
             "updated_at": timestamp,
         }
+        if ufc_reports_avpl_payment:
+            payment.update({
+                "reported_by": actor["_id"],
+                "reported_by_name": actor.get("resolved_name") or "",
+                "reported_by_role": "ufc_admin",
+                "reported_at": timestamp,
+            })
         try:
             result = mongo.db[PAYMENT_COLLECTION].insert_one(payment)
             payment["_id"] = result.inserted_id
         except DuplicateKeyError:
             existing = mongo.db[PAYMENT_COLLECTION].find_one({"idempotency_key": token})
+            if existing and existing.get("status") == "pending_confirmation" and ufc_reports_avpl_payment:
+                return {"payment": serialize_payment(existing), "message": "This payment is already reported and awaiting AVPL confirmation.", "idempotent_replay": True}
             if existing and existing.get("status") == "completed":
                 if not _payment_matches_request(existing, source_type, invoice, value, mode):
                     raise RuntimeError("This payment request token is already linked to a different settlement. Refresh and try again.")
                 accounting_warning = _ensure_accounting_handoff(existing, invoice)
-                message = "This payment was already recorded safely."
+                message = "This payment was already confirmed safely."
                 if accounting_warning:
                     message += " Payment is settled, but the Accounting handoff needs attention."
                 return {"payment": serialize_payment(existing), "message": message, "idempotent_replay": True, "accounting_warning": accounting_warning}
             if existing and existing.get("status") == "processing":
                 raise RuntimeError("This payment is already being processed in another request. Wait a moment, then refresh once.")
             raise RuntimeError("This payment request could not be inserted safely. Refresh and try again.")
+
+        if ufc_reports_avpl_payment:
+            _audit(payment["_id"], actor, "report_payment", f"₹{_money(value)} reported by UFC for AVPL confirmation against {_invoice_number(source_type, invoice)}.")
+            return {
+                "payment": serialize_payment(payment),
+                "message": f"Payment ₹{_money(value)} reported to AVPL. It will be marked paid only after AVPL confirms receipt.",
+                "idempotent_replay": False,
+                "awaiting_confirmation": True,
+            }
 
     # Optimistic, idempotent invoice settlement. The payment ID itself becomes
     # the permanent guard against a repeated POST or recovery retry.
@@ -711,7 +862,13 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             break
         latest_total, latest_paid, latest_outstanding = _current_paid_outstanding(latest)
         if value > latest_outstanding + Decimal("0.004"):
-            mongo.db[PAYMENT_COLLECTION].update_one({"_id": payment["_id"]}, {"$set": {"status": "failed", "failure_reason": "Outstanding changed before settlement.", "updated_at": now_utc()}})
+            restore_status = "pending_confirmation" if confirming_report else "failed"
+            mongo.db[PAYMENT_COLLECTION].update_one({"_id": payment["_id"]}, {"$set": {
+                "status": restore_status,
+                "failure_reason": "Outstanding changed before settlement." if not confirming_report else None,
+                "confirmation_error": "Outstanding changed before confirmation." if confirming_report else None,
+                "updated_at": now_utc(),
+            }})
             raise RuntimeError("The outstanding amount changed in another session. Refresh before recording this payment.")
         version = int(latest.get("payment_version") or 0)
         new_paid = min(latest_paid + value, latest_total)
@@ -738,7 +895,13 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             settled_invoice = mongo.db[collection_name].find_one({"_id": latest["_id"]})
             break
     if not settled_invoice:
-        mongo.db[PAYMENT_COLLECTION].update_one({"_id": payment["_id"]}, {"$set": {"status": "failed", "failure_reason": "Invoice settlement concurrency failure.", "updated_at": now_utc()}})
+        restore_status = "pending_confirmation" if confirming_report else "failed"
+        mongo.db[PAYMENT_COLLECTION].update_one({"_id": payment["_id"]}, {"$set": {
+            "status": restore_status,
+            "failure_reason": "Invoice settlement concurrency failure." if not confirming_report else None,
+            "confirmation_error": "Invoice changed during confirmation." if confirming_report else None,
+            "updated_at": now_utc(),
+        }})
         raise RuntimeError("Payment could not be applied safely because the invoice changed. Refresh and try again.")
 
     final_total, final_paid, final_outstanding = _current_paid_outstanding(settled_invoice)
@@ -755,7 +918,7 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
     if resume_payment and payment["_id"] in (settled_invoice.get("payment_ids") or []):
         effective_paid_before = max(final_paid - value, Decimal("0"))
         effective_outstanding_before = min(final_outstanding + value, final_total)
-    mongo.db[PAYMENT_COLLECTION].update_one({"_id": payment["_id"]}, {"$set": {
+    completion_fields = {
         "status": "completed",
         "receipt_number": receipt_number,
         "paid_before": float(effective_paid_before),
@@ -765,12 +928,31 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
         "invoice_payment_status_after": final_status,
         "completed_at": now_utc(),
         "updated_at": now_utc(),
-    }})
+        "confirmation_error": None,
+    }
+    if confirming_report:
+        completion_fields.update({
+            "confirmed_by": actor["_id"],
+            "confirmed_by_name": actor.get("resolved_name") or "",
+            "confirmed_by_role": actor_role or "",
+            "confirmed_at": now_utc(),
+        })
+    mongo.db[PAYMENT_COLLECTION].update_one({"_id": payment["_id"]}, {"$set": completion_fields})
     payment = mongo.db[PAYMENT_COLLECTION].find_one({"_id": payment["_id"]})
     accounting_warning = _ensure_accounting_handoff(payment, settled_invoice)
     payment = mongo.db[PAYMENT_COLLECTION].find_one({"_id": payment["_id"]}) or payment
-    _audit(payment["_id"], actor, "record_payment", f"₹{_money(value)} recorded by {PAYMENT_MODES.get(mode, mode)} against {_invoice_number(source_type, settled_invoice)}.")
-    message = f"Payment ₹{_money(value)} recorded successfully. Outstanding is now ₹{_money(final_outstanding)}."
+    action = "confirm_reported_payment" if confirming_report else "record_payment"
+    note_text = (
+        f"₹{_money(value)} reported by UFC and confirmed received by AVPL against {_invoice_number(source_type, settled_invoice)}."
+        if confirming_report
+        else f"₹{_money(value)} recorded by {PAYMENT_MODES.get(mode, mode)} against {_invoice_number(source_type, settled_invoice)}."
+    )
+    _audit(payment["_id"], actor, action, note_text)
+    message = (
+        f"Payment ₹{_money(value)} confirmed received. Outstanding is now ₹{_money(final_outstanding)}."
+        if confirming_report
+        else f"Payment ₹{_money(value)} recorded successfully. Outstanding is now ₹{_money(final_outstanding)}."
+    )
     if accounting_warning:
         message += " Settlement is complete, but the controlled Accounting handoff needs attention."
     return {
@@ -780,6 +962,81 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
         "accounting_warning": accounting_warning,
     }
 
+
+def confirm_reported_payment(actor_user_id, payment_id):
+    """AVPL confirms money that a UFC has reported as paid.
+
+    The invoice/payable/receivable are untouched until this confirmation succeeds.
+    """
+    _ensure_indexes()
+    actor = _get_actor(actor_user_id)
+    if actor.get("resolved_role") not in {"super_admin", "avpl_admin", "accounts"}:
+        raise PermissionError("Only AVPL authorized users can confirm UFC payments.")
+    oid = _to_object_id(payment_id)
+    if not oid:
+        raise ValueError("Invalid payment reference.")
+    payment = mongo.db[PAYMENT_COLLECTION].find_one({"_id": oid})
+    if not payment:
+        raise ValueError("Reported payment was not found.")
+    if payment.get("source_type") != "avpl_ufc_invoice":
+        raise ValueError("Only UFC payments to AVPL use this confirmation flow.")
+    if payment.get("status") == "completed":
+        return {"payment": serialize_payment(payment), "message": "This payment is already confirmed."}
+    if payment.get("status") == "rejected":
+        raise ValueError("This payment report was already returned by AVPL.")
+    if payment.get("status") != "pending_confirmation":
+        raise ValueError("This payment is not waiting for AVPL confirmation.")
+    return record_payment(
+        actor_user_id,
+        payment.get("source_type"),
+        payment.get("invoice_id"),
+        payment.get("amount"),
+        payment.get("payment_mode"),
+        reference=payment.get("reference") or "",
+        note=payment.get("note") or "",
+        idempotency_key=payment.get("idempotency_key") or "",
+    )
+
+
+def reject_reported_payment(actor_user_id, payment_id, reason):
+    """Return an unconfirmed UFC payment report without changing any ledger balance."""
+    _ensure_indexes()
+    actor = _get_actor(actor_user_id)
+    if actor.get("resolved_role") not in {"super_admin", "avpl_admin", "accounts"}:
+        raise PermissionError("Only AVPL authorized users can return UFC payment reports.")
+    oid = _to_object_id(payment_id)
+    if not oid:
+        raise ValueError("Invalid payment reference.")
+    payment = mongo.db[PAYMENT_COLLECTION].find_one({"_id": oid})
+    if not payment:
+        raise ValueError("Reported payment was not found.")
+    if payment.get("source_type") != "avpl_ufc_invoice":
+        raise ValueError("Only UFC payments to AVPL use this confirmation flow.")
+    if payment.get("status") == "rejected":
+        return {"payment": serialize_payment(payment), "message": "This payment report is already returned."}
+    if payment.get("status") == "completed":
+        raise ValueError("This payment is already confirmed. Use the controlled reversal flow if a confirmed settlement must be corrected.")
+    if payment.get("status") != "pending_confirmation":
+        raise ValueError("This payment is not waiting for AVPL confirmation.")
+    clean_reason = _clean(reason, 1000)
+    if len(clean_reason) < 4:
+        raise ValueError("Enter a clear reason for returning the payment report.")
+    result = mongo.db[PAYMENT_COLLECTION].update_one(
+        {"_id": oid, "status": "pending_confirmation"},
+        {"$set": {
+            "status": "rejected",
+            "rejection_reason": clean_reason,
+            "rejected_by": actor["_id"],
+            "rejected_by_name": actor.get("resolved_name") or "",
+            "rejected_at": now_utc(),
+            "updated_at": now_utc(),
+        }},
+    )
+    if result.modified_count != 1:
+        raise RuntimeError("This payment report changed in another session. Refresh and try again.")
+    _audit(oid, actor, "reject_reported_payment", clean_reason)
+    updated = mongo.db[PAYMENT_COLLECTION].find_one({"_id": oid})
+    return {"payment": serialize_payment(updated), "message": "Payment report returned to the UFC. No invoice balance was changed."}
 
 def reverse_payment(actor_user_id, payment_id, reason):
     _ensure_indexes()
@@ -890,7 +1147,7 @@ def _serialize_invoice_row(source_type, invoice):
             else:
                 due_day = datetime.strptime(str(raw_due_date)[:10], "%Y-%m-%d").date()
             due_iso = due_day.isoformat()
-            is_overdue = outstanding > Decimal("0.004") and due_day < date.today()
+            is_overdue = outstanding > Decimal("0.004") and due_day < business_today()
         except Exception:
             due_iso = str(raw_due_date)[:10]
     row = {
@@ -970,21 +1227,35 @@ def get_avpl_payment_overview(actor_user_id):
     if actor.get("resolved_role") not in {"super_admin", "avpl_admin", "accounts"}:
         raise PermissionError("Only AVPL authorized users can view this payment workspace.")
     supplier_rows = [_serialize_invoice_row("supplier_invoice", row) for row in mongo.db[SUPPLIER_INVOICE_COLLECTION].find({"payable_posted": True, "posting_status": "posted"}).sort("posted_at", DESCENDING).limit(100)]
-    ufc_rows = [_serialize_invoice_row("avpl_ufc_invoice", row) for row in mongo.db[AVPL_UFC_INVOICE_COLLECTION].find({"status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
+    ufc_invoice_docs = list(mongo.db[AVPL_UFC_INVOICE_COLLECTION].find({"status": "issued"}).sort("issued_at", DESCENDING).limit(100))
+    ufc_rows = [_serialize_invoice_row("avpl_ufc_invoice", row) for row in ufc_invoice_docs]
+    pending_totals = _pending_reported_totals([row.get("_id") for row in ufc_invoice_docs])
+    _annotate_avpl_ufc_invoice_rows(ufc_rows, pending_totals)
+    pending_ufc_payments = _pending_payment_rows()
     farmer_market_rows = [_serialize_invoice_row("farmer_marketplace_invoice", row) for row in mongo.db[FARMER_MARKET_INVOICE_COLLECTION].find({"buyer_type": "avpl", "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
     recent = _recent_payments({"$or": [{"source_type": "supplier_invoice"}, {"source_type": "avpl_ufc_invoice"}, {"source_type": "farmer_marketplace_invoice", "payer_key": "AVPL"}]})
     supplier_due = sum((_decimal(r["outstanding_display"]) for r in supplier_rows), Decimal("0"))
     ufc_due = sum((_decimal(r["outstanding_display"]) for r in ufc_rows), Decimal("0"))
     farmer_due = sum((_decimal(r["outstanding_display"]) for r in farmer_market_rows), Decimal("0"))
+    pending_ufc_amount = sum((_decimal(row.get("amount")) for row in pending_ufc_payments), Decimal("0"))
     pending_accounting = mongo.db[ACCOUNTING_EVENT_COLLECTION].count_documents({"entity_key": "AVPL", "accounting_status": {"$in": ["ready_for_posting", "reversal_required"]}})
     return {
         "supplier_payables": supplier_rows,
         "ufc_receivables": ufc_rows,
+        "pending_ufc_payments": pending_ufc_payments,
         "farmer_payables": farmer_market_rows,
         "recent_payments": recent,
         "accounting_events": _accounting_event_rows({"entity_key": "AVPL"}),
         "payment_modes": PAYMENT_MODES,
-        "summary": {"supplier_due": _money(supplier_due), "ufc_due": _money(ufc_due), "farmer_due": _money(farmer_due), "recent_count": len(recent), "accounting_pending": pending_accounting},
+        "summary": {
+            "supplier_due": _money(supplier_due),
+            "ufc_due": _money(ufc_due),
+            "farmer_due": _money(farmer_due),
+            "ufc_pending_confirmation": _money(pending_ufc_amount),
+            "ufc_pending_count": len(pending_ufc_payments),
+            "recent_count": len(recent),
+            "accounting_pending": pending_accounting,
+        },
     }
 
 
@@ -996,21 +1267,34 @@ def get_ufc_payment_overview(actor_user_id):
     centre_uid = _resolve_ufc_uid(actor)
     if not centre_uid:
         raise ValueError("This UFC Admin is not linked to a Centre UID.")
-    avpl_rows = [_serialize_invoice_row("avpl_ufc_invoice", row) for row in mongo.db[AVPL_UFC_INVOICE_COLLECTION].find({"centre_uid": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
+    avpl_invoice_docs = list(mongo.db[AVPL_UFC_INVOICE_COLLECTION].find({"centre_uid": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100))
+    avpl_rows = [_serialize_invoice_row("avpl_ufc_invoice", row) for row in avpl_invoice_docs]
+    pending_totals = _pending_reported_totals([row.get("_id") for row in avpl_invoice_docs])
+    _annotate_avpl_ufc_invoice_rows(avpl_rows, pending_totals)
+    pending_avpl_payments = _pending_payment_rows({"payer_key": centre_uid})
     farmer_rows = [_serialize_invoice_row("ufc_farmer_invoice", row) for row in mongo.db[UFC_FARMER_INVOICE_COLLECTION].find({"centre_uid": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
     produce_purchase_rows = [_serialize_invoice_row("farmer_marketplace_invoice", row) for row in mongo.db[FARMER_MARKET_INVOICE_COLLECTION].find({"buyer_type": "ufc", "buyer_key": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
     recent = _recent_payments({"$or": [{"source_type": "avpl_ufc_invoice", "payer_key": centre_uid}, {"source_type": "ufc_farmer_invoice", "payee_key": centre_uid}, {"source_type": "farmer_marketplace_invoice", "payer_key": centre_uid}]})
     avpl_due = sum((_decimal(r["outstanding_display"]) for r in avpl_rows), Decimal("0"))
     farmer_due = sum((_decimal(r["outstanding_display"]) for r in farmer_rows), Decimal("0"))
     produce_purchase_due = sum((_decimal(r["outstanding_display"]) for r in produce_purchase_rows), Decimal("0"))
+    pending_avpl_amount = sum((_decimal(row.get("amount")) for row in pending_avpl_payments), Decimal("0"))
     return {
         "centre_uid": centre_uid,
         "avpl_payables": avpl_rows,
+        "pending_avpl_payments": pending_avpl_payments,
         "farmer_receivables": farmer_rows,
         "farmer_produce_payables": produce_purchase_rows,
         "recent_payments": recent,
         "payment_modes": PAYMENT_MODES,
-        "summary": {"avpl_due": _money(avpl_due), "farmer_due": _money(farmer_due), "farmer_produce_due": _money(produce_purchase_due), "recent_count": len(recent)},
+        "summary": {
+            "avpl_due": _money(avpl_due),
+            "avpl_pending_confirmation": _money(pending_avpl_amount),
+            "avpl_pending_count": len(pending_avpl_payments),
+            "farmer_due": _money(farmer_due),
+            "farmer_produce_due": _money(produce_purchase_due),
+            "recent_count": len(recent),
+        },
     }
 
 

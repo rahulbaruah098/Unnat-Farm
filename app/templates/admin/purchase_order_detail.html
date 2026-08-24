@@ -2,21 +2,70 @@
 {% block title %}{{ order.po_number }}{% endblock %}
 {% block content %}
 <style>
-.detail{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B}.links{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;border-radius:999px;border:1px solid #CFE2D5;background:#fff;color:#425466;text-decoration:none;font:inherit;font-weight:800;cursor:pointer}.btn.primary{background:#5FA878;border-color:#5FA878;color:#fff}.btn.dark{background:#2F7A4C;border-color:#2F7A4C;color:#fff}.btn.warning{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.btn.danger{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.notice{margin:17px 0;padding:13px 15px;border:1px solid #F4D38A;border-radius:16px;background:#FFF8E8;color:#6B5316;line-height:1.5}.notice.green{border-color:#B9DCCA;background:#F3FBF6;color:#2E6643}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}.card{padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC}.card small{display:block;color:#64748B;margin-bottom:4px}.card strong{color:#17252A;overflow-wrap:anywhere}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:900;border:1px solid}.status.approved,.status.fully_received,.status.posted,.status.matched,.status.paid{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.pending_approval,.status.returned_for_correction,.status.matched_with_warnings,.status.partially_invoiced_with_warnings,.status.prepared,.status.partially_paid{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.draft{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}.status.partially_received,.status.partially_invoiced{background:#F5F3FF;border-color:#DDD6FE;color:#6D28D9}.status.mismatch,.status.recovery_required{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.status.cancelled,.status.not_started,.status.not_recorded,.status.not_posted,.status.unpaid{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.section{margin-top:15px;padding:17px;border:1px solid #E2EFE6;border-radius:18px;background:#FCFEFC}.section h3{margin:0 0 13px;color:#17252A}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:13px}.section-head h3{margin:0}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:1200px}.table.related{min-width:900px}.table th,.table td{padding:10px;border-bottom:1px solid #E2EFE6;text-align:left;vertical-align:top}.table th{color:#64748B;font-size:.84rem;background:#F6FAF7}.total-box{margin-left:auto;width:min(430px,100%);display:grid;gap:7px}.total-row{display:flex;justify-content:space-between;gap:20px;padding:7px 0;border-bottom:1px solid #E2EFE6}.total-row.grand{border:0;font-size:1.15rem;font-weight:900}.workflow{display:flex;gap:8px;flex-wrap:wrap}.workflow form{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.reason{height:38px;min-width:190px;border:1px solid #D6E5DA;border-radius:999px;padding:0 12px;font:inherit}.history{display:grid;gap:8px}.history-item{padding:10px 12px;border-left:3px solid #5FA878;background:#fff;border-radius:0 12px 12px 0;color:#52635A}.history-item strong{color:#263B31}.empty{padding:20px;text-align:center;border:1px dashed #BFDCC8;border-radius:14px;background:#fff;color:#64748B}.qty-stack{display:grid;gap:3px;font-size:.84rem}.qty-stack strong{color:#237A43}.qty-stack .bad{color:#B91C1C}
-@media(max-width:1050px){.summary{grid-template-columns:repeat(3,1fr)}}@media(max-width:650px){.detail{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr}.links,.links .btn,.workflow form,.workflow .btn,.reason{width:100%}}
+.detail{
+    --ink:#17251d;--text:#435349;--muted:#7b8a80;--green:#2f7a4c;
+    --line:rgba(47,122,76,.12);--shadow:0 22px 60px rgba(28,72,43,.10);
+    width:100%;max-width:1600px;margin:0 auto;padding:28px 32px 34px;
+    border:1px solid rgba(47,122,76,.11);border-radius:30px;
+    background:radial-gradient(circle at 94% 2%,rgba(96,176,122,.10),transparent 22%),linear-gradient(180deg,#fff,#f9fcfa);
+    box-shadow:var(--shadow);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:var(--text);position:relative;overflow:hidden
+}
+.detail::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,#2f7a4c,#67b27e,#badfc6)}
+.head{display:flex;justify-content:space-between;gap:18px;align-items:center;flex-wrap:wrap;padding-bottom:22px;border-bottom:1px solid rgba(47,122,76,.09)}
+.head h2{margin:0;color:var(--ink);font-size:clamp(1.6rem,2vw,2.15rem);font-weight:850;letter-spacing:-.025em}
+.head h2::before{content:"PURCHASE ORDER DETAIL";display:block;margin-bottom:6px;color:#7d8b82;font-size:.68rem;font-weight:850;letter-spacing:.12em}
+.head p{margin:7px 0 0;color:#718078;font-size:.82rem}
+.links{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:8px 13px;border-radius:10px;border:1px solid rgba(47,122,76,.13);background:#fff;color:#496056;text-decoration:none;font-family:inherit;font-size:.75rem;font-weight:850;cursor:pointer;transition:.18s ease}
+.btn:hover{transform:translateY(-1px);box-shadow:0 7px 17px rgba(28,72,43,.08)}
+.btn.primary{background:#397f51;border-color:#397f51;color:#fff}.btn.dark{background:#2f6e46;border-color:#2f6e46;color:#fff}.btn.warning{background:#fff7e6;border-color:#f4d38a;color:#8a5b00}.btn.danger{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+.notice{display:flex;align-items:flex-start;gap:10px;margin:18px 0 0;padding:14px 15px;border:1px solid #f4d38a;border-radius:15px;background:#fff8e8;color:#6b5316;font-size:.79rem;line-height:1.55}
+.notice::before{content:"!";width:27px;height:27px;flex:0 0 27px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(244,211,138,.32);font-weight:900}
+.notice.green{border-color:rgba(47,122,76,.13);background:linear-gradient(180deg,#f5fbf7,#eef8f1);color:#365d45}.notice.green::before{content:"i";background:#dff1e5;color:#2f7a4c}
+.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:20px 0 16px}
+.card{position:relative;overflow:hidden;padding:14px 15px;border:1px solid rgba(47,122,76,.10);border-radius:15px;background:#fff;box-shadow:0 7px 20px rgba(28,72,43,.045)}
+.card small{display:block;color:#819087;margin-bottom:6px;font-size:.65rem;font-weight:800;letter-spacing:.045em;text-transform:uppercase}
+.card strong{position:relative;z-index:1;color:#263b31;font-size:.80rem;font-weight:800;overflow-wrap:anywhere}
+.status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:.67rem;font-weight:900;border:1px solid;white-space:nowrap}
+.status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.status.approved,.status.fully_received,.status.posted,.status.matched,.status.paid{background:#ecfdf3;border-color:#b7e4c7;color:#237a43}.status.pending_approval,.status.returned_for_correction,.status.matched_with_warnings,.status.partially_invoiced_with_warnings,.status.prepared,.status.partially_paid{background:#fff7e6;border-color:#f4d38a;color:#8a5b00}.status.draft{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.status.partially_received,.status.partially_invoiced{background:#f5f3ff;border-color:#ddd6fe;color:#6d28d9}.status.mismatch,.status.recovery_required{background:#fef2f2;border-color:#fecaca;color:#b91c1c}.status.cancelled,.status.not_started,.status.not_recorded,.status.not_posted,.status.unpaid{background:#f1f5f9;border-color:#cbd5e1;color:#64748b}
+.section{margin-top:15px;padding:18px;border:1px solid rgba(47,122,76,.10);border-radius:18px;background:linear-gradient(180deg,#fff,#fafdfa);box-shadow:0 8px 24px rgba(28,72,43,.045)}
+.section h3{display:flex;align-items:center;gap:9px;margin:0 0 14px;color:#22372a;font-size:.96rem;font-weight:850}.section h3::before{content:"";width:8px;height:8px;border-radius:50%;background:#4ea36a;box-shadow:0 0 0 5px rgba(78,163,106,.10)}
+.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:13px}.section-head h3{margin:0}
+.section .summary{margin:0}
+.table-wrap{overflow:auto;border:1px solid rgba(47,122,76,.09);border-radius:14px;background:#fff}
+.table{width:100%;border-collapse:collapse;min-width:1200px}.table.related{min-width:900px}
+.table th,.table td{padding:11px 10px;border-bottom:1px solid rgba(47,122,76,.075);text-align:left;vertical-align:top;font-size:.75rem}
+.table th{position:sticky;top:0;z-index:1;color:#65766c;font-size:.65rem;font-weight:900;letter-spacing:.045em;text-transform:uppercase;background:#eff7f1}
+.table tbody tr:last-child td{border-bottom:0}.table tbody tr:hover td{background:#fbfdfb}.table small{color:#7c8a81;font-size:.68rem}.table strong{color:#2a4033}
+.total-box{margin-left:auto;width:min(460px,100%);display:grid;padding:13px 16px;border:1px solid rgba(47,122,76,.09);border-radius:14px;background:#f8fbf9}
+.total-row{display:flex;justify-content:space-between;gap:20px;padding:8px 0;border-bottom:1px solid rgba(47,122,76,.08);font-size:.77rem}.total-row strong{color:#304337}.total-row.grand{border:0;padding-top:11px;font-size:1rem;font-weight:900;color:#22372a}
+.workflow{display:flex;gap:9px;flex-wrap:wrap}.workflow form{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:9px;border:1px solid rgba(47,122,76,.08);border-radius:12px;background:#f9fcfa}
+.reason{height:39px;min-width:190px;border:1px solid rgba(47,122,76,.13);border-radius:9px;padding:0 11px;font-family:inherit;font-size:.75rem;outline:none}.reason:focus{border-color:rgba(47,122,76,.35);box-shadow:0 0 0 4px rgba(47,122,76,.07)}
+.history{display:grid;gap:8px}.history-item{position:relative;padding:11px 13px 11px 16px;border:1px solid rgba(47,122,76,.08);border-left:3px solid #5fa878;background:#fff;border-radius:0 11px 11px 0;color:#66776d;font-size:.76rem;line-height:1.45}.history-item strong{color:#263b31}
+.empty{padding:25px;text-align:center;border:1px dashed rgba(47,122,76,.22);border-radius:13px;background:#f9fcfa;color:#7b8a80;font-size:.78rem}
+.qty-stack{display:grid;gap:3px;font-size:.71rem;color:#64756b}.qty-stack strong{color:#237a43}.qty-stack .bad{color:#b91c1c}
+@media(max-width:1100px){.summary{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.detail{padding:22px 18px 26px;border-radius:22px}.head{align-items:stretch}.links{width:100%}.links .btn{flex:1 1 140px}.summary{grid-template-columns:repeat(2,1fr)}.workflow form{width:100%}.reason{flex:1;min-width:0}}
+@media(max-width:520px){.detail{padding:18px 14px 22px}.head h2{font-size:1.35rem}.summary{grid-template-columns:1fr}.links,.links .btn,.workflow form,.workflow .btn,.reason{width:100%}.section{padding:14px}.total-box{padding:11px}.total-row{gap:10px}}
+
+@media(max-width:1200px){.detail{padding:20px}.table{min-width:1050px}.summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.head h2{font-size:clamp(1.25rem,6vw,1.65rem)}.section{padding:14px}.table-wrap{-webkit-overflow-scrolling:touch}.links{width:100%}.links .btn{flex:1 1 145px}}
 </style>
 <div class="detail">
     <div class="head">
         <div><h2>{{ order.po_number }}</h2><p>{{ order.supplier_name }} · {{ order.supplier_code }}</p></div>
         <div class="links">
             <a class="btn" href="{{ url_for('admin.purchase_orders') }}">Back</a>
+            <a class="btn" target="_blank" href="{{ url_for('admin.print_purchase_order_view', order_id=order.id) }}">Print / PDF</a>
             {% if order.status in ['draft','returned_for_correction'] %}<a class="btn primary" href="{{ url_for('admin.edit_purchase_order_view', order_id=order.id) }}">Edit</a>{% endif %}
             {% if order.status in ['approved','partially_received'] %}<a class="btn dark" href="{{ url_for('admin.create_goods_receipt_view', po_id=order.id) }}">Receive Goods</a>{% endif %}
-            {% if order.status in ['approved','partially_received','fully_received'] %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=order.id) }}">Record Supplier Invoice</a>{% endif %}
+            {% if order.invoice_recordable %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=order.id) }}">Record Purchase Invoice</a>{% elif order.supplier_invoice_count|int > 0 %}<a class="btn" href="#purchase-invoices">View Purchase Invoice</a>{% endif %}
         </div>
     </div>
 
-    <div class="notice green"><strong>What happens next?</strong> When the goods arrive, choose <strong>Receive Goods</strong>. Only accepted goods become stock. After that, record the supplier invoice.</div>
+    <div class="notice green"><strong>What happens next?</strong> Print or save this Purchase Order and send it to the supplier. When goods arrive, use <strong>Receive Goods</strong>; only accepted goods become stock. The supplier's GST/tax invoice can be captured with the receipt and then becomes the linked Purchase Invoice record.</div>
     {% if order.reverse_charge_review_required %}<div class="notice"><strong>Supplier is not a regular GST supplier:</strong> GST is not being added automatically on this PO. Any special tax review will happen during final purchase processing.</div>{% endif %}
 
     <div class="summary">
@@ -24,7 +73,7 @@
         <div class="card"><small>Order Date</small><strong>{{ order.order_date }}</strong></div>
         <div class="card"><small>Expected Delivery</small><strong>{{ order.expected_delivery_date or '-' }}</strong></div>
         <div class="card"><small>GRNs / Accepted</small><strong>{{ order.grn_count }} / {{ order.accepted_quantity_total }}</strong></div>
-        <div class="card"><small>Supplier Invoices</small><strong>{{ order.supplier_invoice_count }}</strong></div>
+        <div class="card"><small>Purchase Invoices</small><strong>{{ order.supplier_invoice_count }}</strong></div>
         <div class="card"><small>Invoice Match</small><span class="status {{ order.invoice_match_status or 'not_recorded' }}">{{ order.invoice_match_status_display }}</span></div>
     </div>
 
@@ -63,8 +112,8 @@
     </section>
 
     <section class="section">
-        <div class="section-head"><h3>Related Supplier Invoices</h3>{% if order.status in ['approved','partially_received','fully_received'] %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=order.id) }}">Record Invoice</a>{% endif %}</div>
-        {% if supplier_invoices %}<div class="table-wrap"><table class="table related"><thead><tr><th>Purchase / Supplier Invoice</th><th>Invoice Date</th><th>Total</th><th>Match</th><th>Posting</th><th>Outstanding</th><th></th></tr></thead><tbody>{% for invoice in supplier_invoices %}<tr><td><strong>{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}</strong><br><small>Supplier: {{ invoice.supplier_invoice_number }} · Internal: {{ invoice.internal_reference }}</small></td><td>{{ invoice.invoice_date }}</td><td>₹{{ invoice.declared_total }}</td><td><span class="status {{ invoice.status }}">{{ invoice.status_display }}</span></td><td><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></td><td>₹{{ invoice.outstanding_amount }}</td><td><a class="btn" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=invoice.id) }}">View</a> <a class="btn" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty">No Supplier Invoice has been recorded for this Purchase Order.</div>{% endif %}
+        <div class="section-head" id="purchase-invoices"><h3>Related Purchase Invoices</h3>{% if order.invoice_recordable %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=order.id) }}">Record Purchase Invoice</a>{% endif %}</div>
+        {% if supplier_invoices %}<div class="table-wrap"><table class="table related"><thead><tr><th>Purchase Invoice / Supplier Bill</th><th>Invoice Date</th><th>Total</th><th>Match</th><th>Posting</th><th>Outstanding</th><th></th></tr></thead><tbody>{% for invoice in supplier_invoices %}<tr><td><strong>{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}</strong><br><small>Supplier: {{ invoice.supplier_invoice_number }} · Internal: {{ invoice.internal_reference }}</small></td><td>{{ invoice.invoice_date }}</td><td>₹{{ invoice.declared_total }}</td><td><span class="status {{ invoice.status }}">{{ invoice.status_display }}</span></td><td><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></td><td>₹{{ invoice.outstanding_amount }}</td><td><a class="btn" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=invoice.id) }}">View</a> <a class="btn" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty">No Purchase Invoice has been recorded for this Purchase Order.</div>{% endif %}
     </section>
 
     {% if order.return_reason %}<div class="notice"><strong>Returned for correction:</strong> {{ order.return_reason }}</div>{% endif %}

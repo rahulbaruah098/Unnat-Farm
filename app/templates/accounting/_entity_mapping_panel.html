@@ -90,7 +90,7 @@
                     <span>Latest synchronization</span>
                     <strong>{{ entity_mapping_overview.latest_run.status.replace('_', ' ').title() }}</strong>
                     {% if entity_mapping_overview.latest_run.completed_at %}
-                        <small>{{ entity_mapping_overview.latest_run.completed_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+                        <small>{{ entity_mapping_overview.latest_run.completed_at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}</small>
                     {% endif %}
                 </div>
                 <div>

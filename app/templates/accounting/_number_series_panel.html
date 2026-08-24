@@ -274,6 +274,49 @@
             </form>
         {% endif %}
 
+        {% if number_series_capabilities.can_approve %}
+            <form
+                id="numberSeriesBulkApproveForm"
+                class="accounting-number-bulk-toolbar"
+                method="post"
+                action="{{ url_for('accounting.number_series_bulk_approve') }}"
+                hidden
+            >
+                <div class="accounting-number-bulk-status">
+                    <span class="accounting-number-bulk-count" id="numberSeriesBulkApproveCount">0</span>
+                    <strong>pending series selected</strong>
+                </div>
+
+                <label class="accounting-number-bulk-note">
+                    <span>Shared approval note</span>
+                    <input
+                        type="text"
+                        name="bulk_approval_note"
+                        maxlength="500"
+                        placeholder="Optional note applied to every approved series"
+                    >
+                </label>
+
+                <div class="accounting-number-bulk-actions">
+                    <button type="button" class="accounting-secondary-button" id="numberSeriesApproveSelectAll">
+                        Select all pending
+                    </button>
+                    <button type="button" class="accounting-secondary-button" id="numberSeriesApproveClearAll">
+                        Clear
+                    </button>
+                    <button type="submit" class="accounting-primary-button" id="numberSeriesBulkApproveButton" disabled>
+                        Approve & activate selected
+                    </button>
+                </div>
+
+                <p class="accounting-number-bulk-help">
+                    Review the submitted previews below, select any pending series, then approve them together.
+                    Each series still keeps its own maker-checker validation, version check, workflow history and audit record.
+                    The page refreshes only once after the batch is processed.
+                </p>
+            </form>
+        {% endif %}
+
         {% for fy_group in number_series_overview.groups %}
             <div class="accounting-number-fy-block">
                 <div class="accounting-number-fy-heading">
@@ -306,6 +349,7 @@
                                 {% set active = scope.active %}
                                 {% set maker_can_change = working and (session.get('role') == 'super_admin' or working.created_by_str == current_user_id) %}
                                 {% set bulk_submit_eligible = working and working.status in ['draft', 'returned_for_correction'] and number_series_capabilities.can_submit and maker_can_change %}
+                                {% set bulk_approve_eligible = working and working.status == 'pending_approval' and number_series_capabilities.can_approve and working.created_by_str != current_user_id %}
 
                                 <article class="accounting-number-series-item {% if active %}has-active{% endif %} {% if working %}has-working{% endif %}">
                                     <div class="accounting-number-item-heading">
@@ -319,6 +363,19 @@
                                                     form="numberSeriesBulkSubmitForm"
                                                     data-category="{{ scope.category }}"
                                                     data-bulk-scope="{{ scope.financial_year_id }}|{{ scope.category }}"
+                                                    data-label="{{ scope.label }}"
+                                                >
+                                                <span>Select</span>
+                                            </label>
+                                        {% endif %}
+                                        {% if bulk_approve_eligible %}
+                                            <label class="accounting-number-item-select">
+                                                <input
+                                                    type="checkbox"
+                                                    class="accounting-number-bulk-approve-checkbox"
+                                                    name="selected_series"
+                                                    value="{{ scope.category }}|{{ working.id }}|{{ working.version }}"
+                                                    form="numberSeriesBulkApproveForm"
                                                     data-label="{{ scope.label }}"
                                                 >
                                                 <span>Select</span>
@@ -494,7 +551,7 @@
                                                         <div>
                                                             <strong>{{ event.action.replace('_', ' ').title() }}</strong>
                                                             <span>{{ event.actor_name or event.actor_role.replace('_', ' ').title() }}</span>
-                                                            {% if event.at %}<small>{{ event.at.strftime('%d %b %Y, %I:%M %p') }}</small>{% endif %}
+                                                            {% if event.at %}<small>{{ event.at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}</small>{% endif %}
                                                             {% if event.reason %}<p>Reason: {{ event.reason }}</p>{% endif %}
                                                             {% if event.note %}<p>Note: {{ event.note }}</p>{% endif %}
                                                         </div>
@@ -620,6 +677,70 @@
     });
 
     updateBulkState();
+})();
+
+(function(){
+    const section = document.getElementById('number-series');
+    const bulkForm = document.getElementById('numberSeriesBulkApproveForm');
+    if(!section || !bulkForm) return;
+
+    const itemCheckboxes = Array.from(section.querySelectorAll('.accounting-number-bulk-approve-checkbox'));
+    const countNode = document.getElementById('numberSeriesBulkApproveCount');
+    const approveButton = document.getElementById('numberSeriesBulkApproveButton');
+    const selectAllButton = document.getElementById('numberSeriesApproveSelectAll');
+    const clearAllButton = document.getElementById('numberSeriesApproveClearAll');
+
+    if(!itemCheckboxes.length){
+        bulkForm.hidden = true;
+        return;
+    }
+
+    bulkForm.hidden = false;
+
+    function updateBulkApproveState(){
+        const selected = itemCheckboxes.filter(box => box.checked);
+        countNode.textContent = String(selected.length);
+        approveButton.disabled = selected.length === 0;
+
+        itemCheckboxes.forEach(box => {
+            const card = box.closest('.accounting-number-series-item');
+            if(card) card.classList.toggle('bulk-selected', box.checked);
+        });
+    }
+
+    itemCheckboxes.forEach(box => box.addEventListener('change', updateBulkApproveState));
+
+    selectAllButton.addEventListener('click', function(){
+        itemCheckboxes.forEach(box => { box.checked = true; });
+        updateBulkApproveState();
+    });
+
+    clearAllButton.addEventListener('click', function(){
+        itemCheckboxes.forEach(box => { box.checked = false; });
+        updateBulkApproveState();
+    });
+
+    bulkForm.addEventListener('submit', function(event){
+        const selected = itemCheckboxes.filter(box => box.checked);
+        if(!selected.length){
+            event.preventDefault();
+            updateBulkApproveState();
+            return;
+        }
+
+        const labelText = selected.length === 1 ? '1 selected series' : `${selected.length} selected series`;
+        if(!window.confirm(`Approve and activate ${labelText}?`)){
+            event.preventDefault();
+            return;
+        }
+
+        approveButton.disabled = true;
+        approveButton.textContent = 'Approving selected series...';
+        selectAllButton.disabled = true;
+        clearAllButton.disabled = true;
+    });
+
+    updateBulkApproveState();
 })();
 </script>
 </section>

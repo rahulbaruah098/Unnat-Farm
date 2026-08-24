@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from collections import defaultdict
 from datetime import date, datetime
@@ -208,7 +209,7 @@ def _get_ufc_actor(user_id, centre_uid_hint=None):
 
 
 def _next_order_number():
-    year = date.today().year
+    year = business_today().year
     counter = mongo.db.system_counters.find_one_and_update(
         {"_id": f"avpl_ufc_order:{year}"},
         {"$inc": {"sequence": 1}, "$setOnInsert": {"created_at": now_utc()}},
@@ -220,7 +221,7 @@ def _next_order_number():
 
 
 def _next_purchase_number(centre_uid):
-    year = date.today().year
+    year = business_today().year
     safe_centre = "".join(ch for ch in str(centre_uid or "UFC").upper() if ch.isalnum())[:14] or "UFC"
     counter = mongo.db.system_counters.find_one_and_update(
         {"_id": f"ufc_purchase:{safe_centre}:{year}"},
@@ -246,7 +247,7 @@ def _lot_expired(lot):
     if not expiry:
         return False
     try:
-        return datetime.strptime(expiry, "%Y-%m-%d").date() < date.today()
+        return datetime.strptime(expiry, "%Y-%m-%d").date() < business_today()
     except ValueError:
         return False
 
@@ -461,7 +462,7 @@ def _reserve_avpl_stock(order, approved_quantity, actor):
     needed = _decimal(approved_quantity)
     allocations = []
     reserved_updates = []
-    today_iso = date.today().strftime("%Y-%m-%d")
+    today_iso = business_today().strftime("%Y-%m-%d")
 
     for lot in _candidate_avpl_lots(order["accounting_entity_id"], order["source_product_id"]):
         if needed <= 0:
@@ -575,7 +576,7 @@ def _reserve_avpl_stock(order, approved_quantity, actor):
                     "batch_number": allocation.get("batch_number") or "",
                     "manufacturing_date": allocation.get("manufacturing_date") or "",
                     "expiry_date": allocation.get("expiry_date") or "",
-                    "movement_date": date.today().strftime("%Y-%m-%d"),
+                    "movement_date": business_today().strftime("%Y-%m-%d"),
                     "reason": f"Reserved for UFC order {order.get('order_number') or ''} ({order.get('centre_uid') or ''}).",
                     "posted_by": actor["_id"],
                     "posted_by_name": actor.get("resolved_name") or "",
@@ -784,7 +785,7 @@ def cancel_approved_ufc_order(actor_user_id, order_id, reason=""):
                 "warehouse_bin": allocation.get("warehouse_bin") or "",
                 "batch_number": allocation.get("batch_number") or "",
                 "expiry_date": allocation.get("expiry_date") or "",
-                "movement_date": date.today().strftime("%Y-%m-%d"),
+                "movement_date": business_today().strftime("%Y-%m-%d"),
                 "reason": _clean_text(reason, 1000) or f"Reservation released for cancelled UFC order {order.get('order_number') or ''}.",
                 "posted_by": actor["_id"],
                 "posted_by_name": actor.get("resolved_name") or "",
@@ -864,7 +865,7 @@ def dispatch_ufc_order(actor_user_id, order_id, dispatch_note="", transporter=""
         raise RuntimeError("No reserved stock allocation exists for this order.")
 
     moved = []
-    today_iso = date.today().strftime("%Y-%m-%d")
+    today_iso = business_today().strftime("%Y-%m-%d")
     try:
         for allocation in allocations:
             lot_id = _to_object_id(allocation.get("inventory_lot_id"))
@@ -941,7 +942,7 @@ def dispatch_ufc_order(actor_user_id, order_id, dispatch_note="", transporter=""
                 "batch_number": allocation.get("batch_number") or "",
                 "manufacturing_date": allocation.get("manufacturing_date") or "",
                 "expiry_date": allocation.get("expiry_date") or "",
-                "movement_date": date.today().strftime("%Y-%m-%d"),
+                "movement_date": business_today().strftime("%Y-%m-%d"),
                 "reason": f"Dispatched to UFC {order.get('centre_uid') or ''} against order {order.get('order_number') or ''}.",
                 "posted_by": actor["_id"],
                 "posted_by_name": actor.get("resolved_name") or "",
@@ -1118,7 +1119,7 @@ def _apply_ufc_inventory(order, actor):
                 "batch_number": allocation.get("batch_number") or "",
                 "manufacturing_date": allocation.get("manufacturing_date") or "",
                 "expiry_date": allocation.get("expiry_date") or "",
-                "movement_date": date.today().strftime("%Y-%m-%d"),
+                "movement_date": business_today().strftime("%Y-%m-%d"),
                 "reason": f"Received from AVPL against order {order.get('order_number') or ''}.",
                 "posted_by": actor["_id"],
                 "posted_by_name": actor.get("resolved_name") or "",

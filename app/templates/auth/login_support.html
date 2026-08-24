@@ -688,7 +688,7 @@
 
             {% if tracked_ticket.updated_at %}
                 <div class="ticket-updated">
-                    Last Updated: {{ tracked_ticket.updated_at.strftime('%d-%m-%Y %I:%M %p') if tracked_ticket.updated_at.strftime else tracked_ticket.updated_at }}
+                    Last Updated: {{ tracked_ticket.updated_at|ist_datetime('%d-%m-%Y %I:%M %p', '-') }}
                 </div>
             {% endif %}
         </div>

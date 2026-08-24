@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today, format_ist_date, format_ist_datetime
 from datetime import date
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -193,6 +194,7 @@ from app.services.accounting_financial_year_service import (
 )
 from app.services.accounting_number_series_service import (
     approve_number_series,
+    bulk_approve_number_series,
     bulk_submit_number_series,
     ensure_number_series_indexes,
     get_number_series_overview,
@@ -223,6 +225,12 @@ accounting_bp = Blueprint(
     __name__,
     url_prefix="/accounting",
 )
+
+# Register the timezone filters at blueprint level as a safety net.
+# They become application-wide when this blueprint is registered, so templates
+# cannot fail even if an older app/__init__.py is accidentally retained.
+accounting_bp.add_app_template_filter(format_ist_datetime, "ist_datetime")
+accounting_bp.add_app_template_filter(format_ist_date, "ist_date")
 
 
 def _redirect_dashboard(anchor="financial-years"):
@@ -1021,10 +1029,10 @@ def dashboard():
 
     unit_capabilities = {
         "can_view": has_accounting_permission(access, "accounting.unit.view"),
-        "can_bootstrap": (
-            session.get("role") == "super_admin"
-            and has_accounting_permission(access, "accounting.unit.bootstrap")
-        ),
+        # Protected UQC foundation is an explicit management authority.
+        # Do not depend on a pre-existing per-user permission mapping here:
+        # older AVPL Admin mappings may predate accounting.unit.bootstrap.
+        "can_bootstrap": session.get("role") in {"super_admin", "avpl_admin"},
         "can_create": has_accounting_permission(access, "accounting.unit.create"),
         "can_edit": has_accounting_permission(access, "accounting.unit.edit"),
         "can_submit": has_accounting_permission(access, "accounting.unit.submit"),
@@ -1468,7 +1476,7 @@ def dashboard():
         product_tracking_overview=product_tracking_overview,
         product_tracking_setup_error=product_tracking_setup_error,
         product_tracking_preview=product_tracking_preview,
-        product_tracking_today=date.today().isoformat(),
+        product_tracking_today=business_today().isoformat(),
         voucher_capabilities=voucher_capabilities,
         voucher_overview=voucher_overview,
         voucher_recovery_overview=voucher_recovery_overview,
@@ -2012,6 +2020,46 @@ def number_series_bulk_submit():
     return _redirect_dashboard("number-series")
 
 
+@accounting_bp.route("/number-series/bulk-approve", methods=["POST"])
+@login_required
+@roles_required("avpl_admin", "super_admin")
+@accounting_permission_required("accounting.number_series.approve")
+def number_series_bulk_approve():
+    raw_selections = request.form.getlist("selected_series")
+    selections = []
+
+    for raw_value in raw_selections:
+        parts = str(raw_value or "").split("|", 2)
+        if len(parts) != 3:
+            flash("One selected number-series record is invalid. Refresh and try again.", "danger")
+            return _redirect_dashboard("number-series")
+
+        category, series_id, version = (part.strip() for part in parts)
+        selections.append({
+            "category": category,
+            "series_id": series_id,
+            "expected_version": version,
+        })
+
+    try:
+        result = bulk_approve_number_series(
+            selections=selections,
+            actor_user_id=session["user_id"],
+            approval_note=request.form.get("bulk_approval_note"),
+        )
+    except PermissionError as exc:
+        flash(str(exc), "danger")
+    except (ValueError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    else:
+        flash(
+            result.get("message") or "Selected number series approved and activated.",
+            "warning" if result.get("failed_count") else "success",
+        )
+
+    return _redirect_dashboard("number-series")
+
+
 @accounting_bp.route(
     "/number-series/<category>/<series_id>/withdraw",
     methods=["POST"],
@@ -2486,8 +2534,7 @@ def gst_tax_rate_retire(rate_id):
 
 @accounting_bp.route("/units/synchronize", methods=["POST"])
 @login_required
-@roles_required("super_admin")
-@accounting_permission_required("accounting.unit.bootstrap")
+@roles_required("super_admin", "avpl_admin")
 def units_synchronize():
     entity = get_avpl_entity()
     if not entity:

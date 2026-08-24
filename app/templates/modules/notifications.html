@@ -548,7 +548,7 @@
                         <td data-label="Title">{{ n.title }}</td>
                         <td data-label="Message">{{ n.message }}</td>
                         <td data-label="Status"><span class="status-pill">{{ n.status }}</span></td>
-                        <td data-label="Date">{{ n.created_at.strftime('%d-%m-%Y %I:%M %p') if n.created_at else '-' }}</td>
+                        <td data-label="Date">{{ n.created_at|ist_datetime('%d-%m-%Y %I:%M %p', '-') }}</td>
                     </tr>
                 {% else %}
                     <tr>

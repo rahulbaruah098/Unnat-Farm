@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today
 from bson import ObjectId
 from datetime import datetime
 import json
@@ -896,7 +897,7 @@ def calculate_age_from_dob(dob_value):
 
     try:
         dob = datetime.strptime(str(dob_value), "%Y-%m-%d").date()
-        today = date.today()
+        today = business_today()
 
         if dob > today:
             return ""

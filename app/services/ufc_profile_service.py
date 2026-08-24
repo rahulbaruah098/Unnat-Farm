@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today
 import re
 from datetime import date, datetime
 
@@ -168,7 +169,7 @@ def calculate_age(dob_value):
         dob = datetime.strptime(str(dob_value), "%Y-%m-%d").date()
     except Exception:
         return ""
-    today = date.today()
+    today = business_today()
     if dob > today:
         return ""
     age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))

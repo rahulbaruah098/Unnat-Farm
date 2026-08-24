@@ -38,6 +38,7 @@ from app.services.avpl_purchase_order_service import (
     withdraw_purchase_order,
 )
 from app.services.avpl_goods_receipt_service import (
+    attach_goods_receipt_supplier_invoice_document,
     cancel_goods_receipt,
     create_goods_receipt,
     get_goods_receipt,
@@ -92,9 +93,11 @@ from app.services.avpl_ufc_sales_service import (
     get_sales_invoice_print_context,
 )
 from app.services.payment_service import (
+    confirm_reported_payment as stage8_confirm_reported_payment,
     get_avpl_payment_overview,
     get_payment_receipt_context,
     record_payment as stage8_record_payment,
+    reject_reported_payment as stage8_reject_reported_payment,
     reverse_payment as stage8_reverse_payment,
 )
 from datetime import datetime
@@ -2421,6 +2424,41 @@ def purchase_order_detail(order_id):
     )
 
 
+@admin_bp.route('/purchase-orders/<order_id>/print')
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def print_purchase_order_view(order_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        order = get_purchase_order(
+            entity['_id'],
+            session.get('user_id'),
+            order_id,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.purchase_orders'))
+
+    return render_template(
+        'admin/purchase_order_print.html',
+        order=order,
+        entity={
+            'legal_name': entity.get('legal_name') or entity.get('name') or 'AVPL',
+            'trade_name': entity.get('trade_name') or entity.get('display_name') or 'UnnatFarm',
+            'address_line_1': entity.get('address_line_1') or entity.get('address') or entity.get('registered_address') or '',
+            'address_line_2': entity.get('address_line_2') or '',
+            'city': entity.get('city') or '',
+            'district': entity.get('district') or '',
+            'state': entity.get('state') or entity.get('state_name') or '',
+            'postal_code': entity.get('postal_code') or '',
+            'gstin': entity.get('gstin') or '',
+            'pan': entity.get('pan') or '',
+        },
+    )
+
+
 @admin_bp.route('/purchase-orders/<order_id>/edit', methods=['GET', 'POST'])
 @login_required
 @roles_required('super_admin', 'avpl_admin', 'accounts')
@@ -2602,6 +2640,30 @@ def _goods_receipt_form_context(receipt=None, form_data=None):
     }
 
 
+def _save_grn_supplier_invoice_attachment(receipt_id):
+    file_storage = request.files.get('supplier_invoice_file')
+    if not file_storage or not file_storage.filename:
+        return None
+    document = store_document(
+        file_storage,
+        str(receipt_id),
+        str(receipt_id),
+        session.get('user_id'),
+        session.get('role'),
+        'Supplier Invoice Attachment',
+    )
+    if not document:
+        raise ValueError('The supplier invoice attachment could not be saved.')
+    return attach_goods_receipt_supplier_invoice_document(
+        receipt_id,
+        session.get('user_id'),
+        document.get('_id'),
+        document.get('filename'),
+        supplier_invoice_number=request.form.get('supplier_invoice_number_capture', ''),
+        supplier_invoice_date=request.form.get('supplier_invoice_date_capture', ''),
+    )
+
+
 @admin_bp.route('/goods-receipts')
 @login_required
 @roles_required('super_admin', 'avpl_admin', 'accounts')
@@ -2650,10 +2712,26 @@ def create_goods_receipt_view():
                     )
                 ),
             )
+            attachment_warning = None
+            try:
+                _save_grn_supplier_invoice_attachment(result['receipt']['id'])
+            except (ValueError, RuntimeError) as attachment_exc:
+                attachment_warning = str(attachment_exc)
+
             flash(
                 result.get('message') or 'Goods Receipt saved.',
                 'success',
             )
+            if request.form.get('supplier_invoice_received') == 'on' and not request.files.get('supplier_invoice_file'):
+                flash(
+                    'Goods Receipt was saved. The supplier invoice reference is recorded, but no invoice file was attached; you can attach it from the Goods Receipt page.',
+                    'warning',
+                )
+            elif attachment_warning:
+                flash(
+                    'Goods Receipt was saved, but the supplier invoice file needs attention: ' + attachment_warning,
+                    'warning',
+                )
             return redirect(
                 url_for(
                     'admin.goods_receipt_detail',
@@ -2688,10 +2766,67 @@ def goods_receipt_detail(receipt_id):
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), 'danger')
         return redirect(url_for('admin.goods_receipts'))
+    related_purchase_invoices = get_supplier_invoices_for_purchase_order(
+        entity['_id'],
+        session.get('user_id'),
+        receipt.get('purchase_order_id'),
+    )
+    invoice_catalog = get_supplier_invoice_form_catalog(
+        entity['_id'],
+        session.get('user_id'),
+        receipt.get('purchase_order_id'),
+        source_grn_id=receipt.get('id'),
+    )
+    linked_purchase_invoice = None
+    linked_id = str(receipt.get('supplier_invoice_record_id') or '')
+    if linked_id:
+        linked_purchase_invoice = next(
+            (row for row in related_purchase_invoices if str(row.get('id')) == linked_id),
+            None,
+        )
+    if not linked_purchase_invoice and receipt.get('supplier_invoice_number_capture'):
+        linked_purchase_invoice = next(
+            (
+                row
+                for row in related_purchase_invoices
+                if str(row.get('supplier_invoice_number') or '').strip().lower()
+                == str(receipt.get('supplier_invoice_number_capture') or '').strip().lower()
+            ),
+            None,
+        )
+    can_record_purchase_invoice = bool(invoice_catalog.get('purchase_orders'))
+    if not linked_purchase_invoice and not can_record_purchase_invoice and len(related_purchase_invoices) == 1:
+        linked_purchase_invoice = related_purchase_invoices[0]
+
     return render_template(
         'admin/goods_receipt_detail.html',
         receipt=receipt,
+        linked_purchase_invoice=linked_purchase_invoice,
+        related_purchase_invoices=related_purchase_invoices,
+        can_record_purchase_invoice=can_record_purchase_invoice,
     )
+
+
+@admin_bp.route('/goods-receipts/<receipt_id>/supplier-invoice-attachment', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def goods_receipt_supplier_invoice_attachment(receipt_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        receipt = get_goods_receipt(
+            entity['_id'],
+            session.get('user_id'),
+            receipt_id,
+        )
+        if not request.files.get('supplier_invoice_file') or not request.files['supplier_invoice_file'].filename:
+            raise ValueError('Choose the supplier GST/tax invoice file to upload.')
+        result = _save_grn_supplier_invoice_attachment(receipt_id)
+        flash((result or {}).get('message') or 'Supplier invoice attachment saved.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.goods_receipt_detail', receipt_id=receipt_id))
 
 
 @admin_bp.route('/goods-receipts/<receipt_id>/edit', methods=['GET', 'POST'])
@@ -2733,10 +2868,20 @@ def edit_goods_receipt_view(receipt_id):
                     )
                 ),
             )
+            attachment_warning = None
+            try:
+                _save_grn_supplier_invoice_attachment(receipt_id)
+            except (ValueError, RuntimeError) as attachment_exc:
+                attachment_warning = str(attachment_exc)
             flash(
                 result.get('message') or 'Goods Receipt updated.',
                 'success',
             )
+            if attachment_warning:
+                flash(
+                    'Goods Receipt was updated, but the supplier invoice file needs attention: ' + attachment_warning,
+                    'warning',
+                )
             return redirect(
                 url_for(
                     'admin.goods_receipt_detail',
@@ -2836,10 +2981,20 @@ def _supplier_invoice_form_context(invoice=None, form_data=None):
     else:
         selected_po_id = request.args.get('po_id', '').strip()
 
+    selected_source_grn_id = ''
+    if form_data:
+        selected_source_grn_id = form_data.get('source_grn_id', '')
+    elif invoice:
+        selected_source_grn_id = invoice.get('source_grn_id', '')
+    else:
+        selected_source_grn_id = request.args.get('grn_id', '').strip()
+
     catalog = get_supplier_invoice_form_catalog(
         entity['_id'],
         session.get('user_id'),
         selected_po_id,
+        source_grn_id=selected_source_grn_id,
+        include_fully_invoiced=bool(invoice),
     )
     return {
         'catalog': catalog,
@@ -2847,6 +3002,7 @@ def _supplier_invoice_form_context(invoice=None, form_data=None):
         'invoice': invoice,
         'form_data': form_data,
         'selected_purchase_order_id': selected_po_id,
+        'selected_source_grn_id': selected_source_grn_id,
     }
 
 
@@ -3673,9 +3829,19 @@ def payments_dashboard():
         overview = {
             'supplier_payables': [],
             'ufc_receivables': [],
+            'pending_ufc_payments': [],
+            'farmer_payables': [],
             'recent_payments': [],
             'payment_modes': {},
-            'summary': {'supplier_due': '0.00', 'ufc_due': '0.00', 'recent_count': 0, 'accounting_pending': 0},
+            'summary': {
+                'supplier_due': '0.00',
+                'ufc_due': '0.00',
+                'farmer_due': '0.00',
+                'ufc_pending_confirmation': '0.00',
+                'ufc_pending_count': 0,
+                'recent_count': 0,
+                'accounting_pending': 0,
+            },
         }
     return render_template('admin/payments.html', overview=overview)
 
@@ -3696,6 +3862,34 @@ def record_payment_view():
             idempotency_key=request.form.get('payment_token', ''),
         )
         flash(result.get('message') or 'Payment recorded.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.payments_dashboard'))
+
+
+@admin_bp.route('/payments/reported/<payment_id>/confirm', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def confirm_ufc_payment_report(payment_id):
+    try:
+        result = stage8_confirm_reported_payment(session.get('user_id'), payment_id)
+        flash(result.get('message') or 'UFC payment confirmed.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.payments_dashboard'))
+
+
+@admin_bp.route('/payments/reported/<payment_id>/return', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def reject_ufc_payment_report(payment_id):
+    try:
+        result = stage8_reject_reported_payment(
+            session.get('user_id'),
+            payment_id,
+            request.form.get('reason', ''),
+        )
+        flash(result.get('message') or 'UFC payment report returned.', 'success')
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), 'danger')
     return redirect(url_for('admin.payments_dashboard'))

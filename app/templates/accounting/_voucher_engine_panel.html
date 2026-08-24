@@ -646,7 +646,7 @@
                                         {% endif %}
                                         <small>
                                             Checked by {{ voucher.last_validation_result.validated_by_name or voucher.last_validated_by_name or 'Accounting user' }}
-                                            {% if voucher.last_validation_result.validated_at %} on {{ voucher.last_validation_result.validated_at.strftime('%d %b %Y, %I:%M %p') }}{% endif %}.
+                                            {% if voucher.last_validation_result.validated_at %} on {{ voucher.last_validation_result.validated_at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}{% endif %}.
                                             No official posting was created.
                                         </small>
                                     </div>
@@ -790,7 +790,7 @@
                                         <div>
                                             <strong>{{ event.action.replace('_', ' ').title() }}</strong>
                                             <span>{{ event.actor_name or event.actor_role.replace('_', ' ').title() }}</span>
-                                            {% if event.at %}<small>{{ event.at.strftime('%d %b %Y, %I:%M %p') }}</small>{% endif %}
+                                            {% if event.at %}<small>{{ event.at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}</small>{% endif %}
                                             {% if event.changed_fields %}<p>Fields: {{ event.changed_fields|join(', ') }}</p>{% endif %}
                                             {% if event.remarks %}<p>{{ event.remarks }}</p>{% endif %}
                                         </div>

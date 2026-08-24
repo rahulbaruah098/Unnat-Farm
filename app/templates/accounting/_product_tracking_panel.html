@@ -449,7 +449,7 @@
                                     <div>
                                         <strong>{{ event.action.replace('_',' ').title() }}</strong>
                                         <span>{{ event.actor_name or event.actor_role.replace('_',' ').title() }}</span>
-                                        {% if event.at %}<small>{{ event.at.strftime('%d %b %Y, %I:%M %p') }}</small>{% endif %}
+                                        {% if event.at %}<small>{{ event.at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}</small>{% endif %}
                                         {% if event.reason %}<p>Reason: {{ event.reason }}</p>{% endif %}
                                         {% if event.note %}<p>Note: {{ event.note }}</p>{% endif %}
                                     </div>

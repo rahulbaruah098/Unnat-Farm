@@ -2,7 +2,149 @@
 {% block title %}{{ sale.sale_number }}{% endblock %}
 {% block content %}
 <style>
-.sd{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.head p{margin:5px 0 0;color:#64748b}.btn{display:inline-flex;padding:8px 14px;border:1px solid #cfe6d8;border-radius:999px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:18px 0}.info{padding:12px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.info small{display:block;color:#64748b}.info strong{display:block;margin-top:4px;color:#17252a}.section{margin-top:15px;padding:15px;border:1px solid #e2efe6;border-radius:16px;background:#fbfefc}.section h3{margin:0 0 10px;color:#17252a}.money{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.good{color:#166534}.warn{color:#c2410c}@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.money{grid-template-columns:1fr}}@media(max-width:560px){.sd{padding:15px;border-radius:18px}.grid{grid-template-columns:1fr}}
+.sd{
+    width:100%;
+    max-width:1600px;
+    margin:0 auto;
+    padding:28px;
+    border:1px solid rgba(47,122,76,.11);
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 16px 40px rgba(28,72,43,.07);
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#435349;
+}
+
+.head{
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+}
+
+.head h2{
+    margin:0;
+    color:#17251d;
+    font-size:clamp(1.5rem,2vw,2rem);
+    font-weight:800;
+    line-height:1.2;
+    letter-spacing:-.02em;
+}
+
+.head p{
+    margin:6px 0 0;
+    color:#748279;
+    font-size:.8rem;
+}
+
+.btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:37px;
+    padding:7px 12px;
+    border:1px solid rgba(47,122,76,.14);
+    border-radius:9px;
+    background:#fff;
+    color:#2f6e46;
+    text-decoration:none;
+    font-size:.7rem;
+    font-weight:800;
+}
+
+.btn:hover{
+    background:#f7fbf8;
+    border-color:rgba(47,122,76,.26);
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin:18px 0;
+}
+
+.info{
+    min-width:0;
+    padding:13px;
+    border:1px solid rgba(47,122,76,.10);
+    border-radius:11px;
+    background:#fbfdfb;
+}
+
+.info small{
+    display:block;
+    color:#7b8a80;
+    font-size:.67rem;
+}
+
+.info strong{
+    display:block;
+    margin-top:5px;
+    color:#22372a;
+    font-size:.8rem;
+    font-weight:800;
+    overflow-wrap:anywhere;
+}
+
+.section{
+    margin-top:15px;
+    padding:16px;
+    border:1px solid rgba(47,122,76,.10);
+    border-radius:12px;
+    background:#fbfdfb;
+}
+
+.section h3{
+    margin:0 0 11px;
+    color:#263b2f;
+    font-size:.9rem;
+    font-weight:800;
+}
+
+.section p{
+    font-size:.74rem;
+    line-height:1.5;
+}
+
+.money{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+}
+
+.good{
+    color:#166534!important;
+}
+
+.warn{
+    color:#8a5b00!important;
+}
+
+.section a:not(.btn){
+    color:#2f6e46!important;
+    font-weight:800!important;
+    text-decoration:none!important;
+}
+
+.section a:not(.btn):hover{
+    text-decoration:underline!important;
+}
+
+@media(max-width:900px){
+    .sd{padding:20px}
+    .grid{grid-template-columns:repeat(2,1fr)}
+    .money{grid-template-columns:1fr}
+}
+
+@media(max-width:560px){
+    .sd{padding:15px;border-radius:16px}
+    .grid{grid-template-columns:1fr}
+    .head>div:last-child{width:100%}
+    .head>div:last-child .btn{width:100%}
+}
 </style>
 <div class="sd">
   <div class="head"><div><h2>{{ sale.sale_number }}</h2><p>{{ sale.centre_name }} · {{ sale.centre_uid }} · {{ sale.avpl_order_number }}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="{{ url_for('admin.ufc_sales') }}">← Sales to UFC</a>{% if sale.invoice %}<a class="btn" target="_blank" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=sale.invoice.id) }}">Print Invoice</a>{% endif %}</div></div>

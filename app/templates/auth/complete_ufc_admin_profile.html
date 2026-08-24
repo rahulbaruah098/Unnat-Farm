@@ -77,7 +77,7 @@ fieldset{border:1px solid #DCEEE2;border-radius:20px;padding:18px;margin:0 0 16p
 (function(){
     const dob=document.getElementById('ownerDob'),age=document.getElementById('ownerAge');
     function calc(){if(!dob||!age||!dob.value){if(age)age.value='';return;}const d=new Date(dob.value),t=new Date();if(Number.isNaN(d.getTime())||d>t){age.value='';return;}let a=t.getFullYear()-d.getFullYear();if(t.getMonth()<d.getMonth()||(t.getMonth()===d.getMonth()&&t.getDate()<d.getDate()))a--;age.value=a>=0?a:'';}
-    if(dob){dob.max=new Date().toISOString().split('T')[0];dob.addEventListener('change',calc);calc();}
+    if(dob){dob.max={{ business_today_iso|tojson }};dob.addEventListener('change',calc);calc();}
     const pan=document.getElementById('panNumber'),gst=document.getElementById('gstNumber'),gstField=document.getElementById('gstinField'),gstFile=document.getElementById('gst_file');
     if(pan)pan.addEventListener('input',()=>pan.value=pan.value.toUpperCase().replace(/\s/g,''));if(gst)gst.addEventListener('input',()=>gst.value=gst.value.toUpperCase().replace(/\s/g,''));
     function toggleGST(){const y=document.querySelector('input[name="gst_registered"][value="yes"]');const on=!!(y&&y.checked);if(gstField)gstField.style.display=on?'flex':'none';if(gst){gst.required=on;if(!on)gst.value='';}if(gstFile){gstFile.required=on&&gstFile.dataset.existing!=='1';}}

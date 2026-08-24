@@ -2,7 +2,61 @@
 {% block title %}UFC Stock{% endblock %}
 {% block content %}
 <style>
-.sp{width:100%;padding:24px;border:1px solid #dceee2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.head p{margin:5px 0 0;color:#64748b}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;padding:8px 14px;border:1px solid #cfe6d8;border-radius:999px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:16px 0}.sum{padding:13px;border:1px solid #e2efe6;border-radius:14px;background:#fcfefc}.sum small{display:block;color:#64748b}.sum strong{display:block;margin-top:3px;font-size:1.2rem;color:#17252a}.search{display:flex;gap:8px;margin-bottom:14px}.search input{flex:1;height:42px;border:1px solid #d6e5da;border-radius:999px;padding:0 14px;font:inherit}.search button{height:42px;border:0;border-radius:999px;padding:0 18px;background:#5fa878;color:#fff;font:inherit;font-weight:900}.table{overflow:auto;border:1px solid #e2efe6;border-radius:16px}.table table{width:100%;border-collapse:collapse;min-width:1000px}.table th{padding:10px;background:#eff7f1;color:#4b6255;text-align:left;font-size:.8rem}.table td{padding:11px 10px;border-top:1px solid #edf3ef;color:#334155}.table strong{color:#17252a}.sale{color:#237a43;font-weight:900}.empty{padding:30px;text-align:center;color:#64748b}@media(max-width:620px){.sp{padding:15px;border-radius:18px}.actions,.actions a{width:100%}.summary{grid-template-columns:1fr}}
+.sp{
+    width:100%;
+    max-width:1600px;
+    margin:0 auto;
+    padding:28px;
+    border:1px solid rgba(47,122,76,.11);
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 16px 40px rgba(28,72,43,.07);
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#435349;
+}
+.head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}
+.head h2{margin:0;color:#17251d;font-size:clamp(1.5rem,2vw,2rem);font-weight:800;line-height:1.2;letter-spacing:-.02em}
+.head p{margin:6px 0 0;color:#748279;font-size:.82rem;line-height:1.5}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+    display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:8px 14px;
+    border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#fff;color:#526158;
+    text-decoration:none;font-size:.74rem;font-weight:800;transition:.18s ease
+}
+.btn:hover{background:#f7fbf8;border-color:rgba(47,122,76,.26);color:#2f6e46}
+.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
+.sum{padding:14px;border:1px solid rgba(47,122,76,.10);border-radius:11px;background:#fbfdfb}
+.sum small{display:block;margin-bottom:7px;color:#7b8a80;font-size:.68rem;font-weight:750}
+.sum strong{display:block;color:#22372a;font-size:1.25rem;font-weight:850;overflow-wrap:anywhere}
+.search{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin-bottom:16px;padding:13px;
+    border:1px solid rgba(47,122,76,.09);border-radius:11px;background:#fbfdfb
+}
+.search input{
+    width:100%;min-width:0;height:41px;border:1px solid rgba(47,122,76,.14);border-radius:9px;
+    padding:0 11px;background:#fff;color:#263b2f;font:inherit;font-size:.78rem;outline:none
+}
+.search input::placeholder{color:#94a098;opacity:.85}
+.search input:focus{border-color:rgba(47,122,76,.38);box-shadow:0 0 0 4px rgba(47,122,76,.06)}
+.search button{
+    height:41px;border:1px solid #397e51;border-radius:9px;padding:0 17px;background:#397e51;color:#fff;
+    font:inherit;font-size:.74rem;font-weight:800;cursor:pointer
+}
+.search button:hover{background:#2f6e46;border-color:#2f6e46}
+.table{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid rgba(47,122,76,.09);border-radius:11px;background:#fff}
+.table table{width:100%;min-width:1000px;border-collapse:collapse}
+.table th,.table td{padding:10px 11px;border-bottom:1px solid #edf2ee;text-align:left;vertical-align:top;font-size:.72rem;line-height:1.4}
+.table th{background:#f6f9f7;color:#6e7e74;font-size:.63rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+.table td{color:#435349}.table tbody tr:last-child td{border-bottom:none}.table tbody tr:hover td{background:#fbfdfb}
+.table strong{color:#304438;font-weight:800}.table small{color:#829087;font-size:.66rem}
+.sale{color:#237a43!important;font-weight:800}
+.empty{padding:30px!important;text-align:center!important;color:#829087!important}
+@media(max-width:620px){
+    .sp{padding:15px;border-radius:16px}
+    .actions,.actions a{width:100%}
+    .summary{grid-template-columns:1fr}
+    .search{grid-template-columns:1fr}
+}
 </style>
 <div class="sp"><div class="head"><div><h2>My UFC Stock</h2><p>{{ overview.get('centre_name') }} · Stock increases only after you confirm physical receipt from AVPL.</p></div><div class="actions"><a class="btn" href="{{ url_for('modules.ufc_farmer_marketplace') }}">Farmer Marketplace Setup</a><a class="btn" href="{{ url_for('modules.buy') }}">AVPL Marketplace</a><a class="btn" href="{{ url_for('modules.ufc_avpl_orders') }}">My AVPL Orders</a><a class="btn" href="{{ url_for('modules.ufc_purchases') }}">Purchase Entries</a></div></div><div class="summary"><div class="sum"><small>Products in Stock</small><strong>{{ overview.get('summary',{}).get('product_count',0) }}</strong></div><div class="sum"><small>Purchase Cost Stock Value</small><strong>₹{{ overview.get('summary',{}).get('stock_value','0.00') }}</strong></div></div><form class="search" method="get"><input name="q" value="{{ overview.get('query','') }}" placeholder="Search product, SKU or batch"><button type="submit">Search</button></form><div class="table"><table><thead><tr><th>Product</th><th>Category</th><th>Role</th><th>Physical</th><th>Reserved</th><th>Saleable</th><th>Blocked/Damaged</th><th>Batches</th><th>Avg Purchase Cost</th><th>Stock Value</th></tr></thead><tbody>{% for r in overview.get('rows',[]) %}<tr><td><strong>{{ r.product_name }}</strong><br><small>{{ r.product_code }}</small></td><td>{{ r.category }}</td><td>{{ r.product_role }}</td><td>{{ r.physical_quantity }} {{ r.unit_code }}</td><td>{{ r.reserved_quantity }}</td><td class="sale">{{ r.saleable_quantity }}</td><td>{{ r.blocked_quantity }}</td><td>{{ r.batch_count }}</td><td>₹{{ r.weighted_average_cost }}</td><td><strong>₹{{ r.stock_value }}</strong></td></tr>{% else %}<tr><td colspan="10" class="empty">No UFC stock yet. Request a published AVPL product, wait for dispatch, then confirm physical receipt.</td></tr>{% endfor %}</tbody></table></div></div>
 {% endblock %}

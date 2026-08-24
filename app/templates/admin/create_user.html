@@ -2,310 +2,231 @@
 {% block content %}
 
 <style>
-    .page-card{
-        width:100%;
-        border:1px solid rgba(220,238,226,.95);
-        border-radius:26px;
-        padding:28px;
-        background:rgba(255,255,255,.92);
-        box-shadow:0 22px 55px rgba(23,37,42,.10);
-        backdrop-filter:blur(14px);
-        font-family:"Times New Roman", Georgia, serif;
-    }
-
-.title-row{
-    display:grid;
-    grid-template-columns:42px 1fr;
-    align-items:center;
-    column-gap:12px;
-    margin-bottom:18px;
+.create-user-page{
+    --ink:#17251d; --text:#435349; --muted:#7b8a80;
+    --green:#2f7a4c; --green-dark:#2f6e46;
+    --line:rgba(47,122,76,.12);
+    --shadow:0 22px 60px rgba(28,72,43,.10);
+    --shadow-sm:0 10px 28px rgba(28,72,43,.07);
+    width:100%; max-width:1450px; margin:0 auto;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:var(--text);
 }
-
-.title-row h2{
-    margin:0;
-    color:#17252A;
-    font-size:clamp(1.35rem, 5vw, 1.9rem);
-    font-weight:700;
-    line-height:1.25;
-    letter-spacing:.2px;
-    text-align:left;
-    white-space:nowrap;
+.create-user-card{
+    position:relative; overflow:hidden; width:100%;
+    border:1px solid rgba(47,122,76,.11); border-radius:30px;
+    background:radial-gradient(circle at 93% 4%,rgba(96,176,122,.10),transparent 23%),
+               linear-gradient(180deg,rgba(255,255,255,.985),rgba(248,252,249,.985));
+    box-shadow:var(--shadow);
 }
-
+.create-user-card::before{
+    content:""; position:absolute; inset:0 0 auto 0; height:5px;
+    background:linear-gradient(90deg,#2f7a4c,#67b27e,#badfc6);
+}
+.create-user-header{
+    display:flex; align-items:center; gap:14px;
+    padding:30px 32px 23px; border-bottom:1px solid rgba(47,122,76,.09);
+}
 .back-btn{
-    display:inline-flex;
-    width:42px;
-    height:42px;
-    border:none;
-    border-radius:14px;
-    align-items:center;
-    justify-content:center;
-    background:rgba(228,247,234,.82);
-    color:#3B7D55;
-    font-size:1.65rem;
-    font-weight:700;
-    line-height:1;
-    cursor:pointer;
-    box-shadow:0 8px 20px rgba(95,168,120,.12);
-    transition:all .2s ease;
+    display:inline-flex; width:42px; height:42px; flex:0 0 42px;
+    border:1px solid rgba(47,122,76,.13); border-radius:13px;
+    align-items:center; justify-content:center; background:#edf8f1;
+    color:#2f7a4c; font-size:1.35rem; font-weight:800; cursor:pointer;
+    transition:.18s ease;
 }
-
-    .back-btn:hover{
-        background:#5FA878;
-        color:#fff;
-        transform:translateX(-2px);
-    }
-
-    .muted{
-        display:block;
-        margin:0 0 22px;
-        color:#64748B;
-        font-size:1rem;
-        line-height:1.6;
-    }
-
-    .grid-form{
-        display:grid;
-        gap:18px;
-    }
-
-    .grid-form.two-col{
-        grid-template-columns:repeat(2, minmax(0, 1fr));
-    }
-
-    .grid-form label{
-        display:flex;
-        flex-direction:column;
-        gap:8px;
-        color:#17252A;
-        font-size:1.05rem;
-        font-weight:700;
-    }
-
-    .grid-form input,
-    .grid-form select{
-        width:100%;
-        min-height:44px;
-        padding:10px 13px;
-        border:1px solid rgba(220,238,226,.95);
-        border-radius:14px;
-        background:#fff;
-        color:#334155;
-        font-family:"Times New Roman", Georgia, serif;
-        font-size:1rem;
-        outline:none;
-        transition:all .2s ease;
-    }
-
-    .grid-form input:focus,
-    .grid-form select:focus{
-        border-color:rgba(95,168,120,.55);
-        box-shadow:0 0 0 4px rgba(95,168,120,.12);
-    }
-
-    .grid-form small.muted{
-        margin:2px 0 0;
-        padding:10px 12px;
-        border:1px solid rgba(95,168,120,.16);
-        border-radius:14px;
-        background:rgba(228,247,234,.38);
-        color:#64748B;
-        font-size:.92rem;
-        line-height:1.45;
-        font-weight:400;
-    }
-
-    .span-2{
-        grid-column:1 / -1;
-        display:flex;
-        justify-content:flex-end;
-        margin-top:4px;
-    }
-
-    .span-2 button{
-        min-height:44px;
-        padding:10px 24px;
-        border:none;
-        border-radius:999px;
-        background:#5FA878;
-        color:#fff;
-        font-family:"Times New Roman", Georgia, serif;
-        font-size:1.05rem;
-        font-weight:700;
-        cursor:pointer;
-        box-shadow:0 12px 26px rgba(95,168,120,.24);
-        transition:all .2s ease;
-    }
-
-    .span-2 button:hover{
-        background:#3B7D55;
-        transform:translateY(-1px);
-    }
-
-    .modal-overlay{
-        position:fixed;
-        inset:0;
-        background:rgba(15,23,42,.45);
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        z-index:9999;
-        opacity:0;
-        pointer-events:none;
-        transition:.25s ease;
-    }
-
-    .modal-overlay.active{
-        opacity:1;
-        pointer-events:auto;
-    }
-
-    .modal-box{
-        width:min(92%, 420px);
-        background:#fff;
-        border-radius:20px;
-        padding:24px;
-        box-shadow:0 30px 60px rgba(15,23,42,.25);
-        font-family:"Times New Roman", Georgia, serif;
-        text-align:center;
-    }
-
-    .modal-box h3{
-        margin:0 0 10px;
-        color:#17252A;
-        font-size:1.4rem;
-        font-weight:700;
-    }
-
-    .modal-box p{
-        margin:0 0 20px;
-        color:#475569;
-        font-size:1rem;
-    }
-
-    .modal-actions{
-        display:flex;
-        gap:12px;
-        justify-content:center;
-    }
-
-    .btn-cancel,
-    .btn-confirm{
-        min-height:38px;
-        padding:8px 18px;
-        border-radius:999px;
-        font-family:"Times New Roman", Georgia, serif;
-        font-weight:700;
-        cursor:pointer;
-        border:1px solid transparent;
-        transition:.2s ease;
-    }
-
-    .btn-cancel{
-        background:#E2E8F0;
-        color:#334155;
-    }
-
-    .btn-confirm{
-        background:#5FA878;
-        color:#fff;
-    }
-
-    .btn-cancel:hover{
-        background:#CBD5E1;
-    }
-
-    .btn-confirm:hover{
-        background:#3B7D55;
-    }
-
-    @media (max-width:860px){
-
-        .page-card{
-            padding:22px;
-            border-radius:22px;
-        }
-
-        .grid-form.two-col{
-            grid-template-columns:1fr;
-        }
-
-        .span-2{
-            justify-content:stretch;
-        }
-
-        .span-2 button{
-            width:100%;
-        }
-    }
-
-    @media (max-width:420px){
-        .page-card{
-            padding:16px;
-            border-radius:18px;
-        }
-
-       .title-row{
-    grid-template-columns:38px 1fr;
-    column-gap:10px;
+.back-btn:hover{color:#fff;background:#2f7a4c;transform:translateX(-2px);}
+.create-user-header-icon{
+    width:48px;height:48px;flex:0 0 48px;display:flex;align-items:center;justify-content:center;
+    border-radius:16px;color:#2f7a4c;background:linear-gradient(145deg,#e8f6ed,#dff1e5);
+    border:1px solid rgba(47,122,76,.13);box-shadow:0 8px 20px rgba(47,122,76,.10);
 }
-
-.title-row h2{
-    font-size:1.55rem;
+.create-user-header-icon svg{width:22px;height:22px;}
+.create-user-eyebrow{
+    margin:0 0 5px;color:#7d8b82;font-size:.70rem;font-weight:850;
+    letter-spacing:.12em;text-transform:uppercase;
 }
-
-.back-btn{
-    width:38px;
-    height:38px;
-    border-radius:12px;
-    font-size:1.45rem;
+.create-user-title{
+    margin:0;color:var(--ink);font-size:clamp(1.6rem,2vw,2.15rem);
+    font-weight:830;line-height:1.12;letter-spacing:-.025em;
 }
-
-        .grid-form label{
-            font-size:1rem;
-        }
-
-        .modal-actions{
-            flex-direction:column;
-        }
-    }
+.create-user-body{padding:24px 32px 34px;}
+.uid-guide{
+    display:flex;align-items:flex-start;gap:12px;margin:0 0 22px;padding:15px 16px;
+    border:1px solid rgba(47,122,76,.11);border-radius:16px;color:#53665a;
+    background:linear-gradient(180deg,#f7fbf8,#eef8f1);font-size:.82rem;line-height:1.55;
+}
+.uid-guide::before{
+    content:"i";width:28px;height:28px;flex:0 0 28px;display:flex;align-items:center;justify-content:center;
+    border-radius:9px;color:#2f7a4c;background:#dff1e5;font-size:.8rem;font-weight:900;
+}
+.form-panel{
+    padding:20px;border:1px solid rgba(47,122,76,.11);border-radius:20px;
+    background:linear-gradient(180deg,#fbfdfb,#f6faf7);box-shadow:var(--shadow-sm);
+}
+.form-section-title{
+    display:flex;align-items:center;gap:9px;margin-bottom:16px;color:#6c7c72;
+    font-size:.70rem;font-weight:850;letter-spacing:.10em;text-transform:uppercase;
+}
+.form-section-title::before{
+    content:"";width:8px;height:8px;border-radius:50%;background:#4ea36a;
+    box-shadow:0 0 0 5px rgba(78,163,106,.10);
+}
+.grid-form{display:grid;gap:14px;}
+.grid-form.two-col{grid-template-columns:repeat(2,minmax(0,1fr));}
+.field-card{
+    display:flex;flex-direction:column;gap:8px;min-width:0;padding:15px;
+    border:1px solid rgba(47,122,76,.10);border-radius:15px;background:#fff;transition:.18s ease;
+}
+.field-card:focus-within{border-color:rgba(47,122,76,.22);box-shadow:0 8px 22px rgba(28,72,43,.06);}
+.field-label{color:#2c4033;font-size:.78rem;font-weight:800;}
+.field-required{color:#b74444;margin-left:2px;}
+.grid-form input,.grid-form select{
+    width:100%;min-height:42px;padding:9px 11px;border:1px solid rgba(47,122,76,.13);
+    border-radius:10px;outline:none;background:#fdfefd;color:#34483c;font-family:inherit;
+    font-size:.82rem;transition:.18s ease;
+}
+.grid-form input:focus,.grid-form select:focus{
+    border-color:rgba(47,122,76,.35);box-shadow:0 0 0 4px rgba(47,122,76,.07);background:#fff;
+}
+.grid-form input[readonly]{background:#f2f6f3;color:#6c7b71;cursor:not-allowed;}
+.field-help{
+    margin:0;padding:9px 10px;border:1px solid rgba(47,122,76,.08);border-radius:10px;
+    background:#f3f9f5;color:#748279;font-size:.72rem;line-height:1.45;font-weight:550;
+}
+.span-2{grid-column:1/-1;display:flex;justify-content:flex-end;margin-top:4px;}
+.create-btn{
+    min-height:43px;padding:10px 18px;border:none;border-radius:11px;color:#fff;
+    background:linear-gradient(135deg,#397f51,#2f6e46);font-family:inherit;font-size:.82rem;
+    font-weight:800;cursor:pointer;box-shadow:0 10px 24px rgba(47,122,76,.18);transition:.18s ease;
+}
+.create-btn::before{content:"+";margin-right:7px;font-size:1rem;}
+.create-btn:hover{transform:translateY(-1px);box-shadow:0 13px 28px rgba(47,122,76,.23);}
+.modal-overlay{
+    position:fixed;inset:0;width:100vw;height:100dvh;display:flex;align-items:center;justify-content:center;
+    padding:20px;background:rgba(17,35,24,.48);backdrop-filter:blur(5px);z-index:999999;
+    opacity:0;pointer-events:none;transition:.2s ease;
+}
+.modal-overlay.active{opacity:1;pointer-events:auto;}
+.modal-box{
+    width:min(92vw,420px);padding:25px;border:1px solid rgba(47,122,76,.10);border-radius:22px;
+    background:#fff;box-shadow:0 30px 70px rgba(17,35,24,.25);text-align:center;
+    transform:scale(.96) translateY(8px);transition:.2s ease;
+}
+.modal-overlay.active .modal-box{transform:scale(1) translateY(0);}
+.modal-box::before{
+    content:"+";width:50px;height:50px;margin:0 auto 13px;display:flex;align-items:center;justify-content:center;
+    border-radius:15px;color:#2f7a4c;background:#edf8f1;border:1px solid rgba(47,122,76,.13);
+    font-size:1.25rem;font-weight:900;
+}
+.modal-box h3{margin:0 0 7px;color:#25362b;font-size:1.15rem;font-weight:820;}
+.modal-box p{margin:0 0 20px;color:#69786f;font-size:.86rem;line-height:1.5;}
+.modal-actions{display:flex;gap:9px;justify-content:center;}
+.btn-cancel,.btn-confirm{
+    min-height:40px;padding:8px 16px;border-radius:11px;font-family:inherit;font-size:.8rem;
+    font-weight:800;cursor:pointer;border:1px solid transparent;transition:.18s ease;
+}
+.btn-cancel{color:#425247;background:#edf2ef;}
+.btn-confirm{color:#fff;background:#397e51;box-shadow:0 8px 18px rgba(47,122,76,.18);}
+.btn-cancel:hover{background:#e2e9e4;}
+.btn-confirm:hover{background:#2f6e46;}
+@media(max-width:860px){
+    .create-user-card{border-radius:22px;}
+    .create-user-header{padding:22px 18px 18px;}
+    .create-user-header-icon{display:none;}
+    .create-user-body{padding:20px 18px 26px;}
+    .grid-form.two-col{grid-template-columns:1fr;}
+    .span-2{grid-column:auto;justify-content:stretch;}
+    .create-btn{width:100%;}
+}
+@media(max-width:480px){
+    .create-user-header{padding-left:14px;padding-right:14px;}
+    .create-user-title{font-size:1.35rem;}
+    .back-btn{width:38px;height:38px;flex-basis:38px;}
+    .create-user-body{padding-left:14px;padding-right:14px;}
+    .form-panel{padding:14px;}
+    .field-card{padding:13px;}
+    .modal-actions{flex-direction:column;}
+    .btn-cancel,.btn-confirm{width:100%;}
+}
 </style>
 
-<div class="page-card">
-    <div class="title-row">
+<div class="create-user-page">
+<div class="create-user-card">
+    <div class="create-user-header">
         <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
-        <h2>Create User / ID</h2>
+        <div class="create-user-header-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path d="M15 19c0-3-2-5-6-5s-6 2-6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M18 8v6M15 11h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div>
+            <div class="create-user-eyebrow">People & Validation</div>
+            <h2 class="create-user-title">Create User / ID</h2>
+        </div>
     </div>
 
-    <p class="muted">UFC Admin UID is generated from selected state, e.g. AS0001. UFC Mitra UID is generated under the mapped centre, e.g. AS0001-01.</p>
+    <div class="create-user-body">
+        <div class="uid-guide">
+            UFC Admin UID is generated from selected state, e.g. AS0001. UFC Mitra UID is generated under the mapped centre, e.g. AS0001-01.
+        </div>
 
-    <form method="post" class="grid-form two-col" onsubmit="return handleCreate(event, this);">
-        <label>Role
-            <select name="role" required>
-                {% set role_labels = {
-                    'accounts': 'Accountant',
-                    'sales_unnatfarm': 'Sales - UnnatFarm',
-                    'sales_nelocals': 'Sales - NeLocals',
-                    'avpl_admin': 'AVPL Admin',
-                    'ufc_admin': 'UnnatFarm Centre Admin'
-                } %}
-                {% for role in allowed_roles %}<option value="{{ role }}">{{ role_labels.get(role, role) }}</option>{% endfor %}
-            </select>
-        </label>
-        <label>Name <input type="text" name="name" required></label>
-        <label>Username <input type="text" name="username"></label>
-        <label>Phone <input type="text" name="phone"></label>
-        <label>Password <input type="text" name="password" required></label>
-        <label data-role-field="ufc_admin">State
-            <select name="state"><option value="">Select</option>{% for s in states %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
-            <small class="muted">For UFC Admin ID creation, AVPL selects only the state. District, block and village are typed manually by the centre during profile completion.</small>
-        </label>
-        <label data-role-field="ufc_mitra">Mapped UnnatFarm Centre UID
-            <input type="text" name="mapped_centre_uid" data-centre-lookup value="{{ session.get('centre_uid') if session.get('role') == 'ufc_admin' else '' }}" {% if session.get('role') == 'ufc_admin' %}readonly{% endif %}>
-            <small class="muted">Mitra UID is generated under this Centre UID. Location is handled during Mitra profile completion.</small>
-        </label>
-        <div class="span-2"><button type="submit">Create</button></div>
-    </form>
+        <div class="form-panel">
+            <div class="form-section-title">User Account Information</div>
+
+            <form method="post" class="grid-form two-col" onsubmit="return handleCreate(event, this);">
+                <label class="field-card">
+                    <span class="field-label">Role <span class="field-required">*</span></span>
+                    <select name="role" required>
+                        {% set role_labels = {
+                            'accounts': 'Accountant',
+                            'sales_unnatfarm': 'Sales - UnnatFarm',
+                            'sales_nelocals': 'Sales - NeLocals',
+                            'avpl_admin': 'AVPL Admin',
+                            'ufc_admin': 'UnnatFarm Centre Admin'
+                        } %}
+                        {% for role in allowed_roles %}<option value="{{ role }}">{{ role_labels.get(role, role) }}</option>{% endfor %}
+                    </select>
+                </label>
+
+                <label class="field-card">
+                    <span class="field-label">Name <span class="field-required">*</span></span>
+                    <input type="text" name="name" required>
+                </label>
+
+                <label class="field-card">
+                    <span class="field-label">Username</span>
+                    <input type="text" name="username">
+                </label>
+
+                <label class="field-card">
+                    <span class="field-label">Phone</span>
+                    <input type="text" name="phone">
+                </label>
+
+                <label class="field-card">
+                    <span class="field-label">Password <span class="field-required">*</span></span>
+                    <input type="text" name="password" required>
+                </label>
+
+                <label class="field-card" data-role-field="ufc_admin">
+                    <span class="field-label">State</span>
+                    <select name="state"><option value="">Select</option>{% for s in states %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
+                    <small class="field-help">For UFC Admin ID creation, AVPL selects only the state. District, block and village are typed manually by the centre during profile completion.</small>
+                </label>
+
+                <label class="field-card" data-role-field="ufc_mitra">
+                    <span class="field-label">Mapped UnnatFarm Centre UID</span>
+                    <input type="text" name="mapped_centre_uid" data-centre-lookup value="{{ session.get('centre_uid') if session.get('role') == 'ufc_admin' else '' }}" {% if session.get('role') == 'ufc_admin' %}readonly{% endif %}>
+                    <small class="field-help">Mitra UID is generated under this Centre UID. Location is handled during Mitra profile completion.</small>
+                </label>
+
+                <div class="span-2"><button class="create-btn" type="submit">Create</button></div>
+            </form>
+        </div>
+    </div>
+</div>
 </div>
 
 <div id="createModal" class="modal-overlay">

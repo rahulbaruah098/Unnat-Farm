@@ -1,9 +1,10 @@
-from datetime import datetime
 from bson import ObjectId
+
+from app.utils.timezone import utc_now
 
 
 def now_utc():
-    return datetime.utcnow()
+    return utc_now()
 
 
 def to_obj_id(value):

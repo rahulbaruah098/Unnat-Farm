@@ -2,447 +2,990 @@
 {% block content %}
 
 <style>
-    .page-card{
-        width:100%;
-        border:1px solid rgba(220,238,226,.95);
-        border-radius:26px;
-        padding:28px;
-        background:rgba(255,255,255,.92);
-        box-shadow:0 22px 55px rgba(23,37,42,.10);
-        backdrop-filter:blur(14px);
-        font-family:"Times New Roman", Georgia, serif;
+.profile-page {
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 28px;
+
+    border: 1px solid rgba(47, 122, 76, 0.11);
+    border-radius: 22px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 16px 40px rgba(28, 72, 43, 0.07);
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    color: #435349;
+}
+
+
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
+
+.profile-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 18px;
+    margin-bottom: 24px;
+
+    flex-wrap: wrap;
+}
+
+.profile-header-main {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+    min-width: 0;
+}
+
+.profile-back-btn {
+    display: none;
+
+    width: 40px;
+    height: 40px;
+
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 40px;
+
+    border: 1px solid rgba(47, 122, 76, 0.14);
+    border-radius: 10px;
+
+    background: #f3f8f4;
+    color: #397e51;
+
+    font-size: 1.15rem;
+    font-weight: 800;
+
+    cursor: pointer;
+}
+
+.profile-back-btn:hover {
+    background: #397e51;
+    border-color: #397e51;
+    color: #ffffff;
+}
+
+.profile-header-copy {
+    min-width: 0;
+}
+
+.profile-kicker {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #748279;
+
+    font-size: 0.70rem;
+    font-weight: 800;
+
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.profile-title {
+    margin: 0;
+
+    color: #17251d;
+
+    font-size: clamp(1.5rem, 2vw, 2rem);
+    font-weight: 800;
+    line-height: 1.2;
+
+    letter-spacing: -0.02em;
+
+    overflow-wrap: anywhere;
+}
+
+.profile-subtitle {
+    margin: 7px 0 0;
+
+    color: #748279;
+
+    font-size: 0.84rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   PROFILE SUMMARY
+   ========================================================= */
+
+.profile-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 12px;
+    margin-bottom: 26px;
+}
+
+.profile-summary-card {
+    min-width: 0;
+
+    padding: 16px;
+
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 14px;
+
+    background: #fbfdfb;
+}
+
+.profile-summary-label {
+    display: block;
+
+    margin-bottom: 10px;
+
+    color: #7b8a80;
+
+    font-size: 0.70rem;
+    font-weight: 800;
+
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.profile-summary-value {
+    display: block;
+
+    color: #22372a;
+
+    font-size: clamp(1.15rem, 2vw, 1.55rem);
+    font-weight: 850;
+    line-height: 1.2;
+
+    overflow-wrap: anywhere;
+}
+
+.profile-summary-card.status-card .profile-summary-value {
+    color: #2b6f47;
+}
+
+
+/* =========================================================
+   SECTION
+   ========================================================= */
+
+.profile-section {
+    margin-top: 26px;
+}
+
+.profile-section:first-of-type {
+    margin-top: 0;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+    margin-bottom: 12px;
+
+    flex-wrap: wrap;
+}
+
+.section-header h3 {
+    margin: 0;
+
+    color: #263b2f;
+
+    font-size: 0.96rem;
+    font-weight: 800;
+}
+
+.section-description {
+    margin: 4px 0 0;
+
+    color: #7b8a80;
+
+    font-size: 0.74rem;
+    line-height: 1.45;
+}
+
+
+/* =========================================================
+   ACCOUNT DETAILS
+   ========================================================= */
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 10px;
+}
+
+.detail-card {
+    min-width: 0;
+
+    padding: 14px 15px;
+
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 12px;
+
+    background: #ffffff;
+}
+
+.detail-label {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #829087;
+
+    font-size: 0.67rem;
+    font-weight: 800;
+
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.detail-value {
+    display: block;
+
+    color: #304438;
+
+    font-size: 0.84rem;
+    font-weight: 650;
+    line-height: 1.4;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   DOCUMENT TABLE
+   ========================================================= */
+
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    scrollbar-width: thin;
+    scrollbar-color: rgba(47, 122, 76, 0.34) #edf3ef;
+}
+
+.table-wrap::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+    background: #edf3ef;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+    background: rgba(47, 122, 76, 0.34);
+    border-radius: 999px;
+}
+
+.documents-table {
+    width: 100%;
+    min-width: 650px;
+
+    border-collapse: collapse;
+}
+
+.documents-table th,
+.documents-table td {
+    padding: 11px 12px;
+
+    border-bottom: 1px solid #edf2ee;
+
+    text-align: left;
+    vertical-align: middle;
+
+    color: #435349;
+
+    font-size: 0.76rem;
+    line-height: 1.4;
+}
+
+.documents-table th {
+    background: #f6f9f7;
+    color: #6e7e74;
+
+    font-size: 0.64rem;
+    font-weight: 800;
+
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    white-space: nowrap;
+}
+
+.documents-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.documents-table tbody tr:hover td {
+    background: #fbfdfb;
+}
+
+.table-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 34px;
+    padding: 7px 11px;
+
+    border: 1px solid rgba(47, 122, 76, 0.13);
+    border-radius: 9px;
+
+    background: #f3f8f4;
+    color: #397e51;
+
+    text-decoration: none;
+
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.table-action:hover {
+    background: #397e51;
+    border-color: #397e51;
+    color: #ffffff;
+}
+
+
+/* =========================================================
+   ALERT / REQUEST STATES
+   ========================================================= */
+
+.profile-notice {
+    margin-bottom: 14px;
+
+    padding: 13px 14px;
+
+    border: 1px solid rgba(47, 122, 76, 0.12);
+    border-radius: 11px;
+
+    background: #f5faf7;
+    color: #526b5b;
+
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.profile-rejection {
+    margin-bottom: 14px;
+
+    padding: 14px;
+
+    border: 1px solid #fecaca;
+    border-radius: 11px;
+
+    background: #fff7f7;
+}
+
+.profile-rejection-title {
+    margin-bottom: 5px;
+
+    color: #b91c1c;
+
+    font-size: 0.82rem;
+    font-weight: 850;
+}
+
+.profile-rejection-text {
+    margin-bottom: 8px;
+
+    color: #8d2d2d;
+
+    font-size: 0.76rem;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+.profile-rejection-reason {
+    padding: 10px 11px;
+
+    border: 1px solid #fecaca;
+    border-radius: 9px;
+
+    background: #fef2f2;
+    color: #7f1d1d;
+
+    font-size: 0.74rem;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+
+/* =========================================================
+   UPDATE REQUEST FORM
+   ========================================================= */
+
+.update-panel {
+    padding: 16px;
+
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 14px;
+
+    background: #fbfdfb;
+}
+
+.update-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 12px;
+}
+
+.upload-card {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+    min-width: 0;
+
+    padding: 14px;
+
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 12px;
+
+    background: #ffffff;
+}
+
+.upload-title {
+    color: #304438;
+
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.current-file {
+    color: #7b8a80;
+
+    font-size: 0.70rem;
+    font-weight: 600;
+    line-height: 1.4;
+
+    overflow-wrap: anywhere;
+}
+
+.current-file-preview {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+
+    flex-wrap: wrap;
+
+    padding: 8px;
+
+    border: 1px solid rgba(47, 122, 76, 0.09);
+    border-radius: 9px;
+
+    background: #f7fbf8;
+}
+
+.current-profile-img {
+    width: 54px;
+    height: 54px;
+
+    flex: 0 0 54px;
+
+    border: 1px solid rgba(47, 122, 76, 0.14);
+    border-radius: 10px;
+
+    background: #f1f5f9;
+
+    object-fit: cover;
+}
+
+.current-file-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 32px;
+    padding: 6px 10px;
+
+    border: 1px solid rgba(47, 122, 76, 0.13);
+    border-radius: 8px;
+
+    background: #f3f8f4;
+    color: #397e51;
+
+    text-decoration: none;
+
+    font-size: 0.70rem;
+    font-weight: 800;
+}
+
+.current-file-link:hover {
+    background: #397e51;
+    border-color: #397e51;
+    color: #ffffff;
+}
+
+.upload-card input[type="file"] {
+    width: 100%;
+    min-width: 0;
+
+    padding: 8px;
+
+    border: 1px dashed rgba(47, 122, 76, 0.24);
+    border-radius: 9px;
+
+    background: #fbfdfb;
+    color: #526159;
+
+    font: inherit;
+    font-size: 0.72rem;
+}
+
+.upload-card input[type="file"]::file-selector-button {
+    margin-right: 9px;
+
+    padding: 7px 10px;
+
+    border: 0;
+    border-radius: 7px;
+
+    background: #eaf6ee;
+    color: #2f6e46;
+
+    font: inherit;
+    font-size: 0.70rem;
+    font-weight: 800;
+
+    cursor: pointer;
+}
+
+.update-actions {
+    grid-column: 1 / -1;
+
+    display: flex;
+    justify-content: flex-end;
+
+    padding-top: 2px;
+}
+
+.submit-btn {
+    min-height: 40px;
+    padding: 8px 15px;
+
+    border: 1px solid #397e51;
+    border-radius: 9px;
+
+    background: #397e51;
+    color: #ffffff;
+
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 800;
+
+    cursor: pointer;
+}
+
+.submit-btn:hover {
+    background: #2f6e46;
+    border-color: #2f6e46;
+}
+
+.empty-state {
+    padding: 24px 16px;
+
+    color: #7b8a80;
+
+    font-size: 0.78rem;
+    font-weight: 650;
+
+    text-align: center;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .profile-page {
+        padding: 20px;
+        border-radius: 18px;
     }
 
-    .page-card h2,
-    .page-card h3{
-        margin:0 0 22px;
-        color:#17252A;
-        font-family:"Times New Roman", Georgia, serif;
-        font-weight:700;
-        line-height:1.25;
-        letter-spacing:.2px;
-    }
-
-    .page-card h2{
-        font-size:clamp(1.45rem, 2.1vw, 1.9rem);
-    }
-
-    .title-row{
-    display:grid;
-    grid-template-columns:42px 1fr;
-    align-items:center;
-    column-gap:12px;
-    margin-bottom:22px;
-}
-
-.title-row h2{
-    margin:0;
-    color:#17252A;
-    font-size:clamp(1.45rem, 2.1vw, 1.9rem);
-    font-weight:700;
-    line-height:1.25;
-    letter-spacing:.2px;
-    text-align:left;
-    white-space:nowrap;
-}
-
-.back-btn{
-    display:none;
-    width:42px;
-    height:42px;
-    border:none;
-    border-radius:14px;
-    align-items:center;
-    justify-content:center;
-    background:rgba(228,247,234,.82);
-    color:#3B7D55;
-    font-size:1.65rem;
-    font-weight:700;
-    cursor:pointer;
-    box-shadow:0 8px 20px rgba(95,168,120,.12);
-    transition:all .2s ease;
-}
-
-.back-btn:hover{
-    background:#5FA878;
-    color:#fff;
-    transform:translateX(-2px);
-}
-
-    .page-card h3{
-        margin-top:28px;
-        font-size:clamp(1.22rem, 1.7vw, 1.5rem);
-    }
-
-    .role-assigned-card{
-        margin-bottom:26px;
-        padding:22px;
-        border:1px solid rgba(95,168,120,.28);
-        border-radius:22px;
-        background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,251,247,.92));
-        box-shadow:0 14px 32px rgba(23,37,42,.06);
-    }
-
-    .role-assigned-label{
-        display:block;
-        margin-bottom:10px;
-        color:#64748B;
-        font-size:1rem;
-        font-weight:600;
-    }
-
-    .role-assigned-value{
-        display:block;
-        color:#17252A;
-        font-size:clamp(1.6rem, 2.6vw, 2.3rem);
-        font-weight:700;
-        line-height:1.2;
-        word-break:break-word;
-    }
-
-    .page-card table{
-        width:100%;
-        border-collapse:separate;
-        border-spacing:0;
-        margin:0 0 24px;
-        border:1px solid rgba(220,238,226,.95);
-        border-radius:20px;
-        overflow:hidden;
-        background:#fff;
-        box-shadow:0 12px 28px rgba(23,37,42,.05);
-    }
-
-    .page-card th,
-    .page-card td{
-        padding:14px 16px;
-        border-bottom:1px solid rgba(220,238,226,.85);
-        color:#425466;
-        font-size:1rem;
-        line-height:1.45;
-        text-align:left;
-        vertical-align:top;
-        word-break:break-word;
-    }
-
-    .page-card th{
-        width:230px;
-        color:#17252A;
-        font-weight:700;
-        background:rgba(228,247,234,.42);
-    }
-
-    .page-card thead th{
-        background:rgba(228,247,234,.72);
-        color:#17252A;
-        font-weight:700;
-    }
-
-    .page-card tr:last-child th,
-    .page-card tr:last-child td{
-        border-bottom:none;
-    }
-
-    .page-card a{
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        min-height:34px;
-        padding:7px 13px;
-        border-radius:999px;
-        color:#3B7D55;
-        background:rgba(228,247,234,.72);
-        border:1px solid rgba(95,168,120,.25);
-        text-decoration:none;
-        font-weight:700;
-        transition:all .2s ease;
-    }
-
-    .page-card a:hover{
-        color:#fff;
-        background:#5FA878;
-        border-color:#5FA878;
-        transform:translateY(-1px);
-    }
-
-    .page-card p{
-        margin:0;
-        padding:15px 18px;
-        border:1px solid rgba(95,168,120,.18);
-        border-radius:18px;
-        color:#475569;
-        background:rgba(228,247,234,.42);
-        font-size:1rem;
-        line-height:1.6;
-    }
-
-    @media (max-width:760px){
-        .page-card{
-            padding:20px;
-            border-radius:22px;
-        }
-
-        .back-btn{
-    display:inline-flex;
-}
-
-        .role-assigned-card{
-            padding:20px;
-            border-radius:20px;
-        }
-
-        .page-card table,
-        .page-card tbody,
-        .page-card tr,
-        .page-card th,
-        .page-card td{
-            display:block;
-            width:100%;
-        }
-
-        .page-card thead{
-            display:none;
-        }
-
-        .page-card tr{
-            border-bottom:1px solid rgba(220,238,226,.95);
-        }
-
-        .page-card tr:last-child{
-            border-bottom:none;
-        }
-
-        .page-card th{
-            border-bottom:none;
-            padding:13px 14px 6px;
-        }
-
-        .page-card td{
-            padding:6px 14px 13px;
-        }
-
-        .page-card td[colspan]{
-            padding:16px;
-            text-align:center;
-        }
-    }
-
-    @media (max-width:420px){
-        .page-card{
-            padding:16px;
-            border-radius:18px;
-        }
-
-        .page-card th,
-        .page-card td{
-            font-size:.96rem;
-        }
-        .title-row{
-    grid-template-columns:38px 1fr;
-    column-gap:10px;
-}
-
-.back-btn{
-    width:38px;
-    height:38px;
-    border-radius:12px;
-    font-size:1.45rem;
-}
-    }
-
-    .grid-form{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:16px;
-    margin-bottom:24px;
-}
-
-.grid-form label{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    color:#17252A;
-    font-size:1rem;
-    font-weight:700;
-}
-
-.grid-form input{
-    width:100%;
-    min-height:46px;
-    padding:10px 14px;
-    border:1px solid rgba(95,168,120,.28);
-    border-radius:14px;
-    background:#fff;
-    color:#334155;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:1rem;
-}
-
-.span-2{
-    grid-column:1 / -1;
-}
-
-.grid-form button{
-    min-height:46px;
-    padding:10px 22px;
-    border:none;
-    border-radius:999px;
-    background:#5FA878;
-    color:#fff;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:1rem;
-    font-weight:800;
-    cursor:pointer;
-    box-shadow:0 12px 26px rgba(95,168,120,.22);
-}
-
-.grid-form button:hover{
-    background:#3B7D55;
-}
-.current-file-preview{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-    margin:6px 0 10px;
-    padding:8px 10px;
-    border:1px solid rgba(95,168,120,.18);
-    border-radius:14px;
-    background:rgba(228,247,234,.28);
-    width:max-content;
-    max-width:100%;
-}
-
-.current-profile-img{
-    width:52px;
-    height:52px;
-    border-radius:12px;
-    object-fit:cover;
-    object-position:center;
-    border:1px solid rgba(95,168,120,.25);
-    background:#F1F5F9;
-    box-shadow:0 8px 16px rgba(23,37,42,.07);
-}
-
-.current-file-preview a{
-    min-height:30px;
-    padding:5px 11px;
-    font-size:.88rem;
-}
-
-@media(max-width:420px){
-    .current-profile-img{
-        width:46px;
-        height:46px;
-        border-radius:11px;
-    }
-
-    .current-file-preview{
-        width:100%;
-    }
-}
-@media(max-width:760px){
-    .grid-form{
-        grid-template-columns:1fr;
+    .profile-summary-grid {
+        grid-template-columns: 1fr;
     }
 }
 
-.profile-rejection-box{
-    margin:18px 0 22px;
-    padding:18px 20px;
-    border-radius:18px;
-    border:1px solid #FECACA;
-    background:#FEF2F2;
-    color:#7F1D1D;
-    box-shadow:0 12px 28px rgba(185,28,28,.08);
+@media (max-width: 760px) {
+    .profile-back-btn {
+        display: inline-flex;
+    }
+
+    .details-grid,
+    .update-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .update-actions {
+        grid-column: auto;
+    }
 }
 
-.profile-rejection-title{
-    font-size:1.15rem;
-    font-weight:900;
-    color:#B91C1C;
-    margin-bottom:8px;
-}
+@media (max-width: 560px) {
+    .profile-page {
+        padding: 15px;
+        border-radius: 16px;
+    }
 
-.profile-rejection-text{
-    font-size:1rem;
-    font-weight:700;
-    color:#7F1D1D;
-    margin-bottom:10px;
-}
+    .profile-title {
+        font-size: 1.28rem;
+    }
 
-.profile-rejection-reason{
-    padding:12px 14px;
-    border-radius:14px;
-    background:#FEE2E2;
-    border:1px solid #FECACA;
-    color:#7F1D1D;
-    font-weight:700;
-    line-height:1.45;
+    .profile-subtitle {
+        font-size: 0.78rem;
+    }
+
+    .profile-summary-card,
+    .detail-card,
+    .upload-card {
+        padding: 12px;
+    }
+
+    .update-panel {
+        padding: 12px;
+    }
+
+    .update-actions,
+    .submit-btn {
+        width: 100%;
+    }
+
+    .documents-table {
+        min-width: 560px;
+    }
 }
 </style>
 
-<div class="page-card">
-    <div class="title-row">
-        <button type="button" class="back-btn" onclick="history.back()" aria-label="Back">←</button>
-<h2>{{ profile_title or 'My Profile' }}</h2>
+
+<div class="profile-page">
+
+    <div class="profile-header">
+
+        <div class="profile-header-main">
+
+            <button
+                type="button"
+                class="profile-back-btn"
+                onclick="history.back()"
+                aria-label="Back"
+            >
+                ←
+            </button>
+
+            <div class="profile-header-copy">
+
+                <span class="profile-kicker">
+                    Account & Identity
+                </span>
+
+                <h2 class="profile-title">
+                    {{ profile_title or 'My Profile' }}
+                </h2>
+
+                <p class="profile-subtitle">
+                    View your account information, uploaded documents,
+                    profile status and update requests.
+                </p>
+
+            </div>
+
+        </div>
+
     </div>
+
+
     {% if user %}
 
-    <div class="role-assigned-card">
-        <span class="role-assigned-label">Assigned Role</span>
-        <strong class="role-assigned-value">{{ user.role|replace('_',' ')|title }}</strong>
+    <div class="profile-summary-grid">
+
+        <div class="profile-summary-card">
+            <span class="profile-summary-label">
+                Assigned Role
+            </span>
+
+            <strong class="profile-summary-value">
+                {{ user.role|replace('_',' ')|title }}
+            </strong>
+        </div>
+
+        <div class="profile-summary-card status-card">
+            <span class="profile-summary-label">
+                Approval Status
+            </span>
+
+            <strong class="profile-summary-value">
+                {{ user.approval_status or 'Active' }}
+            </strong>
+        </div>
+
     </div>
 
-<h3>Account Details</h3>
-<table><tbody>
-    {% if user.name %}<tr><th>Name</th><td>{{ user.name }}</td></tr>{% endif %}
-    {% if user.username %}<tr><th>Username</th><td>{{ user.username }}</td></tr>{% endif %}
-    {% if user.phone %}<tr><th>Phone</th><td>{{ user.phone }}</td></tr>{% endif %}
 
-   {% if user.role not in ['super_admin', 'avpl_admin'] %}
-    {% set display_dob = profile_dob %}
-    {% set display_age = profile_age %}
+    <!-- =====================================================
+         ACCOUNT DETAILS
+         ===================================================== -->
 
-    <tr>
-        <th>Date of Birth</th>
-        <td>{{ display_dob or '-' }}</td>
-    </tr>
+    <section class="profile-section">
 
-    <tr>
-        <th>Age</th>
-        <td>{{ display_age or '-' }}</td>
-    </tr>
-{% endif %}
+        <div class="section-header">
+            <div>
+                <h3>Account Details</h3>
+                <p class="section-description">
+                    Basic identity, location and mapped account information.
+                </p>
+            </div>
+        </div>
 
-    {% if user.role %}<tr><th>Role</th><td>{{ user.role }}</td></tr>{% endif %}
-        {% if user.centre_uid or user.mapped_centre_uid %}<tr><th>Centre UID</th><td>{{ user.centre_uid or user.mapped_centre_uid }}</td></tr>{% endif %}
-        {% if user.mitra_uid or user.mapped_mitra_uid %}<tr><th>Mitra UID</th><td>{{ user.mitra_uid or user.mapped_mitra_uid }}</td></tr>{% endif %}
-        {% if user.state %}<tr><th>State</th><td>{{ user.state }}</td></tr>{% endif %}
-        {% if user.district %}<tr><th>District</th><td>{{ user.district }}</td></tr>{% endif %}
-        {% if user.block %}<tr><th>Block</th><td>{{ user.block }}</td></tr>{% endif %}
-        {% if user.village %}<tr><th>Village</th><td>{{ user.village }}</td></tr>{% endif %}
-        {% if user.approval_status %}<tr><th>Approval Status</th><td>{{ user.approval_status }}</td></tr>{% endif %}
-        {% if user.last_login %}<tr><th>Last Login</th><td>{{ user.last_login }}</td></tr>{% endif %}
-    </tbody></table>
+        <div class="details-grid">
+
+            {% if user.name %}
+            <div class="detail-card">
+                <span class="detail-label">Name</span>
+                <span class="detail-value">{{ user.name }}</span>
+            </div>
+            {% endif %}
 
 
-    <h3>Uploaded Documents</h3>
-    <table>
-      <thead><tr><th>Document Type</th><th>Preview</th><th>Download</th></tr></thead>
-      <tbody>
-      {% for d in docs %}
-        <tr><td>{{ d.document_type }}</td><td><a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">View</a></td><td><a href="{{ url_for('documents.serve', filename=d.filename, download=1) }}">Download</a></td></tr>
-      {% else %}
-        <tr><td colspan="3">No uploaded documents found.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+            {% if user.username %}
+            <div class="detail-card">
+                <span class="detail-label">Username</span>
+                <span class="detail-value">{{ user.username }}</span>
+            </div>
+            {% endif %}
+
+
+            {% if user.phone %}
+            <div class="detail-card">
+                <span class="detail-label">Phone</span>
+                <span class="detail-value">{{ user.phone }}</span>
+            </div>
+            {% endif %}
+
+
+            {% if user.role not in ['super_admin', 'avpl_admin'] %}
+
+                {% set display_dob = profile_dob %}
+                {% set display_age = profile_age %}
+
+                <div class="detail-card">
+                    <span class="detail-label">Date of Birth</span>
+                    <span class="detail-value">{{ display_dob or '-' }}</span>
+                </div>
+
+                <div class="detail-card">
+                    <span class="detail-label">Age</span>
+                    <span class="detail-value">{{ display_age or '-' }}</span>
+                </div>
+
+            {% endif %}
+
+
+            {% if user.role %}
+            <div class="detail-card">
+                <span class="detail-label">Role</span>
+                <span class="detail-value">{{ user.role }}</span>
+            </div>
+            {% endif %}
+
+
+            {% if user.centre_uid or user.mapped_centre_uid %}
+            <div class="detail-card">
+                <span class="detail-label">Centre UID</span>
+                <span class="detail-value">
+                    {{ user.centre_uid or user.mapped_centre_uid }}
+                </span>
+            </div>
+            {% endif %}
+
+
+            {% if user.mitra_uid or user.mapped_mitra_uid %}
+            <div class="detail-card">
+                <span class="detail-label">Mitra UID</span>
+                <span class="detail-value">
+                    {{ user.mitra_uid or user.mapped_mitra_uid }}
+                </span>
+            </div>
+            {% endif %}
+
+
+            {% if user.state %}
+            <div class="detail-card">
+                <span class="detail-label">State</span>
+                <span class="detail-value">{{ user.state }}</span>
+            </div>
+            {% endif %}
+
+
+            {% if user.district %}
+            <div class="detail-card">
+                <span class="detail-label">District</span>
+                <span class="detail-value">{{ user.district }}</span>
+            </div>
+            {% endif %}
+
+
+            {% if user.block %}
+            <div class="detail-card">
+                <span class="detail-label">Block</span>
+                <span class="detail-value">{{ user.block }}</span>
+            </div>
+            {% endif %}
+
+
+            {% if user.village %}
+            <div class="detail-card">
+                <span class="detail-label">Village</span>
+                <span class="detail-value">{{ user.village }}</span>
+            </div>
+            {% endif %}
+
+
+            {% if user.approval_status %}
+            <div class="detail-card">
+                <span class="detail-label">Approval Status</span>
+                <span class="detail-value">{{ user.approval_status }}</span>
+            </div>
+            {% endif %}
+
+
+            {% if user.last_login %}
+            <div class="detail-card">
+                <span class="detail-label">Last Login</span>
+                <span class="detail-value">{{ user.last_login }}</span>
+            </div>
+            {% endif %}
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         DOCUMENTS
+         ===================================================== -->
+
+    <section class="profile-section">
+
+        <div class="section-header">
+            <div>
+                <h3>Uploaded Documents</h3>
+                <p class="section-description">
+                    View or download the documents currently linked to this profile.
+                </p>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+
+            <table class="documents-table">
+
+                <thead>
+                    <tr>
+                        <th>Document Type</th>
+                        <th>Preview</th>
+                        <th>Download</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for d in docs %}
+
+                    <tr>
+
+                        <td>
+                            {{ d.document_type }}
+                        </td>
+
+                        <td>
+                            <a
+                                class="table-action"
+                                href="{{ url_for('documents.serve', filename=d.filename) }}"
+                                target="_blank"
+                            >
+                                View
+                            </a>
+                        </td>
+
+                        <td>
+                            <a
+                                class="table-action"
+                                href="{{ url_for('documents.serve', filename=d.filename, download=1) }}"
+                            >
+                                Download
+                            </a>
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+                        <td colspan="3" class="empty-state">
+                            No uploaded documents found.
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         PROFILE UPDATE REQUEST
+         ===================================================== -->
 
     {% if not readonly_profile and user.role not in ['avpl_admin', 'super_admin'] %}
-    <h3>Request Document / Photo Update</h3>
 
-    {% if rejected_profile_update %}
-        <div class="profile-rejection-box">
+    <section class="profile-section">
+
+        <div class="section-header">
+            <div>
+                <h3>Request Document / Photo Update</h3>
+                <p class="section-description">
+                    Submit replacement documents or a new profile photo for approval.
+                </p>
+            </div>
+        </div>
+
+
+        {% if rejected_profile_update %}
+
+        <div class="profile-rejection">
+
             <div class="profile-rejection-title">
                 Update Request Rejected
             </div>
@@ -455,23 +998,37 @@
                 <strong>Reason / Correction Required:</strong>
                 {{ rejected_profile_update.rejection_reason or "No reason provided." }}
             </div>
+
         </div>
-    {% endif %}
 
-    {% if pending_profile_update %}
-            <p>
-                Your profile update request has been sent for AVPL Admin approval.
-                Until approval, your old approved profile/documents will remain active.
-            </p>
+        {% endif %}
+
+
+        {% if pending_profile_update %}
+
+        <div class="profile-notice">
+            Your profile update request has been sent for AVPL Admin approval.
+            Until approval, your old approved profile/documents will remain active.
+        </div>
+
         {% else %}
-            <form method="POST"
-                  action="{{ url_for('modules.request_profile_update') }}"
-                  enctype="multipart/form-data"
-                  class="grid-form two-col"
-                  style="margin-top:16px;">
 
-                <label>
-                    Profile Photo
+        <div class="update-panel">
+
+            <form
+                method="POST"
+                action="{{ url_for('modules.request_profile_update') }}"
+                enctype="multipart/form-data"
+                class="update-grid"
+            >
+
+                <!-- PROFILE PHOTO -->
+
+                <label class="upload-card">
+
+                    <span class="upload-title">
+                        Profile Photo
+                    </span>
 
                     {% set current_profile_photo =
                         user.profile_photo
@@ -479,7 +1036,7 @@
                         or (master.passport_photo_file if master and master.passport_photo_file else none)
                     %}
 
-                    <small class="current-file-text">
+                    <small class="current-file">
                         Current:
                         {% if current_profile_photo %}
                             {{ current_profile_photo }}
@@ -489,84 +1046,166 @@
                     </small>
 
                     {% if current_profile_photo %}
-                        <div class="current-file-preview">
-                            <img
-                                src="{{ url_for('documents.serve', filename=current_profile_photo) }}"
-                                alt="Current Profile Photo"
-                                class="current-profile-img"
-                            >
-                            <a href="{{ url_for('documents.serve', filename=current_profile_photo) }}" target="_blank">
-                                View Current
-                            </a>
-                        </div>
+
+                    <div class="current-file-preview">
+
+                        <img
+                            src="{{ url_for('documents.serve', filename=current_profile_photo) }}"
+                            alt="Current Profile Photo"
+                            class="current-profile-img"
+                        >
+
+                        <a
+                            class="current-file-link"
+                            href="{{ url_for('documents.serve', filename=current_profile_photo) }}"
+                            target="_blank"
+                        >
+                            View Current
+                        </a>
+
+                    </div>
+
                     {% endif %}
 
-                    <input type="file" name="profile_photo" accept="image/png,image/jpeg,image/jpg,image/webp">
+                    <input
+                        type="file"
+                        name="profile_photo"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                    >
+
                 </label>
 
+
                 {% if user.role != 'farmer' %}
-                    <label>
-    Government ID / Identity Document
 
-    {% set current_government_id = master.government_id_file if master and master.government_id_file else none %}
+                <!-- GOVERNMENT ID -->
 
-    <small class="current-file-text">
-        Current:
-        {% if current_government_id %}
-            {{ current_government_id }}
-        {% else %}
-            Not uploaded
-        {% endif %}
-    </small>
+                <label class="upload-card">
 
-    {% if current_government_id %}
-        <div class="current-file-preview">
-            <a href="{{ url_for('documents.serve', filename=current_government_id) }}" target="_blank">
-                View Current
-            </a>
-        </div>
-    {% endif %}
+                    <span class="upload-title">
+                        Government ID / Identity Document
+                    </span>
 
-    <input type="file" name="government_id_file" accept=".pdf,.jpg,.jpeg,.png,.webp">
-</label>
+                    {% set current_government_id =
+                        master.government_id_file
+                        if master and master.government_id_file
+                        else none
+                    %}
 
-                    <label>
-    Supporting Document
+                    <small class="current-file">
+                        Current:
+                        {% if current_government_id %}
+                            {{ current_government_id }}
+                        {% else %}
+                            Not uploaded
+                        {% endif %}
+                    </small>
 
-    {% set current_supporting_document = master.supporting_document if master and master.supporting_document else none %}
+                    {% if current_government_id %}
 
-    <small class="current-file-text">
-        Current:
-        {% if current_supporting_document %}
-            {{ current_supporting_document }}
-        {% else %}
-            Not uploaded
-        {% endif %}
-    </small>
+                    <div class="current-file-preview">
 
-    {% if current_supporting_document %}
-        <div class="current-file-preview">
-            <a href="{{ url_for('documents.serve', filename=current_supporting_document) }}" target="_blank">
-                View Current
-            </a>
-        </div>
-    {% endif %}
+                        <a
+                            class="current-file-link"
+                            href="{{ url_for('documents.serve', filename=current_government_id) }}"
+                            target="_blank"
+                        >
+                            View Current
+                        </a>
 
-    <input type="file" name="supporting_document" accept=".pdf,.jpg,.jpeg,.png,.webp">
-</label>
+                    </div>
+
+                    {% endif %}
+
+                    <input
+                        type="file"
+                        name="government_id_file"
+                        accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    >
+
+                </label>
+
+
+                <!-- SUPPORTING DOCUMENT -->
+
+                <label class="upload-card">
+
+                    <span class="upload-title">
+                        Supporting Document
+                    </span>
+
+                    {% set current_supporting_document =
+                        master.supporting_document
+                        if master and master.supporting_document
+                        else none
+                    %}
+
+                    <small class="current-file">
+                        Current:
+                        {% if current_supporting_document %}
+                            {{ current_supporting_document }}
+                        {% else %}
+                            Not uploaded
+                        {% endif %}
+                    </small>
+
+                    {% if current_supporting_document %}
+
+                    <div class="current-file-preview">
+
+                        <a
+                            class="current-file-link"
+                            href="{{ url_for('documents.serve', filename=current_supporting_document) }}"
+                            target="_blank"
+                        >
+                            View Current
+                        </a>
+
+                    </div>
+
+                    {% endif %}
+
+                    <input
+                        type="file"
+                        name="supporting_document"
+                        accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    >
+
+                </label>
+
                 {% endif %}
 
-                <div class="span-2">
-                    <button type="submit">Send Update Request</button>
+
+                <div class="update-actions">
+
+                    <button
+                        class="submit-btn"
+                        type="submit"
+                    >
+                        Send Update Request
+                    </button>
+
                 </div>
+
             </form>
+
+        </div>
+
         {% endif %}
+
+    </section>
+
     {% endif %}
 
+
     {% else %}
-        <p>User not found.</p>
+
+    <div class="empty-state">
+        User not found.
+    </div>
+
     {% endif %}
+
 </div>
 
 {% endblock %}
-

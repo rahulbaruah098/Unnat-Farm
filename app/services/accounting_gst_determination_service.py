@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today
 from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
@@ -689,7 +690,7 @@ def get_gst_determination_overview(accounting_entity_id, actor_user_id):
             {"code": code, **meta}
             for code, meta in TRANSACTION_TYPES.items()
         ],
-        "today": date.today().strftime("%Y-%m-%d"),
+        "today": business_today().strftime("%Y-%m-%d"),
         "counts": {
             "suppliers": len(suppliers),
             "customers": len(customers),

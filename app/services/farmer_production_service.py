@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -101,7 +102,7 @@ def _to_object_id(value):
 
 
 def _date_iso(value, fallback=None):
-    fallback = fallback or date.today()
+    fallback = fallback or business_today()
     if isinstance(value, datetime):
         return value.date().isoformat()
     if isinstance(value, date):
@@ -147,7 +148,7 @@ def _ensure_indexes():
 
 
 def _next_number(counter_key, prefix, digits=6):
-    year = date.today().year
+    year = business_today().year
     counter = mongo.db.system_counters.find_one_and_update(
         {"_id": f"{counter_key}:{year}"},
         {"$inc": {"sequence": 1}, "$setOnInsert": {"created_at": now_utc()}},
@@ -262,7 +263,7 @@ def record_production(actor_user_id, product_name, quantity, unit_code, *, harve
         raise ValueError("Produced quantity is unusually large. Please check it once.")
     unit = _unit_code(unit_code)
     harvest = _date_iso(harvest_date)
-    if datetime.strptime(harvest, "%Y-%m-%d").date() > date.today():
+    if datetime.strptime(harvest, "%Y-%m-%d").date() > business_today():
         raise ValueError("Harvest / production date cannot be in the future.")
     cost = max(_decimal(estimated_cost), Decimal("0"))
     token = _clean(idempotency_key, 120) or f"PROD-{uuid4().hex.upper()}"
@@ -519,7 +520,7 @@ def get_production_overview(actor_user_id, search=""):
         "stock_rows": stock_rows,
         "expenses": expenses,
         "query": q,
-        "today": date.today().isoformat(),
+        "today": business_today().isoformat(),
         "production_token": f"PROD-{uuid4().hex.upper()}",
         "expense_token": f"EXP-{uuid4().hex.upper()}",
         "summary": {
@@ -739,7 +740,7 @@ def create_external_sale(actor_user_id, product_key, quantity, unit_price, *, bu
         days = 0
     days = min(max(days, 0), 365)
     sale_day = _date_iso(sale_date)
-    if datetime.strptime(sale_day, "%Y-%m-%d").date() > date.today():
+    if datetime.strptime(sale_day, "%Y-%m-%d").date() > business_today():
         raise ValueError("Sale date cannot be in the future.")
     token = _clean(idempotency_key, 120) or f"FSALE-{uuid4().hex.upper()}"
 
@@ -844,7 +845,7 @@ def _ensure_external_invoice(profile, sale):
     if existing:
         return existing
     total = _decimal(sale.get("grand_total"))
-    due_date = sale.get("sale_date") or date.today().isoformat()
+    due_date = sale.get("sale_date") or business_today().isoformat()
     if sale.get("payment_term") == "credit":
         base = datetime.strptime(_date_iso(sale.get("sale_date")), "%Y-%m-%d").date()
         due_date = (base + timedelta(days=max(int(sale.get("credit_days") or 0), 0))).isoformat()
@@ -980,7 +981,7 @@ def create_external_purchase(actor_user_id, seller_name, product_name, quantity,
     if total <= 0:
         raise ValueError("Total purchase amount must be greater than zero.")
     purchase_day = _date_iso(purchase_date)
-    if datetime.strptime(purchase_day, "%Y-%m-%d").date() > date.today():
+    if datetime.strptime(purchase_day, "%Y-%m-%d").date() > business_today():
         raise ValueError("Purchase date cannot be in the future.")
     term = str(payment_term or "pay_now").strip().lower()
     if term not in PAYMENT_TERM_LABELS:
@@ -1137,7 +1138,7 @@ def serialize_external_purchase_invoice(row):
 
 def get_external_purchase_form_context(actor_user_id):
     profile = _get_farmer(actor_user_id)
-    return {"farmer": profile, "unit_choices": UNIT_CHOICES, "today": date.today().isoformat(), "purchase_token": f"FPUR-{uuid4().hex.upper()}", "payment_token": f"FPAY-{uuid4().hex.upper()}"}
+    return {"farmer": profile, "unit_choices": UNIT_CHOICES, "today": business_today().isoformat(), "purchase_token": f"FPUR-{uuid4().hex.upper()}", "payment_token": f"FPAY-{uuid4().hex.upper()}"}
 
 
 def get_external_purchase_rows(actor_user_id, search=""):
@@ -1243,7 +1244,7 @@ def get_sale_form_context(actor_user_id):
         "buyer_types": BUYER_TYPES,
         "payment_terms": PAYMENT_TERM_LABELS,
         "mapped_ufc": _resolve_mapped_ufc(profile),
-        "today": date.today().isoformat(),
+        "today": business_today().isoformat(),
         "sale_token": f"FSALE-{uuid4().hex.upper()}",
         "payment_token": f"FPAY-{uuid4().hex.upper()}",
     }

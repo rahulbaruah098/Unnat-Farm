@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today
 from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
@@ -711,7 +712,7 @@ def serialize_gst_tax_rate(document):
         "status": document.get("status") or STATUS_DRAFT,
         "status_display": STATUS_LABELS.get(document.get("status"), document.get("status") or "Draft"),
         "is_active": document.get("is_active") is True,
-        "is_current_today": _is_date_current(document, datetime.combine(date.today(), time.min)),
+        "is_current_today": _is_date_current(document, datetime.combine(business_today(), time.min)),
         "version": int(document.get("version") or 1),
         "created_by": str(document.get("created_by") or ""),
         "created_by_name": document.get("created_by_name") or "",
@@ -1673,7 +1674,7 @@ def retire_gst_tax_rate(rate_id, actor_user_id, expected_version, effective_to, 
     retirement_date = _parse_date(effective_to, "Retirement effective date")
     if retirement_date < current.get("effective_from"):
         raise ValueError("Retirement date cannot precede the rate effective date.")
-    today_start = datetime.combine(date.today(), time.min)
+    today_start = datetime.combine(business_today(), time.min)
     if retirement_date > today_start:
         raise ValueError(
             "A GST rate cannot be retired with a future date. Use a replacement "
@@ -1841,7 +1842,7 @@ def get_gst_tax_option_catalog(accounting_entity_id=None):
             for item in GST_TAXABILITY_DEFINITIONS
         },
         "active_rates": active_rates,
-        "today": date.today().isoformat(),
+        "today": business_today().isoformat(),
     }
 
 
@@ -1867,7 +1868,7 @@ def get_gst_tax_overview(accounting_entity_id, actor_user_id):
             row.get("status") or STATUS_DRAFT, 0
         ) + 1
 
-    today_dt = datetime.combine(date.today(), time.min)
+    today_dt = datetime.combine(business_today(), time.min)
     current_active = [
         serialize_gst_tax_rate(row)
         for row in rows
@@ -1902,7 +1903,7 @@ def get_gst_tax_overview(accounting_entity_id, actor_user_id):
         ) + foundation.get("audit_recovery_count", 0),
         "options": get_gst_tax_option_catalog(entity["_id"]),
         "form_defaults": {
-            "effective_from": date.today().isoformat(),
+            "effective_from": business_today().isoformat(),
             "effective_to": "",
             "taxability_code": "TAXABLE",
         },
@@ -1922,7 +1923,7 @@ def get_effective_gst_tax_rate(accounting_entity_id, rate_id=None, rate_code=Non
     elif transaction_date:
         date_value = _parse_date(transaction_date, "Transaction date")
     else:
-        date_value = datetime.combine(date.today(), time.min)
+        date_value = datetime.combine(business_today(), time.min)
 
     query = {
         "accounting_entity_id": entity_id,

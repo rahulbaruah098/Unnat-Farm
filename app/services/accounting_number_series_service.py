@@ -1614,6 +1614,130 @@ def approve_number_series(
     }
 
 
+def bulk_approve_number_series(
+    selections,
+    actor_user_id,
+    approval_note="",
+):
+    """Approve multiple pending number-series revisions in one request.
+
+    The batch performs a complete preflight before changing any record, then
+    delegates each activation to ``approve_number_series`` so the existing
+    maker-checker, optimistic versioning, active-series supersession, workflow
+    history and audit logic remain exactly the same. The UI therefore refreshes
+    once for the whole selection instead of once per series.
+    """
+    actor = _get_actor(actor_user_id, allowed_roles={"avpl_admin", "super_admin"})
+
+    if not isinstance(selections, list) or not selections:
+        raise ValueError("Select at least one pending number series to approve.")
+    if len(selections) > 50:
+        raise ValueError("A maximum of 50 number-series records can be approved together.")
+
+    clean_note = str(approval_note or "").strip()
+    if len(clean_note) > 500:
+        raise ValueError("The shared approval note cannot exceed 500 characters.")
+
+    prepared = []
+    seen = set()
+
+    # Complete preflight first. This avoids normal validation failures leaving
+    # an avoidable partially-approved batch. A true concurrent edit can still
+    # occur after preflight, in which case the per-item approval guard catches it.
+    for raw_item in selections:
+        if not isinstance(raw_item, dict):
+            raise ValueError("Invalid bulk number-series selection.")
+
+        category = str(raw_item.get("category") or "").strip().lower()
+        series_id = str(raw_item.get("series_id") or "").strip()
+        expected_version = raw_item.get("expected_version")
+        unique_key = (category, series_id)
+
+        if not category or not series_id:
+            raise ValueError("Invalid bulk number-series selection.")
+        if unique_key in seen:
+            continue
+        seen.add(unique_key)
+
+        _, document = _load_series(category, series_id)
+        _require_permission(
+            actor,
+            document["accounting_entity_id"],
+            "accounting.number_series.approve",
+        )
+
+        if document.get("status") != STATUS_PENDING_APPROVAL:
+            raise ValueError(
+                f"{document.get('document_label') or 'A selected series'} is no longer awaiting approval."
+            )
+        if str(document.get("created_by") or "") == str(actor.get("_id") or ""):
+            raise PermissionError(
+                f"{document.get('document_label') or 'A selected series'} was created by the current user; "
+                "the maker cannot approve their own revision."
+            )
+
+        expected = _parse_expected_version(expected_version)
+        current_version = int(document.get("version") or 1)
+        if expected != current_version:
+            raise RuntimeError(
+                f"{document.get('document_label') or 'A selected series'} changed in another session. "
+                "Refresh and select it again."
+            )
+
+        _assert_open_financial_year(
+            document["financial_year_id"],
+            document["accounting_entity_id"],
+        )
+        _assert_active_configuration(document["accounting_entity_id"])
+        _assert_pattern_available(
+            document["accounting_entity_id"],
+            document["financial_year_id"],
+            document["pattern_key"],
+            document["scope_key"],
+            exclude_id=document["_id"],
+        )
+
+        collection = mongo.db[_collection_name_for_category(category)]
+        active = _find_active(collection, document["scope_key"])
+        _assert_revision_start_safe(document, active)
+
+        prepared.append({
+            "category": category,
+            "series_id": series_id,
+            "expected_version": current_version,
+            "label": document.get("document_label") or "Number series",
+        })
+
+    approved_count = 0
+    failures = []
+    for item in prepared:
+        try:
+            approve_number_series(
+                category=item["category"],
+                series_id=item["series_id"],
+                actor_user_id=actor["_id"],
+                expected_version=item["expected_version"],
+                approval_note=clean_note,
+            )
+            approved_count += 1
+        except (PermissionError, ValueError, RuntimeError) as exc:
+            failures.append(f"{item['label']}: {exc}")
+
+    if approved_count == 0 and failures:
+        raise RuntimeError(failures[0])
+
+    message = f"{approved_count} number series approved and activated."
+    if failures:
+        message += f" {len(failures)} could not be approved because they changed or failed validation; refresh and review them."
+
+    return {
+        "approved_count": approved_count,
+        "failed_count": len(failures),
+        "failures": failures,
+        "message": message,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Atomic reservation and recovery foundation for future posting services
 # ---------------------------------------------------------------------------

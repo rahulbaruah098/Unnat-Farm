@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ order.po_number }} · Purchase Order</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#edf3ef;color:#1f3026;font-family:Inter,Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}.toolbar{position:sticky;top:0;z-index:10;display:flex;justify-content:center;gap:8px;padding:10px 14px;background:#203c2b}.toolbar a,.toolbar button{min-height:36px;padding:7px 14px;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:transparent;color:#fff;font:inherit;font-size:12px;font-weight:800;text-decoration:none;cursor:pointer}.toolbar button{background:#fff;color:#28583a}.sheet{width:min(210mm,calc(100vw - 24px));min-height:297mm;margin:18px auto;padding:12mm 13mm;background:#fff;box-shadow:0 14px 38px rgba(28,52,36,.12)}.header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:start;padding-bottom:12px;border-bottom:2px solid #397e51}.brand{display:flex;gap:13px;align-items:flex-start}.brand img{width:82px;height:52px;object-fit:contain}.brand h1{margin:0 0 4px;font-size:20px;color:#183321}.brand p,.doc p{margin:2px 0;color:#617067;font-size:10.5px;line-height:1.4}.doc{text-align:right}.doc h2{margin:0 0 6px;color:#397e51;font-size:22px}.status{display:inline-flex;padding:4px 8px;border:1px solid #b7e4c7;border-radius:999px;background:#f1faf4;color:#237a43;font-size:9px;font-weight:800;text-transform:uppercase}.meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:11px 0}.meta>div,.party{padding:8px;border:1px solid #dfe9e2;border-radius:6px;background:#fbfdfb}.meta small,.party small{display:block;margin-bottom:4px;color:#75837a;font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.meta strong,.party strong{font-size:10.5px}.parties{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.party p{margin:3px 0;color:#53645a;font-size:9.5px;line-height:1.4}.party .party-name{font-size:11px;color:#263b31}.table-wrap{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:6px;border:1px solid #dfe9e2;text-align:left;vertical-align:top}th{background:#eef6f0;color:#50635a;font-size:8px;text-transform:uppercase}td.num,th.num{text-align:right;white-space:nowrap}.totals{width:48%;margin:10px 0 0 auto}.row{display:flex;justify-content:space-between;gap:14px;padding:5px 0;border-bottom:1px solid #e6eee8;font-size:9.5px}.row.grand{font-size:11px;font-weight:900;border-top:2px solid #397e51;border-bottom:0}.notes{margin-top:12px;padding:9px;border:1px solid #dfe9e2;border-radius:6px;color:#53645a;font-size:9.5px;line-height:1.5}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:34px}.sign{padding-top:7px;border-top:1px solid #839087;text-align:center;color:#65756b;font-size:9px}@media(max-width:760px){.sheet{width:calc(100vw - 12px);min-height:auto;margin:6px auto;padding:18px 12px}.header{grid-template-columns:1fr}.doc{text-align:left}.meta{grid-template-columns:repeat(2,minmax(0,1fr))}.parties{grid-template-columns:1fr}.totals{width:100%}.brand img{width:64px}.toolbar{flex-wrap:wrap}.toolbar a,.toolbar button{flex:1 1 140px}.table-wrap{overflow:auto}table{min-width:780px}}@media(max-width:480px){.meta{grid-template-columns:1fr}.signatures{grid-template-columns:1fr;gap:24px}.brand h1{font-size:17px}.doc h2{font-size:19px}}@media print{body{background:#fff}.toolbar{display:none}.sheet{width:210mm;min-height:297mm;margin:0;padding:10mm 12mm;box-shadow:none}.table-wrap{overflow:visible}table{min-width:0}.signatures{break-inside:avoid}@page{size:A4;margin:0}}
+</style>
+</head>
+<body>
+<div class="toolbar"><a href="{{ url_for('admin.purchase_order_detail', order_id=order.id) }}">Back to Purchase Order</a><button onclick="window.print()">Print / Save as PDF</button></div>
+<main class="sheet">
+<header class="header">
+<div class="brand"><img src="{{ url_for('static', filename='images/unnatfarmlogo.png') }}" alt="UnnatFarm"><div><h1>{{ entity.trade_name or entity.legal_name or 'AVPL' }}</h1>{% if entity.legal_name and entity.legal_name != entity.trade_name %}<p>{{ entity.legal_name }}</p>{% endif %}{% if entity.address_line_1 %}<p>{{ entity.address_line_1 }}</p>{% endif %}{% if entity.address_line_2 %}<p>{{ entity.address_line_2 }}</p>{% endif %}<p>{% if entity.city %}{{ entity.city }}{% endif %}{% if entity.district %}{% if entity.city %}, {% endif %}{{ entity.district }}{% endif %}{% if entity.state %}{% if entity.city or entity.district %}, {% endif %}{{ entity.state }}{% endif %}{% if entity.postal_code %} - {{ entity.postal_code }}{% endif %}</p>{% if entity.gstin or entity.pan %}<p>{% if entity.gstin %}GSTIN: {{ entity.gstin }}{% endif %}{% if entity.pan %}{% if entity.gstin %} · {% endif %}PAN: {{ entity.pan }}{% endif %}</p>{% endif %}</div></div>
+<div class="doc"><h2>Purchase Order</h2><span class="status">{{ order.status_display }}</span><p><strong>{{ order.po_number }}</strong></p></div>
+</header>
+
+<section class="meta"><div><small>PO Date</small><strong>{{ order.order_date }}</strong></div><div><small>Expected Delivery</small><strong>{{ order.expected_delivery_date or '-' }}</strong></div><div><small>Payment Terms</small><strong>{{ order.payment_terms or '-' }}</strong></div><div><small>Currency</small><strong>{{ order.currency or 'INR' }}</strong></div></section>
+
+<section class="parties">
+<div class="party">
+<small>Supplier</small>
+<strong class="party-name">{{ order.supplier_legal_name or order.supplier_name }}</strong>
+{% if order.supplier_trade_name and order.supplier_trade_name != order.supplier_legal_name %}<p>Trade Name: {{ order.supplier_trade_name }}</p>{% endif %}
+{% if order.supplier_address_line_1 %}<p>{{ order.supplier_address_line_1 }}</p>{% endif %}
+{% if order.supplier_address_line_2 %}<p>{{ order.supplier_address_line_2 }}</p>{% endif %}
+{% if order.supplier_city or order.supplier_district or order.supplier_state_name or order.supplier_postal_code %}<p>{% if order.supplier_city %}{{ order.supplier_city }}{% endif %}{% if order.supplier_district %}{% if order.supplier_city %}, {% endif %}{{ order.supplier_district }}{% endif %}{% if order.supplier_state_name %}{% if order.supplier_city or order.supplier_district %}, {% endif %}{{ order.supplier_state_name }}{% endif %}{% if order.supplier_postal_code %} - {{ order.supplier_postal_code }}{% endif %}</p>{% endif %}
+{% if order.supplier_contact_person %}<p>Contact: {{ order.supplier_contact_person }}</p>{% endif %}
+{% if order.supplier_phone %}<p>Phone: {{ order.supplier_phone }}</p>{% endif %}
+{% if order.supplier_email %}<p>Email: {{ order.supplier_email }}</p>{% endif %}
+<p>Supplier Code: {{ order.supplier_code or '-' }}</p>
+{% if order.supplier_gstin %}<p>GSTIN: {{ order.supplier_gstin }}</p>{% endif %}
+{% if order.supplier_pan %}<p>PAN: {{ order.supplier_pan }}</p>{% endif %}
+{% if order.supplier_state_code %}<p>State Code: {{ order.supplier_state_code }}</p>{% endif %}
+{% if order.supplier_reference %}<p>Reference: {{ order.supplier_reference }}</p>{% endif %}
+</div>
+
+<div class="party">
+<small>Deliver To</small>
+<strong class="party-name">{{ entity.trade_name or entity.legal_name or 'AVPL' }}</strong>
+{% if order.delivery_address %}
+{% for line in order.delivery_address.split('\n') %}{% if line.strip() %}<p>{{ line }}</p>{% endif %}{% endfor %}
+{% else %}
+{% if entity.address_line_1 %}<p>{{ entity.address_line_1 }}</p>{% endif %}
+{% if entity.address_line_2 %}<p>{{ entity.address_line_2 }}</p>{% endif %}
+{% if entity.city or entity.district or entity.state or entity.postal_code %}<p>{% if entity.city %}{{ entity.city }}{% endif %}{% if entity.district %}{% if entity.city %}, {% endif %}{{ entity.district }}{% endif %}{% if entity.state %}{% if entity.city or entity.district %}, {% endif %}{{ entity.state }}{% endif %}{% if entity.postal_code %} - {{ entity.postal_code }}{% endif %}</p>{% endif %}
+{% endif %}
+{% if entity.gstin %}<p>GSTIN: {{ entity.gstin }}</p>{% endif %}
+</div>
+</section>
+
+<div class="table-wrap"><table><thead><tr><th>#</th><th>Product</th><th>HSN</th><th>Unit</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Discount</th><th class="num">Tax</th><th class="num">Line Total</th></tr></thead><tbody>{% for item in order.get('items', []) %}<tr><td>{{ item.line_no }}</td><td><strong>{{ item.product_name }}</strong><br><small>{{ item.product_code }}</small></td><td>{{ item.hsn_code or '-' }}</td><td>{{ item.unit_code or item.unit_name }}</td><td class="num">{{ item.quantity }}</td><td class="num">₹{{ item.rate }}</td><td class="num">{{ item.discount_percent }}%</td><td class="num">₹{{ item.tax_amount }}</td><td class="num"><strong>₹{{ item.line_total }}</strong></td></tr>{% endfor %}</tbody></table></div>
+
+<section class="totals"><div class="row"><span>Subtotal</span><strong>₹{{ order.subtotal }}</strong></div><div class="row"><span>Discount</span><strong>₹{{ order.discount_total }}</strong></div><div class="row"><span>Taxable Value</span><strong>₹{{ order.taxable_total }}</strong></div><div class="row"><span>CGST</span><strong>₹{{ order.cgst_total }}</strong></div><div class="row"><span>SGST</span><strong>₹{{ order.sgst_total }}</strong></div><div class="row"><span>IGST</span><strong>₹{{ order.igst_total }}</strong></div><div class="row"><span>Freight + Other</span><strong>₹{{ order.freight_amount }} + ₹{{ order.other_charges }}</strong></div><div class="row grand"><span>Grand Total</span><strong>₹{{ order.grand_total }}</strong></div></section>
+
+<section class="notes"><strong>Terms / Notes</strong><br>{{ order.remarks or 'Please supply the above goods as per the quantities, rates, tax treatment, delivery location and payment terms stated in this Purchase Order.' }}<br><br><strong>Important:</strong> This Purchase Order records AVPL's intent to buy. Final accepted quantity is confirmed through Goods Receipt.</section>
+<section class="signatures"><div class="sign">Authorized by AVPL</div><div class="sign">Supplier Acknowledgement</div></section>
+</main>
+</body>
+</html>

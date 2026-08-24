@@ -1,11 +1,527 @@
+{% set tax_code = (invoice.taxability_code or '')|upper %}
+{% if tax_code == 'TAXABLE' %}
+  {% set document_title = 'TAX INVOICE' %}
+{% elif tax_code in ['EXEMPT', 'NIL_RATED', 'NIL RATED'] %}
+  {% set document_title = 'BILL OF SUPPLY' %}
+{% else %}
+  {% set document_title = 'SALES INVOICE' %}
+{% endif %}
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{ invoice.invoice_number or 'AVPL Sales Invoice' }}</title>
+<title>{{ invoice.invoice_number or document_title }} · {{ document_title }}</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#edf7f0;color:#17252a;font-family:"Times New Roman",Georgia,serif}.toolbar{position:sticky;top:0;z-index:5;display:flex;justify-content:center;gap:8px;padding:12px;background:#174b31}.toolbar button,.toolbar a{border:0;border-radius:999px;padding:9px 15px;background:#fff;color:#174b31;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.sheet{width:min(900px,calc(100% - 28px));margin:18px auto 40px;background:#fff;padding:34px 38px;box-shadow:0 18px 45px rgba(15,23,42,.12)}.top{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding-bottom:16px;border-bottom:2px solid #2f7a4c}.seller h1,.title h1{margin:0;color:#184b30}.seller h1{font-size:1.45rem}.title{text-align:right}.title h1{font-size:1.6rem}.meta{font-size:.9rem;line-height:1.55;color:#475569}.number{font-weight:900;color:#17252a}.badge{display:inline-flex;padding:4px 8px;border-radius:999px;background:#ecfdf5;color:#047857;font-weight:900;font-size:.78rem}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:14px 0}.card{padding:9px;border:1px solid #dceee2;border-radius:10px}.card small{display:block;color:#64748b}.card strong{display:block;margin-top:3px}.party{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.box{padding:12px;border:1px solid #dceee2;border-radius:11px;line-height:1.5}.box h3{margin:0 0 7px;color:#2f7a4c;font-size:.95rem}table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#eff7f1;color:#3f5d4a;text-align:left;padding:8px;border:1px solid #dceee2;font-size:.82rem}td{padding:9px 8px;border:1px solid #e4eee7;vertical-align:top}.right{text-align:right}.totals{width:min(390px,100%);margin:12px 0 0 auto}.totals .row{display:flex;justify-content:space-between;gap:16px;padding:6px 0;border-bottom:1px solid #edf3ef}.totals .grand{font-size:1.08rem;font-weight:900;color:#184b30;border-top:2px solid #2f7a4c}.foot{margin-top:24px;padding-top:14px;border-top:1px solid #cfe6d8;display:grid;grid-template-columns:1fr 1fr;gap:20px}.sign{padding-top:28px;border-top:1px solid #64748b;text-align:center}.note{margin-top:14px;color:#64748b;font-size:.82rem;line-height:1.45}@media(max-width:700px){.sheet{padding:20px 16px}.top,.party,.foot{grid-template-columns:1fr}.title{text-align:left}.cards{grid-template-columns:repeat(2,1fr)}.table-wrap{overflow:auto}table{min-width:780px}}@media print{body{background:#fff}.toolbar{display:none}.sheet{width:100%;margin:0;padding:16mm;box-shadow:none}.note{font-size:9pt}}
+*{box-sizing:border-box}
+
+:root{
+  --ink:#17251d;
+  --text:#435349;
+  --muted:#758279;
+  --line:#dfe8e2;
+  --line-dark:#c8d6cc;
+  --soft:#f7faf8;
+  --soft-green:#edf6f0;
+  --green:#2f6e46;
+  --green-dark:#24583a;
+}
+
+html,body{
+  margin:0;
+  padding:0;
+}
+
+body{
+  background:#eef3ef;
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:13px;
+  line-height:1.45;
+}
+
+.toolbar{
+  position:sticky;
+  top:0;
+  z-index:20;
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  padding:10px 14px;
+  background:#183f2a;
+  box-shadow:0 3px 12px rgba(15,23,42,.12);
+}
+
+.toolbar button,
+.toolbar a{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:36px;
+  padding:7px 13px;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:8px;
+  background:#fff;
+  color:#183f2a;
+  text-decoration:none;
+  font:inherit;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.toolbar button:hover,
+.toolbar a:hover{
+  background:#f5faf6;
+}
+
+.sheet{
+  width:min(920px,calc(100% - 28px));
+  margin:18px auto 38px;
+  padding:30px 34px 26px;
+  background:#fff;
+  border:1px solid #dde7e0;
+  box-shadow:0 18px 46px rgba(15,23,42,.10);
+}
+
+.top{
+  display:grid;
+  grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);
+  gap:24px;
+  align-items:start;
+  padding-bottom:16px;
+  border-bottom:2px solid var(--green);
+}
+
+.seller h1,
+.title h1{
+  margin:0;
+  color:var(--ink);
+  line-height:1.15;
+}
+
+.seller h1{
+  font-size:24px;
+  font-weight:850;
+  letter-spacing:-.02em;
+}
+
+.title{
+  text-align:right;
+}
+
+.title h1{
+  font-size:25px;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+
+.meta{
+  margin-top:6px;
+  color:#5f6f65;
+  font-size:12px;
+  line-height:1.5;
+}
+
+.number{
+  margin-top:7px;
+  color:var(--ink);
+  font-size:14px;
+  font-weight:850;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-top:8px;
+  padding:4px 8px;
+  border:1px solid #b8dac4;
+  border-radius:6px;
+  background:#edf8f0;
+  color:#23643d;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin:14px 0;
+}
+
+.card{
+  min-width:0;
+  padding:10px 11px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fbfdfb;
+}
+
+.card small{
+  display:block;
+  margin-bottom:4px;
+  color:var(--muted);
+  font-size:10px;
+  font-weight:700;
+  line-height:1.25;
+}
+
+.card strong{
+  display:block;
+  color:var(--ink);
+  font-size:12px;
+  font-weight:800;
+  overflow-wrap:anywhere;
+}
+
+.party{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:12px 0;
+}
+
+.box{
+  min-height:160px;
+  padding:13px 14px;
+  border:1px solid var(--line-dark);
+  border-radius:9px;
+  background:#fff;
+  color:#46554b;
+  font-size:12px;
+  line-height:1.5;
+}
+
+.box h3{
+  margin:0 0 8px;
+  padding-bottom:6px;
+  border-bottom:1px solid #e7eee9;
+  color:var(--green);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.06em;
+}
+
+.box strong{
+  color:var(--ink);
+  font-size:12px;
+  font-weight:850;
+}
+
+.table-wrap{
+  width:100%;
+  margin-top:14px;
+  overflow-x:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:auto;
+}
+
+th,
+td{
+  border:1px solid #dde7e0;
+  vertical-align:top;
+}
+
+th{
+  padding:8px 7px;
+  background:#f1f6f3;
+  color:#53645a;
+  text-align:left;
+  font-size:10px;
+  font-weight:850;
+  line-height:1.25;
+  white-space:nowrap;
+}
+
+td{
+  padding:9px 7px;
+  color:#3d4c43;
+  font-size:11px;
+  line-height:1.35;
+}
+
+td strong{
+  color:var(--ink);
+}
+
+td small{
+  color:var(--muted);
+  font-size:9px;
+}
+
+.right{
+  text-align:right;
+  white-space:nowrap;
+}
+
+.totals{
+  width:min(380px,100%);
+  margin:14px 0 0 auto;
+  border-top:1px solid var(--line);
+}
+
+.totals .row{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  padding:6px 2px;
+  border-bottom:1px solid #edf2ee;
+  color:#516158;
+  font-size:11px;
+}
+
+.totals .row strong{
+  color:var(--ink);
+  font-weight:800;
+}
+
+.totals .grand{
+  margin-top:2px;
+  padding-top:8px;
+  border-top:2px solid var(--green);
+  color:var(--ink);
+  font-size:13px;
+  font-weight:900;
+}
+
+.totals .grand span:last-child{
+  color:var(--green-dark);
+}
+
+.foot{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:40px;
+  margin-top:30px;
+  padding-top:8px;
+}
+
+.sign{
+  padding-top:26px;
+  border-top:1px solid #7e8b83;
+  color:#536158;
+  text-align:center;
+  font-size:10px;
+  font-weight:700;
+}
+
+.note{
+  margin-top:18px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+  color:#758279;
+  font-size:9.5px;
+  line-height:1.45;
+}
+
+@media(max-width:760px){
+  .sheet{
+    width:min(100% - 18px,920px);
+    padding:20px 16px;
+  }
+
+  .top,
+  .party,
+  .foot{
+    grid-template-columns:1fr;
+  }
+
+  .title{
+    text-align:left;
+  }
+
+  .cards{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .box{
+    min-height:auto;
+  }
+
+  table{
+    min-width:780px;
+  }
+}
+
+@page{
+  size:A4;
+  margin:10mm;
+}
+
+@media print{
+  html,
+  body{
+    width:210mm;
+    background:#fff;
+  }
+
+  body{
+    font-size:10pt;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  .toolbar{
+    display:none!important;
+  }
+
+  .sheet{
+    width:100%;
+    max-width:none;
+    margin:0;
+    padding:0;
+    border:0;
+    box-shadow:none;
+  }
+
+  .top{
+    gap:14mm;
+    padding-bottom:8px;
+  }
+
+  .seller h1{
+    font-size:17pt;
+  }
+
+  .title h1{
+    font-size:18pt;
+  }
+
+  .meta{
+    font-size:8.5pt;
+    line-height:1.35;
+  }
+
+  .number{
+    font-size:10pt;
+  }
+
+  .cards{
+    gap:5px;
+    margin:8px 0;
+  }
+
+  .card{
+    padding:6px 7px;
+    border-radius:4px;
+  }
+
+  .card small{
+    font-size:7pt;
+  }
+
+  .card strong{
+    font-size:8.5pt;
+  }
+
+  .party{
+    gap:6px;
+    margin:7px 0;
+  }
+
+  .box{
+    min-height:auto;
+    padding:8px 9px;
+    border-radius:4px;
+    font-size:8.2pt;
+    line-height:1.35;
+  }
+
+  .box h3{
+    margin-bottom:5px;
+    padding-bottom:4px;
+    font-size:7pt;
+  }
+
+  .box strong{
+    font-size:8.4pt;
+  }
+
+  .table-wrap{
+    margin-top:8px;
+    overflow:visible;
+  }
+
+  table{
+    min-width:0!important;
+    table-layout:fixed;
+  }
+
+  th{
+    padding:5px 4px;
+    font-size:6.8pt;
+  }
+
+  td{
+    padding:5px 4px;
+    font-size:7.4pt;
+    word-break:break-word;
+  }
+
+  td small{
+    font-size:6.4pt;
+  }
+
+  th:nth-child(1),td:nth-child(1){width:4%}
+  th:nth-child(2),td:nth-child(2){width:24%}
+  th:nth-child(3),td:nth-child(3){width:8%}
+  th:nth-child(4),td:nth-child(4){width:7%}
+  th:nth-child(5),td:nth-child(5){width:7%}
+  th:nth-child(6),td:nth-child(6){width:11%}
+  th:nth-child(7),td:nth-child(7){width:12%}
+  th:nth-child(8),td:nth-child(8){width:12%}
+  th:nth-child(9),td:nth-child(9){width:15%}
+
+  .totals{
+    width:85mm;
+    margin-top:8px;
+  }
+
+  .totals .row{
+    padding:3px 1px;
+    font-size:7.8pt;
+  }
+
+  .totals .grand{
+    padding-top:5px;
+    font-size:9pt;
+  }
+
+  .foot{
+    gap:20mm;
+    margin-top:14mm;
+  }
+
+  .sign{
+    padding-top:14mm;
+    font-size:7.5pt;
+  }
+
+  .note{
+    margin-top:8mm;
+    padding-top:5px;
+    font-size:6.8pt;
+    line-height:1.3;
+  }
+
+  .top,
+  .cards,
+  .party,
+  .table-wrap,
+  .totals,
+  .foot,
+  .note{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+}
 </style>
 </head>
 <body>
@@ -13,19 +529,54 @@
 <div class="sheet">
   <div class="top">
     <div class="seller"><h1>{{ seller.display_name or seller.legal_name or 'AVPL' }}</h1><div class="meta">{{ seller.legal_name }}<br>{{ seller.address_line_1 }}{% if seller.address_line_2 %}, {{ seller.address_line_2 }}{% endif %}<br>{{ seller.city }}{% if seller.district %}, {{ seller.district }}{% endif %}, {{ seller.state }} {{ seller.postal_code }}<br>{% if seller.gstin %}GSTIN: {{ seller.gstin }}{% endif %}{% if seller.pan %} · PAN: {{ seller.pan }}{% endif %}</div></div>
-    <div class="title"><h1>Sales Invoice</h1><div class="badge">ISSUED</div><div class="meta number">{{ invoice.invoice_number }}</div><div class="meta">Invoice Date: {{ invoice.invoice_date }}<br>Due Date: {{ invoice.due_date }}</div></div>
+    <div class="title"><h1>{{ document_title }}</h1><div class="badge">ISSUED</div><div class="meta number">{{ invoice.invoice_number }}</div><div class="meta">Invoice Date: {{ invoice.invoice_date }}<br>Due Date: {{ invoice.due_date }}</div></div>
   </div>
 
   <div class="cards"><div class="card"><small>AVPL Sale</small><strong>{{ invoice.sale_number }}</strong></div><div class="card"><small>UFC Order</small><strong>{{ invoice.avpl_order_number }}</strong></div><div class="card"><small>Place of Supply</small><strong>{{ invoice.place_of_supply_state }}{% if invoice.place_of_supply_state_code %} ({{ invoice.place_of_supply_state_code }}){% endif %}</strong></div><div class="card"><small>Payment Status</small><strong>{{ invoice.payment_status_label }}</strong></div></div>
 
-  <div class="party"><div class="box"><h3>SELLER</h3><strong>{{ seller.legal_name or seller.display_name }}</strong><br>{{ seller.address_line_1 }}<br>{{ seller.city }}{% if seller.district %}, {{ seller.district }}{% endif %}, {{ seller.state }}<br>{% if seller.gstin %}GSTIN: {{ seller.gstin }}{% endif %}</div><div class="box"><h3>BILL TO / UFC CENTRE</h3><strong>{{ buyer.legal_name }}</strong><br>Centre UID: {{ buyer.centre_uid }}<br>{% if buyer.address %}{{ buyer.address }}<br>{% endif %}{{ buyer.village }}{% if buyer.district %}, {{ buyer.district }}{% endif %}, {{ buyer.state }}<br>{% if buyer.gstin %}GSTIN: {{ buyer.gstin }}{% else %}GST: Unregistered{% endif %}</div></div>
+  <div class="party">
+    <div class="box">
+      <h3>SELLER / FROM</h3>
+      <strong>{{ seller.trade_name or seller.display_name or seller.legal_name }}</strong>
+      {% if seller.legal_name and seller.legal_name != seller.trade_name %}<br>{{ seller.legal_name }}{% endif %}
+      {% if seller.address_line_1 %}<br>{{ seller.address_line_1 }}{% endif %}
+      {% if seller.address_line_2 %}<br>{{ seller.address_line_2 }}{% endif %}
+      {% if seller.city or seller.district or seller.state or seller.postal_code %}
+        <br>{% if seller.city %}{{ seller.city }}{% endif %}{% if seller.district %}{% if seller.city %}, {% endif %}{{ seller.district }}{% endif %}{% if seller.state %}{% if seller.city or seller.district %}, {% endif %}{{ seller.state }}{% endif %}{% if seller.postal_code %} - {{ seller.postal_code }}{% endif %}
+      {% endif %}
+      {% if seller.gstin %}<br>GSTIN: {{ seller.gstin }}{% endif %}
+      {% if seller.pan %}<br>PAN: {{ seller.pan }}{% endif %}
+    </div>
+    <div class="box">
+      <h3>BILL TO / UFC CENTRE</h3>
+      <strong>{{ buyer.legal_name }}</strong>
+      <br>Centre UID: {{ buyer.centre_uid }}
+      {% if buyer.owner_name %}<br>Owner: {{ buyer.owner_name }}{% endif %}
+      {% if buyer.address %}<br>{{ buyer.address }}{% endif %}
+      {% if buyer.village or buyer.block or buyer.district or buyer.state %}
+        <br>{% if buyer.village %}{{ buyer.village }}{% endif %}{% if buyer.block %}{% if buyer.village %}, {% endif %}{{ buyer.block }}{% endif %}{% if buyer.district %}{% if buyer.village or buyer.block %}, {% endif %}{{ buyer.district }}{% endif %}{% if buyer.state %}{% if buyer.village or buyer.block or buyer.district %}, {% endif %}{{ buyer.state }}{% endif %}
+      {% endif %}
+      {% if buyer.phone %}<br>Phone: {{ buyer.phone }}{% endif %}
+      {% if buyer.email %}<br>Email: {{ buyer.email }}{% endif %}
+      {% if buyer.gstin %}<br>GSTIN: {{ buyer.gstin }}{% else %}<br>GST: Unregistered{% endif %}
+      {% if buyer.pan %}<br>PAN: {{ buyer.pan }}{% endif %}
+    </div>
+  </div>
+
+  {% set dispatch = invoice.dispatch or {} %}
+  <div class="cards">
+    <div class="card"><small>Dispatch Quantity</small><strong>{{ invoice.quantity_display }} {{ invoice.unit_code }}</strong></div>
+    <div class="card"><small>Transporter</small><strong>{{ dispatch.transporter_name or '-' }}</strong></div>
+    <div class="card"><small>Vehicle</small><strong>{{ dispatch.vehicle_number or '-' }}</strong></div>
+    <div class="card"><small>Dispatch Date</small><strong>{{ dispatch.dispatched_at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</strong></div>
+  </div>
 
   <div class="table-wrap"><table><thead><tr><th>#</th><th>Product / Description</th><th>HSN</th><th>Qty</th><th>Unit</th><th class="right">Rate</th><th class="right">Taxable</th><th class="right">GST</th><th class="right">Line Total</th></tr></thead><tbody><tr><td>1</td><td><strong>{{ invoice.product_name }}</strong><br><small>{{ invoice.product_code }}</small></td><td>{{ invoice.hsn_code or '-' }}</td><td>{{ invoice.quantity_display }}</td><td>{{ invoice.unit_code }}</td><td class="right">₹{{ invoice.unit_price_display }}</td><td class="right">₹{{ invoice.taxable_value_display }}</td><td class="right">{{ invoice.gst_rate_display }}%<br><small>₹{{ invoice.gst_amount_display }}</small></td><td class="right"><strong>₹{{ invoice.grand_total_display }}</strong></td></tr></tbody></table></div>
 
   <div class="totals"><div class="row"><span>Taxable Value</span><strong>₹{{ invoice.taxable_value_display }}</strong></div><div class="row"><span>CGST</span><strong>₹{{ invoice.cgst_amount_display }}</strong></div><div class="row"><span>SGST</span><strong>₹{{ invoice.sgst_amount_display }}</strong></div><div class="row"><span>IGST</span><strong>₹{{ invoice.igst_amount_display }}</strong></div><div class="row grand"><span>Grand Total</span><span>₹{{ invoice.grand_total_display }}</span></div><div class="row"><span>Paid</span><strong>₹{{ invoice.amount_paid_display }}</strong></div><div class="row"><span>Balance Due</span><strong>₹{{ invoice.outstanding_amount_display }}</strong></div></div>
 
   <div class="foot"><div class="sign">Prepared / System Generated</div><div class="sign">Authorized Signatory — AVPL</div></div>
-  <div class="note">Generated from fulfilled UnnatFarm AVPL → UFC Order {{ invoice.avpl_order_number }}. Physical AVPL stock was reduced at dispatch. UFC purchase and stock are created only after the UFC confirms physical receipt. Payments are allocated through the unified settlement ledger. Paid and outstanding balances update without changing the issued invoice amount; Accounting posting remains controlled by the existing maker-checker workflow.</div>
+  <div class="note">Generated automatically when AVPL dispatched UnnatFarm order {{ invoice.avpl_order_number }}. This is the seller-side commercial document linked to the same UFC purchase. AVPL stock reduces at dispatch; UFC stock and the UFC Purchase Entry are created only after physical receipt is confirmed. Payment and outstanding balances remain linked to this invoice.</div>
 </div>
 </body>
 </html>

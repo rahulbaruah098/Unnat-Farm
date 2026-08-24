@@ -553,7 +553,7 @@
                                 <span class="status-pill available">Available</span>
                             {% endif %}
                         </td>
-                        <td data-label="Last Updated">{{ i.updated_at.strftime('%d-%m-%Y') if i.updated_at else '-' }}</td>
+                        <td data-label="Last Updated">{{ i.updated_at|ist_date('%d-%m-%Y', '-') }}</td>
                     </tr>
                 {% else %}
                     <tr>

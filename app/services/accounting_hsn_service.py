@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today
 from datetime import date
 import re
 from uuid import uuid4
@@ -558,7 +559,7 @@ def get_hsn_option_catalog(accounting_entity_id=None):
         "taxability": taxability,
         "rates": rates,
         "active_hsn": active_hsn,
-        "today": date.today().isoformat(),
+        "today": business_today().isoformat(),
     }
 
 

@@ -820,6 +820,8 @@ def serialize_purchase_order(order):
         Decimal("0"),
     )
 
+    supplier_snapshot = dict(order.get("supplier_snapshot") or {})
+
     return {
         "id": str(order.get("_id") or ""),
         "document_uid": order.get("document_uid") or "",
@@ -827,8 +829,19 @@ def serialize_purchase_order(order):
         "accounting_entity_id": str(order.get("accounting_entity_id") or ""),
         "supplier_ledger_id": str(order.get("supplier_ledger_id") or ""),
         "supplier_code": order.get("supplier_code") or "",
-        "supplier_name": order.get("supplier_name") or "",
-        "supplier_gstin": order.get("supplier_gstin") or "",
+        "supplier_name": order.get("supplier_name") or supplier_snapshot.get("name") or supplier_snapshot.get("legal_name") or "",
+        "supplier_legal_name": supplier_snapshot.get("legal_name") or order.get("supplier_name") or "",
+        "supplier_trade_name": supplier_snapshot.get("trade_name") or "",
+        "supplier_contact_person": supplier_snapshot.get("contact_person") or "",
+        "supplier_phone": supplier_snapshot.get("phone") or "",
+        "supplier_email": supplier_snapshot.get("email") or "",
+        "supplier_address_line_1": supplier_snapshot.get("address_line_1") or "",
+        "supplier_address_line_2": supplier_snapshot.get("address_line_2") or "",
+        "supplier_city": supplier_snapshot.get("city") or "",
+        "supplier_district": supplier_snapshot.get("district") or "",
+        "supplier_postal_code": supplier_snapshot.get("postal_code") or "",
+        "supplier_pan": supplier_snapshot.get("pan") or "",
+        "supplier_gstin": order.get("supplier_gstin") or supplier_snapshot.get("gstin") or "",
         "supplier_gst_registration_status": (
             order.get("supplier_gst_registration_status")
             or (order.get("supplier_snapshot") or {}).get(
@@ -843,8 +856,8 @@ def serialize_purchase_order(order):
             )
             or ""
         ),
-        "supplier_state_code": order.get("supplier_state_code") or "",
-        "supplier_state_name": order.get("supplier_state_name") or "",
+        "supplier_state_code": order.get("supplier_state_code") or supplier_snapshot.get("state_code") or "",
+        "supplier_state_name": order.get("supplier_state_name") or supplier_snapshot.get("state_name") or "",
         "order_date": date_string(order.get("order_date")),
         "expected_delivery_date": date_string(order.get("expected_delivery_date")),
         "supplier_reference": order.get("supplier_reference") or "",
@@ -926,6 +939,7 @@ def serialize_purchase_order(order):
         "invoice_pending_quantity_total": _quantity_string(
             invoice_pending_quantity_total
         ),
+        "invoice_recordable": invoice_pending_quantity_total > Decimal("0.0000"),
         "invoice_match_status": order.get("invoice_match_status")
         or "not_recorded",
         "invoice_match_status_display": (

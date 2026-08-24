@@ -1,24 +1,520 @@
 {% extends 'base.html' %}
-{% block title %}{{ 'Edit' if invoice else 'Record' }} Supplier Invoice{% endblock %}
+{% block title %}{{ 'Edit' if invoice else 'Record' }} Purchase Invoice{% endblock %}
 {% block content %}
 {% set values = form_data or invoice or {} %}
 <style>
-.invoice-form-page{width:100%;max-width:1500px;margin:0 auto;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.page-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.page-head h2{margin:0;color:#17252A}.page-head p{margin:5px 0 0;color:#64748B}.back-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 16px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C}.tip{margin-bottom:17px;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.section{margin-top:15px;padding:18px;border:1px solid #E2EFE6;border-radius:19px;background:#FCFEFC}.section h3{margin:0 0 14px;color:#17252A}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:7px;color:#263B31;font-weight:800}.field.full{grid-column:1/-1}.field.span2{grid-column:span 2}.field input,.field select,.field textarea{width:100%;min-height:43px;padding:9px 11px;border:1px solid #CFE2D5;border-radius:12px;background:#fff;color:#17252A;font:inherit}.field textarea{min-height:75px;resize:vertical}.field small{color:#64748B;font-size:.84rem;font-weight:400;line-height:1.4}.po-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:14px}.summary-card{padding:12px;border:1px solid #DCECE1;border-radius:14px;background:#fff}.summary-card small{display:block;color:#64748B;margin-bottom:4px}.summary-card strong{color:#17252A}.table-wrap{overflow:auto}.invoice-table{width:100%;border-collapse:separate;border-spacing:0;min-width:980px}.invoice-table th,.invoice-table td{padding:9px;border-right:1px solid #E2EFE6;border-bottom:1px solid #E2EFE6;vertical-align:top;text-align:left}.invoice-table th{background:#EFF7F1;color:#4B6255;font-size:.82rem;white-space:nowrap}.invoice-table th:first-child,.invoice-table td:first-child{border-left:1px solid #E2EFE6}.invoice-table thead th{border-top:1px solid #E2EFE6}.product-name{font-weight:900;color:#17252A}.sub{display:block;margin-top:3px;color:#64748B;font-size:.8rem}.line-input{width:100%;min-width:90px;height:38px;padding:7px 8px;border:1px solid #CFE2D5;border-radius:10px;background:#fff;font:inherit}.line-details{min-width:260px}.line-details details{border:1px solid #DCECE1;border-radius:10px;background:#FCFEFC}.line-details summary{padding:8px 10px;cursor:pointer;color:#2F7A4C;font-weight:900}.line-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 9px 9px}.line-detail-grid input{min-width:0;width:100%}.readonly{background:#F1F5F9}.totals-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,.7fr);gap:18px;align-items:start}.calculated{display:grid;gap:8px}.total-row{display:flex;justify-content:space-between;gap:15px;padding:8px 0;border-bottom:1px solid #E2EFE6;color:#425466}.total-row strong{color:#17252A}.total-row.grand{border:0;font-size:1.15rem;font-weight:900}.match-preview{padding:14px;border:1px solid #B9DCCA;border-radius:15px;background:#F3FBF6;color:#2E6643;line-height:1.5}.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:18px}.btn{min-height:42px;padding:9px 18px;border-radius:999px;border:1px solid #CFE2D5;background:#fff;color:#425466;font:inherit;font-weight:900;cursor:pointer;text-decoration:none}.btn.primary{background:#5FA878;border-color:#5FA878;color:#fff}.empty-lines{padding:24px;text-align:center;border:1px dashed #BFDCC8;border-radius:15px;background:#F6FCF8;color:#64748B}.error-text{color:#B91C1C;font-size:.78rem;font-weight:700;margin-top:4px}.advanced{margin-top:14px;border:1px solid #DCECE1;border-radius:14px;background:#fff}.advanced summary{padding:12px 14px;cursor:pointer;font-weight:900;color:#2F7A4C}.advanced-body{padding:0 14px 14px}.checkbox-field{display:flex;align-items:flex-start;gap:9px;padding:12px;border:1px solid #DCECE1;border-radius:13px;background:#fff;color:#425466;font-weight:800}.checkbox-field input{margin-top:3px}
-@media(max-width:1050px){.grid{grid-template-columns:repeat(2,1fr)}.po-summary{grid-template-columns:repeat(3,1fr)}.totals-layout{grid-template-columns:1fr}}@media(max-width:650px){.invoice-form-page{padding:15px;border-radius:18px}.grid,.po-summary{grid-template-columns:1fr}.field.span2,.field.full{grid-column:auto}.actions,.actions .btn,.back-link{width:100%}}
+.invoice-form-page {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 28px;
+    border: 1px solid rgba(47, 122, 76, .11);
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 16px 40px rgba(28, 72, 43, .07);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #435349;
+}
+
+.page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.page-head h2 {
+    margin: 0;
+    color: #17251d;
+    font-size: clamp(1.5rem, 2vw, 1.95rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -.02em;
+}
+
+.page-head p {
+    max-width: 820px;
+    margin: 7px 0 0;
+    color: #748279;
+    font-size: .82rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid rgba(47, 122, 76, .14);
+    border-radius: 9px;
+    background: #ffffff;
+    color: #397e51;
+    font-size: .75rem;
+    font-weight: 800;
+    text-decoration: none;
+    transition: .18s ease;
+}
+
+.back-link:hover {
+    background: #f4faf6;
+    border-color: rgba(47, 122, 76, .28);
+}
+
+.tip {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border: 1px solid rgba(47, 122, 76, .12);
+    border-radius: 11px;
+    background: #f5faf7;
+    color: #526b5b;
+    font-size: .78rem;
+    line-height: 1.5;
+}
+
+.section {
+    margin-top: 14px;
+    padding: 18px;
+    border: 1px solid rgba(47, 122, 76, .10);
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.section h3 {
+    margin: 0 0 15px;
+    color: #263b2f;
+    font-size: .92rem;
+    font-weight: 800;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    color: #4c5f53;
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+.field.full {
+    grid-column: 1 / -1;
+}
+
+.field.span2 {
+    grid-column: span 2;
+}
+
+.field input,
+.field select,
+.field textarea {
+    width: 100%;
+    min-height: 41px;
+    padding: 9px 11px;
+    border: 1px solid rgba(47, 122, 76, .14);
+    border-radius: 9px;
+    background: #ffffff;
+    color: #263b2f;
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 600;
+    outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.line-input:focus {
+    border-color: rgba(47, 122, 76, .38);
+    box-shadow: 0 0 0 4px rgba(47, 122, 76, .06);
+}
+
+.field textarea {
+    min-height: 78px;
+    resize: vertical;
+}
+
+.field small {
+    color: #7d8a82;
+    font-size: .68rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.po-summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 14px;
+}
+
+.summary-card {
+    min-width: 0;
+    padding: 12px 13px;
+    border: 1px solid rgba(47, 122, 76, .09);
+    border-radius: 10px;
+    background: #fbfdfb;
+}
+
+.summary-card small {
+    display: block;
+    margin-bottom: 5px;
+    color: #829087;
+    font-size: .64rem;
+    font-weight: 750;
+}
+
+.summary-card strong {
+    color: #304438;
+    font-size: .77rem;
+    font-weight: 800;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.advanced {
+    margin-top: 14px;
+    border: 1px solid rgba(47, 122, 76, .10);
+    border-radius: 10px;
+    background: #fbfdfb;
+}
+
+.advanced summary {
+    padding: 11px 13px;
+    color: #397e51;
+    font-size: .73rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.advanced-body {
+    padding: 2px 13px 14px;
+}
+
+.checkbox-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 11px 12px;
+    border: 1px solid rgba(47, 122, 76, .09);
+    border-radius: 9px;
+    background: #ffffff;
+    color: #526158;
+    font-size: .72rem;
+    font-weight: 750;
+    line-height: 1.4;
+}
+
+.checkbox-field input {
+    margin-top: 2px;
+}
+
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid rgba(47, 122, 76, .09);
+    border-radius: 11px;
+    background: #ffffff;
+}
+
+.invoice-table {
+    width: 100%;
+    min-width: 1000px;
+    border-collapse: collapse;
+}
+
+.invoice-table th,
+.invoice-table td {
+    padding: 10px 11px;
+    border-bottom: 1px solid #edf2ee;
+    text-align: left;
+    vertical-align: top;
+    font-size: .72rem;
+    line-height: 1.4;
+}
+
+.invoice-table th {
+    background: #f6f9f7;
+    color: #6e7e74;
+    font-size: .63rem;
+    font-weight: 800;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.invoice-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.invoice-table tbody tr:hover {
+    background: #fbfdfb;
+}
+
+.product-name {
+    color: #304438;
+    font-size: .75rem;
+    font-weight: 850;
+}
+
+.sub {
+    display: block;
+    margin-top: 4px;
+    color: #849087;
+    font-size: .64rem;
+    line-height: 1.35;
+}
+
+.line-input {
+    width: 100%;
+    min-width: 90px;
+    height: 37px;
+    padding: 7px 8px;
+    border: 1px solid rgba(47, 122, 76, .14);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #304438;
+    font: inherit;
+    font-size: .72rem;
+    outline: none;
+}
+
+.readonly {
+    background: #f4f7f5;
+    color: #68766d;
+}
+
+.line-details {
+    min-width: 245px;
+}
+
+.line-details details {
+    border: 1px solid rgba(47, 122, 76, .09);
+    border-radius: 8px;
+    background: #fbfdfb;
+}
+
+.line-details summary {
+    padding: 8px 9px;
+    color: #397e51;
+    font-size: .68rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.line-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    padding: 0 9px 9px;
+}
+
+.line-detail-grid input {
+    min-width: 0;
+}
+
+.totals-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, .72fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.calculated {
+    display: grid;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 9px 0;
+    border-bottom: 1px solid #edf2ee;
+    color: #65756b;
+    font-size: .75rem;
+}
+
+.total-row strong {
+    color: #304438;
+    text-align: right;
+}
+
+.total-row.grand {
+    border-bottom: 0;
+    color: #263b2f;
+    font-size: .88rem;
+    font-weight: 850;
+}
+
+.match-preview {
+    margin-top: 10px;
+    padding: 11px 12px;
+    border: 1px solid rgba(47, 122, 76, .12);
+    border-radius: 9px;
+    background: #f5faf7;
+    color: #526b5b;
+    font-size: .72rem;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 39px;
+    padding: 8px 15px;
+    border: 1px solid rgba(47, 122, 76, .14);
+    border-radius: 9px;
+    background: #ffffff;
+    color: #526158;
+    font: inherit;
+    font-size: .74rem;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    transition: .18s ease;
+}
+
+.btn:hover {
+    border-color: #397e51;
+    color: #397e51;
+}
+
+.btn.primary {
+    background: #397e51;
+    border-color: #397e51;
+    color: #ffffff;
+}
+
+.btn.primary:hover {
+    background: #2f6e46;
+    border-color: #2f6e46;
+    color: #ffffff;
+}
+
+.empty-lines {
+    padding: 28px 18px;
+    border: 1px dashed rgba(47, 122, 76, .22);
+    border-radius: 10px;
+    background: #fbfdfb;
+    color: #7b8980;
+    font-size: .75rem;
+    text-align: center;
+}
+
+.error-text {
+    margin-top: 4px;
+    color: #b91c1c;
+    font-size: .64rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+@media (max-width: 1100px) {
+    .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .po-summary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .totals-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .invoice-form-page {
+        padding: 18px;
+        border-radius: 18px;
+    }
+
+    .po-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .actions {
+        justify-content: stretch;
+    }
+
+    .actions .btn {
+        flex: 1 1 150px;
+    }
+}
+
+@media (max-width: 560px) {
+    .invoice-form-page {
+        padding: 14px;
+        border-radius: 15px;
+    }
+
+    .page-head h2 {
+        font-size: 1.3rem;
+    }
+
+    .grid,
+    .po-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .field.span2,
+    .field.full {
+        grid-column: auto;
+    }
+
+    .back-link,
+    .actions,
+    .actions .btn {
+        width: 100%;
+    }
+
+    .section {
+        padding: 14px;
+    }
+
+    .line-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media(max-width:1280px){.invoice-form-page{padding:22px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.po-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.totals-layout{grid-template-columns:1fr}.invoice-table{min-width:900px}}
+@media(max-width:760px){.invoice-form-page{padding:14px;border-radius:18px}.grid,.po-summary{grid-template-columns:1fr}.field.span2,.field.full{grid-column:auto}.page-head h2{font-size:clamp(1.25rem,6vw,1.55rem)}.table-wrap{-webkit-overflow-scrolling:touch}.actions,.actions .btn,.back-link{width:100%}}
 </style>
 <div class="invoice-form-page">
-    <div class="page-head"><div><h2>{{ 'Edit Supplier Invoice' if invoice else 'Record Supplier Invoice' }}</h2><p>Enter the supplier's invoice. The system will automatically compare it with the Purchase Order and received goods.</p></div><a class="back-link" href="{{ url_for('admin.supplier_invoices') }}">Back</a></div>
-    <div class="tip"><strong>You only need to enter what is printed on the supplier invoice.</strong> If everything matches the PO and accepted receipt, the system marks it matched automatically{% if streamlined_workflows_enabled %} and finalizes the Purchase Invoice/payable in the same save{% endif %}.</div>
+    <div class="page-head"><div><h2>{{ 'Edit Purchase Invoice' if invoice else 'Record Purchase Invoice' }}</h2><p>Enter the supplier's GST/tax invoice details. The system compares them with the Purchase Order and accepted Goods Receipt before creating AVPL's Purchase Invoice record.</p></div><a class="back-link" href="{{ url_for('admin.supplier_invoices') }}">Back</a></div>
+    <div class="tip"><strong>Only Purchase Orders with accepted goods still waiting to be invoiced are shown.</strong> If the supplier invoice was captured during Receive Goods, choose that GRN below and the supplier invoice reference will be filled automatically.</div>
+    {% if not invoice and not purchase_orders %}<div class="tip" style="border-color:#f0d28b;background:#fff8e8;color:#6b5316"><strong>Nothing is waiting for a Purchase Invoice.</strong> Receive goods first, or open an existing Purchase Invoice from the list.</div>{% endif %}
 
     <form method="post" id="invoiceForm">
         {% if invoice %}<input type="hidden" name="expected_version" value="{{ invoice.version }}">{% endif %}
         <input type="hidden" name="items_json" id="itemsJson">
         <section class="section"><h3>Invoice Details</h3><div class="grid">
-            <label class="field span2">Purchase Order<select name="purchase_order_id" id="purchaseOrderSelect" required {% if invoice %}disabled{% endif %}><option value="">Select Purchase Order</option>{% for po in purchase_orders %}<option value="{{ po.id }}" {% if selected_purchase_order_id|string == po.id|string %}selected{% endif %}>{{ po.po_number }} · {{ po.supplier_name }} · Received {{ po.total_accepted_quantity }}</option>{% endfor %}</select>{% if invoice %}<input type="hidden" name="purchase_order_id" value="{{ invoice.purchase_order_id }}">{% endif %}</label>
-            <label class="field">Supplier Invoice Number<input name="supplier_invoice_number" maxlength="80" value="{{ values.get('supplier_invoice_number', '') }}" required></label>
-            <label class="field">Invoice Date<input type="date" name="invoice_date" id="invoiceDate" value="{{ values.get('invoice_date', catalog.get('today', '')) }}" required></label>
-            <label class="field">Invoice Total<input type="number" name="declared_total" id="declaredTotal" min="0.01" step="0.01" value="{{ values.get('declared_total', values.get('grand_total', '')) }}" required placeholder="Total printed on invoice"></label>
-            <label class="field">Due Date<input type="date" name="due_date" id="dueDate" value="{{ values.get('due_date', '') }}"></label>
+            <label class="field span2">Purchase Order<select name="purchase_order_id" id="purchaseOrderSelect" required {% if invoice %}disabled{% endif %}><option value="">Select Purchase Order</option>{% for po in purchase_orders %}<option value="{{ po.id }}" {% if selected_purchase_order_id|string == po.id|string %}selected{% endif %}>{{ po.po_number }} · {{ po.supplier_name }} · To invoice {{ po.total_available_to_invoice_quantity }}</option>{% endfor %}</select>{% if invoice %}<input type="hidden" name="purchase_order_id" value="{{ invoice.purchase_order_id }}">{% endif %}<small>Fully invoiced Purchase Orders are automatically hidden.</small></label>
+            <label class="field span2">Supplier Invoice Received With<select name="source_grn_id" id="sourceGrnSelect"><option value="">Enter supplier invoice manually / not linked to one GRN</option></select><small id="sourceGrnHelp">Choose the Goods Receipt that carried the supplier's GST/tax invoice when available.</small></label>
+            <label class="field">Supplier Invoice Number<input name="supplier_invoice_number" id="supplierInvoiceNumber" maxlength="80" value="{{ values.get('supplier_invoice_number', '') }}" required></label>
+            <label class="field">Supplier Invoice Date<input type="date" name="invoice_date" id="invoiceDate" value="{{ values.get('invoice_date', catalog.get('today', '')) }}" required></label>
+            <label class="field">Invoice Total<input type="number" name="declared_total" id="declaredTotal" min="0.01" step="0.01" value="{{ values.get('declared_total', values.get('grand_total', '')) }}" required placeholder="Total printed on supplier invoice"></label>
+            <label class="field">Payment Due Date<input type="date" name="due_date" id="dueDate" value="{{ values.get('due_date', '') }}"><small>Auto-calculated from the supplier credit period. It matters only while money is still payable.</small></label>
         </div><div class="po-summary" id="poSummary" hidden></div>
         <details class="advanced"><summary>Optional invoice details</summary><div class="advanced-body"><div class="grid">
             <label class="field">Document Reference<input name="document_reference" maxlength="240" value="{{ values.get('document_reference', '') }}" placeholder="Scan/file reference"></label>
@@ -39,15 +535,17 @@
 </div>
 <script>
 (function(){
-    const catalog={{ purchase_orders|tojson }};const invoice={{ (invoice or {})|tojson }};const postedItemsText={{ (form_data.get('items_json', '') if form_data else '')|tojson }};let initialItems=[];try{initialItems=postedItemsText?JSON.parse(postedItemsText):(invoice.items||[]);}catch(error){initialItems=invoice.items||[];}
-    const select=document.getElementById('purchaseOrderSelect');const container=document.getElementById('linesContainer');const summary=document.getElementById('poSummary');const itemsJson=document.getElementById('itemsJson');const form=document.getElementById('invoiceForm');const invoiceDate=document.getElementById('invoiceDate');const dueDate=document.getElementById('dueDate');const paymentTerms=document.getElementById('paymentTerms');const declaredTotal=document.getElementById('declaredTotal');let declaredTouched=Boolean(declaredTotal.value);
-    function number(value){const parsed=Number(value||0);return Number.isFinite(parsed)?parsed:0}function money(value){return number(value).toFixed(2)}function quantity(value){return number(value).toFixed(4)}function rate(value){const n=number(value);return String(Number(n.toFixed(3)))}function escapeHtml(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}function selectedOrder(){const id=select?select.value:(invoice.purchase_order_id||'');return catalog.find(row=>String(row.id)===String(id))}function initialForLine(lineNo){return initialItems.find(row=>Number(row.po_line_no)===Number(lineNo))||{}}function addDays(iso,days){if(!iso)return'';const date=new Date(`${iso}T00:00:00`);if(Number.isNaN(date.getTime()))return'';date.setDate(date.getDate()+Number(days||0));return date.toISOString().slice(0,10);}
+    const catalog={{ purchase_orders|tojson }};const invoice={{ (invoice or {})|tojson }};const selectedSourceGrnId={{ selected_source_grn_id|default('')|tojson }};const documentUrlTemplate={{ url_for('documents.serve', filename='__FILE__')|tojson }};const postedItemsText={{ (form_data.get('items_json', '') if form_data else '')|tojson }};let initialItems=[];try{initialItems=postedItemsText?JSON.parse(postedItemsText):(invoice.items||[]);}catch(error){initialItems=invoice.items||[];}
+    const select=document.getElementById('purchaseOrderSelect');const sourceGrnSelect=document.getElementById('sourceGrnSelect');const sourceGrnHelp=document.getElementById('sourceGrnHelp');const supplierInvoiceNumber=document.getElementById('supplierInvoiceNumber');const container=document.getElementById('linesContainer');const summary=document.getElementById('poSummary');const itemsJson=document.getElementById('itemsJson');const form=document.getElementById('invoiceForm');const invoiceDate=document.getElementById('invoiceDate');const dueDate=document.getElementById('dueDate');const paymentTerms=document.getElementById('paymentTerms');const declaredTotal=document.getElementById('declaredTotal');let declaredTouched=Boolean(declaredTotal.value);
+    function number(value){const parsed=Number(value||0);return Number.isFinite(parsed)?parsed:0}function money(value){return number(value).toFixed(2)}function quantity(value){return number(value).toFixed(4)}function rate(value){const n=number(value);return String(Number(n.toFixed(3)))}function escapeHtml(value){return String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}function selectedOrder(){const id=select?select.value:(invoice.purchase_order_id||'');return catalog.find(row=>String(row.id)===String(id))}function initialForLine(lineNo){return initialItems.find(row=>Number(row.po_line_no)===Number(lineNo))||{}}function localIso(date){const y=date.getFullYear();const m=String(date.getMonth()+1).padStart(2,'0');const d=String(date.getDate()).padStart(2,'0');return `${y}-${m}-${d}`}function addDays(iso,days){if(!iso)return'';const parts=iso.split('-').map(Number);if(parts.length!==3||parts.some(v=>!Number.isFinite(v)))return'';const date=new Date(parts[0],parts[1]-1,parts[2]);date.setDate(date.getDate()+Number(days||0));return localIso(date);}
     function renderSummary(po){if(!po){summary.hidden=true;summary.innerHTML='';return;}summary.hidden=false;summary.innerHTML=`<div class="summary-card"><small>PO</small><strong>${escapeHtml(po.po_number)}</strong></div><div class="summary-card"><small>Supplier</small><strong>${escapeHtml(po.supplier_name)}</strong></div><div class="summary-card"><small>Received</small><strong>${escapeHtml(po.total_accepted_quantity)}</strong></div><div class="summary-card"><small>Already Invoiced</small><strong>${escapeHtml(number(po.total_accepted_quantity)-number(po.total_available_to_invoice_quantity))}</strong></div><div class="summary-card"><small>Available to Invoice</small><strong>${escapeHtml(po.total_available_to_invoice_quantity)}</strong></div>`;}
-    function rowHtml(item){const saved=initialForLine(item.po_line_no);const defaultQty=saved.invoice_quantity!=null?saved.invoice_quantity:item.available_to_invoice_quantity;return `<tr data-line="${item.po_line_no}" data-available="${escapeHtml(item.available_to_invoice_quantity)}" data-po-rate="${escapeHtml(item.rate)}" data-po-discount="${escapeHtml(item.discount_percent)}" data-po-hsn="${escapeHtml(item.hsn_code)}" data-po-gst="${escapeHtml(item.gst_rate)}"><td><span class="product-name">${escapeHtml(item.product_name)}</span><span class="sub">${escapeHtml(item.product_code)} · ${escapeHtml(item.unit_code)}</span></td><td>${escapeHtml(item.accepted_quantity)}<span class="sub">Available: ${escapeHtml(item.available_to_invoice_quantity)}</span></td><td><input class="line-input qty" type="number" min="0.0001" step="0.0001" value="${escapeHtml(defaultQty)}"><div class="line-error error-text"></div></td><td><input class="line-input rate" type="number" min="0.01" step="0.01" value="${escapeHtml(saved.rate!=null?saved.rate:item.rate)}"><span class="sub">PO ₹${escapeHtml(item.rate)}</span></td><td><input class="line-input line-total readonly" value="0.00" readonly></td><td class="line-details"><details><summary>Discount / HSN / GST</summary><div class="line-detail-grid"><input class="line-input discount" type="number" min="0" max="100" step="0.001" value="${escapeHtml(saved.discount_percent!=null?saved.discount_percent:item.discount_percent)}" placeholder="Discount %"><input class="line-input hsn" maxlength="8" value="${escapeHtml(saved.hsn_code||item.hsn_code)}" placeholder="HSN"><input class="line-input gst" type="number" min="0" max="100" step="0.001" value="${escapeHtml(saved.gst_rate!=null?saved.gst_rate:item.gst_rate)}" placeholder="GST %"></div></details></td></tr>`;}
-    function renderLines(){const po=selectedOrder();renderSummary(po);if(!po){container.className='empty-lines';container.innerHTML='Select a Purchase Order to load products.';itemsJson.value='[]';updateTotals();return;}if(paymentTerms&&!paymentTerms.value)paymentTerms.value=po.payment_terms||`${po.credit_period_days||0} days`;if(!dueDate.value&&invoiceDate.value)dueDate.value=addDays(invoiceDate.value,po.credit_period_days||0);container.className='table-wrap';container.innerHTML=`<table class="invoice-table"><thead><tr><th>Product</th><th>Accepted</th><th>Invoice Qty</th><th>Invoice Rate</th><th>Line Total</th><th>More Details</th></tr></thead><tbody>${po.items.map(rowHtml).join('')}</tbody></table>`;container.querySelectorAll('.line-input:not(.line-total)').forEach(input=>input.addEventListener('input',updateTotals));updateTotals();}
+    function rowHtml(item){const saved=initialForLine(item.po_line_no);const defaultQty=saved.invoice_quantity!=null?saved.invoice_quantity:item.available_to_invoice_quantity;return `<tr data-line="${item.po_line_no}" data-available="${escapeHtml(item.available_to_invoice_quantity)}" data-po-rate="${escapeHtml(item.rate)}" data-po-discount="${escapeHtml(item.discount_percent)}" data-po-hsn="${escapeHtml(item.hsn_code)}" data-po-gst="${escapeHtml(item.gst_rate)}"><td><span class="product-name">${escapeHtml(item.product_name)}</span><span class="sub">${escapeHtml(item.product_code)} · ${escapeHtml(item.unit_code)}</span></td><td>${escapeHtml(item.accepted_quantity)}<span class="sub">Available now: ${escapeHtml(item.available_to_invoice_quantity)}</span></td><td><input class="line-input qty" type="number" min="0.0001" step="0.0001" value="${escapeHtml(defaultQty)}"><div class="line-error error-text"></div></td><td><input class="line-input rate" type="number" min="0.01" step="0.01" value="${escapeHtml(saved.rate!=null?saved.rate:item.rate)}"><span class="sub">PO ₹${escapeHtml(item.rate)}</span></td><td><input class="line-input line-total readonly" value="0.00" readonly></td><td class="line-details"><details><summary>Discount / HSN / GST</summary><div class="line-detail-grid"><input class="line-input discount" type="number" min="0" max="100" step="0.001" value="${escapeHtml(saved.discount_percent!=null?saved.discount_percent:item.discount_percent)}" placeholder="Discount %"><input class="line-input hsn" maxlength="8" value="${escapeHtml(saved.hsn_code||item.hsn_code)}" placeholder="HSN"><input class="line-input gst" type="number" min="0" max="100" step="0.001" value="${escapeHtml(saved.gst_rate!=null?saved.gst_rate:item.gst_rate)}" placeholder="GST %"></div></details></td></tr>`;}
+    function renderSourceGrns(po){if(!sourceGrnSelect)return;const previous=sourceGrnSelect.value||selectedSourceGrnId||invoice.source_grn_id||'';sourceGrnSelect.innerHTML='<option value="">Enter supplier invoice manually / not linked to one GRN</option>';if(!po){sourceGrnHelp.textContent='Choose a Purchase Order first.';return;}const captures=(po.invoice_captures||[]).filter(c=>c.is_available||String(c.linked_invoice_id||'')===String(invoice.id||''));captures.forEach(c=>{const option=document.createElement('option');option.value=c.grn_id;option.textContent=`${c.grn_number}${c.supplier_invoice_number?' · Supplier Invoice '+c.supplier_invoice_number:''}`;option.dataset.number=c.supplier_invoice_number||'';option.dataset.date=c.supplier_invoice_date||'';option.dataset.file=c.attachment_filename||'';if(String(c.grn_id)===String(previous))option.selected=true;sourceGrnSelect.appendChild(option);});sourceGrnHelp.textContent=captures.length?'Select the GRN that carried this supplier bill.':'No supplier invoice attachment/reference was captured during Goods Receipt for this PO.';applySourceGrn(false);}
+    function applySourceGrn(force){if(!sourceGrnSelect)return;const option=sourceGrnSelect.options[sourceGrnSelect.selectedIndex];if(!option||!option.value)return;if((force||!supplierInvoiceNumber.value)&&option.dataset.number)supplierInvoiceNumber.value=option.dataset.number;if((force||!invoiceDate.value)&&option.dataset.date)invoiceDate.value=option.dataset.date;const file=option.dataset.file||'';if(file){const url=documentUrlTemplate.replace('__FILE__',encodeURIComponent(file));sourceGrnHelp.innerHTML=`Supplier invoice attachment captured with this GRN. <a href="${url}" target="_blank" rel="noopener" style="color:#2F7A4C;font-weight:800">View attachment</a>`;}if(!dueDate.value&&invoiceDate.value){const po=selectedOrder();if(po)dueDate.value=addDays(invoiceDate.value,po.credit_period_days||0);}}
+    function renderLines(){const po=selectedOrder();renderSummary(po);renderSourceGrns(po);if(!po){container.className='empty-lines';container.innerHTML='Select a Purchase Order to load products.';itemsJson.value='[]';updateTotals();return;}if(paymentTerms&&!paymentTerms.value)paymentTerms.value=po.payment_terms||`${po.credit_period_days||0} days`;if(!dueDate.value&&invoiceDate.value)dueDate.value=addDays(invoiceDate.value,po.credit_period_days||0);const visibleItems=(po.items||[]).filter(item=>number(item.available_to_invoice_quantity)>0||number(initialForLine(item.po_line_no).invoice_quantity)>0);container.className='table-wrap';container.innerHTML=visibleItems.length?`<table class="invoice-table"><thead><tr><th>Product</th><th>Accepted</th><th>Invoice Qty</th><th>Invoice Rate</th><th>Line Total</th><th>More Details</th></tr></thead><tbody>${visibleItems.map(rowHtml).join('')}</tbody></table>`:'<div class="empty-lines">All accepted quantities on this Purchase Order are already invoiced.</div>';container.querySelectorAll('.line-input:not(.line-total)').forEach(input=>input.addEventListener('input',updateTotals));updateTotals();}
     function collectItems(showErrors){const rows=Array.from(container.querySelectorAll('tbody tr'));const output=[];let blockingHints=0;rows.forEach(row=>{const qty=number(row.querySelector('.qty').value);if(qty<=0)return;const available=number(row.dataset.available);const enteredRate=number(row.querySelector('.rate').value);const enteredDiscount=number(row.querySelector('.discount').value);const enteredHsn=row.querySelector('.hsn').value.trim();const enteredGst=number(row.querySelector('.gst').value);const hints=[];if(qty>available+0.0000001)hints.push(`Quantity exceeds received uninvoiced quantity ${quantity(available)}`);if(Math.abs(enteredRate-number(row.dataset.poRate))>0.01)hints.push('Rate differs from PO');if(Math.abs(enteredDiscount-number(row.dataset.poDiscount))>0.001)hints.push('Discount differs from PO');if(enteredHsn!==row.dataset.poHsn)hints.push('HSN differs from PO');if(Math.abs(enteredGst-number(row.dataset.poGst))>0.001)hints.push('GST differs from PO');if(hints.length)blockingHints+=hints.length;if(showErrors)row.querySelector('.line-error').textContent=hints.join(' · ');const subtotal=qty*enteredRate;const discountAmount=subtotal*enteredDiscount/100;const taxable=subtotal-discountAmount;const tax=taxable*enteredGst/100;row.querySelector('.line-total').value=money(taxable+tax);output.push({po_line_no:Number(row.dataset.line),invoice_quantity:quantity(qty),rate:money(enteredRate),discount_percent:rate(enteredDiscount),hsn_code:enteredHsn,gst_rate:rate(enteredGst)});});itemsJson.value=JSON.stringify(output);return{output,blockingHints};}
     function updateTotals(){const result=collectItems(false);let subtotal=0,discount=0,taxable=0,tax=0;result.output.forEach(item=>{const lineSubtotal=number(item.invoice_quantity)*number(item.rate);const lineDiscount=lineSubtotal*number(item.discount_percent)/100;const lineTaxable=lineSubtotal-lineDiscount;const lineTax=lineTaxable*number(item.gst_rate)/100;subtotal+=lineSubtotal;discount+=lineDiscount;taxable+=lineTaxable;tax+=lineTax;});const charges=number(document.getElementById('freightAmount').value)+number(document.getElementById('otherCharges').value)+number(document.getElementById('roundOff').value);const computed=taxable+tax+charges;document.getElementById('subtotalValue').textContent=`₹${money(subtotal)}`;document.getElementById('discountValue').textContent=`₹${money(discount)}`;document.getElementById('taxableValue').textContent=`₹${money(taxable)}`;document.getElementById('taxValue').textContent=`₹${money(tax)}`;document.getElementById('chargesValue').textContent=`₹${money(charges)}`;document.getElementById('computedTotal').textContent=`₹${money(computed)}`;if(!declaredTouched||!declaredTotal.value)declaredTotal.value=money(computed);const difference=Math.abs(number(declaredTotal.value)-computed);const po=selectedOrder();const messages=[];if(po&&Number(po.posted_grn_count||0)===0)messages.push('No received goods found yet');if(result.blockingHints)messages.push(`${result.blockingHints} difference(s) need review`);if(difference>0.01)messages.push(`Invoice total differs by ₹${money(difference)}`);document.getElementById('matchPreview').textContent=messages.length?messages.join(' · '):'✓ The entered values currently look aligned. Final checking happens when you save.';}
-    if(select){select.addEventListener('change',function(){initialItems=[];declaredTouched=false;renderLines();});}invoiceDate.addEventListener('change',function(){const po=selectedOrder();if(po&&!dueDate.value)dueDate.value=addDays(invoiceDate.value,po.credit_period_days||0);});declaredTotal.addEventListener('input',function(){declaredTouched=true;updateTotals();});['freightAmount','otherCharges','roundOff'].forEach(id=>document.getElementById(id).addEventListener('input',updateTotals));form.addEventListener('submit',function(event){const result=collectItems(true);if(!result.output.length){event.preventDefault();alert('Enter an invoice quantity for at least one product.');}});renderLines();
+    if(select){select.addEventListener('change',function(){initialItems=[];declaredTouched=false;if(sourceGrnSelect)sourceGrnSelect.value='';renderLines();});}if(sourceGrnSelect){sourceGrnSelect.addEventListener('change',function(){applySourceGrn(true);});}invoiceDate.addEventListener('change',function(){const po=selectedOrder();if(po){dueDate.value=addDays(invoiceDate.value,po.credit_period_days||0);}});declaredTotal.addEventListener('input',function(){declaredTouched=true;updateTotals();});['freightAmount','otherCharges','roundOff'].forEach(id=>document.getElementById(id).addEventListener('input',updateTotals));form.addEventListener('submit',function(event){const result=collectItems(true);if(!result.output.length){event.preventDefault();alert('There is no uninvoiced accepted quantity to record on this Purchase Invoice.');}});renderLines();
 })();
 </script>
 {% endblock %}

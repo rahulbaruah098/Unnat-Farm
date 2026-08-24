@@ -1,3 +1,4 @@
+from app.utils.timezone import business_today
 from datetime import date, datetime, time
 from hashlib import sha256
 import json
@@ -1377,7 +1378,7 @@ def get_voucher_option_catalog():
 
 
 def _default_financial_year(open_financial_years):
-    today_value = date.today()
+    today_value = business_today()
     for financial_year in open_financial_years:
         start_value = financial_year.get("start_date")
         end_value = financial_year.get("end_date")
@@ -1441,7 +1442,7 @@ def get_voucher_overview(accounting_entity_id, actor_user_id):
         if financial_year.get("usable_for_posting")
     ]
     default_financial_year = _default_financial_year(open_financial_years)
-    default_transaction_date = date.today()
+    default_transaction_date = business_today()
     if default_financial_year:
         start_value = default_financial_year.get("start_date")
         end_value = default_financial_year.get("end_date")

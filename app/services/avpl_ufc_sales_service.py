@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.utils.timezone import business_today
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -90,7 +91,7 @@ def _date_iso(value):
     try:
         return datetime.strptime(text, "%Y-%m-%d").date().isoformat()
     except ValueError:
-        return date.today().isoformat()
+        return business_today().isoformat()
 
 
 def _get_actor(user_id, allowed_roles=None):
@@ -154,7 +155,7 @@ def _ensure_indexes():
 
 
 def _next_sale_number():
-    year = date.today().year
+    year = business_today().year
     counter = mongo.db.system_counters.find_one_and_update(
         {"_id": f"avpl_ufc_sale:{year}"},
         {"$inc": {"sequence": 1}, "$setOnInsert": {"created_at": now_utc()}},
@@ -303,7 +304,7 @@ def _purchase_wac(entity_id, product_id):
 
 
 def _financial_snapshot(order, entity, buyer):
-    transaction_date = _date_iso(order.get("dispatched_at") or date.today())
+    transaction_date = _date_iso(order.get("dispatched_at") or business_today())
     mapping = get_product_accounting_mapping_for_posting(
         entity["_id"],
         order.get("source_product_id"),

@@ -256,7 +256,7 @@
                         <div>
                             <strong>{{ item.request_label }} — {{ item.status_display }}</strong>
                             <span>{{ item.created_by_name or 'AVPL Admin' }}</span>
-                            {% if item.approved_at %}<small>Approved {{ item.approved_at.strftime('%d %b %Y, %I:%M %p') }}</small>{% endif %}
+                            {% if item.approved_at %}<small>Approved {{ item.approved_at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}</small>{% endif %}
                             {% if item.reason %}<p>Reason: {{ item.reason }}</p>{% endif %}
                             {% if item.cancel_reason %}<p>Cancellation: {{ item.cancel_reason }}</p>{% endif %}
                         </div>

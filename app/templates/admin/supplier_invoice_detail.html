@@ -2,15 +2,548 @@
 {% block title %}{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}{% endblock %}
 {% block content %}
 <style>
-.invoice-detail{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0;color:#17252A}.head p{margin:5px 0 0;color:#64748B}.links{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 16px;border-radius:999px;border:1px solid #CFE2D5;background:#fff;color:#425466;text-decoration:none;font:inherit;font-weight:800;cursor:pointer}.btn.primary{background:#5FA878;border-color:#5FA878;color:#fff}.btn.dark{background:#2F7A4C;border-color:#2F7A4C;color:#fff}.btn.warning{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.btn.danger{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.btn:disabled{opacity:.55;cursor:not-allowed}.notice{margin:17px 0;padding:13px 15px;border:1px solid #B9DCCA;border-radius:16px;background:#F3FBF6;color:#2E6643;line-height:1.5}.notice.warning{border-color:#F4D38A;background:#FFF8E8;color:#6B5316}.notice.error{border-color:#FECACA;background:#FEF2F2;color:#991B1B}.notice.info{border-color:#BFDBFE;background:#EFF6FF;color:#1D4ED8}.summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}.card{padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC}.card small{display:block;color:#64748B;margin-bottom:4px}.card strong{color:#17252A;overflow-wrap:anywhere}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:900;border:1px solid}.status.matched,.status.posted,.status.paid{background:#ECFDF3;border-color:#B7E4C7;color:#237A43}.status.matched_with_warnings,.status.prepared,.status.partially_paid{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.status.mismatch,.status.recovery_required{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}.status.cancelled,.status.not_posted,.status.unpaid{background:#F1F5F9;border-color:#CBD5E1;color:#64748B}.status.posting{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8}.section{margin-top:15px;padding:17px;border:1px solid #E2EFE6;border-radius:18px;background:#FCFEFC}.section h3{margin:0 0 13px;color:#17252A}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}.section-head h3{margin:0}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:1450px}.table.compact{min-width:850px}.table th,.table td{padding:10px;border-bottom:1px solid #E2EFE6;text-align:left;vertical-align:top}.table th{color:#64748B;font-size:.84rem;background:#F6FAF7}.severity{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:900}.severity.blocking{background:#FEF2F2;color:#B91C1C}.severity.warning{background:#FFF7E6;color:#8A5B00}.total-box{margin-left:auto;width:min(500px,100%);display:grid;gap:7px}.total-row{display:flex;justify-content:space-between;gap:20px;padding:7px 0;border-bottom:1px solid #E2EFE6}.total-row.grand{border:0;font-size:1.15rem;font-weight:900}.workflow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.workflow form{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.reason{height:38px;min-width:220px;border:1px solid #D6E5DA;border-radius:999px;padding:0 12px;font:inherit}.history{display:grid;gap:8px}.history-item{padding:10px 12px;border-left:3px solid #5FA878;background:#fff;border-radius:0 12px 12px 0;color:#52635A}.history-item strong{color:#263B31}.posting-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.posting-step{padding:14px;border:1px solid #E2EFE6;border-radius:15px;background:#fff}.posting-step span{display:block;color:#64748B;font-size:.82rem;margin-bottom:4px}.posting-step strong{color:#263B31}.posting-step.done{border-color:#B7E4C7;background:#F3FBF6}.posting-step.current{border-color:#F4D38A;background:#FFF8E8}.posting-step.blocked{border-color:#FECACA;background:#FEF2F2}.posting-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}.posting-meta div{padding:11px;border-radius:12px;background:#fff;border:1px solid #E2EFE6}.posting-meta small{display:block;color:#64748B;margin-bottom:3px}
-@media(max-width:1050px){.summary{grid-template-columns:repeat(3,1fr)}.posting-flow,.posting-meta{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.invoice-detail{padding:15px;border-radius:18px}.summary,.posting-flow,.posting-meta{grid-template-columns:1fr}.links,.links .btn,.workflow form,.workflow .btn,.reason{width:100%}.total-row{align-items:flex-start}}
+.invoice-detail {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 28px;
+    border: 1px solid rgba(47, 122, 76, 0.11);
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 16px 40px rgba(28, 72, 43, 0.07);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #435349;
+}
+
+.head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.head h2 {
+    margin: 0;
+    color: #17251d;
+    font-size: clamp(1.5rem, 2vw, 1.95rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+}
+
+.head p {
+    max-width: 820px;
+    margin: 7px 0 0;
+    color: #748279;
+    font-size: 0.82rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.links,
+.workflow,
+.workflow form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.links {
+    justify-content: flex-end;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 13px;
+    border: 1px solid rgba(47, 122, 76, 0.13);
+    border-radius: 9px;
+    background: #ffffff;
+    color: #526158;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.btn:hover {
+    border-color: #397e51;
+    color: #2f6e46;
+}
+
+.btn.primary {
+    background: #f1f8f3;
+    border-color: rgba(47, 122, 76, 0.18);
+    color: #2f7a4c;
+}
+
+.btn.dark {
+    background: #397e51;
+    border-color: #397e51;
+    color: #ffffff;
+}
+
+.btn.dark:hover,
+.btn.primary:hover {
+    background: #2f6e46;
+    border-color: #2f6e46;
+    color: #ffffff;
+}
+
+.btn.warning {
+    background: #fff8e8;
+    border-color: #f4d38a;
+    color: #8a5b00;
+}
+
+.btn.danger {
+    background: #fff7f7;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.btn.danger:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+    color: #ffffff;
+}
+
+.btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.notice {
+    margin: 14px 0;
+    padding: 12px 14px;
+    border: 1px solid rgba(47, 122, 76, 0.12);
+    border-radius: 11px;
+    background: #f5faf7;
+    color: #526b5b;
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+.notice.warning {
+    border-color: #f4d38a;
+    background: #fff9ed;
+    color: #765c18;
+}
+
+.notice.error {
+    border-color: #fecaca;
+    background: #fff5f5;
+    color: #991b1b;
+}
+
+.notice.info {
+    border-color: #bfdbfe;
+    background: #f4f8ff;
+    color: #1d4ed8;
+}
+
+.summary {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.card {
+    min-width: 0;
+    padding: 13px 14px;
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 12px;
+    background: #fbfdfb;
+}
+
+.card small {
+    display: block;
+    margin-bottom: 6px;
+    color: #829087;
+    font-size: 0.65rem;
+    font-weight: 750;
+    line-height: 1.35;
+}
+
+.card strong {
+    color: #263b2f;
+    font-size: 0.80rem;
+    font-weight: 800;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 27px;
+    padding: 5px 9px;
+    border: 1px solid;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.status.matched,
+.status.posted,
+.status.paid {
+    background: #ecfdf3;
+    border-color: #b7e4c7;
+    color: #237a43;
+}
+
+.status.matched_with_warnings,
+.status.prepared,
+.status.partially_paid {
+    background: #fff7e6;
+    border-color: #f4d38a;
+    color: #8a5b00;
+}
+
+.status.mismatch,
+.status.recovery_required {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.status.cancelled,
+.status.not_posted,
+.status.unpaid {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #64748b;
+}
+
+.status.posting {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.section {
+    margin-top: 14px;
+    padding: 17px;
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.section h3 {
+    margin: 0 0 13px;
+    color: #263b2f;
+    font-size: 0.91rem;
+    font-weight: 800;
+}
+
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 13px;
+    flex-wrap: wrap;
+}
+
+.section-head h3 {
+    margin: 0;
+}
+
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid rgba(47, 122, 76, 0.09);
+    border-radius: 11px;
+    background: #ffffff;
+}
+
+.table {
+    width: 100%;
+    min-width: 1450px;
+    border-collapse: collapse;
+}
+
+.table.compact {
+    min-width: 850px;
+}
+
+.table th,
+.table td {
+    padding: 10px 11px;
+    border-bottom: 1px solid #edf2ee;
+    text-align: left;
+    vertical-align: top;
+    font-size: 0.73rem;
+    line-height: 1.4;
+}
+
+.table th {
+    background: #f6f9f7;
+    color: #6e7e74;
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.table tbody tr:hover {
+    background: #fbfdfb;
+}
+
+.table td strong {
+    color: #304438;
+}
+
+.table td small {
+    color: #7e8b83;
+}
+
+.severity {
+    display: inline-flex;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 0.64rem;
+    font-weight: 850;
+}
+
+.severity.blocking {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.severity.warning {
+    background: #fff7e6;
+    color: #8a5b00;
+}
+
+.total-box {
+    width: min(520px, 100%);
+    margin-left: auto;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 22px;
+    padding: 9px 0;
+    border-bottom: 1px solid #edf2ee;
+    color: #607168;
+    font-size: 0.77rem;
+}
+
+.total-row strong {
+    color: #2c4134;
+    text-align: right;
+}
+
+.total-row.grand {
+    border-bottom: 0;
+    color: #263b2f;
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.reason {
+    min-width: 220px;
+    height: 38px;
+    padding: 0 11px;
+    border: 1px solid rgba(47, 122, 76, 0.14);
+    border-radius: 9px;
+    background: #ffffff;
+    color: #435349;
+    font: inherit;
+    font-size: 0.76rem;
+    outline: none;
+}
+
+.reason:focus {
+    border-color: rgba(47, 122, 76, 0.35);
+    box-shadow: 0 0 0 4px rgba(47, 122, 76, 0.06);
+}
+
+.history {
+    display: grid;
+    gap: 7px;
+}
+
+.history-item {
+    padding: 10px 12px;
+    border: 1px solid rgba(47, 122, 76, 0.08);
+    border-radius: 9px;
+    background: #fbfdfb;
+    color: #697970;
+    font-size: 0.73rem;
+    line-height: 1.45;
+}
+
+.history-item strong {
+    color: #304438;
+}
+
+.posting-flow {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.posting-step {
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 11px;
+    background: #fbfdfb;
+}
+
+.posting-step span {
+    display: block;
+    margin-bottom: 5px;
+    color: #829087;
+    font-size: 0.65rem;
+    font-weight: 750;
+}
+
+.posting-step strong {
+    color: #304438;
+    font-size: 0.77rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.posting-step.done {
+    border-color: #b7e4c7;
+    background: #f4faf6;
+}
+
+.posting-step.current {
+    border-color: #f4d38a;
+    background: #fffaf0;
+}
+
+.posting-step.blocked {
+    border-color: #fecaca;
+    background: #fff7f7;
+}
+
+.posting-meta {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 10px;
+}
+
+.posting-meta div {
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid rgba(47, 122, 76, 0.09);
+    border-radius: 10px;
+    background: #fbfdfb;
+}
+
+.posting-meta small {
+    display: block;
+    margin-bottom: 4px;
+    color: #829087;
+    font-size: 0.63rem;
+    font-weight: 750;
+}
+
+.posting-meta strong {
+    color: #304438;
+    font-size: 0.74rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 1180px) {
+    .summary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .posting-flow,
+    .posting-meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .invoice-detail {
+        padding: 18px;
+        border-radius: 18px;
+    }
+
+    .links {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .links .btn {
+        flex: 1 1 145px;
+    }
+
+    .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .section {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 560px) {
+    .invoice-detail {
+        padding: 14px;
+        border-radius: 15px;
+    }
+
+    .head h2 {
+        font-size: 1.28rem;
+    }
+
+    .summary,
+    .posting-flow,
+    .posting-meta {
+        grid-template-columns: 1fr;
+    }
+
+    .links,
+    .links .btn,
+    .workflow,
+    .workflow form,
+    .workflow .btn,
+    .reason {
+        width: 100%;
+    }
+
+    .total-row {
+        align-items: flex-start;
+    }
+}
+
+@media(max-width:1200px){.invoice-detail{padding:20px}.summary{grid-template-columns:repeat(3,minmax(0,1fr))}.table{min-width:1100px}}
+@media(max-width:760px){.invoice-detail{padding:14px;border-radius:18px}.section{padding:14px}.head h2{font-size:clamp(1.25rem,6vw,1.65rem)}.table-wrap{-webkit-overflow-scrolling:touch}.links{width:100%}.links .btn{flex:1 1 145px}}
 </style>
 <div class="invoice-detail">
     <div class="head">
         <div>
             <h2>{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }}</h2>
             <p>
-                {% if invoice.official_purchase_invoice_number %}Supplier Invoice {{ invoice.supplier_invoice_number }} · {% endif %}
+                {% if invoice.official_purchase_invoice_number %}Supplier Bill {{ invoice.supplier_invoice_number }} · {% endif %}
                 {{ invoice.supplier_name }} · {{ invoice.po_number }} · Internal {{ invoice.internal_reference }}
             </p>
         </div>
@@ -26,7 +559,7 @@
     </div>
 
     {% if invoice.status == 'matched' %}
-        <div class="notice"><strong>Three-way match passed:</strong> Supplier Invoice values match the approved Purchase Order and posted accepted GRN quantities.</div>
+        <div class="notice"><strong>Three-way match passed:</strong> Supplier bill values match the approved Purchase Order and posted accepted GRN quantities.</div>
     {% elif invoice.status == 'matched_with_warnings' %}
         <div class="notice warning"><strong>Matched with warnings:</strong> No blocking difference was found, but {{ invoice.warning_count }} warning{{ '' if invoice.warning_count == 1 else 's' }} should be reviewed before final posting.</div>
     {% elif invoice.status == 'mismatch' %}
@@ -34,7 +567,7 @@
     {% endif %}
 
     {% if invoice.posting_status == 'posted' %}
-        <div class="notice"><strong>Purchase posted:</strong> Official Purchase Invoice <strong>{{ invoice.official_purchase_invoice_number }}</strong> and Accounting Voucher <strong>{{ invoice.accounting_voucher_number }}</strong> were posted. Supplier payment status is <strong>{{ invoice.payment_status_display }}</strong> with ₹{{ invoice.outstanding_amount }} outstanding. <a href="{{ url_for('admin.payments_dashboard') }}" style="font-weight:900;color:inherit;">Open Payments & Settlement</a>. Stock was not increased again.</div>
+        <div class="notice"><strong>Purchase posted:</strong> Official Purchase Invoice <strong>{{ invoice.official_purchase_invoice_number }}</strong> and Accounting Voucher <strong>{{ invoice.accounting_voucher_number }}</strong> were posted. {% if invoice.payment_status == 'paid' or invoice.outstanding_amount|float <= 0 %}Supplier payable is <strong>fully settled</strong>.{% else %}Supplier payment status is <strong>{{ invoice.payment_status_display }}</strong> with <strong>₹{{ invoice.outstanding_amount }}</strong> outstanding.{% endif %} <a href="{{ url_for('admin.payments_dashboard') }}" style="font-weight:900;color:inherit;">Open Payments & Settlement</a>. Stock was not increased again.</div>
     {% elif invoice.posting_status == 'prepared' %}
         <div class="notice warning"><strong>Ready for final approval:</strong> Voucher draft {{ invoice.accounting_voucher_reference }} passed Accounting validation. An authorized AVPL Admin or Super Admin can now complete the purchase posting.</div>
     {% elif invoice.posting_status == 'posting' %}
@@ -50,7 +583,7 @@
         <div class="card"><small>Match Status</small><span class="status {{ invoice.status }}">{{ invoice.status_display }}</span></div>
         <div class="card"><small>Posting Status</small><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></div>
         <div class="card"><small>Invoice Date</small><strong>{{ invoice.invoice_date }}</strong></div>
-        <div class="card"><small>Due Date</small><strong>{{ invoice.due_date or '-' }}</strong></div>
+        <div class="card"><small>Payment Due Date</small><strong>{{ invoice.due_date or '-' }}</strong></div>
         <div class="card"><small>Declared Total</small><strong>₹{{ invoice.declared_total }}</strong></div>
         <div class="card"><small>Payment Status</small><span class="status {{ invoice.payment_status }}">{{ invoice.payment_status_display }}</span></div>
     </div>
@@ -61,11 +594,11 @@
             <div class="posting-step {{ 'done' if invoice.status in ['matched','matched_with_warnings'] else 'blocked' }}"><span>1. Three-Way Match</span><strong>{{ invoice.status_display }}</strong></div>
             {% if streamlined_workflows_enabled %}
             <div class="posting-step {{ 'done' if invoice.posting_status == 'posted' else 'current' }}"><span>2. Purchase Finalization</span><strong>{{ 'Completed' if invoice.posting_status == 'posted' else ('Ready' if invoice.blocking_mismatch_count == 0 else 'Blocked') }}</strong></div>
-            <div class="posting-step {{ 'done' if invoice.payable_posted else '' }}"><span>3. Supplier Payable</span><strong>{{ 'Open · ₹' ~ invoice.outstanding_amount if invoice.payable_posted else 'Created during finalization' }}</strong></div>
+            <div class="posting-step {{ 'done' if invoice.payable_posted else '' }}"><span>3. Supplier Payable</span><strong>{{ ('Settled' if invoice.payment_status == 'paid' or invoice.outstanding_amount|float <= 0 else 'Open · ₹' ~ invoice.outstanding_amount) if invoice.payable_posted else 'Created during finalization' }}</strong></div>
             {% else %}
             <div class="posting-step {{ 'done' if invoice.posting_status in ['prepared','posting','posted','recovery_required'] else 'current' }}"><span>2. Prepare Purchase</span><strong>{{ 'Completed' if invoice.posting_status in ['prepared','posting','posted','recovery_required'] else 'Pending' }}</strong></div>
             <div class="posting-step {{ 'done' if invoice.posting_status == 'posted' else ('current' if invoice.posting_status in ['prepared','recovery_required'] else '') }}"><span>3. Final Approval</span><strong>{{ 'Completed' if invoice.posting_status == 'posted' else 'Pending' }}</strong></div>
-            <div class="posting-step {{ 'done' if invoice.payable_posted else '' }}"><span>4. Supplier Payable</span><strong>{{ 'Open · ₹' ~ invoice.outstanding_amount if invoice.payable_posted else 'Not Posted' }}</strong></div>
+            <div class="posting-step {{ 'done' if invoice.payable_posted else '' }}"><span>4. Supplier Payable</span><strong>{{ ('Settled' if invoice.payment_status == 'paid' or invoice.outstanding_amount|float <= 0 else 'Open · ₹' ~ invoice.outstanding_amount) if invoice.payable_posted else 'Not Posted' }}</strong></div>
             {% endif %}
         </div>
 
@@ -101,14 +634,20 @@
     </section>
 
     <section class="section">
-        <h3>Supplier Invoice Header</h3>
+        <h3>Supplier Bill / GST Invoice</h3>
         <div class="summary" style="margin:0">
             <div class="card"><small>Supplier</small><strong>{{ invoice.supplier_name }} · {{ invoice.supplier_code }}</strong></div>
-            <div class="card"><small>GST Profile</small><strong>{{ invoice.supplier_gst_registration_status|replace('_',' ')|title or 'Unregistered' }}</strong></div>
-            <div class="card"><small>GSTIN</small><strong>{{ invoice.supplier_gstin or 'Not applicable' }}</strong></div>
-            <div class="card"><small>Document Reference</small><strong>{{ invoice.document_reference or '-' }}</strong></div>
+            <div class="card"><small>Supplier Invoice No.</small><strong>{{ invoice.supplier_invoice_number }}</strong></div>
+            <div class="card"><small>Supplier GSTIN</small><strong>{{ invoice.supplier_gstin or 'Not applicable' }}</strong></div>
+            <div class="card"><small>Source Goods Receipt</small><strong>{% if invoice.source_grn_id %}<a href="{{ url_for('admin.goods_receipt_detail', receipt_id=invoice.source_grn_id) }}" style="color:#2F7A4C">{{ invoice.source_grn_number or 'View GRN' }}</a>{% else %}Matched across posted GRNs{% endif %}</strong></div>
+            <div class="card"><small>Original Supplier Invoice</small><strong>{% if invoice.supplier_invoice_attachment_filename %}<a target="_blank" href="{{ url_for('documents.serve', filename=invoice.supplier_invoice_attachment_filename) }}" style="color:#2F7A4C">View Attachment</a>{% else %}Not attached{% endif %}</strong></div>
             <div class="card"><small>Payment Terms</small><strong>{{ invoice.payment_terms or '-' }}</strong></div>
-            <div class="card"><small>Posting Evidence</small><strong>Voucher {{ 'Posted' if invoice.voucher_posted else 'Not posted' }} · Payable {{ 'Posted' if invoice.payable_posted else 'Not posted' }}</strong></div>
+        </div>
+        <div class="summary" style="margin:10px 0 0">
+            <div class="card"><small>GST Profile</small><strong>{{ invoice.supplier_gst_registration_status|replace('_',' ')|title or 'Unregistered' }}</strong></div>
+            <div class="card"><small>Document Reference</small><strong>{{ invoice.document_reference or '-' }}</strong></div>
+            <div class="card"><small>Purchase Order</small><strong><a href="{{ url_for('admin.purchase_order_detail', order_id=invoice.purchase_order_id) }}" style="color:#2F7A4C">{{ invoice.po_number }}</a></strong></div>
+            <div class="card"><small>Posting Evidence</small><strong>Voucher {{ 'Posted' if invoice.voucher_posted else 'Not posted' }} · Payable {{ 'Settled' if invoice.payable_posted and (invoice.payment_status == 'paid' or invoice.outstanding_amount|float <= 0) else ('Posted' if invoice.payable_posted else 'Not posted') }}</strong></div>
         </div>
         {% if invoice.remarks %}<div class="notice" style="margin-bottom:0"><strong>Remarks:</strong> {{ invoice.remarks }}</div>{% endif %}
     </section>
@@ -157,7 +696,7 @@
             </tbody>
         </table></div>
         {% else %}
-            <div class="notice" style="margin-bottom:0"><strong>No exceptions:</strong> PO, posted GRN and Supplier Invoice values matched.</div>
+            <div class="notice" style="margin-bottom:0"><strong>No exceptions:</strong> PO, posted GRN and supplier bill values matched.</div>
         {% endif %}
     </section>
 
@@ -181,7 +720,7 @@
         <div class="total-row"><span>Freight / Other / Round-off</span><strong>₹{{ invoice.freight_amount }} / ₹{{ invoice.other_charges }} / ₹{{ invoice.round_off }}</strong></div>
         <div class="total-row"><span>Calculated Total</span><strong>₹{{ invoice.computed_total }}</strong></div>
         <div class="total-row grand"><span>Supplier Declared Total</span><strong>₹{{ invoice.declared_total }}</strong></div>
-        {% if invoice.payable_posted %}<div class="total-row grand"><span>Outstanding Payable</span><strong>₹{{ invoice.outstanding_amount }}</strong></div>{% endif %}
+        {% if invoice.payable_posted %}<div class="total-row grand"><span>Supplier Payable</span><strong>{% if invoice.payment_status == 'paid' or invoice.outstanding_amount|float <= 0 %}Settled · ₹0.00{% else %}Outstanding ₹{{ invoice.outstanding_amount }}{% endif %}</strong></div>{% endif %}
     </div></section>
 
     {% if invoice.status != 'cancelled' and invoice.posting_status == 'not_posted' %}
@@ -189,7 +728,7 @@
         <form method="post" action="{{ url_for('admin.cancel_supplier_invoice_view', invoice_id=invoice.id) }}">
             <input type="hidden" name="expected_version" value="{{ invoice.version }}">
             <input class="reason" name="reason" placeholder="Cancellation reason" required>
-            <button class="btn danger">Cancel Supplier Invoice</button>
+            <button class="btn danger">Cancel Purchase Invoice Record</button>
         </form>
     </div></section>
     {% endif %}

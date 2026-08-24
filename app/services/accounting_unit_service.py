@@ -15,7 +15,6 @@ from app.services.accounting_permission_service import (
     has_accounting_permission,
 )
 from app.utils.helpers import now_utc
-from app.services.workflow_policy_service import workflow_is_streamlined
 
 
 AVPL_ENTITY_CODE = "AVPL"
@@ -500,9 +499,36 @@ def _canonical_standard_unit(entity, definition, actor, existing=None):
 
 
 def seed_standard_units(accounting_entity_id, actor_user_id):
-    actor = _get_actor(actor_user_id, allowed_roles={"super_admin"})
+    actor = _get_actor(
+        actor_user_id,
+        allowed_roles={"super_admin", "avpl_admin"},
+    )
     entity = _assert_active_avpl_entity(accounting_entity_id)
-    _require_permission(actor, entity["_id"], BOOTSTRAP_PERMISSION)
+
+    # Protected UQC foundation setup is an explicit platform authority
+    # for Super Admin and AVPL Admin. Do not depend on an older stored
+    # accounting_user_access permission mapping for this bootstrap action.
+    access = get_accounting_access(
+        user_id=actor["_id"],
+        session_role=actor.get("resolved_role") or actor.get("role"),
+    )
+
+    if not access.get("enabled"):
+        raise PermissionError(
+            access.get("message") or "Accounting access is disabled."
+        )
+
+    # AVPL Admin must still be scoped to this Accounting entity.
+    if actor.get("resolved_role") == "avpl_admin":
+        entity_ids = {
+            str(value)
+            for value in access.get("entity_ids") or []
+        }
+        if str(entity["_id"]) not in entity_ids:
+            raise PermissionError(
+                "You do not have access to this Accounting entity."
+            )
+
     ensure_unit_indexes()
 
     created = repaired = unchanged = 0
@@ -699,19 +725,16 @@ def update_custom_unit(unit_id, actor_user_id, expected_version, form):
 
 
 def _transition_unit(unit_id, actor_user_id, expected_version, action, permission, allowed_roles, source_statuses, target_status, reason="", note=""):
-    streamlined = workflow_is_streamlined("accounting.unit") and action == "approve_custom_unit"
-    effective_roles = set(allowed_roles) | ({"accounts"} if streamlined else set())
-    actor = _get_actor(actor_user_id, allowed_roles=effective_roles)
+    actor = _get_actor(actor_user_id, allowed_roles=allowed_roles)
     current = _get_unit(unit_id)
     _assert_custom_unit(current)
     entity = _assert_active_avpl_entity(current.get("accounting_entity_id"))
-    effective_permission = SUBMIT_PERMISSION if streamlined and actor.get("resolved_role") == "accounts" else permission
-    _require_permission(actor, entity["_id"], effective_permission)
+    _require_permission(actor, entity["_id"], permission)
     if current.get("status") not in set(source_statuses):
         raise ValueError(f"This unit cannot be moved from {STATUS_LABELS.get(current.get('status'), current.get('status'))}.")
     if action in {"submit_custom_unit", "withdraw_custom_unit", "cancel_custom_unit"} and str(current.get("created_by")) != str(actor["_id"]):
         raise PermissionError("Only the original Accounts maker can perform this action.")
-    if action in {"approve_custom_unit", "return_custom_unit"} and str(current.get("created_by")) == str(actor["_id"]) and not streamlined:
+    if action in {"approve_custom_unit", "return_custom_unit"} and str(current.get("created_by")) == str(actor["_id"]):
         raise PermissionError("The maker cannot approve or return their own unit master.")
     try:
         expected_version = int(expected_version)
@@ -882,18 +905,15 @@ def update_unit_conversion(conversion_id, actor_user_id, expected_version, form)
 
 
 def _transition_conversion(conversion_id, actor_user_id, expected_version, action, permission, allowed_roles, source_statuses, target_status, reason="", note=""):
-    streamlined = workflow_is_streamlined("accounting.unit_conversion") and action == "approve_unit_conversion"
-    effective_roles = set(allowed_roles) | ({"accounts"} if streamlined else set())
-    actor = _get_actor(actor_user_id, allowed_roles=effective_roles)
+    actor = _get_actor(actor_user_id, allowed_roles=allowed_roles)
     current = _get_conversion(conversion_id)
     entity = _assert_active_avpl_entity(current.get("accounting_entity_id"))
-    effective_permission = SUBMIT_PERMISSION if streamlined and actor.get("resolved_role") == "accounts" else permission
-    _require_permission(actor, entity["_id"], effective_permission)
+    _require_permission(actor, entity["_id"], permission)
     if current.get("status") not in set(source_statuses):
         raise ValueError("This unit conversion is not in a valid state for the requested action.")
     if action in {"submit_unit_conversion", "withdraw_unit_conversion", "cancel_unit_conversion"} and str(current.get("created_by")) != str(actor["_id"]):
         raise PermissionError("Only the original Accounts maker can perform this action.")
-    if action in {"approve_unit_conversion", "return_unit_conversion"} and str(current.get("created_by")) == str(actor["_id"]) and not streamlined:
+    if action in {"approve_unit_conversion", "return_unit_conversion"} and str(current.get("created_by")) == str(actor["_id"]):
         raise PermissionError("The maker cannot approve or return their own conversion.")
     try:
         expected_version = int(expected_version)

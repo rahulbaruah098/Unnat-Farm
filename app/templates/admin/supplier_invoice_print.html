@@ -5,9 +5,492 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ invoice.official_purchase_invoice_number or invoice.supplier_invoice_number }} · Print</title>
     <style>
-        *{box-sizing:border-box}body{margin:0;background:#eef6f0;color:#17252A;font-family:"Times New Roman",Georgia,serif}.print-toolbar{position:sticky;top:0;z-index:5;display:flex;justify-content:center;gap:10px;padding:12px;background:#173c27}.print-toolbar button,.print-toolbar a{min-height:40px;padding:8px 18px;border-radius:999px;border:1px solid #d3e8da;background:#fff;color:#234c34;text-decoration:none;font:inherit;font-weight:800;cursor:pointer}.print-toolbar button{background:#5FA878;border-color:#5FA878;color:#fff}.sheet{width:210mm;min-height:297mm;margin:16px auto;padding:13mm;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.14)}.header{display:grid;grid-template-columns:1fr auto;gap:18px;padding-bottom:12px;border-bottom:2px solid #2f7a4c}.brand{display:flex;gap:13px;align-items:flex-start}.brand img{width:90px;height:54px;object-fit:contain}.brand h1{margin:0 0 4px;font-size:22px}.brand p,.doc-head p{margin:2px 0;color:#52635A;font-size:12px;line-height:1.35}.doc-head{text-align:right}.doc-head h2{margin:0 0 5px;font-size:24px;color:#2F7A4C}.badge{display:inline-block;padding:4px 9px;border:1px solid #b7e4c7;border-radius:999px;background:#f3fbf6;color:#237a43;font-size:11px;font-weight:800}.badge.unposted{border-color:#f4d38a;background:#fff8e8;color:#8a5b00}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.meta div{padding:8px;border:1px solid #dceee2;border-radius:9px}.meta small{display:block;color:#64748B;margin-bottom:3px;font-size:10px}.meta strong{font-size:12px;overflow-wrap:anywhere}.parties{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.party{padding:10px;border:1px solid #dceee2;border-radius:10px;min-height:115px}.party h3{margin:0 0 7px;font-size:13px;color:#2F7A4C;text-transform:uppercase;letter-spacing:.04em}.party p{margin:2px 0;font-size:11px;line-height:1.35}.table{width:100%;border-collapse:collapse;font-size:10.5px}.table th,.table td{border:1px solid #cedfd3;padding:6px 5px;vertical-align:top}.table th{background:#f1f8f3;color:#2d5139;text-align:left}.num{text-align:right;white-space:nowrap}.totals-wrap{display:grid;grid-template-columns:1fr 78mm;gap:14px;margin-top:10px}.notes{font-size:10.5px;line-height:1.45}.notes h3{margin:0 0 5px;font-size:12px}.totals{width:100%;border-collapse:collapse;font-size:11px}.totals td{padding:5px 0;border-bottom:1px solid #e2efe6}.totals td:last-child{text-align:right;font-weight:700}.totals .grand td{padding-top:8px;border-top:2px solid #2F7A4C;border-bottom:0;font-size:14px;color:#173c27}.posting{margin-top:12px;padding:10px;border:1px solid #dceee2;border-radius:10px;background:#f9fcfa}.posting-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.posting small{display:block;color:#64748B;margin-bottom:2px;font-size:9px}.posting strong{font-size:10.5px}.footer{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:28px}.signature{padding-top:32px;border-top:1px solid #74877a;text-align:center;font-size:11px}.legal{margin-top:16px;padding-top:8px;border-top:1px solid #dceee2;text-align:center;color:#64748B;font-size:9.5px}.watermark{position:fixed;inset:45% 0 auto;text-align:center;font-size:52px;font-weight:900;color:rgba(138,91,0,.06);transform:rotate(-18deg);pointer-events:none}.unposted-note{margin:10px 0;padding:8px;border:1px solid #f4d38a;background:#fff8e8;color:#6b5316;font-size:10.5px;text-align:center}
-        @page{size:A4;margin:8mm}@media print{body{background:#fff}.print-toolbar{display:none}.sheet{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}.watermark{position:fixed}.unposted-note{break-inside:avoid}a{color:inherit;text-decoration:none}}
-        @media(max-width:900px){.sheet{width:100%;min-height:auto;margin:0;padding:16px}.meta{grid-template-columns:repeat(2,1fr)}.parties,.totals-wrap{grid-template-columns:1fr}.posting-grid{grid-template-columns:repeat(2,1fr)}}
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --ink: #1f3026;
+            --muted: #6f7d74;
+            --green: #397e51;
+            --green-dark: #2f6844;
+            --green-soft: #f3f8f4;
+            --line: #dfe9e2;
+            --paper: #ffffff;
+            --canvas: #edf3ef;
+            --warning: #8a5b00;
+            --warning-bg: #fff8e8;
+            --warning-line: #f0d28b;
+        }
+
+        body {
+            margin: 0;
+            background: var(--canvas);
+            color: var(--ink);
+            font-family: Inter, Arial, Helvetica, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .print-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+            background: #203c2b;
+            box-shadow: 0 5px 16px rgba(22, 44, 31, .12);
+        }
+
+        .print-toolbar button,
+        .print-toolbar a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 36px;
+            padding: 7px 14px;
+            border: 1px solid rgba(255, 255, 255, .22);
+            border-radius: 7px;
+            background: transparent;
+            color: #ffffff;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .print-toolbar button {
+            background: #ffffff;
+            border-color: #ffffff;
+            color: #28583a;
+        }
+
+        .sheet {
+            position: relative;
+            width: 210mm;
+            min-height: 297mm;
+            margin: 18px auto;
+            padding: 12mm 13mm;
+            background: var(--paper);
+            box-shadow: 0 14px 38px rgba(28, 52, 36, .12);
+        }
+
+        .header {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 22px;
+            align-items: start;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--green);
+        }
+
+        .brand {
+            display: flex;
+            align-items: flex-start;
+            gap: 13px;
+            min-width: 0;
+        }
+
+        .brand img {
+            width: 82px;
+            height: 52px;
+            object-fit: contain;
+            flex: 0 0 auto;
+        }
+
+        .brand h1 {
+            margin: 0 0 4px;
+            color: #183321;
+            font-size: 20px;
+            line-height: 1.15;
+        }
+
+        .brand p,
+        .doc-head p {
+            margin: 2px 0;
+            color: #617067;
+            font-size: 10.5px;
+            line-height: 1.4;
+        }
+
+        .doc-head {
+            min-width: 190px;
+            text-align: right;
+        }
+
+        .doc-head h2 {
+            margin: 0 0 6px;
+            color: var(--green);
+            font-size: 21px;
+            line-height: 1.15;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            margin-bottom: 4px;
+            padding: 4px 8px;
+            border: 1px solid #b7e4c7;
+            border-radius: 999px;
+            background: #f1faf4;
+            color: #237a43;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .03em;
+        }
+
+        .badge.unposted {
+            border-color: var(--warning-line);
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        .unposted-note {
+            margin: 10px 0;
+            padding: 7px 9px;
+            border: 1px solid var(--warning-line);
+            border-radius: 6px;
+            background: var(--warning-bg);
+            color: #6b5316;
+            font-size: 9.5px;
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        .meta {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 7px;
+            margin: 11px 0;
+        }
+
+        .meta div {
+            min-width: 0;
+            padding: 7px 8px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #fbfcfb;
+        }
+
+        .meta small {
+            display: block;
+            margin-bottom: 3px;
+            color: #7a887f;
+            font-size: 8.5px;
+            font-weight: 700;
+        }
+
+        .meta strong {
+            display: block;
+            color: #2a3f31;
+            font-size: 10px;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .parties {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 9px;
+            margin-bottom: 11px;
+        }
+
+        .party {
+            min-height: 108px;
+            padding: 9px 10px;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+        }
+
+        .party h3 {
+            margin: 0 0 6px;
+            color: var(--green);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+
+        .party p {
+            margin: 2px 0;
+            color: #4f5f55;
+            font-size: 9.5px;
+            line-height: 1.35;
+        }
+
+        .party p strong {
+            color: #24382b;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+            font-size: 9px;
+        }
+
+        .table th,
+        .table td {
+            padding: 5px 4px;
+            border: 1px solid #d7e2da;
+            vertical-align: top;
+            line-height: 1.3;
+        }
+
+        .table th {
+            background: #f2f7f3;
+            color: #4e6657;
+            font-size: 8px;
+            font-weight: 800;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .table td {
+            color: #425248;
+        }
+
+        .table td strong {
+            color: #263a2d;
+        }
+
+        .num {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .totals-wrap {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 72mm;
+            gap: 14px;
+            align-items: start;
+            margin-top: 10px;
+        }
+
+        .notes {
+            color: #58675e;
+            font-size: 9px;
+            line-height: 1.45;
+        }
+
+        .notes h3 {
+            margin: 0 0 5px;
+            color: #2d4334;
+            font-size: 10px;
+        }
+
+        .notes div {
+            margin-bottom: 3px;
+        }
+
+        .totals {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9.5px;
+        }
+
+        .totals td {
+            padding: 4px 2px;
+            border-bottom: 1px solid #e5ece7;
+            color: #5d6c63;
+        }
+
+        .totals td:last-child {
+            color: #2a3f31;
+            font-weight: 700;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .totals .grand td {
+            padding-top: 7px;
+            border-top: 2px solid var(--green);
+            border-bottom: 0;
+            color: #173c27;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .posting {
+            margin-top: 11px;
+            padding: 9px;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            background: #fafcfb;
+        }
+
+        .posting-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 7px;
+        }
+
+        .posting-grid div {
+            min-width: 0;
+        }
+
+        .posting small {
+            display: block;
+            margin-bottom: 3px;
+            color: #7a887f;
+            font-size: 8px;
+            font-weight: 700;
+        }
+
+        .posting strong {
+            display: block;
+            color: #304438;
+            font-size: 9px;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .footer {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 34px;
+            margin-top: 26px;
+        }
+
+        .signature {
+            padding-top: 28px;
+            border-top: 1px solid #89988e;
+            color: #4e5d54;
+            font-size: 9.5px;
+            text-align: center;
+        }
+
+        .legal {
+            margin-top: 14px;
+            padding-top: 7px;
+            border-top: 1px solid var(--line);
+            color: #7b887f;
+            font-size: 8px;
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        .watermark {
+            position: fixed;
+            inset: 44% 0 auto;
+            color: rgba(138, 91, 0, .055);
+            font-size: 46px;
+            font-weight: 900;
+            text-align: center;
+            transform: rotate(-18deg);
+            pointer-events: none;
+        }
+
+        @page {
+            size: A4;
+            margin: 8mm;
+        }
+
+        @media print {
+            body {
+                background: #ffffff;
+            }
+
+            .print-toolbar {
+                display: none;
+            }
+
+            .sheet {
+                width: auto;
+                min-height: auto;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+
+            .header,
+            .meta,
+            .parties,
+            .posting,
+            .footer,
+            .unposted-note {
+                break-inside: avoid;
+            }
+
+            .table thead {
+                display: table-header-group;
+            }
+
+            .table tr {
+                break-inside: avoid;
+            }
+
+            .watermark {
+                position: fixed;
+            }
+
+            a {
+                color: inherit;
+                text-decoration: none;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .sheet {
+                width: 100%;
+                min-height: auto;
+                margin: 0;
+                padding: 16px;
+            }
+
+            .meta {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .parties,
+            .totals-wrap {
+                grid-template-columns: 1fr;
+            }
+
+            .posting-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .table {
+                min-width: 900px;
+            }
+
+            main.sheet {
+                overflow-x: auto;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .print-toolbar {
+                position: static;
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                grid-template-columns: 1fr;
+            }
+
+            .doc-head {
+                min-width: 0;
+                text-align: left;
+            }
+
+            .meta,
+            .posting-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer {
+                grid-template-columns: 1fr;
+                gap: 22px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -44,7 +527,7 @@
             <div><small>Supplier Invoice No.</small><strong>{{ invoice.supplier_invoice_number }}</strong></div>
             <div><small>Supplier Invoice Date</small><strong>{{ invoice.invoice_date }}</strong></div>
             <div><small>Purchase Order</small><strong>{{ invoice.po_number }}</strong></div>
-            <div><small>Due Date</small><strong>{{ invoice.due_date or '-' }}</strong></div>
+            <div><small>Payment Due Date</small><strong>{{ invoice.due_date or '-' }}</strong></div>
             <div><small>Internal Reference</small><strong>{{ invoice.internal_reference }}</strong></div>
             <div><small>Match Status</small><strong>{{ invoice.status_display }}</strong></div>
             <div><small>Posting Status</small><strong>{{ invoice.posting_status_display }}</strong></div>
@@ -113,7 +596,7 @@
                 <tr><td>Other Charges</td><td>₹{{ invoice.other_charges }}</td></tr>
                 <tr><td>Round-off</td><td>₹{{ invoice.round_off }}</td></tr>
                 <tr class="grand"><td>Grand Total</td><td>₹{{ invoice.grand_total }}</td></tr>
-                {% if invoice.payable_posted %}<tr><td>Paid</td><td>₹{{ invoice.paid_amount or invoice.amount_paid or '0.00' }}</td></tr><tr><td>Outstanding</td><td>₹{{ invoice.outstanding_amount }}</td></tr><tr><td>Payment Status</td><td><strong>{{ invoice.payment_status_display or invoice.payment_status|replace('_',' ')|title }}</strong></td></tr>{% endif %}
+                {% if invoice.payable_posted %}<tr><td>Paid</td><td>₹{{ invoice.paid_amount }}</td></tr><tr><td>Outstanding</td><td>₹{{ invoice.outstanding_amount }}</td></tr><tr><td>Payment Status</td><td><strong>{{ invoice.payment_status_display or invoice.payment_status|replace('_',' ')|title }}</strong></td></tr>{% endif %}
             </table>
         </section>
 
@@ -122,7 +605,7 @@
                 <div><small>Official Purchase Invoice</small><strong>{{ invoice.official_purchase_invoice_number or 'Not posted' }}</strong></div>
                 <div><small>Accounting Voucher</small><strong>{{ invoice.accounting_voucher_number or invoice.accounting_voucher_reference or 'Not prepared' }}</strong></div>
                 <div><small>Financial Year</small><strong>{{ invoice.financial_year_code or '-' }}</strong></div>
-                <div><small>Supplier Payable</small><strong>{{ (invoice.payment_status_display ~ ' · ₹' ~ invoice.outstanding_amount ~ ' due') if invoice.payable_posted else 'Not posted' }}</strong></div>
+                <div><small>Supplier Payable</small><strong>{% if not invoice.payable_posted %}Not posted{% elif invoice.payment_status == 'paid' or invoice.outstanding_amount|float <= 0.004 %}Settled · ₹0.00 outstanding{% else %}{{ invoice.payment_status_display }} · ₹{{ invoice.outstanding_amount }} outstanding{% endif %}</strong></div>
             </div>
         </section>
 

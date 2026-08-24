@@ -2,298 +2,311 @@
 {% block content %}
 
 <style>
-    .page-card {
-        width: 100%;
-        border: 1px solid rgba(220, 238, 226, .95);
-        border-radius: 26px;
-        padding: 28px;
-        background: rgba(255, 255, 255, .92);
-        box-shadow: 0 22px 55px rgba(23, 37, 42, .10);
-        backdrop-filter: blur(14px);
-        font-family: "Times New Roman", Georgia, serif;
-        overflow: hidden;
-    }
+.super-admin-dashboard {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 28px;
+    border: 1px solid rgba(47, 122, 76, 0.11);
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 16px 40px rgba(28, 72, 43, 0.07);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #435349;
+}
 
-    .dashboard-head {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 18px;
-        margin-bottom: 22px;
-    }
+.dashboard-header {
+    margin-bottom: 22px;
+}
 
-    .dashboard-title-wrap {
-        min-width: 0;
-    }
+.dashboard-kicker {
+    display: block;
+    margin-bottom: 7px;
+    color: #5d7564;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
 
-    .dashboard-kicker {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 30px;
-        padding: 6px 14px;
-        margin-bottom: 10px;
-        border-radius: 999px;
-        background: rgba(228, 247, 234, .72);
-        color: #3B7D55;
-        border: 1px solid rgba(95, 168, 120, .22);
-        font-size: .82rem;
-        font-weight: 800;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-    }
+.dashboard-title {
+    margin: 0;
+    color: #17251d;
+    font-size: clamp(1.55rem, 2vw, 2rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
 
-    .page-card h2 {
-        margin: 0;
-        color: #17252A;
-        font-size: clamp(1.55rem, 2.4vw, 2.15rem);
-        font-weight: 800;
-        line-height: 1.2;
-        letter-spacing: .2px;
-        white-space: normal;
-        overflow-wrap: anywhere;
-        word-break: break-word;
-    }
+.dashboard-subtitle {
+    max-width: 780px;
+    margin: 7px 0 0;
+    color: #748279;
+    font-size: 0.86rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
 
-    .dashboard-subtitle {
-        margin: 10px 0 0;
-        max-width: 780px;
-        color: #64748B;
-        font-size: 1rem;
-        line-height: 1.6;
-        font-weight: 600;
+.dashboard-section {
+    margin-top: 24px;
+}
+
+.dashboard-section:first-of-type {
+    margin-top: 0;
+}
+
+.section-heading {
+    margin: 0 0 12px;
+    color: #58695f;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.stat-card {
+    min-height: 108px;
+    padding: 16px;
+    border: 1px solid rgba(47, 122, 76, 0.10);
+    border-radius: 14px;
+    background: #fbfdfb;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(47, 122, 76, 0.20);
+    box-shadow: 0 9px 22px rgba(28, 72, 43, 0.055);
+}
+
+.stat-card.priority {
+    background: #f7fbf8;
+    border-color: rgba(47, 122, 76, 0.14);
+}
+
+.stat-card.financial .stat-value {
+    color: #2b6f47;
+}
+
+.stat-label {
+    display: block;
+    margin-bottom: 12px;
+    color: #7b8a80;
+    font-size: 0.71rem;
+    font-weight: 750;
+    line-height: 1.4;
+}
+
+.stat-value {
+    display: block;
+    color: #22372a;
+    font-size: clamp(1.28rem, 1.8vw, 1.7rem);
+    font-weight: 850;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+}
+
+.dashboard-note {
+    margin: 24px 0 0;
+    padding: 13px 15px;
+    border: 1px solid rgba(47, 122, 76, 0.11);
+    border-radius: 12px;
+    background: #f5faf7;
+    color: #607168;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+@media (max-width: 1180px) {
+    .stat-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 860px) {
+    .super-admin-dashboard {
+        padding: 20px;
+        border-radius: 18px;
     }
 
     .stat-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .stat-grid {
+        grid-template-columns: 1fr;
     }
 
-    .stat {
-        position: relative;
-        min-height: 138px;
-        padding: 22px;
-        border: 1px solid rgba(220, 238, 226, .95);
-        border-radius: 22px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(246, 251, 247, .92));
-        box-shadow: 0 14px 32px rgba(23, 37, 42, .06);
-        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-        font-family: "Times New Roman", Georgia, serif;
-        overflow: hidden;
+    .stat-card {
+        min-height: auto;
     }
+}
 
-    .stat:hover {
-        transform: translateY(-3px);
-        border-color: rgba(95, 168, 120, .38);
-        box-shadow: 0 18px 40px rgba(23, 37, 42, .10);
-    }
-
-    .stat span {
-        display: block;
-        margin-bottom: 18px;
-        color: #64748B;
-        font-size: 1rem;
-        font-weight: 700;
-        line-height: 1.35;
-    }
-
-    .stat strong {
-        display: block;
-        color: #334155;
-        font-size: clamp(2rem, 3vw, 2.6rem);
-        font-weight: 900;
-        line-height: 1;
-        letter-spacing: -.4px;
-    }
-
-    .muted {
-        margin: 22px 0 0;
-        padding: 14px 18px;
-        border: 1px solid rgba(95, 168, 120, .18);
+@media (max-width: 420px) {
+    .super-admin-dashboard {
+        padding: 15px;
         border-radius: 16px;
-        background: rgba(228, 247, 234, .42);
-        color: #3B7D55;
-        font-size: 1rem;
-        font-weight: 700;
-        line-height: 1.5;
     }
 
-    @media (max-width: 1180px) {
-        .stat-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
+    .dashboard-title {
+        font-size: 1.3rem;
     }
 
-    @media (max-width: 760px) {
-        .page-card {
-            padding: 20px;
-            border-radius: 22px;
-        }
-
-        .dashboard-head {
-            margin-bottom: 18px;
-        }
-
-        .dashboard-kicker {
-            font-size: .76rem;
-            padding: 5px 12px;
-        }
-
-        .page-card h2 {
-            font-size: clamp(1.45rem, 6vw, 1.9rem);
-        }
-
-        .dashboard-subtitle {
-            font-size: .95rem;
-            line-height: 1.5;
-        }
-
-        .stat-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .stat {
-            min-height: 118px;
-            padding: 18px;
-            border-radius: 20px;
-        }
-
-        .stat span {
-            margin-bottom: 12px;
-            font-size: .95rem;
-            line-height: 1.25;
-        }
-
-        .stat strong {
-            font-size: 2rem;
-        }
-
-        .muted {
-            margin-top: 18px;
-            padding: 12px 14px;
-            font-size: .95rem;
-        }
+    .dashboard-subtitle {
+        font-size: 0.80rem;
     }
 
-    @media (max-width: 420px) {
-        .page-card {
-            padding: 16px;
-            border-radius: 18px;
-        }
-
-        .dashboard-head {
-            margin-bottom: 16px;
-        }
-
-        .page-card h2 {
-            font-size: 1.42rem;
-            line-height: 1.22;
-        }
-
-        .dashboard-subtitle {
-            font-size: .9rem;
-        }
-
-        .stat-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        .stat {
-            min-height: 108px;
-            padding: 14px;
-            border-radius: 18px;
-        }
-
-        .stat span {
-            margin-bottom: 10px;
-            font-size: .84rem;
-            line-height: 1.25;
-        }
-
-        .stat strong {
-            font-size: 1.72rem;
-        }
-
-        .muted {
-            border-radius: 14px;
-            font-size: .9rem;
-        }
+    .stat-card {
+        padding: 14px;
     }
 
-    @media (max-width: 340px) {
-        .stat {
-            padding: 12px;
-        }
-
-        .stat span {
-            font-size: .78rem;
-        }
-
-        .stat strong {
-            font-size: 1.55rem;
-        }
+    .stat-value {
+        font-size: 1.45rem;
     }
+}
 </style>
 
-<div class="page-card">
-    <div class="dashboard-head">
-        <div class="dashboard-title-wrap">
-            <span class="dashboard-kicker">System Overview</span>
-            <h2>Super Admin Dashboard</h2>
-            <p class="dashboard-subtitle">
-                Top-level monitoring, ID creation oversight, deletion access, and analytics visibility.
-            </p>
-        </div>
+<div class="super-admin-dashboard">
+
+    <div class="dashboard-header">
+        <span class="dashboard-kicker">System Overview</span>
+
+        <h2 class="dashboard-title">
+            Super Admin Dashboard
+        </h2>
+
+        <p class="dashboard-subtitle">
+            Top-level monitoring, ID creation oversight, deletion access, and analytics visibility.
+        </p>
     </div>
 
-    <div class="stat-grid">
-        <div class="stat">
-            <span>Total Users</span>
-            <strong>{{ stats.total_users }}</strong>
+    <section class="dashboard-section">
+        <h3 class="section-heading">User & Validation Overview</h3>
+
+        <div class="stat-grid">
+
+            <div class="stat-card priority">
+                <span class="stat-label">Total Users</span>
+                <strong class="stat-value">{{ stats.total_users }}</strong>
+            </div>
+
+            <div class="stat-card priority">
+                <span class="stat-label">UFC Admins</span>
+                <strong class="stat-value">{{ stats.total_ufc_admins }}</strong>
+            </div>
+
+            <div class="stat-card priority">
+                <span class="stat-label">UFC Mitras</span>
+                <strong class="stat-value">{{ stats.total_ufc_mitras }}</strong>
+            </div>
+
+            <div class="stat-card priority">
+                <span class="stat-label">Farmers</span>
+                <strong class="stat-value">{{ stats.total_farmers }}</strong>
+            </div>
+
+            <div class="stat-card priority">
+                <span class="stat-label">Pending Validations</span>
+                <strong class="stat-value">{{ stats.pending_validations }}</strong>
+            </div>
+
         </div>
+    </section>
 
-        <div class="stat">
-            <span>UFC Admins</span>
-            <strong>{{ stats.total_ufc_admins }}</strong>
+    <section class="dashboard-section">
+        <h3 class="section-heading">Orders & Transactions</h3>
+
+        <div class="stat-grid">
+
+            <div class="stat-card">
+                <span class="stat-label">Total Transactions</span>
+                <strong class="stat-value">{{ stats.total_transactions }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">Live Commercial Orders</span>
+                <strong class="stat-value">{{ stats.total_orders }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">Pending / In-Progress Orders</span>
+                <strong class="stat-value">{{ stats.pending_orders }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">Payments Recorded</span>
+                <strong class="stat-value">{{ stats.payments_recorded }}</strong>
+            </div>
+
         </div>
+    </section>
 
-        <div class="stat">
-            <span>UFC Mitras</span>
-            <strong>{{ stats.total_ufc_mitras }}</strong>
+    <section class="dashboard-section">
+        <h3 class="section-heading">AVPL Stock & Farmer Marketplace</h3>
+
+        <div class="stat-grid">
+
+            <div class="stat-card">
+                <span class="stat-label">AVPL Saleable Stock</span>
+                <strong class="stat-value">{{ stats.avpl_stock_saleable }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">AVPL Reserved Stock</span>
+                <strong class="stat-value">{{ stats.avpl_stock_reserved }}</strong>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-label">Farmer Produce Listings</span>
+                <strong class="stat-value">{{ stats.active_farmer_listings }}</strong>
+            </div>
+
         </div>
+    </section>
 
-        <div class="stat">
-            <span>Farmers</span>
-            <strong>{{ stats.total_farmers }}</strong>
+    <section class="dashboard-section">
+        <h3 class="section-heading">Financial Position</h3>
+
+        <div class="stat-grid">
+
+            <div class="stat-card financial">
+                <span class="stat-label">Supplier Outstanding</span>
+                <strong class="stat-value">
+                    ₹{{ "%.2f"|format(stats.supplier_outstanding|float) }}
+                </strong>
+            </div>
+
+            <div class="stat-card financial">
+                <span class="stat-label">UFC Receivable</span>
+                <strong class="stat-value">
+                    ₹{{ "%.2f"|format(stats.ufc_receivable|float) }}
+                </strong>
+            </div>
+
+            <div class="stat-card financial">
+                <span class="stat-label">Farmer Produce Receivable</span>
+                <strong class="stat-value">
+                    ₹{{ "%.2f"|format(stats.farmer_receivable|float) }}
+                </strong>
+            </div>
+
         </div>
+    </section>
 
-        <div class="stat">
-            <span>Pending Validations</span>
-            <strong>{{ stats.pending_validations }}</strong>
-        </div>
-
-        <div class="stat">
-            <span>Total Transactions</span>
-            <strong>{{ stats.total_transactions }}</strong>
-        </div>
-
-        <div class="stat"><span>Live Commercial Orders</span><strong>{{ stats.total_orders }}</strong></div>
-        <div class="stat"><span>Pending / In-Progress Orders</span><strong>{{ stats.pending_orders }}</strong></div>
-        <div class="stat"><span>AVPL Saleable Stock</span><strong>{{ stats.avpl_stock_saleable }}</strong></div>
-        <div class="stat"><span>AVPL Reserved Stock</span><strong>{{ stats.avpl_stock_reserved }}</strong></div>
-        <div class="stat"><span>Farmer Produce Listings</span><strong>{{ stats.active_farmer_listings }}</strong></div>
-        <div class="stat"><span>Payments Recorded</span><strong>{{ stats.payments_recorded }}</strong></div>
-        <div class="stat"><span>Supplier Outstanding</span><strong>₹{{ "%.2f"|format(stats.supplier_outstanding|float) }}</strong></div>
-        <div class="stat"><span>UFC Receivable</span><strong>₹{{ "%.2f"|format(stats.ufc_receivable|float) }}</strong></div>
-        <div class="stat"><span>Farmer Produce Receivable</span><strong>₹{{ "%.2f"|format(stats.farmer_receivable|float) }}</strong></div>
-    </div>
-
-    <p class="muted">
+    <p class="dashboard-note">
         Top-level monitoring, ID creation oversight, deletion access, analytics visibility.
     </p>
+
 </div>
 
 {% endblock %}

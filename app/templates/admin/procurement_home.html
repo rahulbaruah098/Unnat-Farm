@@ -2,63 +2,75 @@
 {% block title %}AVPL Purchases{% endblock %}
 {% block content %}
 <style>
-.purchase-home{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.purchase-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}.purchase-head h2{margin:0;color:#17252A}.purchase-head p{margin:6px 0 0;color:#64748B}.primary-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 18px;border-radius:999px;text-decoration:none;font-weight:900;background:#5FA878;color:#fff;border:1px solid #5FA878}.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:22px}.step{position:relative;padding:18px;border:1px solid #DDEDE2;border-radius:18px;background:#FCFEFC}.step-no{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#E8F6ED;color:#2F7A4C;font-weight:900;margin-bottom:10px}.step h3{margin:0 0 5px;color:#17252A}.step p{margin:0;color:#64748B;line-height:1.45;font-size:.9rem}.step a{display:inline-flex;margin-top:12px;color:#2F7A4C;font-weight:900;text-decoration:none}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:18px 0}.card{padding:15px;border:1px solid #E2EFE6;border-radius:16px;background:#fff}.card small{display:block;color:#64748B;margin-bottom:4px}.card strong{font-size:1.3rem;color:#17252A}.help{padding:16px;border:1px solid #B9DCCA;border-radius:17px;background:#F3FBF6;color:#2E6643;line-height:1.55}.help strong{color:#24563B}.quick{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.quick a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:999px;border:1px solid #CFE6D8;background:#fff;color:#2F7A4C;text-decoration:none;font-weight:800}
-@media(max-width:950px){.flow,.summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.purchase-home{padding:15px;border-radius:18px}.flow,.summary{grid-template-columns:1fr}.purchase-head .primary-link,.quick,.quick a{width:100%}}
+.purchase-page{--ink:#17251d;--text:#435349;--muted:#7b8a80;--green:#2f7a4c;--green-dark:#2f6e46;--line:rgba(47,122,76,.12);--shadow:0 22px 60px rgba(28,72,43,.10);--shadow-sm:0 10px 28px rgba(28,72,43,.07);width:100%;max-width:1600px;margin:0 auto;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+.purchase-shell{position:relative;overflow:hidden;width:100%;border:1px solid rgba(47,122,76,.11);border-radius:30px;background:radial-gradient(circle at 92% 3%,rgba(96,176,122,.11),transparent 23%),linear-gradient(180deg,rgba(255,255,255,.985),rgba(248,252,249,.985));box-shadow:var(--shadow)}
+.purchase-shell::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,#2f7a4c,#67b27e,#badfc6)}
+.purchase-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:30px 32px 23px;border-bottom:1px solid rgba(47,122,76,.09);flex-wrap:wrap}
+.purchase-title-wrap{display:flex;align-items:center;gap:14px;min-width:0}
+.purchase-head-icon{width:48px;height:48px;flex:0 0 48px;display:flex;align-items:center;justify-content:center;border-radius:16px;color:#2f7a4c;background:linear-gradient(145deg,#e8f6ed,#dff1e5);border:1px solid rgba(47,122,76,.13);box-shadow:0 8px 20px rgba(47,122,76,.10)}
+.purchase-head-icon svg{width:23px;height:23px}.purchase-eyebrow{margin:0 0 5px;color:#7d8b82;font-size:.70rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.purchase-head h2{margin:0;color:var(--ink);font-size:clamp(1.6rem,2vw,2.15rem);font-weight:830;line-height:1.12;letter-spacing:-.025em}
+.purchase-head p{max-width:760px;margin:7px 0 0;color:#718078;font-size:.84rem;line-height:1.55}
+.primary-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;border:1px solid rgba(47,122,76,.14);border-radius:12px;color:#fff;background:linear-gradient(135deg,#367f50,#2f6e46);text-decoration:none;font-size:.82rem;font-weight:850;box-shadow:0 10px 24px rgba(47,122,76,.18);transition:.18s ease;white-space:nowrap}
+.primary-link:hover{transform:translateY(-1px);box-shadow:0 13px 28px rgba(47,122,76,.23)}
+.purchase-content{padding:24px 32px 34px}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px}
+.section-title{display:flex;align-items:center;gap:10px;margin:0;color:var(--ink);font-size:1.05rem;font-weight:820}.section-title::before{content:"";width:8px;height:8px;border-radius:50%;background:#4ea36a;box-shadow:0 0 0 5px rgba(78,163,106,.10)}
+.section-meta{color:#87938b;font-size:.72rem;font-weight:750}
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:26px}
+.step{min-height:210px;padding:18px;border:1px solid rgba(47,122,76,.11);border-radius:19px;background:linear-gradient(180deg,#fff,#f8fcf9);box-shadow:var(--shadow-sm);transition:.18s ease}
+.step:hover{transform:translateY(-2px);border-color:rgba(47,122,76,.20);box-shadow:0 14px 32px rgba(28,72,43,.09)}
+.step-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}.step-no{width:36px;height:36px;flex:0 0 36px;display:flex;align-items:center;justify-content:center;border-radius:12px;color:#2f7a4c;background:#e8f6ed;border:1px solid rgba(47,122,76,.12);font-size:.80rem;font-weight:900}
+.step-label{color:#829087;font-size:.65rem;font-weight:850;letter-spacing:.09em;text-transform:uppercase}.step h3{margin:0 0 7px;color:#22372a;font-size:.98rem;font-weight:820}.step p{margin:0;color:#6f7f75;font-size:.80rem;line-height:1.5}
+.step a{display:inline-flex;align-items:center;margin-top:15px;color:#2f7a4c;text-decoration:none;font-size:.77rem;font-weight:850;transition:.18s ease}.step a:hover{transform:translateX(2px)}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 24px}.summary-card{position:relative;overflow:hidden;padding:17px 18px;border:1px solid rgba(47,122,76,.10);border-radius:17px;background:#fff;box-shadow:0 8px 22px rgba(28,72,43,.055)}
+.summary-card small{display:block;margin-bottom:7px;color:#819087;font-size:.68rem;font-weight:800;letter-spacing:.055em;text-transform:uppercase}.summary-card strong{display:block;color:#22372a;font-size:1.55rem;font-weight:850;line-height:1}
+.help{display:flex;align-items:flex-start;gap:12px;margin-bottom:22px;padding:15px 16px;border:1px solid rgba(47,122,76,.13);border-radius:16px;background:linear-gradient(180deg,#f5fbf7,#eef8f1);color:#53665a;font-size:.80rem;line-height:1.55}
+.help::before{content:"i";width:28px;height:28px;flex:0 0 28px;display:flex;align-items:center;justify-content:center;border-radius:9px;color:#2f7a4c;background:#dff1e5;font-size:.8rem;font-weight:900}.help strong{color:#24563b}
+.quick-panel{padding:18px;border:1px solid rgba(47,122,76,.10);border-radius:18px;background:#fbfdfb}.quick-title{margin:0 0 12px;color:#6d7c72;font-size:.70rem;font-weight:850;letter-spacing:.10em;text-transform:uppercase}
+.quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.quick a{display:flex;align-items:center;justify-content:space-between;min-height:43px;padding:9px 12px;border:1px solid rgba(47,122,76,.11);border-radius:12px;color:#326e48;background:#fff;text-decoration:none;font-size:.76rem;font-weight:800;transition:.18s ease}
+.quick a::after{content:"→";color:#6b9f7c}.quick a:hover{background:#edf8f1;border-color:rgba(47,122,76,.18);transform:translateY(-1px)}
+@media(max-width:1100px){.flow,.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:860px){.purchase-shell{border-radius:22px}.purchase-head{padding:22px 18px 18px;align-items:stretch}.purchase-head-icon{display:none}.purchase-head .primary-link{width:100%}.purchase-content{padding:20px 18px 26px}.quick{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.purchase-head{padding-left:14px;padding-right:14px}.purchase-head h2{font-size:1.35rem}.purchase-content{padding-left:14px;padding-right:14px}.flow,.summary,.quick{grid-template-columns:1fr}.step{min-height:auto}.section-meta{display:none}}
 </style>
-<div class="purchase-home">
-    <div class="purchase-head">
-        <div>
-            <h2>AVPL Purchases</h2>
-            <p>A simple four-step flow for buying goods from suppliers and bringing accepted goods into AVPL stock.</p>
-        </div>
-        <a class="primary-link" href="{{ url_for('admin.create_purchase_order_view') }}">+ New Purchase Order</a>
-    </div>
 
-    <div class="flow">
-        <div class="step">
-            <div class="step-no">1</div>
-            <h3>Supplier</h3>
-            <p>Add the supplier once. Use the same supplier for every future purchase.</p>
-            <a href="{{ url_for('admin.supplier_master') }}">Manage Suppliers →</a>
-        </div>
-        <div class="step">
-            <div class="step-no">2</div>
-            <h3>Purchase Order</h3>
-            <p>Select the supplier, products, quantity and purchase rate.</p>
-            <a href="{{ url_for('admin.purchase_orders') }}">Open Purchase Orders →</a>
-        </div>
-        <div class="step">
-            <div class="step-no">3</div>
-            <h3>Receive Goods</h3>
-            <p>Enter what physically arrived. Only accepted quantity becomes AVPL stock.</p>
-            <a href="{{ url_for('admin.goods_receipts') }}">Receive Goods →</a>
-        </div>
-        <div class="step">
-            <div class="step-no">4</div>
-            <h3>Supplier Invoice</h3>
-            <p>Record the supplier invoice. The system checks it against the PO and received goods.</p>
-            <a href="{{ url_for('admin.supplier_invoices') }}">Record Invoice →</a>
-        </div>
-    </div>
-
-    <div class="summary">
-        <div class="card"><small>Active Suppliers</small><strong>{{ supplier_overview.get('counts', {}).get('active', 0) }}</strong></div>
-        <div class="card"><small>Purchase Orders</small><strong>{{ po_overview.get('rows', [])|length }}</strong></div>
-        <div class="card"><small>Goods Receipts</small><strong>{{ grn_overview.get('rows', [])|length }}</strong></div>
-        <div class="card"><small>Supplier Invoices</small><strong>{{ invoice_overview.get('rows', [])|length }}</strong></div>
-    </div>
-
-    <div class="help">
-        <strong>Easy rule:</strong> Purchase Order means “we intend to buy.” Receive Goods means “the goods physically arrived.” Supplier Invoice means “the supplier has billed us.” Stock increases only from accepted goods at Goods Receipt.
-    </div>
-
-    <div class="quick">
-        <a href="{{ url_for('admin.current_stock') }}">View Current Stock</a>
-        <a href="{{ url_for('admin.ufc_order_requests') }}">UFC Order Requests</a>
-        <a href="{{ url_for('admin.ufc_sales') }}">Sales to UFC</a>
-        <a href="{{ url_for('admin.purchase_orders') }}">All Purchase Orders</a>
-        <a href="{{ url_for('admin.goods_receipts') }}">All Goods Receipts</a>
-        <a href="{{ url_for('admin.supplier_invoices') }}">All Supplier Invoices</a>
-    </div>
+<div class="purchase-page"><div class="purchase-shell">
+<div class="purchase-head">
+<div class="purchase-title-wrap">
+<div class="purchase-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M6 3h12l2 4v14H4V7l2-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 11h8M8 15h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+<div><div class="purchase-eyebrow">AVPL Operations</div><h2>AVPL Purchases</h2><p>A simple four-step flow for buying goods from suppliers and bringing accepted goods into AVPL stock.</p></div>
 </div>
+<a class="primary-link" href="{{ url_for('admin.create_purchase_order_view') }}">+ New Purchase Order</a>
+</div>
+
+<div class="purchase-content">
+<div class="section-heading"><h3 class="section-title">Purchase Workflow</h3><span class="section-meta">Supplier → PO → GRN → Invoice</span></div>
+
+<div class="flow">
+<div class="step"><div class="step-top"><div class="step-no">01</div><div class="step-label">Step One</div></div><h3>Supplier</h3><p>Add the supplier once. Use the same supplier for every future purchase.</p><a href="{{ url_for('admin.supplier_master') }}">Manage Suppliers →</a></div>
+<div class="step"><div class="step-top"><div class="step-no">02</div><div class="step-label">Step Two</div></div><h3>Purchase Order</h3><p>Select the supplier, products, quantity and purchase rate.</p><a href="{{ url_for('admin.purchase_orders') }}">Open Purchase Orders →</a></div>
+<div class="step"><div class="step-top"><div class="step-no">03</div><div class="step-label">Step Three</div></div><h3>Receive Goods</h3><p>Enter what physically arrived. Only accepted quantity becomes AVPL stock.</p><a href="{{ url_for('admin.goods_receipts') }}">Receive Goods →</a></div>
+<div class="step"><div class="step-top"><div class="step-no">04</div><div class="step-label">Step Four</div></div><h3>Supplier Invoice</h3><p>Record the supplier invoice. The system checks it against the PO and received goods.</p><a href="{{ url_for('admin.supplier_invoices') }}">Record Invoice →</a></div>
+</div>
+
+<div class="section-heading"><h3 class="section-title">Purchase Snapshot</h3><span class="section-meta">Current overview</span></div>
+<div class="summary">
+<div class="summary-card"><small>Active Suppliers</small><strong>{{ supplier_overview.get('counts', {}).get('active', 0) }}</strong></div>
+<div class="summary-card"><small>Purchase Orders</small><strong>{{ po_overview.get('rows', [])|length }}</strong></div>
+<div class="summary-card"><small>Goods Receipts</small><strong>{{ grn_overview.get('rows', [])|length }}</strong></div>
+<div class="summary-card"><small>Supplier Invoices</small><strong>{{ invoice_overview.get('rows', [])|length }}</strong></div>
+</div>
+
+<div class="help"><div><strong>Easy rule:</strong> Purchase Order means “we intend to buy.” Receive Goods means “the goods physically arrived.” Supplier Invoice means “the supplier has billed us.” Stock increases only from accepted goods at Goods Receipt.</div></div>
+
+<div class="quick-panel"><div class="quick-title">Quick Access</div><div class="quick">
+<a href="{{ url_for('admin.current_stock') }}">View Current Stock</a>
+<a href="{{ url_for('admin.ufc_order_requests') }}">UFC Order Requests</a>
+<a href="{{ url_for('admin.ufc_sales') }}">Sales to UFC</a>
+<a href="{{ url_for('admin.purchase_orders') }}">All Purchase Orders</a>
+<a href="{{ url_for('admin.goods_receipts') }}">All Goods Receipts</a>
+<a href="{{ url_for('admin.supplier_invoices') }}">All Supplier Invoices</a>
+</div></div>
+</div>
+</div></div>
 {% endblock %}
