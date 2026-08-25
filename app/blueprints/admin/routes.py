@@ -1,3 +1,4 @@
+import os
 from bson import ObjectId
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -7,6 +8,17 @@ from app.utils.helpers import now_utc
 from app.services.user_service import create_user
 from app.services.audit_service import log_action
 from app.services.document_service import store_document
+from app.services.lms_service import (
+    archive_resource as lms_archive_resource,
+    create_course as lms_create_course,
+    create_lesson as lms_create_lesson,
+    create_module as lms_create_module,
+    create_resource as lms_create_resource,
+    get_admin_course_context as lms_get_admin_course_context,
+    get_admin_overview as lms_get_admin_overview,
+    set_course_status as lms_set_course_status,
+    update_course as lms_update_course,
+)
 from app.services.location_service import list_states
 from app.services.accounting_product_mapping_service import (
     get_product_mapping_option_catalog,
@@ -923,44 +935,220 @@ def reset_user_password(user_id):
 @login_required
 @roles_required('avpl_admin', 'sales_nelocals', 'sales_unnatfarm')
 def lms_upload():
+    """Advanced LMS management dashboard.
+
+    The old /admin/lms/upload URL is retained so existing sidebar links and
+    bookmarks continue working.
+    """
     if request.method == 'POST':
-        title = request.form.get('title', '').strip()
-        description = request.form.get('description', '').strip()
-        audience = request.form.get('audience', '').strip()
-        lms_type = request.form.get('lms_type', '').strip()
-        activity_category = request.form.get('activity_category', 'all').strip()
+        try:
+            result = lms_create_course(
+                session.get('user_id'),
+                {
+                    'title': request.form.get('title', ''),
+                    'short_description': request.form.get('short_description', ''),
+                    'description': request.form.get('description', ''),
+                    'audience': request.form.get('audience', 'farmer'),
+                    'level': request.form.get('level', 'beginner'),
+                    'estimated_minutes': request.form.get('estimated_minutes', '0'),
+                    'mandatory': request.form.get('mandatory'),
+                    'certificate_enabled': request.form.get('certificate_enabled'),
+                    'target_mode': request.form.get('target_mode', 'all'),
+                    'target_activities': request.form.getlist('target_activities'),
+                    'target_agri_sub_categories': request.form.getlist('target_agri_sub_categories'),
+                },
+            )
+            flash(result.get('message') or 'LMS course created.', 'success')
+            return redirect(url_for('admin.lms_course_detail', course_id=result['course']['id']))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
 
-        file = request.files.get('material_file')
-        filename = None
+    overview = lms_get_admin_overview(
+        request.args.get('q', ''),
+        request.args.get('status', ''),
+    )
+    return render_template('admin/lms_upload.html', overview=overview)
 
-        if file and file.filename:
+
+def _lms_resource_extension_ok(filename, resource_type):
+    extension = os.path.splitext(str(filename or ''))[1].lower()
+    allowed = {
+        'pdf': {'.pdf'},
+        'video': {'.mp4', '.webm', '.mov', '.m4v'},
+        'image': {'.png', '.jpg', '.jpeg', '.webp'},
+        'document': {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.csv'},
+    }
+    return bool(extension and extension in allowed.get(resource_type, set()))
+
+
+@admin_bp.route('/lms/courses/<course_id>')
+@login_required
+@roles_required('avpl_admin', 'sales_nelocals', 'sales_unnatfarm')
+def lms_course_detail(course_id):
+    try:
+        context = lms_get_admin_course_context(course_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.lms_upload'))
+    return render_template('admin/lms_course_detail.html', **context)
+
+
+@admin_bp.route('/lms/courses/<course_id>/update', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'sales_nelocals', 'sales_unnatfarm')
+def lms_course_update(course_id):
+    try:
+        result = lms_update_course(
+            session.get('user_id'),
+            course_id,
+            {
+                'title': request.form.get('title', ''),
+                'short_description': request.form.get('short_description', ''),
+                'description': request.form.get('description', ''),
+                'audience': request.form.get('audience', 'farmer'),
+                'level': request.form.get('level', 'beginner'),
+                'estimated_minutes': request.form.get('estimated_minutes', '0'),
+                'mandatory': request.form.get('mandatory'),
+                'certificate_enabled': request.form.get('certificate_enabled'),
+                'target_mode': request.form.get('target_mode', 'all'),
+                'target_activities': request.form.getlist('target_activities'),
+                'target_agri_sub_categories': request.form.getlist('target_agri_sub_categories'),
+            },
+        )
+        flash(result.get('message') or 'Course updated.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.lms_course_detail', course_id=course_id))
+
+
+@admin_bp.route('/lms/courses/<course_id>/status', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'sales_nelocals', 'sales_unnatfarm')
+def lms_course_status(course_id):
+    try:
+        result = lms_set_course_status(
+            session.get('user_id'),
+            course_id,
+            request.form.get('status', ''),
+        )
+        flash(result.get('message') or 'Course status updated.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.lms_course_detail', course_id=course_id))
+
+
+@admin_bp.route('/lms/courses/<course_id>/modules', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'sales_nelocals', 'sales_unnatfarm')
+def lms_module_create(course_id):
+    try:
+        result = lms_create_module(
+            session.get('user_id'),
+            course_id,
+            request.form.get('title', ''),
+            request.form.get('description', ''),
+            request.form.get('order', '0'),
+        )
+        flash(result.get('message') or 'Module added.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.lms_course_detail', course_id=course_id))
+
+
+@admin_bp.route('/lms/modules/<module_id>/lessons', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'sales_nelocals', 'sales_unnatfarm')
+def lms_lesson_create(module_id):
+    course_id = request.form.get('course_id', '')
+    try:
+        result = lms_create_lesson(
+            session.get('user_id'),
+            module_id,
+            {
+                'title': request.form.get('title', ''),
+                'summary': request.form.get('summary', ''),
+                'content_text': request.form.get('content_text', ''),
+                'estimated_minutes': request.form.get('estimated_minutes', '0'),
+                'order': request.form.get('order', '0'),
+                'required': request.form.get('required'),
+            },
+        )
+        course_id = result['lesson']['course_id_str']
+        flash(result.get('message') or 'Lesson added.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    if course_id:
+        return redirect(url_for('admin.lms_course_detail', course_id=course_id))
+    return redirect(url_for('admin.lms_upload'))
+
+
+@admin_bp.route('/lms/lessons/<lesson_id>/resources', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'sales_nelocals', 'sales_unnatfarm')
+def lms_resource_create(lesson_id):
+    course_id = request.form.get('course_id', '')
+    resource_type = request.form.get('resource_type', '').strip().lower()
+    stored_filename = ''
+    try:
+        if resource_type != 'link':
+            file = request.files.get('resource_file')
+            if not file or not file.filename:
+                raise ValueError('Choose a file for this learning resource.')
+            if not _lms_resource_extension_ok(file.filename, resource_type):
+                raise ValueError('This file type does not match the selected LMS resource type.')
             doc = store_document(
                 file,
                 session['user_id'],
                 None,
                 session['user_id'],
-                session['role'],
-                'LMS Material'
+                session.get('role'),
+                'LMS Resource'
             )
-            filename = doc['filename'] if doc else None
+            stored_filename = (
+                (doc or {}).get('filename')
+                or (doc or {}).get('file_name')
+                or (doc or {}).get('stored_name')
+                or ''
+            )
+            if not stored_filename:
+                raise RuntimeError('The LMS file could not be stored.')
 
-        mongo.db.lms_materials.insert_one({
-            'title': title,
-            'description': description,
-            'audience': audience,
-            'lms_type': lms_type,
-            'activity_category': activity_category,
-            'file_name': filename,
-            'created_by': session['user_id'],
-            'created_role': session.get('role'),
-            'created_at': now_utc()
-        })
+        result = lms_create_resource(
+            session.get('user_id'),
+            lesson_id,
+            {
+                'title': request.form.get('title', ''),
+                'description': request.form.get('description', ''),
+                'resource_type': resource_type,
+                'file_name': stored_filename,
+                'external_url': request.form.get('external_url', ''),
+                'order': request.form.get('order', '0'),
+                'downloadable': request.form.get('downloadable'),
+            },
+        )
+        course_id = result['resource']['course_id_str']
+        flash(result.get('message') or 'Learning resource added.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
 
-        flash('LMS material uploaded successfully.', 'success')
-        return redirect(url_for('admin.lms_upload'))
+    if course_id:
+        return redirect(url_for('admin.lms_course_detail', course_id=course_id))
+    return redirect(url_for('admin.lms_upload'))
 
-    items = list(mongo.db.lms_materials.find({}).sort('created_at', -1).limit(20))
-    return render_template('admin/lms_upload.html', items=items)
+
+@admin_bp.route('/lms/resources/<resource_id>/archive', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'sales_nelocals', 'sales_unnatfarm')
+def lms_resource_archive(resource_id):
+    course_id = request.form.get('course_id', '')
+    try:
+        result = lms_archive_resource(session.get('user_id'), resource_id)
+        flash(result.get('message') or 'Resource archived.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    if course_id:
+        return redirect(url_for('admin.lms_course_detail', course_id=course_id))
+    return redirect(url_for('admin.lms_upload'))
 
 
 PRODUCT_MASTER_ROLES = {"input", "output", "both"}

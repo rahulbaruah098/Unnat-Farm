@@ -74,6 +74,7 @@ def replace_document(file_storage, linked_user_id, linked_master_id, uploader_us
         document_type
     )
 
+
 def candidate_upload_dirs():
     """Return safe upload directories used by current and legacy builds."""
     dirs = []
@@ -122,3 +123,74 @@ def find_document_path(filename):
 
 def document_file_exists(filename):
     return bool(find_document_path(filename))
+
+
+SUPPORT_ATTACHMENT_EXTENSIONS = {
+    "pdf", "jpg", "jpeg", "png", "webp", "txt", "doc", "docx", "xls", "xlsx"
+}
+SUPPORT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
+
+
+def validate_support_attachment(file_storage):
+    """Validate a Support attachment without changing the existing document flow."""
+    if not file_storage or not file_storage.filename:
+        return True, ""
+
+    original_name = os.path.basename(str(file_storage.filename or ""))
+    extension = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else ""
+    if extension not in SUPPORT_ATTACHMENT_EXTENSIONS:
+        return False, "Support attachments must be PDF, image, TXT, Word or Excel files."
+
+    try:
+        file_storage.seek(0, 2)
+        size = file_storage.tell()
+        file_storage.seek(0)
+    except Exception:
+        size = 0
+
+    if size > SUPPORT_ATTACHMENT_MAX_BYTES:
+        return False, "Each Support attachment must be 10 MB or smaller."
+    return True, ""
+
+
+def store_support_attachment(file_storage, linked_ticket_id, uploader_user_id=None, role=""):
+    """Store a Support attachment without replacing earlier ticket files."""
+    if not file_storage or not file_storage.filename:
+        return None
+
+    valid, message = validate_support_attachment(file_storage)
+    if not valid:
+        raise ValueError(message)
+
+    original_name = os.path.basename(str(file_storage.filename or ""))
+    try:
+        file_storage.seek(0, 2)
+        size = file_storage.tell()
+        file_storage.seek(0)
+    except Exception:
+        size = 0
+
+    filename = save_file(file_storage, prefix="support_attachment")
+    if not filename:
+        raise ValueError("Support attachment could not be saved.")
+
+    timestamp = now_utc()
+    doc = {
+        "filename": filename,
+        "original_name": original_name,
+        "content_type": getattr(file_storage, "mimetype", "") or "",
+        "size_bytes": int(size or 0),
+        "linked_ticket_id": str(linked_ticket_id) if linked_ticket_id else "",
+        "linked_user_id": str(uploader_user_id) if uploader_user_id else None,
+        "linked_master_id": None,
+        "uploader_user_id": str(uploader_user_id) if uploader_user_id else None,
+        "role": str(role or "").strip(),
+        "document_type": "Support Attachment",
+        "support_attachment": True,
+        "status": "active",
+        "created_at": timestamp,
+        "updated_at": timestamp,
+    }
+    result = mongo.db.documents.insert_one(doc)
+    doc["_id"] = result.inserted_id
+    return doc

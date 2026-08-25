@@ -50,6 +50,11 @@ FARMER_MARKET_PURCHASE_COLLECTION = "farmer_marketplace_purchase_entries"
 FARMER_MARKET_PAYABLE_COLLECTION = "farmer_marketplace_payables"
 FARMER_MARKET_ORDER_COLLECTION = "farmer_produce_marketplace_orders"
 
+# UAT Fix 10 — unified UFC / Farmer direct-sale POS.
+POS_INVOICE_COLLECTION = "pos_invoices"
+POS_SALE_COLLECTION = "pos_sales"
+POS_RECEIVABLE_COLLECTION = "pos_receivables"
+
 MONEY_QUANTUM = Decimal("0.01")
 PAYMENT_MODES = {
     "cash": "Cash",
@@ -77,6 +82,8 @@ SOURCE_LABELS = {
     "farmer_external_invoice": "Buyer Payment to Farmer",
     "farmer_external_purchase_invoice": "Farmer Payment to Outside Seller",
     "farmer_marketplace_invoice": "Farmer Produce Market Payment",
+    "ufc_pos_invoice": "UFC POS Collection",
+    "farmer_pos_invoice": "Farmer POS Collection",
 }
 
 
@@ -180,6 +187,8 @@ def _source_invoice(source_type, invoice_id):
         "farmer_external_invoice": FARMER_EXTERNAL_INVOICE_COLLECTION,
         "farmer_external_purchase_invoice": FARMER_EXTERNAL_PURCHASE_INVOICE_COLLECTION,
         "farmer_marketplace_invoice": FARMER_MARKET_INVOICE_COLLECTION,
+        "ufc_pos_invoice": POS_INVOICE_COLLECTION,
+        "farmer_pos_invoice": POS_INVOICE_COLLECTION,
     }.get(str(source_type or "").strip().lower())
     if not collection_name:
         raise ValueError("Unsupported payment source.")
@@ -214,15 +223,17 @@ def _assert_access(actor, source_type, invoice, *, write=False):
             if not centre_uid or str(invoice.get("centre_uid") or "") != centre_uid:
                 raise PermissionError("This invoice does not belong to your UFC Centre.")
             return
-        if not write and role == "farmer":
+        if role == "farmer":
             buyer = invoice.get("buyer") or {}
             if str(buyer.get("farmer_user_id") or buyer.get("farmer_user_id_str") or "") != str(actor.get("_id")):
                 # fallback through order link for older Stage 7 documents
                 order = mongo.db[UFC_FARMER_ORDER_COLLECTION].find_one({"_id": invoice.get("ufc_farmer_order_id")}) or {}
                 if str(order.get("farmer_user_id") or "") != str(actor.get("_id")):
                     raise PermissionError("This invoice does not belong to you.")
+            # Farmer write access is report-only. record_payment() keeps the
+            # invoice outstanding until the mapped UFC confirms receipt.
             return
-        raise PermissionError("Manual Farmer payment collection must be recorded by the UFC Centre.")
+        raise PermissionError("Only the mapped Farmer or UFC Centre can manage this payment.")
 
     if source_type == "farmer_external_invoice":
         if role != "farmer":
@@ -244,6 +255,24 @@ def _assert_access(actor, source_type, invoice, *, write=False):
             owner_id = str(buyer.get("farmer_user_id") or buyer.get("farmer_user_id_str") or "")
         if owner_id != str(actor.get("_id") or ""):
             raise PermissionError("This outside purchase record does not belong to you.")
+        return
+
+
+    if source_type == "ufc_pos_invoice":
+        if role != "ufc_admin":
+            raise PermissionError("Only the UFC Centre that issued this POS invoice can manage its collection.")
+        centre_uid = _resolve_ufc_uid(actor)
+        if not centre_uid or str(invoice.get("seller_key") or invoice.get("centre_uid") or "") != centre_uid:
+            raise PermissionError("This POS invoice does not belong to your UFC Centre.")
+        return
+
+    if source_type == "farmer_pos_invoice":
+        if role != "farmer":
+            raise PermissionError("Only the Farmer who issued this POS receipt can manage its collection.")
+        seller = invoice.get("seller") or {}
+        owner_id = str(invoice.get("seller_user_id") or invoice.get("seller_user_id_str") or seller.get("farmer_user_id") or seller.get("farmer_user_id_str") or invoice.get("seller_key") or "")
+        if owner_id != str(actor.get("_id") or ""):
+            raise PermissionError("This Farmer POS receipt does not belong to you.")
         return
 
 
@@ -340,6 +369,16 @@ def _party_snapshot(source_type, invoice):
             "payee_key": str(seller.get("phone") or seller.get("name") or f"OUTSIDE-SELLER:{invoice.get('_id')}"),
             "payee_name": seller.get("name") or "Outside Seller",
         }
+    if source_type in {"ufc_pos_invoice", "farmer_pos_invoice"}:
+        buyer = invoice.get("buyer") or {}
+        seller = invoice.get("seller") or {}
+        seller_key = invoice.get("seller_key") or seller.get("key") or seller.get("centre_uid") or seller.get("farmer_user_id") or "SELLER"
+        return {
+            "payer_key": str(buyer.get("key") or buyer.get("farmer_user_id") or buyer.get("phone") or buyer.get("name") or f"POS-BUYER:{invoice.get('_id')}"),
+            "payer_name": buyer.get("name") or "Customer",
+            "payee_key": str(seller_key),
+            "payee_name": seller.get("legal_name") or seller.get("name") or invoice.get("seller_name") or "Seller",
+        }
     if source_type == "farmer_marketplace_invoice":
         buyer = invoice.get("buyer") or {}
         seller = invoice.get("seller") or {}
@@ -423,6 +462,17 @@ def _sync_linked_documents(source_type, invoice, paid, outstanding, status, paym
             mongo.db[FARMER_MARKET_ORDER_COLLECTION].update_one({"_id": order_id}, {"$set": common})
         return
 
+    if source_type in {"ufc_pos_invoice", "farmer_pos_invoice"}:
+        sale_id = invoice.get("pos_sale_id")
+        common_pos = {**common}
+        if sale_id:
+            mongo.db[POS_SALE_COLLECTION].update_one({"_id": sale_id}, {"$set": common_pos})
+        mongo.db[POS_RECEIVABLE_COLLECTION].update_one(
+            {"invoice_id": invoice["_id"]},
+            {"$set": {**common_pos, "status": "closed" if status == "paid" else "open"}},
+        )
+        return
+
     order_id = invoice.get("ufc_farmer_order_id")
     sale_id = invoice.get("ufc_farmer_sale_id")
     purchase_id = invoice.get("farmer_purchase_entry_id")
@@ -488,6 +538,18 @@ def _create_accounting_events(payment, invoice):
             roles.append(("avpl_farmer_procurement_payment", "AVPL", "AVPL payment-side event for produce purchased from a Farmer."))
         elif buyer_type == "farmer":
             roles.append(("farmer_market_purchase_payment", f"FARMER:{buyer_key}", "Farmer buyer payment-side event for Farmer Produce Market purchase."))
+    elif source_type == "ufc_pos_invoice":
+        roles = [(
+            "ufc_pos_receipt",
+            str(invoice.get("seller_key") or invoice.get("centre_uid") or "UFC"),
+            "UFC POS receipt event linked to the direct-sale invoice. Stock movement was already posted by POS and is not repeated here.",
+        )]
+    elif source_type == "farmer_pos_invoice":
+        roles = [(
+            "farmer_pos_receipt",
+            f"FARMER:{invoice.get('seller_user_id_str') or invoice.get('seller_user_id') or invoice.get('seller_key') or 'UNKNOWN'}",
+            "Farmer POS receipt event linked to the direct produce sale. Keep for payment audit/reporting.",
+        )]
     else:
         roles = [("ufc_receipt", str(invoice.get("centre_uid") or "UFC"), "UFC receipt-side event linked to Farmer receivable settlement.")]
     for event_role, entity_key, note in roles:
@@ -522,10 +584,19 @@ def serialize_payment(payment):
     row["outstanding_after_display"] = _money(row.get("outstanding_after"))
     row["payment_mode_label"] = PAYMENT_MODES.get(row.get("payment_mode"), str(row.get("payment_mode") or "").replace("_", " ").title())
     row["source_label"] = SOURCE_LABELS.get(row.get("source_type"), row.get("source_type"))
-    row["status_label"] = PAYMENT_RECORD_STATUS_LABELS.get(
-        str(row.get("status") or "completed"),
-        str(row.get("status") or "completed").replace("_", " ").title(),
-    )
+    payment_status = str(row.get("status") or "completed")
+    if payment_status == "pending_confirmation":
+        if row.get("source_type") == "ufc_farmer_invoice":
+            row["status_label"] = "Awaiting UFC Confirmation"
+        elif row.get("source_type") == "avpl_ufc_invoice":
+            row["status_label"] = "Awaiting AVPL Confirmation"
+        else:
+            row["status_label"] = "Awaiting Confirmation"
+    else:
+        row["status_label"] = PAYMENT_RECORD_STATUS_LABELS.get(
+            payment_status,
+            payment_status.replace("_", " ").title(),
+        )
     row["is_pending_confirmation"] = row.get("status") == "pending_confirmation"
     return row
 
@@ -540,11 +611,11 @@ def _payment_matches_request(payment, source_type, invoice, value, mode):
     )
 
 
-def _pending_reported_totals(invoice_ids):
-    """Return pending UFC->AVPL reported-payment totals keyed by invoice id.
+def _pending_reported_totals(invoice_ids, source_type="avpl_ufc_invoice"):
+    """Return pending reported-payment totals keyed by invoice id.
 
-    Reported payments do not settle invoices until AVPL confirms actual receipt.
-    Aggregating once avoids N+1 queries on the payment dashboards.
+    Payer-reported payments do not settle invoices until the seller/receiver
+    confirms actual receipt. Aggregating once avoids N+1 dashboard queries.
     """
     ids = []
     for value in invoice_ids or []:
@@ -555,7 +626,7 @@ def _pending_reported_totals(invoice_ids):
         return {}
     rows = mongo.db[PAYMENT_COLLECTION].aggregate([
         {"$match": {
-            "source_type": "avpl_ufc_invoice",
+            "source_type": source_type,
             "status": "pending_confirmation",
             "invoice_id": {"$in": ids},
         }},
@@ -564,7 +635,7 @@ def _pending_reported_totals(invoice_ids):
     return {str(row.get("_id")): _decimal(row.get("amount")) for row in rows}
 
 
-def _annotate_avpl_ufc_invoice_rows(rows, pending_totals):
+def _annotate_reportable_invoice_rows(rows, pending_totals):
     for row in rows or []:
         pending = max(_decimal((pending_totals or {}).get(str(row.get("id"))) or 0), Decimal("0"))
         outstanding = max(_decimal(row.get("outstanding_display")), Decimal("0"))
@@ -572,15 +643,17 @@ def _annotate_avpl_ufc_invoice_rows(rows, pending_totals):
         row["reported_pending_display"] = _money(pending)
         row["reportable_outstanding_display"] = _money(available)
         row["has_pending_report"] = pending > Decimal("0.004")
-        # Both UFC reporting and AVPL direct collection should avoid double-counting
-        # money that is already waiting for AVPL confirmation.
         row["can_pay"] = available > Decimal("0.004")
     return rows
 
 
-def _pending_payment_rows(query=None, limit=100):
+def _annotate_avpl_ufc_invoice_rows(rows, pending_totals):
+    return _annotate_reportable_invoice_rows(rows, pending_totals)
+
+
+def _pending_payment_rows(query=None, limit=100, source_type="avpl_ufc_invoice"):
     base = {
-        "source_type": "avpl_ufc_invoice",
+        "source_type": source_type,
         "status": "pending_confirmation",
     }
     if query:
@@ -589,7 +662,6 @@ def _pending_payment_rows(query=None, limit=100):
         serialize_payment(row)
         for row in mongo.db[PAYMENT_COLLECTION].find(base).sort("created_at", DESCENDING).limit(limit)
     ]
-
 
 def _ensure_payment_receipt(payment, invoice, parties, final_total, final_paid, final_outstanding, final_status):
     existing = mongo.db[RECEIPT_COLLECTION].find_one({"payment_id": payment["_id"]})
@@ -646,6 +718,8 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
     _assert_access(actor, source_type, invoice, write=True)
     actor_role = actor.get("resolved_role")
     ufc_reports_avpl_payment = source_type == "avpl_ufc_invoice" and actor_role == "ufc_admin"
+    farmer_reports_ufc_payment = source_type == "ufc_farmer_invoice" and actor_role == "farmer"
+    payer_reports_payment = ufc_reports_avpl_payment or farmer_reports_ufc_payment
 
     mode = str(payment_mode or "").strip().lower()
     if mode not in PAYMENT_MODES:
@@ -670,14 +744,23 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
                 message += " Payment is settled, but the Accounting handoff needs attention."
             return {"payment": serialize_payment(existing), "message": message, "idempotent_replay": True, "accounting_warning": accounting_warning}
         if existing.get("status") == "pending_confirmation":
-            if ufc_reports_avpl_payment:
+            if payer_reports_payment:
+                destination = "AVPL" if ufc_reports_avpl_payment else "your UFC"
                 return {
                     "payment": serialize_payment(existing),
-                    "message": "This payment is already reported and is awaiting AVPL confirmation.",
+                    "message": f"This payment is already reported and is awaiting confirmation from {destination}.",
                     "idempotent_replay": True,
                 }
-            if source_type != "avpl_ufc_invoice" or actor_role not in {"super_admin", "avpl_admin", "accounts"}:
-                raise PermissionError("Only AVPL authorized users can confirm this reported payment.")
+            allowed_confirmation = (
+                source_type == "avpl_ufc_invoice"
+                and actor_role in {"super_admin", "avpl_admin", "accounts"}
+            ) or (
+                source_type == "ufc_farmer_invoice"
+                and actor_role == "ufc_admin"
+                and str(existing.get("payee_key") or "") == _resolve_ufc_uid(actor)
+            )
+            if not allowed_confirmation:
+                raise PermissionError("You are not authorized to confirm this reported payment.")
             result = mongo.db[PAYMENT_COLLECTION].update_one(
                 {"_id": existing["_id"], "status": "pending_confirmation"},
                 {"$set": {
@@ -696,7 +779,7 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             resume_payment = mongo.db[PAYMENT_COLLECTION].find_one({"_id": existing["_id"]})
             confirming_report = True
         elif existing.get("status") == "rejected":
-            raise ValueError("This payment report was returned by AVPL. Use a new payment entry after correcting the details.")
+            raise ValueError("This payment report was returned by the receiving party. Use a new payment entry after correcting the details.")
         elif existing.get("status") == "reversed":
             raise ValueError("This payment request token belongs to a reversed payment. Refresh and try again.")
         elif existing.get("status") == "failed":
@@ -710,7 +793,10 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             ):
                 raise RuntimeError("This payment token is already being used for a different settlement. Refresh and try again.")
             resume_payment = existing
-            confirming_report = bool(existing.get("reported_by_role") == "ufc_admin" and source_type == "avpl_ufc_invoice")
+            confirming_report = bool(
+                (existing.get("reported_by_role") == "ufc_admin" and source_type == "avpl_ufc_invoice")
+                or (existing.get("reported_by_role") == "farmer" and source_type == "ufc_farmer_invoice")
+            )
 
     total, paid, outstanding = _current_paid_outstanding(invoice)
     already_applied = bool(resume_payment and resume_payment.get("_id") in (invoice.get("payment_ids") or []))
@@ -729,31 +815,39 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             )
         raise ValueError(f"Payment cannot exceed the outstanding amount of ₹{_money(outstanding)}.")
 
-    # UFC may report only the portion not already waiting for AVPL confirmation.
-    # This prevents several accidental clicks/reports from exceeding one invoice.
-    if ufc_reports_avpl_payment:
-        pending_map = _pending_reported_totals([invoice["_id"]])
+    # A payer may report only the portion not already waiting for confirmation.
+    # This prevents repeated clicks from reporting more than the invoice balance.
+    if payer_reports_payment:
+        pending_map = _pending_reported_totals([invoice["_id"]], source_type=source_type)
         already_reported = max(_decimal(pending_map.get(str(invoice["_id"])) or 0), Decimal("0"))
         reportable = max(outstanding - already_reported, Decimal("0"))
         if reportable <= Decimal("0.004"):
-            raise ValueError("The full outstanding amount is already reported and awaiting AVPL confirmation.")
+            raise ValueError("The full outstanding amount is already reported and awaiting confirmation.")
         if value > reportable + Decimal("0.004"):
-            raise ValueError(f"You can report at most ₹{_money(reportable)} now because ₹{_money(already_reported)} is already awaiting AVPL confirmation.")
+            raise ValueError(
+                f"You can report at most ₹{_money(reportable)} now because "
+                f"₹{_money(already_reported)} is already awaiting confirmation."
+            )
 
-    # If AVPL records money directly, do not let that manual collection overlap
-    # an amount already reported by the UFC. AVPL must confirm or return the
-    # reported payment first; any genuinely additional amount can still be recorded.
-    if (
+    # A receiver recording money directly must not overlap an amount that the
+    # payer already reported. Confirm/return the report first, or record only
+    # any genuinely additional unreported amount.
+    receiver_records_directly = (
         source_type == "avpl_ufc_invoice"
         and actor_role in {"super_admin", "avpl_admin", "accounts"}
         and not confirming_report
-    ):
-        pending_map = _pending_reported_totals([invoice["_id"]])
+    ) or (
+        source_type == "ufc_farmer_invoice"
+        and actor_role == "ufc_admin"
+        and not confirming_report
+    )
+    if receiver_records_directly:
+        pending_map = _pending_reported_totals([invoice["_id"]], source_type=source_type)
         already_reported = max(_decimal(pending_map.get(str(invoice["_id"])) or 0), Decimal("0"))
         directly_collectable = max(outstanding - already_reported, Decimal("0"))
         if value > directly_collectable + Decimal("0.004"):
             raise ValueError(
-                f"₹{_money(already_reported)} is already reported by the UFC and awaiting confirmation. "
+                f"₹{_money(already_reported)} is already reported and awaiting confirmation. "
                 "Confirm or return that report first, or record only the additional unreported amount."
             )
 
@@ -773,7 +867,7 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             if duplicate_reference.get("status") == "pending_confirmation":
                 return {
                     "payment": serialize_payment(duplicate_reference),
-                    "message": "This payment reference and amount are already reported and awaiting AVPL confirmation.",
+                    "message": "This payment reference and amount are already reported and awaiting confirmation.",
                     "idempotent_replay": True,
                 }
             return {
@@ -807,7 +901,7 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             "provider_signature": None,
             "provider_status": None,
             **parties,
-            "status": "pending_confirmation" if ufc_reports_avpl_payment else "processing",
+            "status": "pending_confirmation" if payer_reports_payment else "processing",
             "recorded_by": actor["_id"],
             "recorded_by_name": actor.get("resolved_name") or "",
             "recorded_by_role": actor_role or "",
@@ -815,11 +909,11 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             "created_at": timestamp,
             "updated_at": timestamp,
         }
-        if ufc_reports_avpl_payment:
+        if payer_reports_payment:
             payment.update({
                 "reported_by": actor["_id"],
                 "reported_by_name": actor.get("resolved_name") or "",
-                "reported_by_role": "ufc_admin",
+                "reported_by_role": actor_role or "",
                 "reported_at": timestamp,
             })
         try:
@@ -827,8 +921,8 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
             payment["_id"] = result.inserted_id
         except DuplicateKeyError:
             existing = mongo.db[PAYMENT_COLLECTION].find_one({"idempotency_key": token})
-            if existing and existing.get("status") == "pending_confirmation" and ufc_reports_avpl_payment:
-                return {"payment": serialize_payment(existing), "message": "This payment is already reported and awaiting AVPL confirmation.", "idempotent_replay": True}
+            if existing and existing.get("status") == "pending_confirmation" and payer_reports_payment:
+                return {"payment": serialize_payment(existing), "message": "This payment is already reported and awaiting confirmation.", "idempotent_replay": True}
             if existing and existing.get("status") == "completed":
                 if not _payment_matches_request(existing, source_type, invoice, value, mode):
                     raise RuntimeError("This payment request token is already linked to a different settlement. Refresh and try again.")
@@ -841,11 +935,20 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
                 raise RuntimeError("This payment is already being processed in another request. Wait a moment, then refresh once.")
             raise RuntimeError("This payment request could not be inserted safely. Refresh and try again.")
 
-        if ufc_reports_avpl_payment:
-            _audit(payment["_id"], actor, "report_payment", f"₹{_money(value)} reported by UFC for AVPL confirmation against {_invoice_number(source_type, invoice)}.")
+        if payer_reports_payment:
+            receiver_label = "AVPL" if ufc_reports_avpl_payment else "your UFC Centre"
+            _audit(
+                payment["_id"],
+                actor,
+                "report_payment",
+                f"₹{_money(value)} reported for {receiver_label} confirmation against {_invoice_number(source_type, invoice)}.",
+            )
             return {
                 "payment": serialize_payment(payment),
-                "message": f"Payment ₹{_money(value)} reported to AVPL. It will be marked paid only after AVPL confirms receipt.",
+                "message": (
+                    f"Payment ₹{_money(value)} reported to {receiver_label}. "
+                    "It will be marked paid only after the receiver confirms the money was received."
+                ),
                 "idempotent_replay": False,
                 "awaiting_confirmation": True,
             }
@@ -942,11 +1045,12 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
     accounting_warning = _ensure_accounting_handoff(payment, settled_invoice)
     payment = mongo.db[PAYMENT_COLLECTION].find_one({"_id": payment["_id"]}) or payment
     action = "confirm_reported_payment" if confirming_report else "record_payment"
-    note_text = (
-        f"₹{_money(value)} reported by UFC and confirmed received by AVPL against {_invoice_number(source_type, settled_invoice)}."
-        if confirming_report
-        else f"₹{_money(value)} recorded by {PAYMENT_MODES.get(mode, mode)} against {_invoice_number(source_type, settled_invoice)}."
-    )
+    if confirming_report and source_type == "avpl_ufc_invoice":
+        note_text = f"₹{_money(value)} reported by UFC and confirmed received by AVPL against {_invoice_number(source_type, settled_invoice)}."
+    elif confirming_report and source_type == "ufc_farmer_invoice":
+        note_text = f"₹{_money(value)} reported by Farmer and confirmed received by UFC against {_invoice_number(source_type, settled_invoice)}."
+    else:
+        note_text = f"₹{_money(value)} recorded by {PAYMENT_MODES.get(mode, mode)} against {_invoice_number(source_type, settled_invoice)}."
     _audit(payment["_id"], actor, action, note_text)
     message = (
         f"Payment ₹{_money(value)} confirmed received. Outstanding is now ₹{_money(final_outstanding)}."
@@ -964,31 +1068,37 @@ def record_payment(actor_user_id, source_type, invoice_id, amount, payment_mode,
 
 
 def confirm_reported_payment(actor_user_id, payment_id):
-    """AVPL confirms money that a UFC has reported as paid.
-
-    The invoice/payable/receivable are untouched until this confirmation succeeds.
-    """
+    """Confirm a payer-reported internal payment without moving any stock."""
     _ensure_indexes()
     actor = _get_actor(actor_user_id)
-    if actor.get("resolved_role") not in {"super_admin", "avpl_admin", "accounts"}:
-        raise PermissionError("Only AVPL authorized users can confirm UFC payments.")
     oid = _to_object_id(payment_id)
     if not oid:
         raise ValueError("Invalid payment reference.")
     payment = mongo.db[PAYMENT_COLLECTION].find_one({"_id": oid})
     if not payment:
         raise ValueError("Reported payment was not found.")
-    if payment.get("source_type") != "avpl_ufc_invoice":
-        raise ValueError("Only UFC payments to AVPL use this confirmation flow.")
+
+    source_type = payment.get("source_type")
+    role = actor.get("resolved_role")
+    if source_type == "avpl_ufc_invoice":
+        if role not in {"super_admin", "avpl_admin", "accounts"}:
+            raise PermissionError("Only AVPL authorized users can confirm UFC payments.")
+    elif source_type == "ufc_farmer_invoice":
+        if role != "ufc_admin" or str(payment.get("payee_key") or "") != _resolve_ufc_uid(actor):
+            raise PermissionError("Only the mapped UFC Centre can confirm this Farmer payment.")
+    else:
+        raise ValueError("This payment source does not use the report-and-confirm flow.")
+
     if payment.get("status") == "completed":
         return {"payment": serialize_payment(payment), "message": "This payment is already confirmed."}
     if payment.get("status") == "rejected":
-        raise ValueError("This payment report was already returned by AVPL.")
+        raise ValueError("This payment report was already returned.")
     if payment.get("status") != "pending_confirmation":
-        raise ValueError("This payment is not waiting for AVPL confirmation.")
+        raise ValueError("This payment is not waiting for confirmation.")
+
     return record_payment(
         actor_user_id,
-        payment.get("source_type"),
+        source_type,
         payment.get("invoice_id"),
         payment.get("amount"),
         payment.get("payment_mode"),
@@ -999,28 +1109,38 @@ def confirm_reported_payment(actor_user_id, payment_id):
 
 
 def reject_reported_payment(actor_user_id, payment_id, reason):
-    """Return an unconfirmed UFC payment report without changing any ledger balance."""
+    """Return an unconfirmed payment report without changing any invoice balance."""
     _ensure_indexes()
     actor = _get_actor(actor_user_id)
-    if actor.get("resolved_role") not in {"super_admin", "avpl_admin", "accounts"}:
-        raise PermissionError("Only AVPL authorized users can return UFC payment reports.")
     oid = _to_object_id(payment_id)
     if not oid:
         raise ValueError("Invalid payment reference.")
     payment = mongo.db[PAYMENT_COLLECTION].find_one({"_id": oid})
     if not payment:
         raise ValueError("Reported payment was not found.")
-    if payment.get("source_type") != "avpl_ufc_invoice":
-        raise ValueError("Only UFC payments to AVPL use this confirmation flow.")
+
+    source_type = payment.get("source_type")
+    role = actor.get("resolved_role")
+    if source_type == "avpl_ufc_invoice":
+        if role not in {"super_admin", "avpl_admin", "accounts"}:
+            raise PermissionError("Only AVPL authorized users can return UFC payment reports.")
+    elif source_type == "ufc_farmer_invoice":
+        if role != "ufc_admin" or str(payment.get("payee_key") or "") != _resolve_ufc_uid(actor):
+            raise PermissionError("Only the mapped UFC Centre can return this Farmer payment report.")
+    else:
+        raise ValueError("This payment source does not use the report-and-confirm flow.")
+
     if payment.get("status") == "rejected":
         return {"payment": serialize_payment(payment), "message": "This payment report is already returned."}
     if payment.get("status") == "completed":
-        raise ValueError("This payment is already confirmed. Use the controlled reversal flow if a confirmed settlement must be corrected.")
+        raise ValueError("This payment is already confirmed. Use the controlled reversal flow if it must be corrected.")
     if payment.get("status") != "pending_confirmation":
-        raise ValueError("This payment is not waiting for AVPL confirmation.")
+        raise ValueError("This payment is not waiting for confirmation.")
+
     clean_reason = _clean(reason, 1000)
     if len(clean_reason) < 4:
         raise ValueError("Enter a clear reason for returning the payment report.")
+
     result = mongo.db[PAYMENT_COLLECTION].update_one(
         {"_id": oid, "status": "pending_confirmation"},
         {"$set": {
@@ -1036,7 +1156,10 @@ def reject_reported_payment(actor_user_id, payment_id, reason):
         raise RuntimeError("This payment report changed in another session. Refresh and try again.")
     _audit(oid, actor, "reject_reported_payment", clean_reason)
     updated = mongo.db[PAYMENT_COLLECTION].find_one({"_id": oid})
-    return {"payment": serialize_payment(updated), "message": "Payment report returned to the UFC. No invoice balance was changed."}
+    return {
+        "payment": serialize_payment(updated),
+        "message": "Payment report returned. No invoice balance was changed.",
+    }
 
 def reverse_payment(actor_user_id, payment_id, reason):
     _ensure_indexes()
@@ -1067,6 +1190,12 @@ def reverse_payment(actor_user_id, payment_id, reason):
     elif source_type in {"farmer_external_invoice", "farmer_external_purchase_invoice"}:
         if role != "farmer":
             raise PermissionError("Only the Farmer who recorded this payment can reverse it.")
+    elif source_type == "ufc_pos_invoice":
+        if role != "ufc_admin":
+            raise PermissionError("Only the UFC Centre that issued this POS invoice can reverse its payment.")
+    elif source_type == "farmer_pos_invoice":
+        if role != "farmer":
+            raise PermissionError("Only the Farmer who issued this POS receipt can reverse its payment.")
     elif source_type == "farmer_marketplace_invoice":
         seller = invoice.get("seller") or {}
         seller_id = str(invoice.get("farmer_user_id") or invoice.get("farmer_user_id_str") or seller.get("farmer_user_id") or "")
@@ -1272,18 +1401,30 @@ def get_ufc_payment_overview(actor_user_id):
     pending_totals = _pending_reported_totals([row.get("_id") for row in avpl_invoice_docs])
     _annotate_avpl_ufc_invoice_rows(avpl_rows, pending_totals)
     pending_avpl_payments = _pending_payment_rows({"payer_key": centre_uid})
-    farmer_rows = [_serialize_invoice_row("ufc_farmer_invoice", row) for row in mongo.db[UFC_FARMER_INVOICE_COLLECTION].find({"centre_uid": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
+    farmer_invoice_docs = list(mongo.db[UFC_FARMER_INVOICE_COLLECTION].find({"centre_uid": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100))
+    farmer_rows = [_serialize_invoice_row("ufc_farmer_invoice", row) for row in farmer_invoice_docs]
+    pending_farmer_totals = _pending_reported_totals(
+        [row.get("_id") for row in farmer_invoice_docs],
+        source_type="ufc_farmer_invoice",
+    )
+    _annotate_reportable_invoice_rows(farmer_rows, pending_farmer_totals)
+    pending_farmer_payments = _pending_payment_rows(
+        {"payee_key": centre_uid},
+        source_type="ufc_farmer_invoice",
+    )
     produce_purchase_rows = [_serialize_invoice_row("farmer_marketplace_invoice", row) for row in mongo.db[FARMER_MARKET_INVOICE_COLLECTION].find({"buyer_type": "ufc", "buyer_key": centre_uid, "status": "issued"}).sort("issued_at", DESCENDING).limit(100)]
     recent = _recent_payments({"$or": [{"source_type": "avpl_ufc_invoice", "payer_key": centre_uid}, {"source_type": "ufc_farmer_invoice", "payee_key": centre_uid}, {"source_type": "farmer_marketplace_invoice", "payer_key": centre_uid}]})
     avpl_due = sum((_decimal(r["outstanding_display"]) for r in avpl_rows), Decimal("0"))
     farmer_due = sum((_decimal(r["outstanding_display"]) for r in farmer_rows), Decimal("0"))
     produce_purchase_due = sum((_decimal(r["outstanding_display"]) for r in produce_purchase_rows), Decimal("0"))
     pending_avpl_amount = sum((_decimal(row.get("amount")) for row in pending_avpl_payments), Decimal("0"))
+    pending_farmer_amount = sum((_decimal(row.get("amount")) for row in pending_farmer_payments), Decimal("0"))
     return {
         "centre_uid": centre_uid,
         "avpl_payables": avpl_rows,
         "pending_avpl_payments": pending_avpl_payments,
         "farmer_receivables": farmer_rows,
+        "pending_farmer_payments": pending_farmer_payments,
         "farmer_produce_payables": produce_purchase_rows,
         "recent_payments": recent,
         "payment_modes": PAYMENT_MODES,
@@ -1292,6 +1433,8 @@ def get_ufc_payment_overview(actor_user_id):
             "avpl_pending_confirmation": _money(pending_avpl_amount),
             "avpl_pending_count": len(pending_avpl_payments),
             "farmer_due": _money(farmer_due),
+            "farmer_pending_confirmation": _money(pending_farmer_amount),
+            "farmer_pending_count": len(pending_farmer_payments),
             "farmer_produce_due": _money(produce_purchase_due),
             "recent_count": len(recent),
         },
@@ -1310,12 +1453,24 @@ def get_farmer_payment_overview(actor_user_id):
         {"buyer.farmer_user_id_str": str(actor["_id"])},
     ]}).sort("issued_at", DESCENDING).limit(100))
     payables = []
+    internal_ufc_rows = []
     for invoice in purchase_invoices:
         try:
             _assert_access(actor, "ufc_farmer_invoice", invoice, write=False)
-            payables.append(_serialize_invoice_row("ufc_farmer_invoice", invoice))
+            row = _serialize_invoice_row("ufc_farmer_invoice", invoice)
+            payables.append(row)
+            internal_ufc_rows.append(row)
         except PermissionError:
             continue
+    pending_ufc_totals = _pending_reported_totals(
+        [invoice.get("_id") for invoice in purchase_invoices],
+        source_type="ufc_farmer_invoice",
+    )
+    _annotate_reportable_invoice_rows(internal_ufc_rows, pending_ufc_totals)
+    pending_ufc_payments = _pending_payment_rows(
+        {"payer_key": str(actor["_id"])},
+        source_type="ufc_farmer_invoice",
+    )
 
     # Stage 9: purchases made outside UnnatFarm are entered once by the Farmer
     # and use the same settlement engine as internal purchases.
@@ -1386,14 +1541,18 @@ def get_farmer_payment_overview(actor_user_id):
     ]})
     payable_due = sum((_decimal(r["outstanding_display"]) for r in payables), Decimal("0"))
     receivable_due = sum((_decimal(r["outstanding_display"]) for r in receivables), Decimal("0"))
+    pending_ufc_amount = sum((_decimal(row.get("amount")) for row in pending_ufc_payments), Decimal("0"))
     return {
         "payables": payables,
         "receivables": receivables,
+        "pending_ufc_payments": pending_ufc_payments,
         "recent_payments": recent,
         "payment_modes": PAYMENT_MODES,
         "summary": {
             "outstanding": _money(payable_due),
             "payable_outstanding": _money(payable_due),
+            "ufc_pending_confirmation": _money(pending_ufc_amount),
+            "ufc_pending_count": len(pending_ufc_payments),
             "receivable_outstanding": _money(receivable_due),
             "recent_count": len(recent),
         },

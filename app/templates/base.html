@@ -868,6 +868,102 @@ body.sidebar-collapsed .sidebar-logout{
 
 
 
+/* ============================================================
+   SIDEBAR HEADER COLLAPSE / EXPAND CONTROL
+   Desktop only. Mobile menu behavior remains unchanged.
+============================================================ */
+.sidebar-header-meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:8px;
+}
+
+.sidebar-header-meta .role-chip{
+    margin:0 !important;
+}
+
+.sidebar-collapse-btn{
+    width:34px;
+    height:34px;
+    flex:0 0 34px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(47,122,76,.16);
+    border-radius:10px;
+    background:#FFFFFF;
+    color:#2F7A4C;
+    cursor:pointer;
+    box-shadow:0 5px 14px rgba(31,79,46,.07);
+    transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease;
+}
+
+.sidebar-collapse-btn:hover{
+    background:#EAF6EE;
+    border-color:rgba(47,122,76,.28);
+    color:#205D39;
+    transform:translateX(-1px);
+    box-shadow:0 7px 18px rgba(31,79,46,.10);
+}
+
+.sidebar-collapse-btn:focus-visible{
+    outline:3px solid rgba(79,154,106,.20);
+    outline-offset:2px;
+}
+
+.sidebar-collapse-icon{
+    width:17px;
+    height:17px;
+    display:block;
+}
+
+.sidebar-collapse-btn .icon-expand{
+    display:none;
+}
+
+body.sidebar-collapsed .sidebar-header-meta{
+    justify-content:center;
+    margin-top:9px;
+}
+
+body.sidebar-collapsed .sidebar-collapse-btn{
+    width:38px;
+    height:38px;
+    flex-basis:38px;
+}
+
+body.sidebar-collapsed .sidebar-collapse-btn:hover{
+    transform:translateX(1px);
+}
+
+body.sidebar-collapsed .sidebar-collapse-btn .icon-collapse{
+    display:none;
+}
+
+body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
+    display:block;
+}
+
+/* The old desktop header toggle is no longer used; the control now lives
+   inside the sidebar header beside the role chip. */
+.web-sidebar-toggle{
+    display:none !important;
+}
+
+@media(max-width:860px){
+    .sidebar-collapse-btn{
+        display:none !important;
+    }
+
+    .sidebar-header-meta{
+        display:block;
+        margin-top:8px;
+    }
+}
+
+
 .flash-popup-wrap{
     position:fixed;
     top:calc(var(--header-h) + 16px);
@@ -1837,6 +1933,28 @@ body.sidebar-collapsed .sidebar-logout{
             }
         }
 
+
+        /* VS CODE-LIKE SUBMENU TREE CONTROLS */
+        .sidebar-header-meta{
+            display:flex !important;
+            align-items:center !important;
+            justify-content:space-between !important;
+            gap:8px !important;
+            margin-top:8px;
+        }
+        .sidebar-header-meta .role-chip{margin:0 !important;min-width:0}
+        .nav-tree-controls{display:flex;align-items:center;gap:4px;flex:0 0 auto}
+        .nav-tree-btn{
+            width:30px;height:30px;padding:0;border:1px solid transparent;border-radius:7px;
+            background:transparent;color:#627168;display:inline-flex;align-items:center;justify-content:center;
+            cursor:pointer;transition:.16s ease
+        }
+        .nav-tree-btn svg{width:16px;height:16px}
+        .nav-tree-btn:hover{background:rgba(255,255,255,.88);border-color:rgba(52,122,78,.12);color:#2F7A4C}
+        .nav-chevron{transform:rotate(-90deg) !important;background:transparent !important;border-radius:5px !important}
+        .nav-group.open > .nav-group-toggle .nav-chevron{transform:rotate(0deg) !important;background:transparent !important}
+        .nav-group-toggle:hover .nav-chevron{color:#2F7A4C !important;background:rgba(255,255,255,.58) !important}
+
 </style>
 {% block extra_head %}{% endblock %}
 </head>
@@ -1956,15 +2074,6 @@ body.sidebar-collapsed .sidebar-logout{
             ☰
         </button>
 
-        <button
-            type="button"
-            class="web-sidebar-toggle"
-            onclick="toggleWebSidebar()"
-            aria-label="Collapse sidebar"
-        >
-            ☰
-        </button>
-
         <a href="{{ url_for('dashboard.home') }}">
 
             <img
@@ -2035,8 +2144,27 @@ body.sidebar-collapsed .sidebar-logout{
 
         </div>
 
-        <div class="role-chip">
-            {{ session.get('role','').replace('_',' ').title() }}
+        <div class="sidebar-header-meta">
+
+            <div class="role-chip">
+                {{ session.get('role','').replace('_',' ').title() }}
+            </div>
+
+            <div class="nav-tree-controls" aria-label="Menu controls">
+                <button type="button" class="nav-tree-btn" onclick="expandAllNavGroups()" aria-label="Expand all menus" title="Expand all menus">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="m7 5 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="m7 12 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button type="button" class="nav-tree-btn" onclick="collapseAllNavGroups()" aria-label="Collapse all menus" title="Collapse all menus">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="m7 12 5-5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="m7 19 5-5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
         </div>
 
     </div>
@@ -2697,9 +2825,9 @@ body.sidebar-collapsed .sidebar-logout{
 
                         <a
                             href="{{ url_for('admin.lms_upload') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint and request.endpoint.startswith('admin.lms_') %}active{% endif %}"
                         >
-                            LMS Upload
+                            LMS Management
                         </a>
 
                         <a
@@ -2739,7 +2867,7 @@ body.sidebar-collapsed .sidebar-logout{
 
                         <a
                             href="{{ url_for('modules.support') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
                             Support
                         </a>
@@ -2853,6 +2981,13 @@ body.sidebar-collapsed .sidebar-logout{
                             class="nav-sub-link"
                         >
                             UFC Mitra Master
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.support') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
+                        >
+                            Support Desk
                         </a>
 
                     </div>
@@ -2975,6 +3110,13 @@ body.sidebar-collapsed .sidebar-logout{
                             UFC Mitra Earnings
                         </a>
 
+                        <a
+                            href="{{ url_for('modules.support') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
+                        >
+                            Support
+                        </a>
+
                     </div>
 
                 </div>
@@ -3043,6 +3185,18 @@ body.sidebar-collapsed .sidebar-logout{
                     Finance Leads
                 </span>
 
+            </a>
+
+            <a
+                href="{{ url_for('modules.support') }}"
+                class="sidebar-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
+            >
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/>
+                    </svg>
+                </span>
+                <span class="nav-label">Support</span>
             </a>
 
         </div>
@@ -3389,12 +3543,6 @@ body.sidebar-collapsed .sidebar-logout{
                             Sales to Farmers
                         </a>
 
-                        <a
-                            href="{{ url_for('modules.pos') }}"
-                            class="nav-sub-link {% if request.endpoint == 'modules.pos' %}active{% endif %}"
-                        >
-                            POS / Direct Sales
-                        </a>
 
                     </div>
 
@@ -3402,6 +3550,20 @@ body.sidebar-collapsed .sidebar-logout{
 
             </div>
 
+
+
+            <a
+                href="{{ url_for('modules.pos') }}"
+                class="sidebar-link {% if request.endpoint in ['modules.pos','modules.pos_invoice','modules.pos_record_payment','modules.pos_reverse_payment','modules.pos_void_sale'] %}active{% endif %}"
+            >
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="5" width="16" height="14" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M7 9h10M8 13h3M14 13h2M8 16h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <span class="nav-label">POS / Direct Sales</span>
+            </a>
 
             <!-- CENTRE MANAGEMENT -->
 
@@ -3469,14 +3631,14 @@ body.sidebar-collapsed .sidebar-logout{
 
                         <a
                             href="{{ url_for('modules.lms') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.lms','modules.lms_course_view','modules.lms_resource_open','modules.lms_lesson_complete'] %}active{% endif %}"
                         >
-                            LMS
+                            Learning Centre
                         </a>
 
                         <a
                             href="{{ url_for('modules.support') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
                             Support
                         </a>
@@ -3647,14 +3809,14 @@ body.sidebar-collapsed .sidebar-logout{
 
                         <a
                             href="{{ url_for('modules.lms') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.lms','modules.lms_course_view','modules.lms_resource_open','modules.lms_lesson_complete'] %}active{% endif %}"
                         >
-                            LMS
+                            Learning Centre
                         </a>
 
                         <a
                             href="{{ url_for('modules.support') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
                             Support
                         </a>
@@ -3883,12 +4045,6 @@ body.sidebar-collapsed .sidebar-logout{
                             Marketplace Sales
                         </a>
 
-                        <a
-                            href="{{ url_for('modules.farmer_sales_new') }}"
-                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_sales_new','modules.farmer_sales','modules.farmer_sale_detail','modules.farmer_external_invoice_print','modules.farmer_sale_void'] %}active{% endif %}"
-                        >
-                            Record Outside Sale
-                        </a>
 
                     </div>
 
@@ -3896,6 +4052,20 @@ body.sidebar-collapsed .sidebar-logout{
 
             </div>
 
+
+
+            <a
+                href="{{ url_for('modules.farmer_pos') }}"
+                class="sidebar-link {% if request.endpoint in ['modules.farmer_pos','modules.farmer_pos_invoice','modules.farmer_pos_record_payment','modules.farmer_pos_reverse_payment','modules.farmer_pos_void_sale','modules.farmer_sales_new','modules.farmer_sales','modules.farmer_sale_detail','modules.farmer_external_invoice_print','modules.farmer_sale_void'] %}active{% endif %}"
+            >
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="5" width="16" height="14" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M7 9h10M8 13h3M14 13h2M8 16h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <span class="nav-label">POS / Direct Sale</span>
+            </a>
 
             <!-- SERVICES -->
 
@@ -3960,9 +4130,9 @@ body.sidebar-collapsed .sidebar-logout{
 
                         <a
                             href="{{ url_for('modules.lms') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.lms','modules.lms_course_view','modules.lms_resource_open','modules.lms_lesson_complete'] %}active{% endif %}"
                         >
-                            LMS
+                            Learning Centre
                         </a>
 
                         <a
@@ -3974,7 +4144,7 @@ body.sidebar-collapsed .sidebar-logout{
 
                         <a
                             href="{{ url_for('modules.support') }}"
-                            class="nav-sub-link"
+                            class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
                             Support
                         </a>
@@ -4123,27 +4293,25 @@ function toggleSidebarMenu(forceClose = false){
 
 
 /* ============================================================
-   DESKTOP SIDEBAR COLLAPSE
+   SIDEBAR TREE CONTROLS
 ============================================================ */
 
-function toggleWebSidebar(){
+function setAllNavGroups(open){
+    document.querySelectorAll('.nav-group').forEach(function(group){
+        group.classList.toggle('open', open);
+        const groupName = group.dataset.group || '';
+        if(groupName){
+            localStorage.setItem('uf_nav_group_' + groupName, open ? '1' : '0');
+        }
+    });
+}
 
-    if(window.innerWidth <= 860){
-        return;
-    }
+function expandAllNavGroups(){
+    setAllNavGroups(true);
+}
 
-    document.body.classList.toggle(
-        'sidebar-collapsed'
-    );
-
-    localStorage.setItem(
-        'uf_sidebar_collapsed',
-        document.body.classList.contains(
-            'sidebar-collapsed'
-        )
-            ? '1'
-            : '0'
-    );
+function collapseAllNavGroups(){
+    setAllNavGroups(false);
 }
 
 
@@ -4161,27 +4329,6 @@ function toggleNavGroup(button){
         return;
     }
 
-    /*
-     * If desktop sidebar is collapsed,
-     * expand sidebar first.
-     */
-
-    if(
-        document.body.classList.contains(
-            'sidebar-collapsed'
-        )
-        &&
-        window.innerWidth > 860
-    ){
-        document.body.classList.remove(
-            'sidebar-collapsed'
-        );
-
-        localStorage.setItem(
-            'uf_sidebar_collapsed',
-            '0'
-        );
-    }
 
     const groupName =
         group.dataset.group || '';
@@ -4212,21 +4359,6 @@ document.addEventListener(
     'DOMContentLoaded',
     function(){
 
-        /*
-         * Desktop collapsed state
-         */
-
-        if(
-            window.innerWidth > 860
-            &&
-            localStorage.getItem(
-                'uf_sidebar_collapsed'
-            ) === '1'
-        ){
-            document.body.classList.add(
-                'sidebar-collapsed'
-            );
-        }
 
 
         /*
@@ -4387,6 +4519,7 @@ window.addEventListener(
                 'sidebar-collapsed'
             );
         }
+
     }
 );
 

@@ -668,6 +668,7 @@
 
                     <div class="span-2">
                         <label>Activities</label>
+                        <small style="display:block;margin:4px 0 8px;color:#64748b;">Choose the Farmer's actual activities. LMS courses will be matched using these selections.</small>
                         <div class="checkbox-grid">
                             {% for item in ['Pig','Goat','Poultry','Cattle','Fishery','Agri'] %}
                                 <label>
@@ -678,7 +679,7 @@
                         </div>
                     </div>
 
-                    <div class="span-2">
+                    <div class="span-2" id="farmerAgriSubcategoryWrap">
                         <label>Agri Sub-categories</label>
                         <div class="checkbox-grid">
                             {% for item in ['Maize','Joha Rice','Mustard Seed','Black Rice','Ginger','Turmeric','Black Pepper'] %}
@@ -688,6 +689,7 @@
                                 </label>
                             {% endfor %}
                         </div>
+                        <small style="display:block;margin-top:8px;color:#64748b;">These selections are also used to personalise the Farmer's LMS learning courses.</small>
                     </div>
 
                     <div class="span-2 step-actions">
@@ -713,6 +715,26 @@
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     const form = document.getElementById('farmerRegistrationForm');
+
+    const agriActivity = form ? form.querySelector('input[name="activities"][value="Agri"]') : null;
+    const agriSubcategoryWrap = document.getElementById('farmerAgriSubcategoryWrap');
+    function syncAgriSubcategories(){
+        if(!agriSubcategoryWrap) return;
+        const anySubcategoryChecked = !!agriSubcategoryWrap.querySelector('input[name="agri_sub_categories"]:checked');
+        if(anySubcategoryChecked && agriActivity && !agriActivity.checked){
+            agriActivity.checked = true;
+        }
+        agriSubcategoryWrap.style.display = (agriActivity && agriActivity.checked) ? 'block' : 'none';
+    }
+    if(agriActivity){
+        agriActivity.addEventListener('change', syncAgriSubcategories);
+    }
+    if(agriSubcategoryWrap){
+        agriSubcategoryWrap.querySelectorAll('input[name="agri_sub_categories"]').forEach(function(box){
+            box.addEventListener('change', syncAgriSubcategories);
+        });
+    }
+    syncAgriSubcategories();
 
     const screen1 = document.getElementById('farmerScreen1');
     const screen2 = document.getElementById('farmerScreen2');

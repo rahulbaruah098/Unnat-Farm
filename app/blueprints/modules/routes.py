@@ -56,11 +56,39 @@ from app.services.ufc_profile_service import (
     profile_health,
 )
 from app.services.payment_service import (
+    confirm_reported_payment as stage8_confirm_reported_payment,
     get_farmer_payment_overview,
     get_payment_receipt_context,
     get_ufc_payment_overview,
     record_payment as stage8_record_payment,
+    reject_reported_payment as stage8_reject_reported_payment,
     reverse_payment as stage8_reverse_payment,
+)
+from app.services.lms_service import (
+    get_learner_course_context as lms_get_learner_course_context,
+    get_learner_overview as lms_get_learner_overview,
+    get_resource_for_learner as lms_get_resource_for_learner,
+    mark_lesson_complete as lms_mark_lesson_complete,
+)
+from app.services.support_service import (
+    SUPPORT_EMAIL,
+    SUPPORT_NUMBER,
+    add_ticket_reply as support_add_ticket_reply,
+    create_ticket as support_create_ticket,
+    get_support_overview as support_get_overview,
+    get_ticket_detail as support_get_ticket_detail,
+    update_ticket as support_update_ticket,
+    user_ticket_action as support_user_ticket_action,
+)
+
+from app.services.pos_service import (
+    create_farmer_pos_sale,
+    create_ufc_pos_sale,
+    get_farmer_pos_context,
+    get_pos_sale_context,
+    get_ufc_output_stock_overview,
+    get_ufc_pos_context,
+    void_pos_sale,
 )
 from app.services.farmer_marketplace_service import (
     approve_order as stage9_market_approve_order,
@@ -1881,267 +1909,220 @@ def insurance_leads():
 @modules_bp.route("/lms")
 @login_required
 def lms():
-    audience = session.get("role")
-    user_id = session.get("user_id")
-    q = request.args.get("q", "").strip()
-
-    query = {
-        "$or": [
-            {"audience": audience},
-            {"audience": "all"}
-        ]
-    }
-
-    if audience == "farmer":
-        farmer_profile = (
-            mongo.db.farmer_master.find_one({"linked_user_id": user_id})
-            or mongo.db.farmer_master.find_one({"linked_user_id": ObjectId(user_id)})
+    try:
+        overview = lms_get_learner_overview(
+            session.get("user_id"),
+            request.args.get("q", ""),
+            request.args.get("category", ""),
         )
-
-        farmer_activities = []
-
-        if farmer_profile:
-            for key in ["activities", "registered_activities", "activity", "farmer_activities"]:
-                value = farmer_profile.get(key)
-
-                if isinstance(value, list):
-                    farmer_activities.extend(value)
-                elif isinstance(value, str) and value.strip():
-                    farmer_activities.append(value.strip())
-
-        farmer_activities = list(set(farmer_activities))
-
-        query = {
-            "$and": [
-                {
-                    "$or": [
-                        {"audience": "farmer"},
-                        {"audience": "all"}
-                    ]
-                },
-                {
-                    "$or": [
-                        {"activity_category": "all"},
-                        {"activity_category": "All"},
-                        {"activity_category": {"$in": farmer_activities}},
-                    ]
-                }
-            ]
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        overview = {
+            "courses": [],
+            "legacy_items": [],
+            "profile": {},
+            "query": request.args.get("q", ""),
+            "activity_filter": request.args.get("category", ""),
+            "filter_choices": ["all"],
+            "summary": {
+                "assigned": 0,
+                "in_progress": 0,
+                "completed": 0,
+                "mandatory_pending": 0,
+            },
         }
-
-    if q:
-        query = {
-            "$and": [
-                query,
-                {
-                    "$or": [
-                        {"title": {"$regex": q, "$options": "i"}},
-                        {"lms_type": {"$regex": q, "$options": "i"}},
-                        {"activity_category": {"$regex": q, "$options": "i"}},
-                        {"description": {"$regex": q, "$options": "i"}},
-                        {"file_name": {"$regex": q, "$options": "i"}}
-                    ]
-                }
-            ]
-        }
-
-    items = list(
-        mongo.db.lms_materials.find(query).sort("created_at", -1)
-    )
 
     if wants_json_response():
-        return jsonify(json_safe({
-            "ok": True,
-            "items": items,
-            "q": q
-        }))
+        return jsonify(json_safe({"ok": True, **overview}))
 
-    return render_template("modules/lms.html", items=items, q=q)
+    return render_template("modules/lms.html", overview=overview)
 
-#changes by atlanta
+
+@modules_bp.route("/lms/courses/<course_id>")
+@login_required
+def lms_course_view(course_id):
+    try:
+        context = lms_get_learner_course_context(session.get("user_id"), course_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.lms"))
+
+    if wants_json_response():
+        return jsonify(json_safe({"ok": True, **context}))
+    return render_template("modules/lms_course_detail.html", **context)
+
+
+@modules_bp.route("/lms/lessons/<lesson_id>/complete", methods=["POST"])
+@login_required
+def lms_lesson_complete(lesson_id):
+    try:
+        result = lms_mark_lesson_complete(
+            session.get("user_id"),
+            lesson_id,
+            completed=request.form.get("completed", "1") != "0",
+        )
+        flash(result.get("message") or "Learning progress updated.", "success")
+        course_id = result.get("course_id")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        course_id = request.form.get("course_id", "")
+
+    if course_id:
+        return redirect(url_for("modules.lms_course_view", course_id=course_id))
+    return redirect(url_for("modules.lms"))
+
+
+@modules_bp.route("/lms/resources/<resource_id>/open")
+@login_required
+def lms_resource_open(resource_id):
+    try:
+        resource = lms_get_resource_for_learner(session.get("user_id"), resource_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.lms"))
+
+    if resource.get("resource_type") == "link":
+        return redirect(resource.get("external_url") or url_for("modules.lms"))
+    filename = resource.get("file_name")
+    if not filename:
+        flash("This learning resource file is unavailable.", "danger")
+        return redirect(url_for("modules.lms_course_view", course_id=resource.get("course_id_str")))
+    return redirect(url_for("documents.serve", filename=filename))
+
+
+# ---------------------------------------------------------------------------
+# Professional Support Desk
+# ---------------------------------------------------------------------------
+
 @modules_bp.route("/support", methods=["GET", "POST"])
 @login_required
 def support():
-    payload = request.get_json(silent=True) if request.is_json else {}
-    payload = payload or {}
-
-    user_id = (
-        payload.get("user_id")
-        or request.args.get("user_id")
-        or session.get("user_id")
-        or ""
-    )
-
-    role = session.get("role")
-
-    user = {}
-    if user_id:
-        try:
-            user = mongo.db.users.find_one({"_id": ObjectId(user_id)}) or {}
-        except Exception:
-            user = {}
-
-    if not role and user:
-        role = user.get("role")
-
     if request.method == "POST":
-        if role == "super_admin":
+        try:
+            result = support_create_ticket(
+                session.get("user_id"),
+                subject=request.form.get("subject", "") if not request.is_json else (request.get_json(silent=True) or {}).get("subject", ""),
+                problem_type=request.form.get("problem_type", "") if not request.is_json else (request.get_json(silent=True) or {}).get("problem_type", ""),
+                priority=request.form.get("priority", "") if not request.is_json else (request.get_json(silent=True) or {}).get("priority", ""),
+                message=request.form.get("message", "") if not request.is_json else (request.get_json(silent=True) or {}).get("message", ""),
+                files=request.files.getlist("attachments") if not request.is_json else [],
+            )
             if wants_json_response():
-                return json_error("Super Admin can update tickets from the ticket table.", 403)
-
-            flash("Super Admin can update tickets from the ticket table.", "warning")
-            return redirect(url_for("modules.support"))
-
-        subject = (
-            payload.get("subject")
-            or request.form.get("subject")
-            or ""
-        ).strip()
-
-        problem_type = (
-            payload.get("problem_type")
-            or request.form.get("problem_type")
-            or ""
-        ).strip()
-
-        priority = (
-            payload.get("priority")
-            or request.form.get("priority")
-            or ""
-        ).strip()
-
-        message = (
-            payload.get("message")
-            or request.form.get("message")
-            or ""
-        ).strip()
-
-        if not user_id or not subject or not problem_type or not priority or not message:
+                return jsonify(json_safe({"ok": True, **result})), 201
+            flash(result.get("message") or "Support ticket raised successfully.", "success")
+            ticket = result.get("ticket") or {}
+            if ticket.get("id"):
+                return redirect(url_for("modules.support_ticket_detail", ticket_id=ticket.get("id")))
+        except (ValueError, PermissionError, RuntimeError) as exc:
             if wants_json_response():
-                return json_error("Please fill all required support ticket fields.", 400)
-
-            flash("Please fill all required support ticket fields.", "danger")
-            return redirect(url_for("modules.support"))
-
-        ticket_ref = "TCK-" + datetime.utcnow().strftime("%Y%m%d%H%M%S")
-
-        mongo.db.support_tickets.insert_one({
-            "ticket_ref": ticket_ref,
-            "user_id": str(user_id),
-            "user_name": user.get("name") or session.get("name") or session.get("username") or "Unknown User",
-            "username": user.get("username") or session.get("username"),
-            "role": role,
-            "phone": user.get("phone") or user.get("contact_no") or "",
-            "email": user.get("email") or "",
-            "subject": subject,
-            "problem_type": problem_type,
-            "priority": priority,
-            "message": message,
-            "support_email": "ites@sayanant.com",
-            "support_number": "9957367398",
-            "status": "open",
-            "progress": "Ticket received",
-            "resolution_note": "",
-            "created_at": now_utc(),
-            "updated_at": now_utc(),
-            "resolved_at": None,
-            "updated_by": None
-        })
-
-        if wants_json_response():
-            return jsonify({
-                "ok": True,
-                "message": "Support ticket raised successfully. Super Admin will review it.",
-                "ticket_ref": ticket_ref
-            }), 201
-
-        flash("Support ticket raised successfully. Super Admin will review it.", "success")
+                return json_error(str(exc), 400 if not isinstance(exc, PermissionError) else 403)
+            flash(str(exc), "danger")
         return redirect(url_for("modules.support"))
 
-    q = request.args.get("q", "").strip()
-
-    if role == "super_admin":
-        ticket_query = {}
-    else:
-        ticket_query = {"user_id": str(user_id)}
-
-    if q:
-        search_filter = {
-            "$or": [
-                {"ticket_ref": {"$regex": q, "$options": "i"}},
-                {"user_name": {"$regex": q, "$options": "i"}},
-                {"username": {"$regex": q, "$options": "i"}},
-                {"role": {"$regex": q, "$options": "i"}},
-                {"subject": {"$regex": q, "$options": "i"}},
-                {"problem_type": {"$regex": q, "$options": "i"}},
-                {"priority": {"$regex": q, "$options": "i"}},
-                {"message": {"$regex": q, "$options": "i"}},
-                {"status": {"$regex": q, "$options": "i"}},
-                {"progress": {"$regex": q, "$options": "i"}}
-            ]
+    try:
+        overview = support_get_overview(
+            session.get("user_id"),
+            search=request.args.get("q", ""),
+            status=request.args.get("status", "all"),
+            priority=request.args.get("priority", "all"),
+            problem_type=request.args.get("problem_type", "all"),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        if wants_json_response():
+            return json_error(str(exc), 403 if isinstance(exc, PermissionError) else 400)
+        flash(str(exc), "danger")
+        overview = {
+            "tickets": [],
+            "summary": {"total": 0, "open": 0, "in_progress": 0, "waiting_for_user": 0, "resolved": 0, "closed": 0},
+            "problem_types": [],
+            "priorities": {},
+            "statuses": {},
+            "support_email": SUPPORT_EMAIL,
+            "support_number": SUPPORT_NUMBER,
+            "can_create": session.get("role") != "super_admin",
+            "is_support_admin": session.get("role") == "super_admin",
+            "search": request.args.get("q", ""),
+            "selected_status": request.args.get("status", "all"),
+            "selected_priority": request.args.get("priority", "all"),
+            "selected_problem_type": request.args.get("problem_type", "all"),
         }
 
-        if ticket_query:
-            ticket_query = {"$and": [ticket_query, search_filter]}
-        else:
-            ticket_query = search_filter
+    if wants_json_response():
+        return jsonify(json_safe({"ok": True, "overview": overview}))
+    return render_template("modules/support.html", overview=overview)
 
-    tickets = list(
-        mongo.db.support_tickets.find(ticket_query).sort("created_at", -1)
-    )
+
+@modules_bp.route("/support/<ticket_id>")
+@login_required
+def support_ticket_detail(ticket_id):
+    try:
+        context = support_get_ticket_detail(session.get("user_id"), ticket_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        if wants_json_response():
+            return json_error(str(exc), 403 if isinstance(exc, PermissionError) else 404)
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.support"))
 
     if wants_json_response():
-        return jsonify(json_safe({
-            "ok": True,
-            "tickets": tickets,
-            "q": q,
-            "support_email": "ites@sayanant.com",
-            "support_number": "9957367398"
-        }))
+        return jsonify(json_safe({"ok": True, **context}))
+    return render_template("modules/support_ticket_detail.html", **context)
 
-    return render_template(
-        "modules/support.html",
-        tickets=tickets,
-        q=q,
-        support_email="ites@sayanant.com",
-        support_number="9957367398"
-    )
+
+@modules_bp.route("/support/<ticket_id>/reply", methods=["POST"])
+@login_required
+def support_ticket_reply(ticket_id):
+    payload = request.get_json(silent=True) if request.is_json else {}
+    payload = payload or {}
+    try:
+        result = support_add_ticket_reply(
+            session.get("user_id"),
+            ticket_id,
+            message=payload.get("message", "") if request.is_json else request.form.get("message", ""),
+            files=[] if request.is_json else request.files.getlist("attachments"),
+            internal=(payload.get("visibility") == "internal") if request.is_json else (request.form.get("visibility") == "internal"),
+        )
+        if wants_json_response():
+            return jsonify(json_safe({"ok": True, **result}))
+        flash(result.get("message") or "Reply sent.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        if wants_json_response():
+            return json_error(str(exc), 403 if isinstance(exc, PermissionError) else 400)
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.support_ticket_detail", ticket_id=ticket_id))
+
 
 @modules_bp.route("/support/<ticket_id>/update", methods=["POST"])
 @login_required
 def update_support_ticket(ticket_id):
-    if session.get("role") != "super_admin":
-        flash("Only Super Admin can update support tickets.", "danger")
-        return redirect(url_for("modules.support"))
+    try:
+        result = support_update_ticket(
+            session.get("user_id"),
+            ticket_id,
+            status=request.form.get("status", ""),
+            priority=request.form.get("priority", ""),
+            progress=request.form.get("progress", ""),
+            resolution_note=request.form.get("resolution_note", ""),
+        )
+        flash(result.get("message") or "Support ticket updated.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.support_ticket_detail", ticket_id=ticket_id))
 
-    status = request.form.get("status", "").strip()
-    progress = request.form.get("progress", "").strip()
-    resolution_note = request.form.get("resolution_note", "").strip()
 
-    allowed_statuses = ["open", "in_progress", "resolved", "closed"]
+@modules_bp.route("/support/<ticket_id>/action", methods=["POST"])
+@login_required
+def support_ticket_action(ticket_id):
+    try:
+        result = support_user_ticket_action(
+            session.get("user_id"),
+            ticket_id,
+            request.form.get("action", ""),
+        )
+        flash(result.get("message") or "Ticket updated.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.support_ticket_detail", ticket_id=ticket_id))
 
-    if status not in allowed_statuses:
-        flash("Invalid ticket status selected.", "danger")
-        return redirect(url_for("modules.support"))
-
-    update_doc = {
-        "status": status,
-        "progress": progress,
-        "resolution_note": resolution_note,
-        "updated_at": now_utc(),
-        "updated_by": session.get("username") or "super_admin"
-    }
-
-    if status in ["resolved", "closed"]:
-        update_doc["resolved_at"] = now_utc()
-
-    mongo.db.support_tickets.update_one(
-        {"_id": ObjectId(ticket_id)},
-        {"$set": update_doc}
-    )
-
-    flash("Support ticket progress updated successfully.", "success")
-    return redirect(url_for("modules.support"))
 
 @modules_bp.route("/orders")
 @login_required
@@ -3214,199 +3195,86 @@ def get_mitra_bonus_percentage(mitra_uid, bonus_type, category):
 
     return 2
 
-#changes by atlanta
+# UAT Fix 10 — stock-backed UFC POS.
 @modules_bp.route('/pos', methods=['GET', 'POST'])
 @login_required
 @roles_required('ufc_admin')
 def pos():
-    user_id = session.get('user_id')
-
-    ufc_profile = mongo.db.ufc_admin_master.find_one({
-        'linked_user_id': user_id
-    })
-
-    if not ufc_profile:
-        ufc_profile = mongo.db.ufc_admin_master.find_one({
-            'linked_user_id': ObjectId(user_id)
-        })
-
-    centre_uid = ufc_profile.get('centre_uid') if ufc_profile else None
-
-    mapped_farmers = list(mongo.db.farmer_master.find({
-        'centre_uid': centre_uid,
-        'approval_status': 'approved'
-    }).sort('name', 1))
-   
-    mitras = list(mongo.db.ufc_mitra_master.find({
-        '$and': [
-            {'mitra_uid': {'$exists': True, '$ne': ''}},
-            {
-                '$or': [
-                    {'centre_uid': centre_uid},
-                    {'mapped_centre_uid': centre_uid},
-                    {'center_uid': centre_uid},
-                    {'mapped_center_uid': centre_uid}
-                ]
-            }
-        ]
-    }).sort('name', 1))
-
-    # Stage 3: legacy available_centres no longer controls UFC visibility.
-    # Until UFC-owned stock is introduced, POS can only reference products
-    # explicitly published by AVPL Admin.
-    products = sorted(
-        _published_avpl_products_for_ufc(),
-        key=lambda item: str(item.get('name') or '').lower(),
-    )
-
     if request.method == 'POST':
-        sale_type = request.form.get('sale_type', 'registered')
-
-        farmer_id = None
-        farmer_name = ''
-        farmer_phone = ''
-        mitra_uid = request.form.get('mitra_uid', '').strip()
-
-        farmer = None
-
-        if sale_type == 'registered':
-            farmer_id = request.form.get('farmer_id')
-            farmer = mongo.db.farmer_master.find_one({'_id': ObjectId(farmer_id)}) if farmer_id else None
-
-        if farmer:
-            farmer_name = farmer.get('name', '')
-            farmer_phone = farmer.get('contact_no', '')
-            mitra_uid = mitra_uid or farmer.get('mitra_uid', '')
-        else:
-            farmer_name = request.form.get('unregistered_farmer_name', '').strip()
-            farmer_phone = request.form.get('unregistered_farmer_phone', '').strip()
-            mitra_uid = request.form.get('mitra_uid', '').strip()
-
-        product_id = request.form.get('product_id')
-        product = mongo.db.products.find_one({
-            '_id': ObjectId(product_id),
-            "is_deleted": {"$ne": True},
-            "is_active": {"$ne": False}
-        }) if product_id else None
-
-        if not product:
-            flash("This product is currently unavailable.", "danger")
-            return redirect(url_for("modules.pos"))
-
-        if not _is_avpl_product_published_to_ufc(product.get('_id')):
-            flash("This product is not published to the UFC Marketplace.", "danger")
-            return redirect(url_for("modules.pos"))
-
-        quantity = float(request.form.get('quantity') or 0)
-        price = float(product.get('price') or 0) if product else 0
-        total_amount = quantity * price
-
-        product_category = product.get('category') if product else ''
-
-        bonus_percentage = get_mitra_bonus_percentage(
-            mitra_uid,
-            'avpl_product_sale',
-            product_category
-        )
-
-        bonus_amount = round((total_amount * bonus_percentage) / 100, 2)
-
-        sale_doc = {
-            'centre_uid': centre_uid,
-            'ufc_user_id': user_id,
-            'sale_type': sale_type,
-            'farmer_id': farmer_id,
-            'farmer_name': farmer_name,
-            'farmer_phone': farmer_phone,
-            'mitra_uid': mitra_uid,
-            'product_id': product_id,
-            'product_name': product.get('name') if product else '',
-            'product_category': product_category,
-            'product_type': product.get('type') if product else '',
-            'quantity': quantity,
-            'unit_price': price,
-            'total_amount': total_amount,
-            'sale_source': 'avpl_product_sale',
-            'bonus_type': 'avpl_product_sale',
-            'bonus_percentage': bonus_percentage,
-            'bonus_amount': bonus_amount,
-            'invoice_no': f"AVPL-{centre_uid}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-            'source_reference': _legacy_source_reference("UFC_POS_SALE"),
-            'accounting_status': 'not_posted',
-            'migration_status': 'legacy_operational',
-            'created_at': datetime.utcnow()
-        }
-
-        result = mongo.db.pos_sales.insert_one(sale_doc)
-
-        sale_doc["_id"] = str(result.inserted_id)
-
-        if wants_json_response():
-            return jsonify(json_safe({
-                "ok": True,
-                "message": "Sale recorded successfully.",
-                "sale": sale_doc,
-                "sale_id": str(result.inserted_id)
-            }))
-
-        flash('Sale recorded successfully. Invoice generated.', 'success')
-        return redirect(url_for('modules.pos_invoice', sale_id=str(result.inserted_id)))
-
-    q = request.args.get("q", "").strip()
-
-    sales_query = {
-        'centre_uid': centre_uid
-    }
-
-    if q:
-        safe_q = re.escape(q)
-
-        search_conditions = [
-            {'farmer_name': {'$regex': safe_q, '$options': 'i'}},
-            {'farmer_phone': {'$regex': safe_q, '$options': 'i'}},
-            {'product_name': {'$regex': safe_q, '$options': 'i'}},
-            {'product_category': {'$regex': safe_q, '$options': 'i'}},
-            {'mitra_uid': {'$regex': safe_q, '$options': 'i'}},
-            {'invoice_no': {'$regex': safe_q, '$options': 'i'}},
-            {'centre_uid': {'$regex': safe_q, '$options': 'i'}}
-        ]
-
+        sale_result = None
         try:
-            numeric_q = float(q)
-            search_conditions.extend([
-                {'quantity': numeric_q},
-                {'unit_price': numeric_q},
-                {'total_amount': numeric_q}
-            ])
-        except ValueError:
-            pass
+            sale_result = create_ufc_pos_sale(
+                session.get('user_id'),
+                session.get('centre_uid'),
+                request.form.get('cart_json', '[]'),
+                buyer_type=request.form.get('buyer_type', 'walk_in'),
+                farmer_id=request.form.get('farmer_id', ''),
+                buyer_name=request.form.get('buyer_name', ''),
+                buyer_phone=request.form.get('buyer_phone', ''),
+                buyer_address=request.form.get('buyer_address', ''),
+                buyer_state=request.form.get('buyer_state', ''),
+                buyer_gstin=request.form.get('buyer_gstin', ''),
+                payment_term=request.form.get('payment_term', 'pay_now'),
+                credit_days=request.form.get('credit_days', 0),
+                sale_date=request.form.get('sale_date'),
+                note=request.form.get('note', ''),
+                idempotency_key=request.form.get('sale_token', ''),
+                mitra_uid=request.form.get('mitra_uid', ''),
+            )
+            sale = sale_result.get('sale') or {}
+            invoice = sale_result.get('invoice') or {}
+            flash(sale_result.get('message') or 'POS sale completed.', 'success')
 
-        sales_query['$or'] = search_conditions
+            # Money is intentionally a second step after the physical stock sale.
+            # If payment entry fails, stock must never be deducted a second time.
+            amount_received = str(request.form.get('amount_received') or '').strip()
+            try:
+                amount_value = float(amount_received or 0)
+            except (TypeError, ValueError):
+                amount_value = 0
+            if amount_value > 0 and invoice.get('id'):
+                try:
+                    payment_result = stage8_record_payment(
+                        session.get('user_id'),
+                        'ufc_pos_invoice',
+                        invoice.get('id'),
+                        amount_received,
+                        request.form.get('payment_mode') or 'cash',
+                        reference=request.form.get('payment_reference', ''),
+                        note='Collected at UFC POS checkout. ' + str(request.form.get('payment_note') or ''),
+                        idempotency_key=request.form.get('payment_token', ''),
+                    )
+                    flash(payment_result.get('message') or 'POS payment recorded.', 'success')
+                except (ValueError, PermissionError, RuntimeError) as exc:
+                    flash('Sale and stock update are complete; only payment needs attention: ' + str(exc), 'warning')
 
-    sales = list(
-        mongo.db.pos_sales.find(sales_query).sort('created_at', -1).limit(20)
-    )
+            if wants_json_response():
+                return jsonify(json_safe({'ok': True, **sale_result})), 201
+            return redirect(url_for('modules.pos_invoice', sale_id=sale.get('id')))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if wants_json_response():
+                return json_error(str(exc), 400)
+            flash(str(exc), 'danger')
 
-    if wants_json_response():
-        return jsonify(json_safe({
-            "ok": True,
-            "centre_uid": centre_uid,
-            "farmers": mapped_farmers,
-            "mitras": mitras,
-            "products": products,
-            "sales": sales,
-            "q": q
-        }))
+    try:
+        context = get_ufc_pos_context(
+            session.get('user_id'),
+            session.get('centre_uid'),
+            search=request.args.get('q', ''),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        context = {
+            'seller': {}, 'centre_uid': session.get('centre_uid') or '',
+            'centre_name': session.get('centre_uid') or 'UFC', 'catalog': [], 'farmers': [],
+            'buyer_types': {}, 'payment_terms': {}, 'sales': [],
+            'sale_token': f'UFC-POS-{uuid4().hex.upper()}',
+            'payment_token': f'UFC-POS-PAY-{uuid4().hex.upper()}',
+            'today': business_today().isoformat(), 'query': request.args.get('q', ''),
+            'summary': {'products': 0, 'input_products': 0, 'output_products': 0, 'outstanding': '0.00'},
+        }
+    return render_template('modules/pos.html', **context)
 
-    return render_template(
-        'modules/pos.html',
-        centre_uid=centre_uid,
-        farmers=mapped_farmers,
-        mitras=mitras,
-        products=products,
-        sales=sales,
-        q=q
-    )
 
 @modules_bp.route("/all-orders")
 @login_required
@@ -3432,29 +3300,67 @@ def all_orders():
 
 @modules_bp.route('/pos/invoice/<sale_id>')
 @login_required
-@roles_required('ufc_admin', 'avpl_admin', 'sales_unnatfarm', 'accounts')
+@roles_required('ufc_admin', 'avpl_admin', 'sales_unnatfarm', 'accounts', 'super_admin')
 def pos_invoice(sale_id):
     try:
-        sale = mongo.db.pos_sales.find_one({'_id': ObjectId(sale_id)})
-    except Exception:
-        flash('Invalid invoice ID.', 'danger')
-        if session.get('role') in ['avpl_admin', 'sales_unnatfarm', 'accounts']:
+        context = get_pos_sale_context(session.get('user_id'), sale_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        if session.get('role') in ['avpl_admin', 'super_admin', 'sales_unnatfarm', 'accounts']:
             return redirect(url_for('modules.sales_details'))
         return redirect(url_for('modules.pos'))
-
-    if not sale:
-        flash('Invoice not found.', 'danger')
-        if session.get('role') in ['avpl_admin', 'sales_unnatfarm', 'accounts']:
-            return redirect(url_for('modules.sales_details'))
-        return redirect(url_for('modules.pos'))
-
     if wants_json_response():
-        return jsonify(json_safe({
-            "ok": True,
-            "sale": sale
-        }))
+        return jsonify(json_safe({'ok': True, **context}))
+    return render_template('modules/pos_invoice.html', **context)
 
-    return render_template('modules/pos_invoice.html', sale=sale)
+
+@modules_bp.route('/pos/<sale_id>/payment', methods=['POST'])
+@login_required
+@roles_required('ufc_admin')
+def pos_record_payment(sale_id):
+    try:
+        context = get_pos_sale_context(session.get('user_id'), sale_id)
+        invoice = context.get('invoice') or {}
+        if not invoice.get('id'):
+            raise ValueError('This POS invoice is not ready for payment.')
+        result = stage8_record_payment(
+            session.get('user_id'), 'ufc_pos_invoice', invoice.get('id'),
+            request.form.get('amount'), request.form.get('payment_mode'),
+            reference=request.form.get('reference', ''), note=request.form.get('note', ''),
+            idempotency_key=request.form.get('payment_token', ''),
+        )
+        flash(result.get('message') or 'POS payment recorded.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('modules.pos_invoice', sale_id=sale_id))
+
+
+@modules_bp.route('/pos/<sale_id>/payments/<payment_id>/reverse', methods=['POST'])
+@login_required
+@roles_required('ufc_admin')
+def pos_reverse_payment(sale_id, payment_id):
+    try:
+        context = get_pos_sale_context(session.get('user_id'), sale_id)
+        if not any(str(row.get('id')) == str(payment_id) for row in context.get('payments', [])):
+            raise ValueError('This payment is not linked to the selected POS sale.')
+        result = stage8_reverse_payment(session.get('user_id'), payment_id, request.form.get('reason', ''))
+        flash(result.get('message') or 'POS payment reversed.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('modules.pos_invoice', sale_id=sale_id))
+
+
+@modules_bp.route('/pos/<sale_id>/void', methods=['POST'])
+@login_required
+@roles_required('ufc_admin')
+def pos_void_sale(sale_id):
+    try:
+        result = void_pos_sale(session.get('user_id'), sale_id, request.form.get('reason', ''))
+        flash(result.get('message') or 'POS sale voided.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('modules.pos_invoice', sale_id=sale_id))
+
 
 @modules_bp.route("/mitra-earnings")
 @login_required
@@ -3660,7 +3566,7 @@ def sales_details():
             return jsonify(json_safe({"ok": True, "overview": overview}))
         return render_template("modules/accounts_purchase_sales_summary.html", overview=overview)
 
-    sales = list(mongo.db.pos_sales.find({}).sort("created_at", -1))
+    sales = list(mongo.db.pos_sales.find({"$or": [{"seller_type": "ufc"}, {"seller_type": {"$exists": False}}]}).sort("created_at", -1))
 
     if q:
         q_lower = q.lower()
@@ -3897,7 +3803,6 @@ def cancel_farmer_order_view(order_id):
 @login_required
 @roles_required("ufc_admin")
 def deliver_farmer_order_view(order_id):
-    delivery_succeeded = False
     try:
         result = stage7_deliver_farmer_order(
             session.get("user_id"),
@@ -3905,43 +3810,20 @@ def deliver_farmer_order_view(order_id):
             order_id,
             delivery_note=request.form.get("delivery_note", ""),
         )
-        delivery_succeeded = True
         warning = result.get("financial_warning")
         if warning:
-            flash("Delivery and UFC stock update succeeded. Sales document sync needs attention: " + warning, "warning")
-        else:
-            flash(result.get("message") or "Order delivered.", "success")
-
-        # Stage 8: payment is a separate idempotent settlement after physical
-        # delivery. A payment failure must never roll back or repeat stock.
-        collection_option = str(request.form.get("collection_option") or "none").strip().lower()
-        if delivery_succeeded and not warning and collection_option in {"full", "partial"}:
-            delivered_order = result.get("order") or {}
-            invoice_id = delivered_order.get("invoice_id_str") or delivered_order.get("ufc_farmer_invoice_id_str")
-            if not invoice_id:
-                raise RuntimeError("Delivery succeeded, but the invoice is not ready for payment collection yet. Use Payments after repairing the sales document.")
-            if collection_option == "full":
-                amount_to_record = delivered_order.get("outstanding_amount") or delivered_order.get("grand_total") or delivered_order.get("total_amount")
-            else:
-                amount_to_record = request.form.get("amount_received")
-            payment_result = stage8_record_payment(
-                session.get("user_id"),
-                "ufc_farmer_invoice",
-                invoice_id,
-                amount_to_record,
-                request.form.get("payment_mode") or "cash",
-                reference=request.form.get("payment_reference", ""),
-                note="Collected during Farmer order delivery. " + str(request.form.get("payment_note") or ""),
-                idempotency_key=request.form.get("payment_token", ""),
+            flash(
+                "Delivery and UFC stock update succeeded. Sales document sync needs attention: " + warning,
+                "warning",
             )
-            flash(payment_result.get("message") or "Delivery payment recorded.", "success")
-    except (ValueError, PermissionError, RuntimeError) as exc:
-        # If delivery already succeeded, make the distinction explicit so the
-        # operator never clicks Deliver again just because settlement failed.
-        if delivery_succeeded:
-            flash("Delivery is complete; only payment recording needs attention: " + str(exc), "warning")
         else:
-            flash(str(exc), "danger")
+            flash(
+                result.get("message")
+                or "Order delivered. The Farmer invoice is available and payment remains separate.",
+                "success",
+            )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
     return redirect(url_for("modules.centre_order_detail", order_id=order_id))
 
 
@@ -4038,7 +3920,7 @@ def ufc_payments():
         overview = get_ufc_payment_overview(session.get("user_id"))
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), "danger")
-        overview = {"centre_uid": session.get("centre_uid") or "", "avpl_payables": [], "pending_avpl_payments": [], "farmer_receivables": [], "farmer_produce_payables": [], "recent_payments": [], "payment_modes": {}, "summary": {"avpl_due": "0.00", "avpl_pending_confirmation": "0.00", "avpl_pending_count": 0, "farmer_due": "0.00", "farmer_produce_due": "0.00", "recent_count": 0}}
+        overview = {"centre_uid": session.get("centre_uid") or "", "avpl_payables": [], "pending_avpl_payments": [], "farmer_receivables": [], "pending_farmer_payments": [], "farmer_produce_payables": [], "recent_payments": [], "payment_modes": {}, "summary": {"avpl_due": "0.00", "avpl_pending_confirmation": "0.00", "avpl_pending_count": 0, "farmer_due": "0.00", "farmer_pending_confirmation": "0.00", "farmer_pending_count": 0, "farmer_produce_due": "0.00", "recent_count": 0}}
     return render_template("modules/ufc_payments.html", overview=overview)
 
 
@@ -4079,6 +3961,34 @@ def record_ufc_payment():
     return redirect(url_for("modules.ufc_payments"))
 
 
+@modules_bp.route("/payments/farmer-reports/<payment_id>/confirm", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def confirm_farmer_reported_payment(payment_id):
+    try:
+        result = stage8_confirm_reported_payment(session.get("user_id"), payment_id)
+        flash(result.get("message") or "Farmer payment confirmed received.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.ufc_payments"))
+
+
+@modules_bp.route("/payments/farmer-reports/<payment_id>/return", methods=["POST"])
+@login_required
+@roles_required("ufc_admin")
+def return_farmer_reported_payment(payment_id):
+    try:
+        result = stage8_reject_reported_payment(
+            session.get("user_id"),
+            payment_id,
+            request.form.get("reason", ""),
+        )
+        flash(result.get("message") or "Farmer payment report returned.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.ufc_payments"))
+
+
 @modules_bp.route("/payments/<payment_id>/reverse", methods=["POST"])
 @login_required
 @roles_required("ufc_admin")
@@ -4099,8 +4009,29 @@ def farmer_payments():
         overview = get_farmer_payment_overview(session.get("user_id"))
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), "danger")
-        overview = {"payables": [], "receivables": [], "recent_payments": [], "summary": {"outstanding": "0.00", "payable_outstanding": "0.00", "receivable_outstanding": "0.00", "recent_count": 0}}
+        overview = {"payables": [], "receivables": [], "pending_ufc_payments": [], "recent_payments": [], "payment_modes": {}, "summary": {"outstanding": "0.00", "payable_outstanding": "0.00", "ufc_pending_confirmation": "0.00", "ufc_pending_count": 0, "receivable_outstanding": "0.00", "recent_count": 0}}
     return render_template("modules/farmer_payments.html", overview=overview)
+
+
+@modules_bp.route("/my-payments/ufc/report", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def report_farmer_ufc_payment():
+    try:
+        result = stage8_record_payment(
+            session.get("user_id"),
+            "ufc_farmer_invoice",
+            request.form.get("invoice_id"),
+            request.form.get("amount"),
+            request.form.get("payment_mode"),
+            reference=request.form.get("reference", ""),
+            note=request.form.get("note", ""),
+            idempotency_key=request.form.get("payment_token", ""),
+        )
+        flash(result.get("message") or "Payment reported to your UFC.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_payments"))
 
 
 @modules_bp.route("/payment-receipts/<payment_id>/print")
@@ -4314,6 +4245,132 @@ def farmer_produce_stock_loss():
     return redirect(url_for("modules.farmer_produce_stock"))
 
 
+@modules_bp.route("/farmer-pos", methods=["GET", "POST"])
+@login_required
+@roles_required("farmer")
+def farmer_pos():
+    if request.method == "POST":
+        sale_result = None
+        try:
+            sale_result = create_farmer_pos_sale(
+                session.get("user_id"),
+                request.form.get("cart_json", "[]"),
+                buyer_type=request.form.get("buyer_type", "local_buyer"),
+                buyer_name=request.form.get("buyer_name", ""),
+                buyer_phone=request.form.get("buyer_phone", ""),
+                buyer_address=request.form.get("buyer_address", ""),
+                buyer_state=request.form.get("buyer_state", ""),
+                payment_term=request.form.get("payment_term", "pay_now"),
+                credit_days=request.form.get("credit_days", 0),
+                sale_date=request.form.get("sale_date"),
+                note=request.form.get("note", ""),
+                idempotency_key=request.form.get("sale_token", ""),
+            )
+            sale = sale_result.get("sale") or {}
+            invoice = sale_result.get("invoice") or {}
+            flash(sale_result.get("message") or "Farmer POS sale completed.", "success")
+
+            amount_received = str(request.form.get("amount_received") or "").strip()
+            try:
+                amount_value = float(amount_received or 0)
+            except (TypeError, ValueError):
+                amount_value = 0
+            if amount_value > 0 and invoice.get("id"):
+                try:
+                    payment_result = stage8_record_payment(
+                        session.get("user_id"), "farmer_pos_invoice", invoice.get("id"),
+                        amount_received, request.form.get("payment_mode") or "cash",
+                        reference=request.form.get("payment_reference", ""),
+                        note="Collected at Farmer POS checkout. " + str(request.form.get("payment_note") or ""),
+                        idempotency_key=request.form.get("payment_token", ""),
+                    )
+                    flash(payment_result.get("message") or "Buyer payment recorded.", "success")
+                except (ValueError, PermissionError, RuntimeError) as exc:
+                    flash("Sale and produce stock update are complete; only payment needs attention: " + str(exc), "warning")
+
+            if wants_json_response():
+                return jsonify(json_safe({"ok": True, **sale_result})), 201
+            return redirect(url_for("modules.farmer_pos_invoice", sale_id=sale.get("id")))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if wants_json_response():
+                return json_error(str(exc), 400)
+            flash(str(exc), "danger")
+
+    try:
+        context = get_farmer_pos_context(session.get("user_id"), search=request.args.get("q", ""))
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        context = {
+            "farmer": {}, "catalog": [], "mapped_ufc": {}, "buyer_types": {}, "payment_terms": {}, "sales": [],
+            "sale_token": f"FARMER-POS-{uuid4().hex.upper()}",
+            "payment_token": f"FARMER-POS-PAY-{uuid4().hex.upper()}",
+            "today": business_today().isoformat(), "query": request.args.get("q", ""),
+            "summary": {"products": 0, "outstanding": "0.00"},
+        }
+    return render_template("modules/farmer_sale_form.html", **context)
+
+
+@modules_bp.route("/farmer-pos/invoice/<sale_id>")
+@login_required
+@roles_required("farmer")
+def farmer_pos_invoice(sale_id):
+    try:
+        context = get_pos_sale_context(session.get("user_id"), sale_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.farmer_pos"))
+    return render_template("modules/farmer_pos_invoice.html", **context)
+
+
+@modules_bp.route("/farmer-pos/<sale_id>/payment", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_pos_record_payment(sale_id):
+    try:
+        context = get_pos_sale_context(session.get("user_id"), sale_id)
+        invoice = context.get("invoice") or {}
+        if not invoice.get("id"):
+            raise ValueError("This Farmer POS receipt is not ready for payment.")
+        result = stage8_record_payment(
+            session.get("user_id"), "farmer_pos_invoice", invoice.get("id"),
+            request.form.get("amount"), request.form.get("payment_mode"),
+            reference=request.form.get("reference", ""), note=request.form.get("note", ""),
+            idempotency_key=request.form.get("payment_token", ""),
+        )
+        flash(result.get("message") or "Buyer payment recorded.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_pos_invoice", sale_id=sale_id))
+
+
+@modules_bp.route("/farmer-pos/<sale_id>/payments/<payment_id>/reverse", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_pos_reverse_payment(sale_id, payment_id):
+    try:
+        context = get_pos_sale_context(session.get("user_id"), sale_id)
+        if not any(str(row.get("id")) == str(payment_id) for row in context.get("payments", [])):
+            raise ValueError("This payment is not linked to the selected Farmer POS sale.")
+        result = stage8_reverse_payment(session.get("user_id"), payment_id, request.form.get("reason", ""))
+        flash(result.get("message") or "Buyer payment reversed.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_pos_invoice", sale_id=sale_id))
+
+
+@modules_bp.route("/farmer-pos/<sale_id>/void", methods=["POST"])
+@login_required
+@roles_required("farmer")
+def farmer_pos_void_sale(sale_id):
+    try:
+        result = void_pos_sale(session.get("user_id"), sale_id, request.form.get("reason", ""))
+        flash(result.get("message") or "Farmer POS sale voided.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+    return redirect(url_for("modules.farmer_pos_invoice", sale_id=sale_id))
+
+
+# Legacy single-item outside-sale route retained for old links/history.
 @modules_bp.route("/farmer-sales/new", methods=["GET", "POST"])
 @login_required
 @roles_required("farmer")
@@ -4379,7 +4436,7 @@ def farmer_sales_new():
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), "danger")
         context = {"farmer": {}, "stock_rows": [], "buyer_types": {}, "payment_terms": {}, "mapped_ufc": {}, "today": business_today().isoformat(), "sale_token": f"FSALE-{uuid4().hex.upper()}", "payment_token": f"FPAY-{uuid4().hex.upper()}"}
-    return render_template("modules/farmer_sale_form.html", **context)
+    return render_template("modules/farmer_sale_form_legacy.html", **context)
 
 
 @modules_bp.route("/farmer-sales")
@@ -4945,22 +5002,30 @@ def receive_avpl_order(order_id):
 @login_required
 @roles_required('ufc_admin')
 def ufc_stock():
+    q = request.args.get('q', '')
     try:
         overview = get_ufc_stock_overview(
-            session.get('user_id'),
-            session.get('centre_uid'),
-            search=request.args.get('q', ''),
+            session.get('user_id'), session.get('centre_uid'), search=q,
         )
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), 'danger')
         overview = {
-            'rows': [],
-            'centre_uid': session.get('centre_uid') or '',
-            'centre_name': session.get('centre_uid') or 'UFC',
-            'query': request.args.get('q', ''),
+            'rows': [], 'centre_uid': session.get('centre_uid') or '',
+            'centre_name': session.get('centre_uid') or 'UFC', 'query': q,
             'summary': {'product_count': 0, 'stock_value': '0.00'},
         }
-    return render_template('modules/ufc_stock.html', overview=overview)
+    try:
+        output_overview = get_ufc_output_stock_overview(
+            session.get('user_id'), session.get('centre_uid'), search=q,
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash('Farmer Produce stock could not be loaded: ' + str(exc), 'warning')
+        output_overview = {
+            'rows': [], 'centre_uid': overview.get('centre_uid') or session.get('centre_uid') or '',
+            'centre_name': overview.get('centre_name') or session.get('centre_uid') or 'UFC', 'query': q,
+            'summary': {'product_count': 0, 'stock_value': '0.00'},
+        }
+    return render_template('modules/ufc_stock.html', overview=overview, output_overview=output_overview)
 
 
 @modules_bp.route('/ufc-purchases')

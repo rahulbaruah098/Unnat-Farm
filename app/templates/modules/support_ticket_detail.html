@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}Support Ticket {{ ticket.get('ticket_ref') }}{% endblock %}
+{% block content %}
+<style>
+.ticket-page{width:100%;display:grid;gap:18px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#263b2f}.ticket-head,.ticket-panel{background:#fff;border:1px solid #e1ece4;border-radius:20px;box-shadow:0 16px 40px rgba(25,68,43,.07)}.ticket-head{padding:22px}.top-row{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.title-wrap{display:flex;gap:10px;align-items:flex-start;min-width:0}.back{width:40px;height:40px;border:1px solid #d7e4da;border-radius:10px;background:#fff;color:#2f7548;font-size:1.1rem;font-weight:900;cursor:pointer}.eyebrow{display:inline-flex;padding:5px 9px;border-radius:8px;background:#edf8f0;color:#2f7548;font-size:.68rem;font-weight:900;text-transform:uppercase}.ticket-head h2{margin:8px 0 5px;color:#17251d;font-size:clamp(1.35rem,2.3vw,1.9rem)}.muted{color:#77857d;font-size:.75rem;line-height:1.5}.pill{display:inline-flex;padding:6px 9px;border-radius:9px;font-size:.67rem;font-weight:900}.status-open{background:#eff6ff;color:#1d4ed8}.status-in_progress{background:#fff7ed;color:#b45309}.status-waiting_for_user{background:#fefce8;color:#8a6100}.status-resolved{background:#ecfdf3;color:#137a3f}.status-closed{background:#f3f4f6;color:#5f6871}.priority-low{background:#f1f8f3;color:#2f7548}.priority-medium{background:#fff8e7;color:#8a6100}.priority-high{background:#fff1f2;color:#be123c}.priority-urgent{background:#7f1d1d;color:#fff}.meta-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px}.meta{padding:11px;border:1px solid #e4ece6;border-radius:11px;background:#fafcfb}.meta span{display:block;color:#7d8a82;font-size:.62rem;font-weight:900;text-transform:uppercase}.meta strong{display:block;margin-top:4px;font-size:.74rem;color:#304438;word-break:break-word}.layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,.7fr);gap:18px}.ticket-panel{padding:19px}.ticket-panel h3{margin:0 0 5px;color:#21362a;font-size:1rem}.conversation{display:grid;gap:12px;margin-top:14px}.msg{border:1px solid #e2ebe4;border-radius:14px;padding:13px;background:#fff}.msg.support{background:#f3faf5;border-color:#d2e8d8}.msg.internal{background:#fff8e7;border-color:#f2d99a}.msg-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px}.msg-head strong{font-size:.78rem;color:#263b2f}.msg-head span{font-size:.64rem;color:#829087}.msg-body{white-space:pre-wrap;color:#3f5146;font-size:.76rem;line-height:1.55}.attachments{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.file-link{display:inline-flex;padding:6px 8px;border-radius:8px;background:#eef7f1;color:#2f7548;text-decoration:none;font-size:.67rem;font-weight:900}.reply-form,.manage-form{display:grid;gap:10px;margin-top:14px}.reply-form textarea,.manage-form textarea,.manage-form select,.manage-form input{width:100%;border:1px solid #d6e4da;border-radius:10px;padding:10px 11px;font:inherit;font-size:.75rem;color:#2b3e31;background:#fff;outline:none}.reply-form textarea,.manage-form textarea{min-height:95px;resize:vertical}.reply-form input[type=file]{font-size:.72rem}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:0;border-radius:9px;background:#397e51;color:#fff;font:inherit;font-size:.7rem;font-weight:900;text-decoration:none;cursor:pointer}.btn.secondary{background:#f2f7f3;color:#326b46;border:1px solid #d6e4da}.btn.warning{background:#b45309}.btn.danger{background:#b42318}.note{padding:11px 12px;border-radius:10px;background:#f7faf8;border:1px solid #e0e9e2;color:#56665c;font-size:.72rem;line-height:1.5}.control-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.control-grid .full{grid-column:1/-1}.control-grid label{display:grid;gap:5px;color:#617068;font-size:.67rem;font-weight:900}.resolution{margin-top:12px;padding:12px;border-radius:11px;background:#ecfdf3;border:1px solid #c9ead5;color:#24543a;font-size:.74rem;line-height:1.5}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.timeline{display:grid;gap:8px;margin-top:12px}.timeline-item{padding:9px 10px;border-left:3px solid #cfe0d4;background:#fbfdfb;border-radius:0 8px 8px 0;font-size:.69rem;color:#5f6f66}.contact{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.contact div{padding:10px;border:1px solid #e3ebe5;border-radius:10px;background:#fbfdfb}.contact span{display:block;font-size:.6rem;color:#819087;font-weight:900;text-transform:uppercase}.contact strong{display:block;margin-top:3px;font-size:.69rem;color:#34483b;word-break:break-word}@media(max-width:1000px){.layout{grid-template-columns:1fr}.meta-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:650px){.ticket-head,.ticket-panel{padding:14px;border-radius:16px}.meta-grid,.control-grid,.contact{grid-template-columns:1fr}.control-grid .full{grid-column:auto}.actions .btn{width:100%}}
+</style>
+
+<div class="ticket-page">
+  <section class="ticket-head">
+    <div class="top-row">
+      <div class="title-wrap">
+        <button class="back" type="button" onclick="location.href='{{ url_for('modules.support') }}'" aria-label="Back">←</button>
+        <div>
+          <span class="eyebrow">{{ ticket.get('ticket_ref') }}</span>
+          <h2>{{ ticket.get('subject') }}</h2>
+          <div class="muted">{{ ticket.get('problem_type') }} · Last updated {{ ticket.get('last_activity_at_display') }}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <span class="pill status-{{ ticket.get('status') }}">{% if not is_support_admin and ticket.get('status') == 'waiting_for_user' %}Waiting for You{% else %}{{ ticket.get('status_label') }}{% endif %}</span>
+        <span class="pill priority-{{ ticket.get('priority') }}">{{ ticket.get('priority_label') }}</span>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta"><span>Created</span><strong>{{ ticket.get('created_at_display') }}</strong></div>
+      <div class="meta"><span>Progress</span><strong>{{ ticket.get('progress') or 'Ticket received' }}</strong></div>
+      <div class="meta"><span>Source</span><strong>{{ ticket.get('source_label') }}</strong></div>
+      <div class="meta"><span>Requester</span><strong>{{ ticket.get('user_name') or ticket.get('requester_name') or 'User' }}</strong></div>
+      <div class="meta"><span>Role</span><strong>{{ (ticket.get('role') or 'user')|replace('_',' ')|title }}</strong></div>
+    </div>
+
+    {% if ticket.get('resolution_note') %}<div class="resolution"><strong>Resolution:</strong> {{ ticket.get('resolution_note') }}</div>{% endif %}
+  </section>
+
+  <div class="layout">
+    <section class="ticket-panel">
+      <h3>Conversation</h3>
+      <div class="muted">All public replies and attachments stay with this ticket.</div>
+
+      <div class="conversation">
+        {% for m in ticket.get('messages',[]) %}
+        <div class="msg {% if m.get('visibility') == 'internal' %}internal{% elif m.get('author_type') == 'support' %}support{% endif %}">
+          <div class="msg-head">
+            <strong>{{ m.get('author_name') }}{% if m.get('visibility') == 'internal' %} · Internal Note{% elif m.get('author_type') == 'support' %} · Support{% endif %}</strong>
+            <span>{{ m.get('created_at_display') }}</span>
+          </div>
+          <div class="msg-body">{{ m.get('body') }}</div>
+          {% if m.get('attachments') %}
+          <div class="attachments">
+            {% for a in m.get('attachments',[]) %}
+            <a class="file-link" target="_blank" href="{{ url_for('documents.serve', filename=a.get('filename')) }}">{{ a.get('original_name') or 'Attachment' }}</a>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="note">No conversation messages are available for this older ticket.</div>
+        {% endfor %}
+      </div>
+
+      {% if ticket.get('can_reply') %}
+      <form class="reply-form" method="post" enctype="multipart/form-data" action="{{ url_for('modules.support_ticket_reply', ticket_id=ticket.get('id')) }}">
+        <h3 style="margin-top:8px">{{ 'Reply to User' if is_support_admin else 'Reply to Support' }}</h3>
+        <textarea name="message" maxlength="6000" placeholder="Write your reply..." required></textarea>
+        <input type="file" name="attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.doc,.docx,.xls,.xlsx">
+        {% if is_support_admin %}
+        <label style="display:flex;align-items:center;gap:7px;font-size:.7rem;color:#5f6f66"><input type="checkbox" name="visibility" value="internal" style="width:auto"> Save as internal Support note (hidden from user)</label>
+        {% endif %}
+        <button class="btn" type="submit">{{ 'Send Reply' if is_support_admin else 'Send Reply to Support' }}</button>
+      </form>
+      {% elif not is_support_admin %}
+      <div class="note" style="margin-top:14px">This ticket is closed. Reopen it if you still need help.</div>
+      {% endif %}
+    </section>
+
+    <aside class="ticket-panel">
+      {% if is_support_admin %}
+      <h3>Support Controls</h3>
+      <div class="muted">Update the status and keep the requester informed.</div>
+      <form class="manage-form" method="post" action="{{ url_for('modules.update_support_ticket', ticket_id=ticket.get('id')) }}">
+        <div class="control-grid">
+          <label>Status<select name="status" required>{% for value,label in statuses.items() %}<option value="{{ value }}" {% if ticket.get('status') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+          <label>Priority<select name="priority" required>{% for value,label in priorities.items() %}<option value="{{ value }}" {% if ticket.get('priority') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+          <label class="full">Progress<textarea name="progress" maxlength="1000" placeholder="Example: Issue reproduced; checking payment sync">{{ ticket.get('progress') or '' }}</textarea></label>
+          <label class="full">Resolution Note<textarea name="resolution_note" maxlength="4000" placeholder="Required when marking Resolved">{{ ticket.get('resolution_note') or '' }}</textarea></label>
+        </div>
+        <button class="btn" type="submit">Save Ticket Update</button>
+      </form>
+
+      {% if ticket.get('history') %}
+      <h3 style="margin-top:20px">Activity Log</h3>
+      <div class="timeline">
+        {% for h in ticket.get('history',[])|reverse %}
+        <div class="timeline-item"><strong>{{ (h.get('action') or '')|replace('_',' ')|title }}</strong><br>{{ h.get('note') }}{% if h.get('created_at_display') %}<br><span class="muted">{{ h.get('created_at_display') }}</span>{% endif %}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% else %}
+      <h3>Ticket Actions</h3>
+      <div class="muted">You can close a solved ticket or reopen it if the issue returns.</div>
+      <div class="actions">
+        {% if ticket.get('can_reopen') %}
+        <form method="post" action="{{ url_for('modules.support_ticket_action', ticket_id=ticket.get('id')) }}"><input type="hidden" name="action" value="reopen"><button class="btn warning" type="submit">Reopen Ticket</button></form>
+        {% elif ticket.get('can_close') %}
+        <form method="post" action="{{ url_for('modules.support_ticket_action', ticket_id=ticket.get('id')) }}" onsubmit="return confirm('Close this support ticket?');"><input type="hidden" name="action" value="close"><button class="btn secondary" type="submit">Close Ticket</button></form>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="contact">
+        <div><span>Support Email</span><strong>{{ support_email }}</strong></div>
+        <div><span>Support Number</span><strong>{{ support_number }}</strong></div>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

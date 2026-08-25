@@ -2,7 +2,476 @@
 {% block title %}AVPL Payments{% endblock %}
 {% block content %}
 <style>
-.pay{width:100%;padding:24px;background:#fff;border:1px solid #dceee2;border-radius:24px;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.head h2{margin:0;color:#17252a}.head-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;border:1px solid #cfe6d8;border-radius:999px;padding:8px 12px;background:#f3fbf6;color:#2f7a4c;text-decoration:none;font-weight:900}.muted{color:#64748b}.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0}.sum{padding:13px;border:1px solid #e2efe6;border-radius:14px;background:#fbfefc}.sum small{display:block;color:#64748b}.sum strong{display:block;margin-top:4px;font-size:1.18rem;color:#17252a}.notice{padding:12px 14px;border:1px solid #b9dcca;border-radius:14px;background:#f3fbf6;color:#315e43;margin-bottom:16px;line-height:1.45}.section{margin-top:18px}.section h3{margin:0 0 10px;color:#17252a}.table{overflow:auto;border:1px solid #e2efe6;border-radius:16px}.table table{width:100%;border-collapse:collapse;min-width:1120px}.table th,.table td{padding:10px;border-bottom:1px solid #edf3ef;text-align:left;vertical-align:top}.table th{background:#f3fbf6;color:#40584a}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.76rem;font-weight:900}.unpaid{background:#fff7ed;color:#c2410c}.partially_paid{background:#fff7ed;color:#9a6700}.paid{background:#ecfdf5;color:#047857}.pending_confirmation{background:#eff6ff;color:#1d4ed8}.rejected{background:#fef2f2;color:#b91c1c}.form{display:grid;grid-template-columns:100px 135px 130px 1fr auto;gap:6px;align-items:center}.form input,.form select{height:36px;border:1px solid #d6e5da;border-radius:9px;padding:0 9px;font:inherit;min-width:0}.form button{height:36px;border:0;border-radius:9px;padding:0 12px;background:#5fa878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.receipt{color:#2f7a4c;font-weight:900;text-decoration:none}.reverse{margin-top:5px;display:flex;gap:5px}.reverse input{height:30px;border:1px solid #d6e5da;border-radius:8px;padding:0 8px;font:inherit}.reverse button{height:30px;border:0;border-radius:8px;background:#b45309;color:#fff;font:inherit;font-weight:800}.confirm-actions{display:flex;gap:6px;flex-wrap:wrap}.confirm-actions form{margin:0}.confirm-btn{height:32px;border:0;border-radius:8px;padding:0 10px;background:#397e51;color:#fff;font:inherit;font-weight:900;cursor:pointer}.return-form{display:flex;gap:5px;flex-wrap:wrap}.return-form input{height:32px;border:1px solid #d6e5da;border-radius:8px;padding:0 8px;font:inherit;min-width:170px}.return-btn{height:32px;border:0;border-radius:8px;padding:0 10px;background:#b45309;color:#fff;font:inherit;font-weight:900;cursor:pointer}.empty{padding:24px;text-align:center;color:#64748b}.small{font-size:.84rem;color:#64748b}@media(max-width:760px){.pay{padding:15px}.summary{grid-template-columns:1fr 1fr}.form{grid-template-columns:1fr}.table table{min-width:980px}}@media(max-width:480px){.summary{grid-template-columns:1fr}}
+*{box-sizing:border-box}
+
+.pay{
+    width:100%;
+    padding:28px;
+    background:#fff;
+    border:1px solid #e3ebe5;
+    border-radius:20px;
+    box-shadow:0 12px 34px rgba(24,63,42,.06);
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#435349;
+}
+
+.head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:18px;
+    flex-wrap:wrap;
+    padding-bottom:18px;
+    border-bottom:1px solid #e8eeea;
+}
+
+.head h2{
+    margin:0;
+    color:#17251d;
+    font-size:1.65rem;
+    font-weight:850;
+    letter-spacing:-.025em;
+    line-height:1.2;
+}
+
+.head-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:8px 13px;
+    border:1px solid #cfdcd3;
+    border-radius:8px;
+    background:#fff;
+    color:#2f6e46;
+    text-decoration:none;
+    font-size:.72rem;
+    font-weight:850;
+    transition:.15s ease;
+}
+
+.btn:hover{
+    background:#f6faf7;
+    border-color:#b9cdbf;
+}
+
+.muted{
+    margin-top:6px;
+    color:#7b8880;
+    font-size:.72rem;
+    line-height:1.45;
+}
+
+.summary{
+    display:grid;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:10px;
+    margin:18px 0;
+}
+
+.sum{
+    min-width:0;
+    padding:14px;
+    border:1px solid #e2eae4;
+    border-radius:11px;
+    background:#fbfdfb;
+}
+
+.sum small{
+    display:block;
+    min-height:28px;
+    color:#78867d;
+    font-size:.64rem;
+    font-weight:750;
+    line-height:1.35;
+}
+
+.sum strong{
+    display:block;
+    margin-top:5px;
+    color:#203529;
+    font-size:1.05rem;
+    font-weight:850;
+    line-height:1.2;
+    overflow-wrap:anywhere;
+}
+
+.notice{
+    margin-bottom:16px;
+    padding:12px 14px;
+    border:1px solid #d7e4da;
+    border-left:3px solid #5c9870;
+    border-radius:9px;
+    background:#f8fbf9;
+    color:#526158;
+    font-size:.69rem;
+    font-weight:600;
+    line-height:1.5;
+}
+
+.notice strong{
+    color:#2f6e46;
+    font-weight:850;
+}
+
+.section{
+    margin-top:24px;
+}
+
+.section h3{
+    margin:0 0 10px;
+    color:#263b2f;
+    font-size:.92rem;
+    font-weight:850;
+}
+
+.table{
+    width:100%;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+    border:1px solid #e1e9e3;
+    border-radius:11px;
+    background:#fff;
+}
+
+.table table{
+    width:100%;
+    min-width:1120px;
+    border-collapse:collapse;
+    background:#fff;
+}
+
+.table th,
+.table td{
+    padding:10px 11px;
+    border-bottom:1px solid #edf2ee;
+    text-align:left;
+    vertical-align:middle;
+}
+
+.table th{
+    background:#f5f8f6;
+    color:#68776e;
+    font-size:.61rem;
+    font-weight:850;
+    letter-spacing:.025em;
+    text-transform:uppercase;
+    white-space:nowrap;
+}
+
+.table td{
+    color:#435349;
+    font-size:.69rem;
+    font-weight:650;
+    line-height:1.4;
+}
+
+.table tbody tr:last-child td{
+    border-bottom:0;
+}
+
+.table tbody tr:hover td{
+    background:#fbfdfb;
+}
+
+.table strong{
+    color:#263b2f;
+    font-weight:800;
+}
+
+.pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:24px;
+    padding:4px 8px;
+    border-radius:7px;
+    border:1px solid #dde5df;
+    background:#f5f7f6;
+    color:#5e6d64;
+    font-size:.60rem;
+    font-weight:850;
+    white-space:nowrap;
+}
+
+.unpaid{
+    background:#fff7ed;
+    border-color:#fed7aa;
+    color:#b45309;
+}
+
+.partially_paid{
+    background:#fffbeb;
+    border-color:#fde68a;
+    color:#92600a;
+}
+
+.paid{
+    background:#ecfdf3;
+    border-color:#b7e4c7;
+    color:#237a43;
+}
+
+.pending_confirmation{
+    background:#eff6ff;
+    border-color:#bfdbfe;
+    color:#1d4ed8;
+}
+
+.rejected{
+    background:#fef2f2;
+    border-color:#fecaca;
+    color:#b91c1c;
+}
+
+.form{
+    display:grid;
+    grid-template-columns:100px 135px 150px minmax(150px,1fr) auto;
+    gap:6px;
+    align-items:center;
+    min-width:620px;
+}
+
+.form input,
+.form select{
+    width:100%;
+    min-width:0;
+    height:34px;
+    padding:0 9px;
+    border:1px solid #d8e1da;
+    border-radius:7px;
+    background:#fff;
+    color:#34483b;
+    font:inherit;
+    font-size:.66rem;
+    font-weight:650;
+    outline:none;
+}
+
+.form input::placeholder{
+    color:#9aa59e;
+}
+
+.form input:focus,
+.form select:focus{
+    border-color:#82ad90;
+    box-shadow:0 0 0 3px rgba(47,110,70,.06);
+}
+
+.form button{
+    height:34px;
+    padding:0 11px;
+    border:1px solid #397e51;
+    border-radius:7px;
+    background:#397e51;
+    color:#fff;
+    font:inherit;
+    font-size:.64rem;
+    font-weight:850;
+    white-space:nowrap;
+    cursor:pointer;
+}
+
+.form button:hover{
+    background:#2f6e46;
+    border-color:#2f6e46;
+}
+
+.form button:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+}
+
+.receipt{
+    display:inline-flex;
+    align-items:center;
+    min-height:30px;
+    padding:5px 9px;
+    border:1px solid #cfdcd3;
+    border-radius:7px;
+    background:#fff;
+    color:#2f6e46;
+    font-size:.64rem;
+    font-weight:850;
+    text-decoration:none;
+    white-space:nowrap;
+}
+
+.receipt:hover{
+    background:#f6faf7;
+}
+
+.reverse{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    margin-top:6px;
+}
+
+.reverse input{
+    width:150px;
+    min-width:0;
+    height:30px;
+    padding:0 8px;
+    border:1px solid #e1d5c7;
+    border-radius:6px;
+    background:#fff;
+    color:#4b4037;
+    font:inherit;
+    font-size:.63rem;
+    outline:none;
+}
+
+.reverse button{
+    height:30px;
+    padding:0 9px;
+    border:1px solid #b45309;
+    border-radius:6px;
+    background:#fff;
+    color:#a34b08;
+    font:inherit;
+    font-size:.62rem;
+    font-weight:850;
+    cursor:pointer;
+}
+
+.reverse button:hover{
+    background:#fff7ed;
+}
+
+.confirm-actions{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    align-items:center;
+}
+
+.confirm-actions form{
+    margin:0;
+}
+
+.confirm-btn{
+    height:32px;
+    border:1px solid #397e51;
+    border-radius:7px;
+    padding:0 10px;
+    background:#397e51;
+    color:#fff;
+    font:inherit;
+    font-size:.63rem;
+    font-weight:850;
+    cursor:pointer;
+}
+
+.confirm-btn:hover{
+    background:#2f6e46;
+}
+
+.return-form{
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+    align-items:center;
+}
+
+.return-form input{
+    height:32px;
+    min-width:170px;
+    border:1px solid #d8e1da;
+    border-radius:7px;
+    padding:0 8px;
+    background:#fff;
+    color:#34483b;
+    font:inherit;
+    font-size:.63rem;
+    outline:none;
+}
+
+.return-btn{
+    height:32px;
+    border:1px solid #b45309;
+    border-radius:7px;
+    padding:0 10px;
+    background:#fff;
+    color:#a34b08;
+    font:inherit;
+    font-size:.63rem;
+    font-weight:850;
+    cursor:pointer;
+}
+
+.return-btn:hover{
+    background:#fff7ed;
+}
+
+.empty{
+    padding:26px!important;
+    text-align:center!important;
+    color:#87938b!important;
+    font-size:.7rem!important;
+    font-weight:650!important;
+}
+
+.small{
+    color:#7c8981;
+    font-size:.64rem;
+    line-height:1.4;
+}
+
+.section>.small{
+    margin-bottom:9px!important;
+}
+
+@media(max-width:1200px){
+    .summary{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+    }
+}
+
+@media(max-width:760px){
+    .pay{
+        padding:16px;
+        border-radius:16px;
+    }
+
+    .summary{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .head-actions,
+    .head-actions .btn{
+        width:100%;
+    }
+
+    .form{
+        grid-template-columns:1fr;
+        min-width:230px;
+    }
+
+    .form button{
+        width:100%;
+    }
+
+    .table table{
+        min-width:980px;
+    }
+}
+
+@media(max-width:480px){
+    .summary{
+        grid-template-columns:1fr;
+    }
+
+    .sum small{
+        min-height:0;
+    }
+}
 </style>
 <div class="pay">
   <div class="head"><div><h2>Payments & Settlement</h2><div class="muted">One place for Supplier payments and UFC collections.</div></div><div class="head-actions"><a class="btn" href="{{ url_for('accounting.dashboard') }}">Open Accounting</a></div></div>

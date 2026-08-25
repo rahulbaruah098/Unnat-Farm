@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}{{ course.title }}{% endblock %}
+{% block content %}
+<style>
+.page{width:100%;padding:24px;background:#fff;border:1px solid #dceee2;border-radius:22px;box-shadow:0 18px 44px rgba(15,23,42,.07);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d;box-sizing:border-box}.head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:10px 0 6px;font-size:1.75rem}.muted{color:#6b7b71;line-height:1.55}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;padding:9px 13px;background:#397e51;color:#fff;text-decoration:none;font:inherit;font-weight:850;cursor:pointer}.btn.secondary{background:#fff;color:#2f6e46;border:1px solid #cfe0d4}.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.tag{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef8f1;color:#2f6e46;font-size:.74rem;font-weight:850}.tag.mandatory{background:#fff7ed;color:#9a5200}.overall{min-width:min(100%,300px);border:1px solid #e1ece4;border-radius:14px;padding:14px;background:#fbfdfb}.overall-row{display:flex;justify-content:space-between;gap:10px;font-weight:850;font-size:.85rem}.progress{height:10px;background:#e7efe9;border-radius:999px;overflow:hidden;margin-top:8px}.progress span{display:block;height:100%;background:#397e51}.module{margin-top:16px;border:1px solid #e1ece4;border-radius:15px;background:#fff;overflow:hidden}.module>summary{cursor:pointer;padding:15px 16px;background:#f6faf7;font-weight:900}.lesson{padding:15px 16px;border-top:1px solid #edf3ef}.lesson-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.lesson h4{margin:0}.done{display:inline-flex;padding:5px 8px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:.72rem;font-weight:850}.pending{display:inline-flex;padding:5px 8px;border-radius:999px;background:#fff7ed;color:#9a5200;font-size:.72rem;font-weight:850}.content{white-space:pre-line;color:#52645a;line-height:1.65;margin-top:10px}.resources{display:grid;gap:8px;margin-top:12px}.resource{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid #e1ece4;border-radius:10px;padding:10px;background:#fbfdfb}.resource-left{min-width:0}.resource-title{font-weight:850}.resource-meta{font-size:.78rem;color:#6b7b71}.viewed{color:#047857;font-weight:800}.lesson-actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}.complete-btn{background:#397e51}.undo{background:#fff;color:#8a5b00;border:1px solid #e6c68b}.complete-banner{margin:18px 0 0;padding:16px;border:1px solid #a7f3d0;border-radius:13px;background:#ecfdf5;color:#065f46;font-weight:800}@media(max-width:650px){.page{padding:15px}.lesson-head,.resource{flex-direction:column}.overall{width:100%}}
+</style>
+
+<div class="page">
+  <div class="head">
+    <div style="flex:1;min-width:260px">
+      <a class="btn secondary" href="{{ url_for('modules.lms') }}">← My Learning</a>
+      <h2>{{ course.title }}</h2>
+      <div class="muted">{{ course.description or course.short_description }}</div>
+      <div class="tags">
+        <span class="tag">{{ course.level_label }}</span>
+        {% if course.mandatory %}<span class="tag mandatory">Mandatory</span>{% endif %}
+        {% if course.estimated_minutes %}<span class="tag">{{ course.estimated_minutes }} min</span>{% endif %}
+        {% if course.target_mode != 'all' %}<span class="tag">{{ course.target_label }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="overall">
+      <div class="overall-row"><span>Course Progress</span><span>{{ progress.progress_percent }}%</span></div>
+      <div class="progress"><span style="width:{{ progress.progress_percent }}%"></span></div>
+      <div class="muted" style="font-size:.78rem;margin-top:7px">{{ progress.completed_lessons }} of {{ progress.total_lessons }} lessons completed</div>
+    </div>
+  </div>
+
+  {% if progress.progress_status == 'completed' %}
+  <div class="complete-banner">Course completed. You can still reopen lessons and resources anytime.</div>
+  {% endif %}
+
+  {% for module in modules %}
+  <details class="module" open>
+    <summary>{{ loop.index }}. {{ module.title }}{% if module.description %} — <span class="muted">{{ module.description }}</span>{% endif %}</summary>
+
+    {% for lesson in module.get('lessons',[]) %}
+    <section class="lesson">
+      <div class="lesson-head">
+        <div>
+          <h4>{{ lesson.title }}</h4>
+          <div class="muted">{{ lesson.estimated_minutes or 0 }} min · {{ 'Required' if lesson.required else 'Optional' }}</div>
+        </div>
+        {% if lesson.completed %}<span class="done">Completed</span>{% else %}<span class="pending">Pending</span>{% endif %}
+      </div>
+
+      {% if lesson.summary %}<div class="muted" style="margin-top:8px">{{ lesson.summary }}</div>{% endif %}
+      {% if lesson.content_text %}<div class="content">{{ lesson.content_text }}</div>{% endif %}
+
+      {% if lesson.get('resources') %}
+      <div class="resources">
+        {% for resource in lesson.get('resources',[]) %}
+        <div class="resource">
+          <div class="resource-left">
+            <div class="resource-title">{{ resource.title }}</div>
+            <div class="resource-meta">{{ resource.resource_type_label }}{% if resource.description %} · {{ resource.description }}{% endif %}{% if resource.viewed %} · <span class="viewed">Opened</span>{% endif %}</div>
+          </div>
+          <a class="btn secondary" target="_blank" rel="noopener" href="{{ url_for('modules.lms_resource_open', resource_id=resource.id) }}">Open Resource</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="lesson-actions">
+        {% if not lesson.completed %}
+        <form method="post" action="{{ url_for('modules.lms_lesson_complete', lesson_id=lesson.id) }}">
+          <input type="hidden" name="course_id" value="{{ course.id }}">
+          <input type="hidden" name="completed" value="1">
+          <button class="btn complete-btn" type="submit">Mark Lesson Complete</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('modules.lms_lesson_complete', lesson_id=lesson.id) }}">
+          <input type="hidden" name="course_id" value="{{ course.id }}">
+          <input type="hidden" name="completed" value="0">
+          <button class="btn undo" type="submit">Mark Incomplete</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+    {% else %}
+    <div class="lesson muted">No lessons have been published in this module yet.</div>
+    {% endfor %}
+  </details>
+  {% else %}
+  <div class="muted" style="padding:24px;text-align:center">No course modules are available yet.</div>
+  {% endfor %}
+</div>
+{% endblock %}

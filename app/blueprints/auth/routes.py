@@ -12,6 +12,15 @@ from app.utils.helpers import now_utc
 from app.services.user_service import get_user_for_login, update_last_login, create_farmer_registration, complete_ufc_admin_profile, complete_ufc_mitra_profile
 from app.services.mapping_service import validate_farmer_mapping
 from app.services.document_service import store_document
+from app.services.support_service import (
+    PUBLIC_ACCOUNT_TYPES,
+    PUBLIC_LOGIN_PROBLEM_TYPES,
+    SUPPORT_EMAIL,
+    SUPPORT_NUMBER,
+    create_public_login_ticket as support_create_public_login_ticket,
+    get_public_login_ticket as support_get_public_login_ticket,
+    reply_public_login_ticket as support_reply_public_login_ticket,
+)
 from app.services.ufc_profile_service import (
     get_ufc_profile_documents,
     normalize_gstin,
@@ -24,6 +33,37 @@ from app.services.location_service import list_states, list_districts, list_bloc
 auth_bp = Blueprint('auth', __name__)
 
 GSTIN_FORMAT = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
+
+
+FARMER_LMS_ACTIVITIES = {"Pig", "Goat", "Poultry", "Cattle", "Fishery", "Agri"}
+FARMER_LMS_AGRI_SUB_CATEGORIES = {
+    "Maize", "Joha Rice", "Mustard Seed", "Black Rice",
+    "Ginger", "Turmeric", "Black Pepper",
+}
+
+
+def _normalize_farmer_lms_profile(form):
+    """Keep registration targeting data clean for LMS assignment."""
+    form = dict(form or {})
+    activities = []
+    for value in form.get("activities") or []:
+        clean = str(value or "").strip()
+        if clean in FARMER_LMS_ACTIVITIES and clean not in activities:
+            activities.append(clean)
+
+    sub_categories = []
+    for value in form.get("agri_sub_categories") or []:
+        clean = str(value or "").strip()
+        if clean in FARMER_LMS_AGRI_SUB_CATEGORIES and clean not in sub_categories:
+            sub_categories.append(clean)
+
+    if sub_categories and "Agri" not in activities:
+        activities.append("Agri")
+
+    form["activities"] = activities
+    form["agri_sub_categories"] = sub_categories
+    return form
+
 
 def _normalize_optional_gstin(value, registered=None, pan="", state=""):
     return normalize_gstin(value, registered=registered, pan=pan, state=state)
@@ -257,128 +297,87 @@ def privacy_policy():
 
 @auth_bp.route("/login-support", methods=["GET", "POST"])
 def login_support():
-    support_email = "ites@sayanant.com"
-    support_number = "9957367398"
-
-    problem_types = [
-        "Unable to Login",
-        "Forgot Password",
-        "Forgot Username",
-        "Account Inactive",
-        "Wrong Login Type Selected",
-        "Mobile Number Changed",
-        "Email ID Changed",
-        "Approval Pending",
-        "Account Not Found",
-        "Password Reset Required",
-        "Other Login Issue",
-    ]
-
-    account_types = [
-        "Authority",
-        "UnnatFarm Centre",
-        "UnnatFarm Mitra",
-        "Farmer",
-        "Not Sure",
-    ]
-
+    support_email = SUPPORT_EMAIL
+    support_number = SUPPORT_NUMBER
+    problem_types = PUBLIC_LOGIN_PROBLEM_TYPES
+    account_types = PUBLIC_ACCOUNT_TYPES
     tracked_ticket = None
     track_ref = ""
+    track_mobile = ""
 
     if request.method == "POST":
-        form_action = request.form.get("form_action", "").strip()
+        form_action = request.form.get("form_action", "create_ticket").strip()
 
-        # Track existing request by ticket reference
         if form_action == "track_ticket":
             track_ref = request.form.get("ticket_ref", "").strip().upper()
+            track_mobile = request.form.get("track_mobile", "").strip()
+            try:
+                tracked_ticket = support_get_public_login_ticket(track_ref, track_mobile)
+                session["login_support_recent_ref"] = track_ref
+                session["login_support_recent_mobile"] = track_mobile
+            except (ValueError, PermissionError, RuntimeError) as exc:
+                flash(str(exc), "danger")
 
-            if not track_ref:
-                flash("Please enter your ticket reference number.", "danger")
-                return redirect(url_for("auth.login_support"))
+        elif form_action == "public_reply":
+            track_ref = request.form.get("ticket_ref", "").strip().upper()
+            track_mobile = request.form.get("track_mobile", "").strip()
+            try:
+                result = support_reply_public_login_ticket(
+                    ticket_ref=track_ref,
+                    mobile=track_mobile,
+                    message=request.form.get("reply_message", ""),
+                    files=request.files.getlist("attachments"),
+                )
+                flash(result.get("message") or "Reply sent to Support.", "success")
+                tracked_ticket = support_get_public_login_ticket(track_ref, track_mobile)
+                session["login_support_recent_ref"] = track_ref
+                session["login_support_recent_mobile"] = track_mobile
+            except (ValueError, PermissionError, RuntimeError) as exc:
+                flash(str(exc), "danger")
 
-            tracked_ticket = mongo.db.support_tickets.find_one({
-                "ticket_ref": track_ref,
-                "ticket_source": "login_page"
-            })
+        else:
+            requester_name = request.form.get("requester_name", "").strip()
+            mobile = request.form.get("mobile", "").strip()
+            email = request.form.get("email", "").strip()
+            account_type = request.form.get("account_type", "").strip()
+            identifier = request.form.get("identifier", "").strip()
+            problem_type = request.form.get("problem_type", "").strip()
+            subject = request.form.get("subject", "").strip()
+            message = request.form.get("message", "").strip()
+            try:
+                result = support_create_public_login_ticket(
+                    requester_name=requester_name,
+                    mobile=mobile,
+                    email=email,
+                    account_type=account_type,
+                    identifier=identifier,
+                    problem_type=problem_type,
+                    subject=subject,
+                    message=message,
+                    files=request.files.getlist("attachments"),
+                )
+                track_ref = result.get("ticket_ref") or ""
+                track_mobile = mobile
+                session["login_support_recent_ref"] = track_ref
+                session["login_support_recent_mobile"] = track_mobile
+                flash(result.get("message") or "Login Support ticket raised successfully.", "success")
+                return redirect(url_for("auth.login_support", ticket_ref=track_ref))
+            except (ValueError, PermissionError, RuntimeError) as exc:
+                flash(str(exc), "danger")
 
-            if not tracked_ticket:
-                flash("No login support request found for this ticket reference number.", "danger")
-
-            return render_template(
-                "auth/login_support.html",
-                support_email=support_email,
-                support_number=support_number,
-                problem_types=problem_types,
-                account_types=account_types,
-                tracked_ticket=tracked_ticket,
-                track_ref=track_ref
-            )
-
-        # Submit new login support request
-        requester_name = request.form.get("requester_name", "").strip()
-        mobile = request.form.get("mobile", "").strip()
-        email = request.form.get("email", "").strip()
-        account_type = request.form.get("account_type", "").strip()
-        identifier = request.form.get("identifier", "").strip()
-        problem_type = request.form.get("problem_type", "").strip()
-        subject = request.form.get("subject", "").strip()
-        message = request.form.get("message", "").strip()
-
-        if not requester_name or not mobile or not account_type or not problem_type or not subject or not message:
-            flash("Please fill all required fields.", "danger")
-            return redirect(url_for("auth.login_support"))
-
-        ticket_ref = "LOGIN-" + now_utc().strftime("%Y%m%d%H%M%S")
-
-        mongo.db.support_tickets.insert_one({
-            "ticket_ref": ticket_ref,
-
-            # Source tracking
-            "ticket_source": "login_page",
-            "source_label": "Login Page",
-            "submitted_from": "Login Page Support & Help",
-
-            # No logged-in user available
-            "user_id": "",
-            "user_name": requester_name,
-            "username": identifier or "",
-            "role": "public_login_user",
-
-            # Public form details
-            "requester_name": requester_name,
-            "phone": mobile,
-            "email": email,
-            "account_type": account_type,
-            "login_identifier": identifier,
-
-            # Support ticket fields
-            "subject": subject,
-            "problem_type": problem_type,
-            "priority": "high" if problem_type in ["Unable to Login", "Forgot Password", "Account Inactive"] else "medium",
-            "message": message,
-            "support_email": support_email,
-            "support_number": support_number,
-            "status": "open",
-            "progress": "Ticket received from login page",
-            "resolution_note": "",
-
-            "created_at": now_utc(),
-            "updated_at": now_utc(),
-            "resolved_at": None,
-            "updated_by": None
-        })
-
-        flash(f"Support request submitted successfully. Your ticket reference is {ticket_ref}. Please save this number to track your request.", "success")
-        return redirect(url_for("auth.login_support", ticket_ref=ticket_ref))
-
-    # Optional auto-track after submit redirect
-    query_ticket_ref = request.args.get("ticket_ref", "").strip().upper()
-    if query_ticket_ref:
-        tracked_ticket = mongo.db.support_tickets.find_one({
-            "ticket_ref": query_ticket_ref,
-            "ticket_source": "login_page"
-        })
-        track_ref = query_ticket_ref
+    query_ref = request.args.get("ticket_ref", "").strip().upper()
+    if query_ref and not tracked_ticket:
+        recent_ref = str(session.get("login_support_recent_ref") or "").strip().upper()
+        recent_mobile = str(session.get("login_support_recent_mobile") or "").strip()
+        if recent_ref == query_ref and recent_mobile:
+            try:
+                tracked_ticket = support_get_public_login_ticket(query_ref, recent_mobile)
+                track_ref = query_ref
+                track_mobile = recent_mobile
+            except (ValueError, PermissionError, RuntimeError):
+                tracked_ticket = None
+        else:
+            track_ref = query_ref
 
     return render_template(
         "auth/login_support.html",
@@ -387,8 +386,10 @@ def login_support():
         problem_types=problem_types,
         account_types=account_types,
         tracked_ticket=tracked_ticket,
-        track_ref=track_ref
+        track_ref=track_ref,
+        track_mobile=track_mobile,
     )
+
 
 #Changes by atlanta
 @auth_bp.route('/register/farmer', methods=['GET', 'POST'])
@@ -575,6 +576,8 @@ def register_farmer():
         if not isinstance(form['agri_sub_categories'], list):
             form['agri_sub_categories'] = []
 
+        form = _normalize_farmer_lms_profile(form)
+
         valid, message = validate_farmer_mapping(
             form['centre_uid'],
             form['mitra_uid']
@@ -639,6 +642,7 @@ def register_farmer():
     'activities': request.form.getlist('activities'),
     'agri_sub_categories': request.form.getlist('agri_sub_categories'),
 }
+        form = _normalize_farmer_lms_profile(form)
 
         if not form['centre_uid'] or not form['mitra_uid']:
             flash('Centre UID and UFC Mitra UID are mandatory for farmer registration.', 'danger')
@@ -735,6 +739,7 @@ def complete_farmer():
             'activities': request.form.getlist('activities'),
             'agri_sub_categories': request.form.getlist('agri_sub_categories'),
         }
+        form = _normalize_farmer_lms_profile(form)
 
         if not form['centre_uid'] or not form['mitra_uid']:
             flash('Centre UID and UFC Mitra UID are mandatory.', 'danger')

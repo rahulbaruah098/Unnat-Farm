@@ -2,7 +2,32 @@
 {% block title %}My Orders{% endblock %}
 {% block content %}
 <style>
-.wrap{padding:24px;background:#fff;border:1px solid rgba(47,122,76,.11);border-radius:18px;box-shadow:0 16px 40px rgba(28,72,43,.07);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.top h2{margin:0;color:#17251d}.top p{margin:5px 0 0;color:#748279}.search{display:flex;gap:8px}.search input{height:42px;border:1px solid rgba(47,122,76,.14);border-radius:9px;padding:0 12px;font:inherit}.search button{height:42px;border:0;border-radius:9px;padding:0 15px;background:#397e51;color:#fff;font:inherit;font-weight:800}.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.sum{padding:13px;border:1px solid rgba(47,122,76,.10);border-radius:11px;background:#fbfdfb}.sum small{display:block;color:#748279}.sum strong{font-size:1.2rem;color:#17251d}.table{overflow:auto;border:1px solid rgba(47,122,76,.10);border-radius:11px}.table table{width:100%;border-collapse:collapse;min-width:900px}.table th,.table td{padding:12px;border-bottom:1px solid #edf3ef;text-align:left}.table th{background:#f7fbf8}.pill{display:inline-flex;padding:5px 9px;border-radius:9px;background:#eef8f1;color:#2f6e46;font-weight:800}.link{color:#2f6e46;font-weight:900;text-decoration:none}.cancel{border:0;background:none;color:#b91c1c;font:inherit;font-weight:800;cursor:pointer;padding:0}.empty{text-align:center;padding:28px;color:#748279}@media(max-width:650px){.wrap{padding:15px}.summary{grid-template-columns:1fr}.search{width:100%}.search input,.search button{width:100%}}
+.wrap{width:100%;padding:28px;background:#fff;border:1px solid #e3ebe5;border-radius:20px;box-shadow:0 12px 34px rgba(24,63,42,.06);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#435349}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid #e8eeea}
+.top h2{margin:0;color:#17251d;font-size:1.65rem;font-weight:850;letter-spacing:-.025em}
+.top p{margin:6px 0 0;color:#7b8880;font-size:.74rem;line-height:1.45}
+.search{display:flex;gap:7px;flex-wrap:wrap}
+.search input{min-width:240px;height:38px;border:1px solid #d8e1da;border-radius:8px;padding:0 10px;background:#fff;color:#34483b;font:inherit;font-size:.7rem;outline:none}
+.search input:focus{border-color:#82ad90;box-shadow:0 0 0 3px rgba(47,110,70,.06)}
+.search button{height:38px;border:1px solid #397e51;border-radius:8px;padding:0 14px;background:#397e51;color:#fff;font:inherit;font-size:.68rem;font-weight:850;cursor:pointer}
+.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
+.sum{padding:14px;border:1px solid #e2eae4;border-radius:11px;background:#fbfdfb}
+.sum small{display:block;color:#78867d;font-size:.65rem;font-weight:750}
+.sum strong{display:block;margin-top:5px;color:#203529;font-size:1.08rem;font-weight:850}
+.table{width:100%;overflow:auto;border:1px solid #e1e9e3;border-radius:11px;background:#fff}
+.table table{width:100%;min-width:900px;border-collapse:collapse}
+.table th,.table td{padding:10px 11px;border-bottom:1px solid #edf2ee;text-align:left;vertical-align:middle}
+.table th{background:#f5f8f6;color:#68776e;font-size:.62rem;font-weight:850;letter-spacing:.025em;text-transform:uppercase;white-space:nowrap}
+.table td{color:#435349;font-size:.69rem;font-weight:650;line-height:1.4}
+.table tr:last-child td{border-bottom:0}
+.table strong{color:#263b2f}
+.pill{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:4px 8px;border:1px solid #d7e4da;border-radius:7px;background:#f7faf8;color:#2f6e46;font-size:.61rem;font-weight:850;white-space:nowrap}
+.link{display:inline-flex;align-items:center;min-height:30px;padding:5px 9px;border:1px solid #cfdcd3;border-radius:7px;background:#fff;color:#2f6e46;font-size:.64rem;font-weight:850;text-decoration:none}
+.link:hover{background:#f6faf7}
+.cancel{border:0;background:none;color:#a93a35;font:inherit;font-size:.65rem;font-weight:850;cursor:pointer;padding:0}
+.cancel:hover{text-decoration:underline}
+.empty{text-align:center!important;padding:28px!important;color:#87938b!important}
+@media(max-width:650px){.wrap{padding:16px;border-radius:16px}.summary{grid-template-columns:1fr}.search,.search input,.search button{width:100%}.search input{min-width:0}}
 </style>
 <div class="wrap">
   <div class="top"><div><h2>My Orders</h2><p>{{ overview.get('centre_name') }} · Track requests, approval and delivery.</p></div><form class="search" method="get"><input name="q" value="{{ overview.get('query','') }}" placeholder="Search order or product"><button type="submit">Search</button></form></div>

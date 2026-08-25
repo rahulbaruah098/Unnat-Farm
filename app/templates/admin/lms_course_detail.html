@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% block title %}Manage LMS Course{% endblock %}
+{% block content %}
+<style>
+.page{width:100%;padding:24px;background:#fff;border:1px solid #dceee2;border-radius:22px;box-shadow:0 18px 44px rgba(15,23,42,.07);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d;box-sizing:border-box}.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.head h2{margin:0}.muted{color:#6b7b71;line-height:1.5}.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.tag{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef8f1;color:#2f6e46;font-size:.74rem;font-weight:850}.tag.draft{background:#fff7ed;color:#9a5200}.tag.published{background:#ecfdf5;color:#047857}.tag.archived{background:#f1f5f9;color:#64748b}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;padding:9px 13px;background:#397e51;color:#fff;text-decoration:none;font:inherit;font-weight:850;cursor:pointer}.btn.secondary{background:#fff;color:#2f6e46;border:1px solid #cfe0d4}.btn.warn{background:#b45309}.btn.danger{background:#b42318}.grid{display:grid;grid-template-columns:minmax(300px,.75fr) minmax(0,1.25fr);gap:18px;margin-top:18px;align-items:start}.panel{border:1px solid #e1ece4;border-radius:16px;padding:18px;background:#fff}.panel h3{margin:0 0 13px}.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label,.label{font-size:.82rem;font-weight:850}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;border:1px solid #d6e5da;border-radius:9px;padding:9px;font:inherit}.field textarea{min-height:80px;resize:vertical}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.check{display:flex;gap:6px;align-items:center;border:1px solid #e4ece6;border-radius:8px;padding:7px;background:#fbfdfb;font-size:.8rem}.check input{width:auto}.status-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.module{border:1px solid #dce8df;border-radius:14px;margin-bottom:12px;background:#fbfdfb;overflow:hidden}.module-head{padding:13px 14px;background:#f5faf6;border-bottom:1px solid #e1ece4}.module-head h4{margin:0}.lesson{padding:13px 14px;border-bottom:1px solid #e6eee8;background:#fff}.lesson:last-child{border-bottom:0}.lesson-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.lesson-head h5{margin:0;font-size:.98rem}.content{margin-top:8px;white-space:pre-line;color:#52645a;font-size:.87rem}.resource-list{display:grid;gap:6px;margin-top:9px}.resource{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px;border:1px solid #e4ece6;border-radius:8px;background:#fafcfa;font-size:.8rem}.mini-form{margin-top:10px;padding:10px;border:1px dashed #cfe0d4;border-radius:10px;background:#fbfdfb}.mini-form summary{cursor:pointer;font-weight:850;color:#2f6e46}.lesson-add{padding:12px 14px;background:#f8fbf9}.analytics{margin-top:18px}.table{overflow:auto;border:1px solid #e1ece4;border-radius:11px}.table table{width:100%;border-collapse:collapse;min-width:700px}.table th,.table td{padding:10px;border-bottom:1px solid #edf3ef;text-align:left;font-size:.8rem}.table th{background:#f5f8f6;color:#65736a}.progress{height:8px;background:#e8f0ea;border-radius:999px;overflow:hidden;min-width:100px}.progress span{display:block;height:100%;background:#397e51}.empty{padding:18px;text-align:center;color:#748279}@media(max-width:980px){.grid{grid-template-columns:1fr}}@media(max-width:620px){.page{padding:15px}.form,.checks{grid-template-columns:1fr}.field.full{grid-column:auto}}
+</style>
+
+<div class="page">
+  <div class="head">
+    <div>
+      <a class="btn secondary" href="{{ url_for('admin.lms_upload') }}">← LMS Management</a>
+      <h2 style="margin-top:12px">{{ course.title }}</h2>
+      <div class="muted">{{ course.short_description or course.description }}</div>
+      <div class="tags">
+        <span class="tag {{ course.status }}">{{ course.status|title }}</span>
+        <span class="tag">{{ course.audience_label }}</span>
+        <span class="tag">{{ course.level_label }}</span>
+        {% if course.mandatory %}<span class="tag">Mandatory</span>{% endif %}
+        <span class="tag">{{ course.target_label }}</span>
+      </div>
+    </div>
+    <div class="status-actions">
+      {% if course.status != 'published' %}
+      <form method="post" action="{{ url_for('admin.lms_course_status', course_id=course.id) }}"><input type="hidden" name="status" value="published"><button class="btn" type="submit">Publish Course</button></form>
+      {% else %}
+      <form method="post" action="{{ url_for('admin.lms_course_status', course_id=course.id) }}"><input type="hidden" name="status" value="draft"><button class="btn warn" type="submit">Unpublish to Draft</button></form>
+      {% endif %}
+      {% if course.status != 'archived' %}
+      <form method="post" action="{{ url_for('admin.lms_course_status', course_id=course.id) }}" onsubmit="return confirm('Archive this course? Learners will no longer see it.');"><input type="hidden" name="status" value="archived"><button class="btn danger" type="submit">Archive</button></form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h3>Course Settings</h3>
+      <form class="form" method="post" action="{{ url_for('admin.lms_course_update', course_id=course.id) }}">
+        <div class="field full"><label>Title</label><input name="title" value="{{ course.title }}" required></div>
+        <div class="field"><label>Audience</label><select name="audience">{% for value,label in audience_choices.items() %}<option value="{{ value }}" {% if course.audience==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Level</label><select name="level">{% for value,label in level_choices.items() %}<option value="{{ value }}" {% if course.level==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="field"><label>Estimated Minutes</label><input type="number" name="estimated_minutes" min="0" value="{{ course.estimated_minutes or 0 }}"></div>
+        <div class="field"><label>Targeting</label><select name="target_mode" id="editTargetMode" onchange="toggleEditTargeting()"><option value="all" {% if course.target_mode=='all' %}selected{% endif %}>All eligible learners</option><option value="profile" {% if course.target_mode=='profile' %}selected{% endif %}>Match Farmer profile</option></select></div>
+        <div class="field full"><label>Short Description</label><input name="short_description" value="{{ course.short_description or '' }}"></div>
+        <div class="field full"><label>Description</label><textarea name="description">{{ course.description or '' }}</textarea></div>
+        <div class="field full" id="editTargetFields">
+          <span class="label">Farmer Activities</span>
+          <div class="checks">{% for item in activity_choices %}<label class="check"><input type="checkbox" name="target_activities" value="{{ item }}" {% if item in course.target_activities %}checked{% endif %}> {{ item }}</label>{% endfor %}</div>
+          <span class="label" style="margin-top:8px">Agri Sub-categories</span>
+          <div class="checks">{% for item in agri_sub_category_choices %}<label class="check"><input type="checkbox" name="target_agri_sub_categories" value="{{ item }}" {% if item in course.target_agri_sub_categories %}checked{% endif %}> {{ item }}</label>{% endfor %}</div>
+        </div>
+        <label class="check full"><input type="checkbox" name="mandatory" value="1" {% if course.mandatory %}checked{% endif %}> Mandatory learning</label>
+        <div class="field full"><button class="btn" type="submit">Save Course Settings</button></div>
+      </form>
+
+      <hr style="border:0;border-top:1px solid #e8eeea;margin:18px 0">
+      <h3>Add Module</h3>
+      <form class="form" method="post" action="{{ url_for('admin.lms_module_create', course_id=course.id) }}">
+        <div class="field full"><label>Module Title</label><input name="title" required placeholder="e.g. Module 1 — Housing & Hygiene"></div>
+        <div class="field full"><label>Description</label><textarea name="description"></textarea></div>
+        <div class="field"><label>Order</label><input type="number" name="order" min="0" value="{{ modules|length + 1 }}"></div>
+        <div class="field"><button class="btn" type="submit">Add Module</button></div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h3>Course Content</h3>
+      <div class="muted" style="margin-bottom:12px">Build the course as Modules → Lessons → Resources. Resources may be PDF, video, image, office document or external link.</div>
+
+      {% for module in modules %}
+      <article class="module">
+        <div class="module-head">
+          <h4>{{ module.order }}. {{ module.title }}</h4>
+          {% if module.description %}<div class="muted">{{ module.description }}</div>{% endif %}
+        </div>
+
+        {% for lesson in module.get('lessons',[]) %}
+        <div class="lesson">
+          <div class="lesson-head">
+            <div>
+              <h5>{{ lesson.order }}. {{ lesson.title }}</h5>
+              <div class="muted">{{ lesson.estimated_minutes or 0 }} min · {{ 'Required' if lesson.required else 'Optional' }}</div>
+            </div>
+          </div>
+          {% if lesson.summary %}<div class="muted" style="margin-top:6px">{{ lesson.summary }}</div>{% endif %}
+          {% if lesson.content_text %}<div class="content">{{ lesson.content_text }}</div>{% endif %}
+
+          <div class="resource-list">
+            {% for resource in lesson.get('resources',[]) %}
+            <div class="resource">
+              <div><strong>{{ resource.title }}</strong> · {{ resource.resource_type_label }}{% if resource.description %}<div class="muted">{{ resource.description }}</div>{% endif %}</div>
+              <form method="post" action="{{ url_for('admin.lms_resource_archive', resource_id=resource.id) }}" onsubmit="return confirm('Archive this resource?');">
+                <input type="hidden" name="course_id" value="{{ course.id }}">
+                <button class="btn danger" type="submit" style="padding:6px 9px">Archive</button>
+              </form>
+            </div>
+            {% else %}
+            <div class="muted">No resources yet.</div>
+            {% endfor %}
+          </div>
+
+          <details class="mini-form">
+            <summary>Add Resource</summary>
+            <form class="form" method="post" enctype="multipart/form-data" action="{{ url_for('admin.lms_resource_create', lesson_id=lesson.id) }}" style="margin-top:10px">
+              <input type="hidden" name="course_id" value="{{ course.id }}">
+              <div class="field"><label>Title</label><input name="title" required></div>
+              <div class="field"><label>Type</label><select name="resource_type" class="resourceType" onchange="toggleResourceInput(this)">{% for value,label in resource_types.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+              <div class="field full fileWrap"><label>Upload File</label><input type="file" name="resource_file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg,.webp,.mp4,.webm,.mov,.m4v"></div>
+              <div class="field full linkWrap" style="display:none"><label>External URL</label><input name="external_url" placeholder="https://..."></div>
+              <div class="field full"><label>Description</label><input name="description"></div>
+              <div class="field"><label>Order</label><input type="number" name="order" min="0" value="{{ lesson.get('resources',[])|length + 1 }}"></div>
+              <label class="check"><input type="checkbox" name="downloadable" value="1"> Downloadable</label>
+              <div class="field full"><button class="btn" type="submit">Add Resource</button></div>
+            </form>
+          </details>
+        </div>
+        {% endfor %}
+
+        <div class="lesson-add">
+          <details>
+            <summary><strong>Add Lesson</strong></summary>
+            <form class="form" method="post" action="{{ url_for('admin.lms_lesson_create', module_id=module.id) }}" style="margin-top:10px">
+              <input type="hidden" name="course_id" value="{{ course.id }}">
+              <div class="field"><label>Lesson Title</label><input name="title" required></div>
+              <div class="field"><label>Estimated Minutes</label><input type="number" name="estimated_minutes" min="0" value="10"></div>
+              <div class="field"><label>Order</label><input type="number" name="order" min="0" value="{{ module.get('lessons',[])|length + 1 }}"></div>
+              <label class="check"><input type="checkbox" name="required" value="1" checked> Required</label>
+              <div class="field full"><label>Summary</label><input name="summary"></div>
+              <div class="field full"><label>Lesson Text / Instructions</label><textarea name="content_text" placeholder="Optional lesson notes, instructions or learning content"></textarea></div>
+              <div class="field full"><button class="btn" type="submit">Add Lesson</button></div>
+            </form>
+          </details>
+        </div>
+      </article>
+      {% else %}
+      <div class="empty">No modules yet. Add the first module from the left panel.</div>
+      {% endfor %}
+    </section>
+  </div>
+
+  <section class="panel analytics">
+    <h3>Learner Progress</h3>
+    <div class="table"><table><thead><tr><th>Learner</th><th>Status</th><th>Lessons Completed</th><th>Progress</th></tr></thead><tbody>
+      {% for learner in learners %}
+      <tr>
+        <td>{{ learner.user_name }}</td>
+        <td>{{ learner.progress_status|replace('_',' ')|title }}</td>
+        <td>{{ learner.completed_lessons }} / {{ learner.total_lessons }}</td>
+        <td><div style="display:flex;align-items:center;gap:8px"><div class="progress"><span style="width:{{ learner.progress_percent }}%"></span></div><strong>{{ learner.progress_percent }}%</strong></div></td>
+      </tr>
+      {% else %}<tr><td colspan="4" class="empty">No learner has started this course yet.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+
+<script>
+function toggleEditTargeting(){
+  const mode=document.getElementById('editTargetMode');
+  const box=document.getElementById('editTargetFields');
+  if(mode && box) box.style.display=mode.value==='profile'?'flex':'none';
+}
+function toggleResourceInput(select){
+  const form=select.closest('form');
+  if(!form)return;
+  const file=form.querySelector('.fileWrap');
+  const link=form.querySelector('.linkWrap');
+  const isLink=select.value==='link';
+  if(file) file.style.display=isLink?'none':'flex';
+  if(link) link.style.display=isLink?'flex':'none';
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  toggleEditTargeting();
+  document.querySelectorAll('.resourceType').forEach(toggleResourceInput);
+});
+</script>
+{% endblock %}

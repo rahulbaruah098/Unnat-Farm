@@ -1,370 +1,124 @@
 {% extends 'base.html' %}
+{% block title %}LMS Management{% endblock %}
 {% block content %}
-
 <style>
-.lms-page{
-    width:100%;
-    border:1px solid rgba(220,238,226,.95);
-    border-radius:26px;
-    padding:28px;
-    background:rgba(255,255,255,.92);
-    box-shadow:0 22px 55px rgba(23,37,42,.10);
-    backdrop-filter:blur(14px);
-    font-family:"Times New Roman", Georgia, serif;
-    color:#17252A;
-}
-
-.lms-title-line{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:12px;
-    margin:14px 0 8px;
-    position:relative;
-}
-
-.lms-mobile-back{
-    display:none;
-    width:42px;
-    height:42px;
-    border:none;
-    border-radius:14px;
-    align-items:center;
-    justify-content:center;
-    background:rgba(228,247,234,.82);
-    color:#3B7D55;
-    font-size:1.65rem;
-    font-weight:700;
-    cursor:pointer;
-    box-shadow:0 8px 20px rgba(95,168,120,.12);
-    transition:all .2s ease;
-    line-height:1;
-    flex:0 0 auto;
-}
-
-.lms-mobile-back:hover{
-    background:#5FA878;
-    color:#fff;
-    transform:translateX(-2px);
-}
-
-.lms-header{
-    text-align:center;
-    margin-bottom:28px;
-}
-
-.lms-kicker{
-    display:inline-flex;
-    padding:9px 18px;
-    border-radius:999px;
-    background:rgba(228,247,234,.82);
-    color:#3B7D55;
-    border:1px solid rgba(95,168,120,.25);
-    font-weight:800;
-    letter-spacing:.14em;
-    text-transform:uppercase;
-    font-size:.82rem;
-}
-
-.lms-header h2{
-    margin:0;
-    color:#17252A;
-    font-size:clamp(1.7rem, 3vw, 2.5rem);
-    font-weight:700;
-    letter-spacing:.02em;
-}
-
-.lms-header p{
-    margin:0 auto;
-    max-width:760px;
-    color:#64748B;
-    font-size:1rem;
-    line-height:1.7;
-}
-
-.lms-shell{
-    display:grid;
-    grid-template-columns:minmax(0, .95fr) minmax(0, 1.05fr);
-    gap:24px;
-    align-items:start;
-}
-
-.lms-panel{
-    border-radius:24px;
-    padding:22px;
-    background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,251,247,.92));
-    border:1px solid rgba(220,238,226,.95);
-    box-shadow:0 12px 28px rgba(23,37,42,.05);
-}
-
-.lms-panel h3{
-    margin:0 0 18px;
-    color:#17252A;
-    font-size:1.35rem;
-    font-weight:700;
-}
-
-.grid-form{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:16px;
-}
-
-.grid-form label{
-    display:flex;
-    flex-direction:column;
-    gap:7px;
-    color:#17252A;
-    font-weight:700;
-}
-
-.grid-form input,
-.grid-form select,
-.grid-form textarea{
-    width:100%;
-    border:1px solid rgba(95,168,120,.25);
-    border-radius:14px;
-    background:#fff;
-    color:#334155;
-    padding:11px 13px;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:1rem;
-    outline:none;
-    transition:.2s ease;
-}
-
-.grid-form input,
-.grid-form select{
-    min-height:46px;
-}
-
-.grid-form textarea{
-    resize:vertical;
-    min-height:110px;
-}
-
-.grid-form input:focus,
-.grid-form select:focus,
-.grid-form textarea:focus{
-    border-color:rgba(95,168,120,.55);
-    box-shadow:0 0 0 4px rgba(95,168,120,.12);
-}
-
-.span-2{
-    grid-column:1 / -1;
-}
-
-.upload-box input[type="file"]{
-    padding:10px;
-    background:#F8FAFC;
-}
-
-.span-2 button{
-    width:100%;
-    min-height:48px;
-    border:none;
-    border-radius:999px;
-    background:#5FA878;
-    color:#fff;
-    font-family:"Times New Roman", Georgia, serif;
-    font-size:1.05rem;
-    font-weight:700;
-    cursor:pointer;
-    box-shadow:0 12px 26px rgba(95,168,120,.22);
-    transition:.22s ease;
-}
-
-.span-2 button:hover{
-    background:#3B7D55;
-    transform:translateY(-1px);
-}
-
-.material-list{
-    display:grid;
-    gap:14px;
-}
-
-.material-card{
-    border:1px solid rgba(220,238,226,.95);
-    border-radius:18px;
-    padding:16px;
-    background:#fff;
-    box-shadow:0 12px 28px rgba(23,37,42,.06);
-    transition:.22s ease;
-}
-
-.material-card:hover{
-    transform:translateY(-2px);
-    box-shadow:0 18px 36px rgba(23,37,42,.10);
-}
-
-.material-title{
-    margin:0 0 10px;
-    color:#17252A;
-    font-size:1.12rem;
-    font-weight:700;
-}
-
-.material-meta{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-bottom:10px;
-}
-
-.material-pill{
-    display:inline-flex;
-    align-items:center;
-    min-height:26px;
-    padding:5px 10px;
-    border-radius:999px;
-    background:rgba(228,247,234,.72);
-    color:#3B7D55;
-    border:1px solid rgba(95,168,120,.18);
-    font-size:.82rem;
-    font-weight:800;
-}
-
-.material-file{
-    color:#64748B;
-    font-size:.95rem;
-    line-height:1.45;
-    word-break:break-word;
-}
-
-.empty-material{
-    padding:22px;
-    text-align:center;
-    border-radius:18px;
-    border:1px dashed rgba(95,168,120,.35);
-    background:rgba(228,247,234,.38);
-    color:#64748B;
-    font-weight:700;
-}
-
-@media(max-width:980px){
-    .lms-shell{
-        grid-template-columns:1fr;
-    }
-}
-
-@media(max-width:640px){
-    .lms-page{
-        padding:18px;
-        border-radius:20px;
-    }
-
-    .lms-mobile-back{
-    display:inline-flex;
-}
-
-    .grid-form{
-        grid-template-columns:1fr;
-    }
-
-    .span-2{
-        grid-column:1;
-    }
-
-    .lms-panel{
-        padding:18px;
-        border-radius:20px;
-    }
-}
+.lms{width:100%;padding:24px;background:#fff;border:1px solid #dceee2;border-radius:22px;box-shadow:0 18px 44px rgba(15,23,42,.07);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d;box-sizing:border-box}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.top h2{margin:0;font-size:1.8rem}.muted{color:#6b7b71;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:18px 0}.sum{padding:14px;border:1px solid #e1ece4;border-radius:12px;background:#fbfdfb}.sum small{display:block;color:#748279;font-weight:700}.sum strong{display:block;margin-top:5px;font-size:1.3rem}.grid{display:grid;grid-template-columns:minmax(320px,.85fr) minmax(0,1.15fr);gap:18px;align-items:start}.panel{border:1px solid #e1ece4;border-radius:16px;padding:18px;background:#fff}.panel h3{margin:0 0 14px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label,.label{font-size:.85rem;font-weight:800;color:#2b4232}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;border:1px solid #d6e5da;border-radius:10px;padding:10px;font:inherit;background:#fff}.field textarea{min-height:90px;resize:vertical}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.check{display:flex;gap:7px;align-items:center;border:1px solid #e4ece6;border-radius:9px;padding:8px;background:#fbfdfb;font-size:.85rem}.check input{width:auto}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;padding:10px 14px;background:#397e51;color:#fff;text-decoration:none;font:inherit;font-weight:850;cursor:pointer}.btn.secondary{background:#fff;color:#2f6e46;border:1px solid #cfe0d4}.btn.warn{background:#b45309}.filters{display:grid;grid-template-columns:1fr 150px auto;gap:8px;margin-bottom:12px}.filters input,.filters select{height:40px;border:1px solid #d8e1da;border-radius:9px;padding:0 10px;font:inherit}.course-list{display:grid;gap:10px}.course{border:1px solid #e1ece4;border-radius:13px;padding:14px;background:#fbfdfb}.course-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.course h4{margin:0 0 5px;font-size:1.03rem}.tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.tag{display:inline-flex;padding:4px 8px;border-radius:999px;background:#eef8f1;color:#2f6e46;font-size:.72rem;font-weight:850}.tag.draft{background:#fff7ed;color:#9a5200}.tag.published{background:#ecfdf5;color:#047857}.tag.archived{background:#f1f5f9;color:#64748b}.stats{display:flex;gap:12px;flex-wrap:wrap;font-size:.78rem;color:#65736a;margin-top:8px}.legacy{margin-top:18px}.legacy details{border:1px solid #e1ece4;border-radius:12px;padding:12px}.legacy-row{padding:9px 0;border-bottom:1px solid #edf3ef}.legacy-row:last-child{border-bottom:0}@media(max-width:980px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.lms{padding:15px}.summary,.form-grid{grid-template-columns:1fr}.checks{grid-template-columns:1fr}.filters{grid-template-columns:1fr}.field.full{grid-column:auto}}
 </style>
 
-<div class="page-card lms-page">
-
-    <div class="lms-header">
-        <span class="lms-kicker">Learning Material System</span>
-
-        <div class="lms-title-line">
-            <button type="button" class="lms-mobile-back" onclick="history.back()" aria-label="Back">←</button>
-            <h2>LMS Upload</h2>
-        </div>
-
-        <p>Upload and manage PDF or video based learning materials for farmers, UFC Mitras, UFC Admins, or all audiences.</p>
+<div class="lms">
+  <div class="top">
+    <div>
+      <h2>LMS Management</h2>
+      <div class="muted">Create structured courses, modules, lessons and learning resources. Farmers automatically receive published courses matched to their registered Activities and Agri Sub-categories.</div>
     </div>
+  </div>
 
-    <div class="lms-shell">
+  {% set summary = overview.get('summary', {}) %}
+  <div class="summary">
+    <div class="sum"><small>Active Courses</small><strong>{{ summary.get('course_count',0) }}</strong></div>
+    <div class="sum"><small>Published</small><strong>{{ summary.get('published_count',0) }}</strong></div>
+    <div class="sum"><small>Drafts</small><strong>{{ summary.get('draft_count',0) }}</strong></div>
+    <div class="sum"><small>Learners Started</small><strong>{{ summary.get('started_learners',0) }}</strong></div>
+    <div class="sum"><small>Completions</small><strong>{{ summary.get('completed_records',0) }}</strong></div>
+  </div>
 
-        <div class="lms-panel">
-            <h3>Upload Material</h3>
+  <div class="grid">
+    <section class="panel">
+      <h3>Create Course</h3>
+      <form method="post" class="form-grid">
+        <div class="field full"><label>Course Title *</label><input name="title" maxlength="180" required placeholder="e.g. Scientific Goat Rearing Basics"></div>
+        <div class="field"><label>Audience</label><select name="audience"><option value="farmer">Farmer</option><option value="ufc_mitra">UFC Mitra</option><option value="ufc_admin">UFC Admin</option><option value="all">All</option></select></div>
+        <div class="field"><label>Level</label><select name="level"><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></div>
+        <div class="field"><label>Estimated Minutes</label><input type="number" name="estimated_minutes" min="0" max="100000" value="30"></div>
+        <div class="field"><label>Targeting</label><select name="target_mode" id="targetMode" onchange="toggleTargeting()"><option value="all">All eligible learners</option><option value="profile">Match Farmer profile</option></select></div>
+        <div class="field full"><label>Short Description</label><input name="short_description" maxlength="600" placeholder="One-line course summary"></div>
+        <div class="field full"><label>Course Description</label><textarea name="description" maxlength="6000" placeholder="What will the learner understand or be able to do?"></textarea></div>
 
-            <form method="post" enctype="multipart/form-data" class="grid-form two-col">
-                <label>Title 
-                    <input type="text" name="title" required>
-                </label>
-
-                <label>Audience
-                    <select name="audience" required>
-                        <option value="all">All</option>
-                        <option value="farmer">Farmer</option>
-                        <option value="ufc_mitra">UFC Mitra</option>
-                        <option value="ufc_admin">UFC Admin</option>
-                    </select>
-                </label>
-
-                <label>LMS Type
-                    <select name="lms_type" required>
-                        <option value="">Select Type</option>
-                        <option value="pdf">PDF Based LMS</option>
-                        <option value="video">Video Based LMS</option>
-                    </select>
-                </label>
-
-                <label>Farmer Activity / Category
-                    <select name="activity_category">
-                        <option value="all">All Activities</option>
-                        <option value="Pig">Pig</option>
-                        <option value="Goat">Goat</option>
-                        <option value="Poultry">Poultry</option>
-                        <option value="Cattle">Cattle</option>
-                        <option value="Fishery">Fishery</option>
-                        <option value="Agri">Agri</option>
-                    </select>
-                </label>
-
-                <label class="span-2">Description 
-                    <textarea name="description" rows="4"></textarea>
-                </label>
-
-                <label class="span-2 upload-box">Material File 
-                    <input type="file" name="material_file" accept=".pdf,video/*" required>
-                </label>
-
-                <div class="span-2">
-                    <button type="submit">Upload</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="lms-panel">
-            <h3>Recent LMS Materials</h3>
-
-            <div class="material-list">
-            {% for i in items %}
-                <div class="material-card">
-                    <h4 class="material-title">{{ i.title }}</h4>
-
-                    <div class="material-meta">
-                        <span class="material-pill">{{ i.audience }}</span>
-                        <span class="material-pill">{{ i.lms_type|upper if i.lms_type else '-' }}</span>
-                        <span class="material-pill">{{ i.activity_category or 'All' }}</span>
-                    </div>
-
-                    <div class="material-file">
-                        <strong>File:</strong> {{ i.file_name or '-' }}
-                    </div>
-                </div>
-            {% else %}
-                <div class="empty-material">No LMS materials yet.</div>
+        <div class="field full" id="targetFields" style="display:none">
+          <span class="label">Farmer Activities</span>
+          <div class="checks">
+            {% for item in overview.get('activity_choices',[]) %}
+            <label class="check"><input type="checkbox" name="target_activities" value="{{ item }}"> {{ item }}</label>
             {% endfor %}
-            </div>
+          </div>
+          <span class="label" style="margin-top:10px">Agri Sub-categories</span>
+          <div class="checks">
+            {% for item in overview.get('agri_sub_category_choices',[]) %}
+            <label class="check"><input type="checkbox" name="target_agri_sub_categories" value="{{ item }}"> {{ item }}</label>
+            {% endfor %}
+          </div>
+          <div class="muted" style="font-size:.78rem;margin-top:7px">Selecting an Agri sub-category automatically treats the course as Agri-targeted.</div>
         </div>
 
-    </div>
+        <label class="check full"><input type="checkbox" name="mandatory" value="1"> Mandatory learning</label>
+        <div class="field full"><button class="btn" type="submit">Create Draft Course</button></div>
+      </form>
+    </section>
 
+    <section class="panel">
+      <h3>Courses</h3>
+      <form method="get" class="filters">
+        <input name="q" value="{{ overview.get('query','') }}" placeholder="Search course, activity or category">
+        <select name="status">
+          <option value="">All statuses</option>
+          <option value="draft" {% if overview.get('status_filter')=='draft' %}selected{% endif %}>Draft</option>
+          <option value="published" {% if overview.get('status_filter')=='published' %}selected{% endif %}>Published</option>
+          <option value="archived" {% if overview.get('status_filter')=='archived' %}selected{% endif %}>Archived</option>
+        </select>
+        <button class="btn" type="submit">Filter</button>
+      </form>
+
+      <div class="course-list">
+        {% for c in overview.get('courses',[]) %}
+        <article class="course">
+          <div class="course-head">
+            <div>
+              <h4>{{ c.title }}</h4>
+              <div class="muted">{{ c.short_description or c.description or 'No description yet.' }}</div>
+            </div>
+            <span class="tag {{ c.status }}">{{ c.status|title }}</span>
+          </div>
+          <div class="tags">
+            <span class="tag">{{ c.audience_label }}</span>
+            <span class="tag">{{ c.level_label }}</span>
+            {% if c.mandatory %}<span class="tag">Mandatory</span>{% endif %}
+            <span class="tag">{{ c.target_label }}</span>
+          </div>
+          <div class="stats">
+            <span>{{ c.module_count }} modules</span>
+            <span>{{ c.lesson_count }} lessons</span>
+            <span>{{ c.resource_count }} resources</span>
+            <span>{{ c.started_count }} started</span>
+            <span>{{ c.completed_count }} completed</span>
+          </div>
+          <div style="margin-top:10px"><a class="btn secondary" href="{{ url_for('admin.lms_course_detail', course_id=c.id) }}">Manage Course</a></div>
+        </article>
+        {% else %}
+        <div class="muted" style="padding:20px;text-align:center">No LMS courses found.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  {% if overview.get('legacy_items') %}
+  <div class="legacy">
+    <details>
+      <summary><strong>Existing / Legacy LMS Materials ({{ overview.get('legacy_items')|length }})</strong></summary>
+      <div class="muted" style="margin:8px 0">These older LMS uploads remain available to compatible learners. They are not deleted by the new course system.</div>
+      {% for i in overview.get('legacy_items',[]) %}
+      <div class="legacy-row"><strong>{{ i.title }}</strong> · {{ i.lms_type|upper if i.lms_type else 'RESOURCE' }} · {{ i.activity_category or 'All' }}</div>
+      {% endfor %}
+    </details>
+  </div>
+  {% endif %}
 </div>
 
+<script>
+function toggleTargeting(){
+  const mode=document.getElementById('targetMode');
+  const box=document.getElementById('targetFields');
+  if(mode && box) box.style.display=mode.value==='profile'?'flex':'none';
+}
+document.addEventListener('DOMContentLoaded',toggleTargeting);
+</script>
 {% endblock %}
