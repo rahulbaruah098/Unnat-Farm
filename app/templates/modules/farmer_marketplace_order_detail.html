@@ -1,125 +1,373 @@
 {% extends 'base.html' %}
 {% block title %}Produce Order {{ order.order_number }}{% endblock %}
 {% block content %}
+{% set pay_invoice = payment.get('invoice') if payment else none %}
+{% set pending_payments = payment.get('pending_payments', []) if payment else [] %}
 <style>
-.order-page{width:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d}.hero,.card{background:#fff;border:1px solid rgba(47,122,76,.11);border-radius:11px;padding:18px;margin-bottom:14px}.hero-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.hero h1{margin:0 0 4px;font-size:1.55rem}.muted{color:#748279}.pill{display:inline-flex;padding:5px 9px;border-radius:9px;background:#eef7f1;color:#2f6e46;font-weight:900;font-size:.78rem}.pill.warn{background:#fff7ed;color:#b45309}.pill.bad{background:#fff1f2;color:#b42318}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.fact{padding:11px;border:1px solid #e4efe7;border-radius:9px;background:#fbfdfb}.fact span{display:block;color:#748279;font-size:.82rem}.fact strong{display:block;margin-top:3px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 13px;border-radius:9px;border:1px solid rgba(47,122,76,.14);background:#f7fbf8;color:#2f6e46;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.btn.primary{background:#397e51;border-color:#397e51;color:#fff}.btn.danger{background:#fff1f2;border-color:#fecdd3;color:#b42318}.btn.warn{background:#fff7ed;border-color:#fed7aa;color:#b45309}.form-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}.field label{display:block;font-weight:900;margin-bottom:4px}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;border:1px solid rgba(47,122,76,.14);border-radius:10px;padding:9px;font:inherit}.timeline{border-left:2px solid #cae2d2;margin-left:6px;padding-left:18px}.event{position:relative;padding:0 0 16px}.event:before{content:"";position:absolute;left:-24px;top:4px;width:10px;height:10px;border-radius:50%;background:#397e51}.money{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}.money .fact{text-align:center}.notice{padding:11px 13px;border-radius:9px;background:#fff7ed;border:1px solid #fed7aa;color:#92400e;margin-top:10px}.good{padding:11px 13px;border-radius:9px;background:#f1fbf4;border:1px solid #c7e4d0;color:#435349;margin-top:10px}@media(max-width:760px){.grid,.facts,.form-row,.money{grid-template-columns:1fr}.hero,.card{padding:14px}}
+.order-page{width:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d}.box{background:#fff;border:1px solid #dcebe1;border-radius:14px;padding:18px;margin-bottom:14px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.top h1{margin:0;font-size:1.6rem}.muted{color:#718078}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border-radius:9px;border:1px solid #cfe3d5;background:#f7fbf8;color:#2f6e46;text-decoration:none;font:inherit;font-weight:850;cursor:pointer}.btn.primary{background:#397e51;border-color:#397e51;color:#fff}.btn.danger{background:#fff1f2;border-color:#fecdd3;color:#b42318}.btn.warn{background:#fff7ed;border-color:#fed7aa;color:#a85b09}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef7f1;color:#2f6e46;font-weight:850;font-size:.78rem}.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:14px}.fact{padding:11px;border:1px solid #e4efe7;border-radius:10px;background:#fbfdfb}.fact span{display:block;color:#748279;font-size:.8rem}.fact strong{display:block;margin-top:3px}.flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-top:14px}.step{padding:9px 7px;border:1px solid #e4ebe6;border-radius:9px;text-align:center;font-size:.78rem;color:#7a877f;background:#fafcfa}.step.done{background:#eef8f1;border-color:#cce6d4;color:#2f6e46;font-weight:850}.step.current{outline:2px solid rgba(57,126,81,.22)}.action-card{border:1px solid #d9e9de;border-radius:12px;padding:16px;background:#fbfdfb}.action-card h3{margin:0 0 5px}.good{padding:11px 13px;border-radius:9px;background:#eef8f1;border:1px solid #cce6d4;color:#315b3e;margin:10px 0}.notice{padding:11px 13px;border-radius:9px;background:#fff8ec;border:1px solid #f3d5a4;color:#8a5607;margin:10px 0}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}.field label{display:block;font-weight:800;margin-bottom:4px}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;border:1px solid #d5e5da;border-radius:9px;padding:9px;font:inherit}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}.money{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}.money .fact{text-align:center}.pending{margin-top:12px;padding:12px;border:1px solid #d8e3f5;border-radius:10px;background:#f7faff}.pending-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid #e8eef8}.pending-row:last-child{border-bottom:0}.timeline{margin-top:8px}.timeline details{border:1px solid #e4efe7;border-radius:10px;padding:10px 12px}.timeline summary{cursor:pointer;font-weight:850}.technical details{border:1px solid #e4efe7;border-radius:10px;padding:10px 12px}.technical summary{cursor:pointer;font-weight:850}@media(max-width:900px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}.flow{grid-template-columns:repeat(3,1fr)}.money{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.box{padding:14px}.facts,.form-grid,.money{grid-template-columns:1fr}.flow{grid-template-columns:repeat(2,1fr)}}
+.multi-items{margin-top:12px;overflow-x:auto;border:1px solid #dfeae3;border-radius:10px}.multi-items table{width:100%;border-collapse:collapse;font-size:.75rem}.multi-items th,.multi-items td{padding:10px;border-bottom:1px solid #e8efea;text-align:left}.multi-items th{background:#f7fbf8;font-size:.64rem;text-transform:uppercase;color:#718077}
 </style>
 <div class="order-page">
-  <section class="hero">
-    <div class="hero-row">
-      <div>
-        <h1>{{ order.order_number }}</h1>
-        <div class="muted">{{ order.product_name }} · {{ order.quantity_description }}</div>
-      </div>
-      <div class="actions">
-        <span class="pill {% if order.status in ['rejected','cancelled'] %}bad{% elif order.status in ['requested','approved','dispatched'] %}warn{% endif %}">{{ order.status_label }}</span>
-        <a class="btn" href="{{ url_for('modules.farmer_marketplace_orders_received') if is_seller else url_for('modules.farmer_produce_market_my_orders') }}">Back to Orders</a>
-      </div>
+  {% if order.is_multi_item_order %}<section class="box"><h3 style="margin-top:0">Order Items</h3><div class="multi-items"><table><thead><tr><th>Produce</th><th>Quantity</th><th>Rate</th><th>Amount</th></tr></thead><tbody>{% for line in order.get('items',[]) %}<tr><td><strong>{{ line.product_name }}</strong>{% if line.variety %}<div class="muted">{{ line.variety }}</div>{% endif %}</td><td>{{ line.quantity_description or (line.base_quantity_display ~ ' ' ~ line.unit_code) }}</td><td>₹{{ line.unit_price_display }}</td><td>₹{{ line.line_total_display }}</td></tr>{% endfor %}</tbody></table></div></section>
+{% endif %}
+<section class="box">
+    <div class="top">
+      <div><h1>{{ order.order_number }}</h1><div class="muted">{% if order.is_multi_item_order %}{{ order.product_summary }} · {{ order.item_count }} produce lines{% else %}{{ order.product_name }} · {{ order.quantity_description }}{% endif %}</div></div>
+      <div class="actions" style="margin-top:0"><span class="pill">{{ order.status_label }}</span><a class="btn" href="{{ url_for('modules.farmer_marketplace_orders_received') if is_seller else url_for('modules.farmer_produce_market_my_orders') }}">Back to Orders</a></div>
+    </div>
+
+    <div class="flow" style="grid-template-columns:repeat(5,minmax(0,1fr))">
+      <div class="step {% if order.status in ['requested','approved','dispatched','received'] %}done{% endif %}">1. Requested</div>
+      <div class="step {% if order.status in ['approved','dispatched','received'] %}done{% endif %}">2. Approved</div>
+      <div class="step {% if order.status in ['dispatched','received'] %}done{% endif %}">3. Dispatched</div>
+      <div class="step {% if order.status == 'received' %}done{% endif %}">4. Received</div>
+      <div class="step {% if pay_invoice and pay_invoice.payment_status == 'paid' %}done{% endif %}">5. Paid</div>
+    </div>
+
+    <div class="facts">
+      <div class="fact"><span>Farmer</span><strong>{{ order.seller_farmer_name }}</strong>{% if order.seller_village %}<div class="muted">{{ order.seller_village }}</div>{% endif %}</div>
+      <div class="fact"><span>Buyer</span><strong>{{ order.buyer.name }}</strong><div class="muted">{{ order.buyer_role_label }}</div></div>
+      <div class="fact"><span>{% if order.is_multi_item_order %}Items{% else %}Quantity{% endif %}</span><strong>{% if order.is_multi_item_order %}{{ order.item_count }} produce lines{% else %}{{ order.quantity_description }}{% endif %}</strong></div>
+      <div class="fact"><span>Order Value</span><strong>₹{{ order.total_display }}</strong></div>
     </div>
   </section>
 
-  <div class="grid">
-    <section class="card">
-      <h3 style="margin-top:0">Order Details</h3>
-      <div class="facts">
-        <div class="fact"><span>Produce</span><strong>{{ order.product_name }}</strong>{% if order.variety %}<div class="muted">{{ order.variety }}</div>{% endif %}</div>
-        <div class="fact"><span>Quantity</span><strong>{{ order.quantity_description }}</strong></div>
-        <div class="fact"><span>Order Value</span><strong>₹{{ order.total_display }}</strong></div>
-        <div class="fact"><span>Payment</span><strong>{{ order.payment_term_label }}</strong>{% if order.payment_term == 'credit' and order.credit_days %}<div class="muted">{{ order.credit_days }} credit days approved</div>{% endif %}</div>
-        <div class="fact"><span>Farmer Seller</span><strong>{{ order.seller_farmer_name }}</strong>{% if order.seller_village %}<div class="muted">{{ order.seller_village }}{% if order.seller_district %}, {{ order.seller_district }}{% endif %}</div>{% endif %}</div>
-        <div class="fact"><span>Buyer</span><strong>{{ order.buyer.name }}</strong><div class="muted">{{ order.buyer_role_label }}</div></div>
-      </div>
-      {% if order.purchase_mode == 'bag' and order.package %}
-      <div class="good"><strong>Bag / Pack order:</strong> {{ order.package.bag_count }} × {{ order.package.label }} · {{ order.package.quantity_per_bag }} {{ order.unit_code }} inside each · ₹{{ '%.2f'|format(order.package.price_per_bag or 0) }} per bag</div>
+  <section class="box">
+    <div class="action-card">
+      {% if is_seller %}
+        <h3>Next Action</h3>
+        {% if order.status == 'requested' %}
+          <div class="muted">Approve only if you can supply the requested produce.</div>
+          <form method="post" action="{{ url_for('modules.farmer_marketplace_order_approve', order_id=order.id) }}">{% if order.payment_term == 'credit' %}<div class="field" style="max-width:260px;margin-top:10px"><label>Credit days</label><input type="number" name="credit_days" value="7" min="0" max="365" required></div>{% endif %}<div class="actions"><button class="btn primary" type="submit">Approve Order</button></div></form>
+          <form method="post" action="{{ url_for('modules.farmer_marketplace_order_reject', order_id=order.id) }}"><div class="field" style="max-width:520px;margin-top:10px"><label>Reason if rejecting (optional)</label><input name="reason" maxlength="600"></div><div class="actions"><button class="btn danger" type="submit">Reject Order</button></div></form>
+        {% elif order.status == 'approved' %}
+          <div class="good">Produce is reserved. Dispatch only when it physically leaves you.</div><form method="post" action="{{ url_for('modules.farmer_marketplace_order_dispatch', order_id=order.id) }}"><div class="actions"><button class="btn primary" type="submit">Dispatch Produce</button></div></form>
+        {% elif order.status == 'dispatched' %}<div class="notice">Dispatched. The buyer will check the quantities that actually arrived before payment.</div>{% if is_seller %}{% if order.seller_delivery_confirmed %}<div class="good" style="margin-top:10px">Delivery marked. Waiting for buyer receipt.</div>{% else %}<form method="post" action="{{ url_for('modules.farmer_marketplace_order_delivered', order_id=order.id) }}"><div class="actions"><button class="btn primary" type="submit">Mark Delivered</button></div></form>{% endif %}{% endif %}
+        {% elif order.status == 'received' %}<div class="good"><strong>{{ order.receipt_status_label or 'Receipt confirmed' }}.</strong> Buyer accepted {{ order.accepted_item_count }} / {{ order.dispatched_item_count }} line(s).{% if order.receipt_adjustment_amount %} Adjustment ₹{{ order.receipt_adjustment_amount_display }}.{% endif %}</div>
+        {% else %}<div class="muted">No action is required.</div>{% endif %}
+      {% elif is_buyer %}
+        <h3>Next Action</h3>
+        {% if order.status == 'requested' %}<div class="good">Request sent. Waiting for Farmer approval.</div>
+        {% elif order.status == 'approved' %}<div class="good">Approved. Waiting for Farmer dispatch.</div>
+        {% elif order.status == 'dispatched' %}
+          <div class="notice">Check the produce on arrival. Enter actual Received, Accepted, Damaged and Rejected quantities. Missing is calculated automatically.</div>
+          <form class="market-receipt-form" method="post" action="{{ url_for('modules.farmer_produce_market_receive_order', order_id=order.id) }}">
+            <div class="multi-items"><table><thead><tr><th>Produce</th><th>Dispatched</th><th>Received</th><th>Accepted</th><th>Damaged</th><th>Rejected</th><th>Missing</th></tr></thead><tbody>
+            {% for line in order.get('items',[]) %}<tr data-dispatched="{{ line.dispatched_quantity or line.base_quantity }}"><td><strong>{{ line.product_name }}</strong></td><td>{{ line.dispatched_quantity_display or line.base_quantity_display }} {{ line.unit_code }}</td><td><input class="mrec" type="number" name="received_{{ line.line_id }}" min="0" max="{{ line.dispatched_quantity or line.base_quantity }}" step="0.001" value="{{ line.dispatched_quantity or line.base_quantity }}" required></td><td><input class="macc" type="number" name="accepted_{{ line.line_id }}" min="0" step="0.001" value="{{ line.dispatched_quantity or line.base_quantity }}" required></td><td><input type="number" class="mdam" name="damaged_{{ line.line_id }}" min="0" step="0.001" value="0" required></td><td><input type="number" class="mrej" name="rejected_{{ line.line_id }}" min="0" step="0.001" value="0" required></td><td><strong class="mmiss">0</strong> {{ line.unit_code }}</td></tr>{% endfor %}
+            </tbody></table></div>
+            <div class="field" style="margin-top:10px"><label>Receipt / quality note (optional)</label><input name="receipt_note" maxlength="1000"></div>
+            <div class="good"><strong>Only accepted quantity becomes stock/payable.</strong> Damaged, rejected or missing quantity is not charged automatically.</div><div class="actions"><button class="btn primary" type="submit">Confirm Receipt</button></div>
+          </form>
+        {% elif order.status == 'received' %}<div class="good"><strong>{{ order.receipt_status_label or 'Receipt confirmed' }}.</strong> Accepted {{ order.accepted_item_count }} line(s). Payment is now available for accepted value only.</div>
+        {% else %}<div class="muted">No action is required.</div>{% endif %}
+        {% if order.status in ['requested','approved'] %}<form method="post" action="{{ url_for('modules.farmer_produce_market_cancel_order', order_id=order.id) }}"><div class="actions"><button class="btn danger" type="submit">Cancel Order</button></div></form>{% endif %}
       {% endif %}
-      {% if order.note %}<div class="good"><strong>Buyer note:</strong> {{ order.note }}</div>{% endif %}
-    </section>
-
-    <section class="card">
-      <h3 style="margin-top:0">Status Timeline</h3>
-      <div class="timeline">
-        {% for h in order.status_history or [] %}
-        <div class="event"><strong>{{ h.status|replace('_',' ')|title }}</strong><div class="muted">{% if h.at and h.at.strftime %}{{ h.at|ist_datetime('%d %b %Y, %I:%M %p', '') }}{% endif %}{% if h.by %} · {{ h.by }}{% endif %}</div>{% if h.note %}<div>{{ h.note }}</div>{% endif %}</div>
-        {% else %}
-        <div class="event"><strong>Requested</strong></div>
-        {% endfor %}
-      </div>
-    </section>
-  </div>
+    </div>
+  </section>
 
   {% if invoice %}
-  <section class="card">
-    <div class="hero-row"><div><h3 style="margin:0">Sales Receipt & Payment</h3><div class="muted">The Farmer sale and buyer purchase stay linked to this same order.</div></div><a class="btn" target="_blank" href="{{ url_for('modules.farmer_marketplace_invoice_print', invoice_id=invoice.id) }}">Print Sales Receipt</a></div>
+  <section class="box">
+    <div class="top"><div><h3 style="margin:0">Payment</h3><div class="muted">Goods and money are tracked separately.</div></div><a class="btn" target="_blank" href="{{ url_for('modules.farmer_marketplace_invoice_print', invoice_id=invoice.id) }}">View Receipt</a></div>
     <div class="money">
-      <div class="fact"><span>Total</span><strong>₹{{ invoice.total_display }}</strong></div>
-      <div class="fact"><span>Paid</span><strong>₹{{ invoice.paid_display }}</strong></div>
-      <div class="fact"><span>Outstanding</span><strong>₹{{ invoice.outstanding_display }}</strong><div class="muted">{{ invoice.payment_status_label }}</div></div>
+      <div class="fact"><span>Total</span><strong>₹{{ pay_invoice.total_display if pay_invoice else invoice.total_display }}</strong></div>
+      <div class="fact"><span>Confirmed Paid</span><strong>₹{{ pay_invoice.paid_display if pay_invoice else invoice.paid_display }}</strong></div>
+      <div class="fact"><span>Reported / Waiting</span><strong>₹{{ pay_invoice.reported_pending_display if pay_invoice else '0.00' }}</strong></div>
+      <div class="fact"><span>Outstanding</span><strong>₹{{ pay_invoice.outstanding_display if pay_invoice else invoice.outstanding_display }}</strong></div>
     </div>
-    {% if invoice.outstanding_display != '0.00' and order.status in ['dispatched','received'] %}
-    <form method="post" action="{{ url_for('modules.farmer_marketplace_record_payment') }}" style="margin-top:12px" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
-      <input type="hidden" name="invoice_id" value="{{ invoice.id }}"><input type="hidden" name="order_id" value="{{ order.id }}"><input type="hidden" name="payment_token" value="{{ payment_token }}">
-      <div class="form-row">
-        <div class="field"><label>Amount {% if is_seller %}Received{% else %}Paid{% endif %}</label><input type="number" name="amount" min="0.01" max="{{ invoice.outstanding_display }}" step="0.01" value="{{ invoice.outstanding_display }}" required></div>
-        <div class="field"><label>Payment Mode</label><select name="payment_mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option></select></div>
-        <div class="field"><label>Reference</label><input name="reference" maxlength="120" placeholder="Required for UPI / Bank / Cheque"></div>
-        <div class="field"><label>Note</label><input name="note" maxlength="300" placeholder="Optional"></div>
-      </div>
-      <div class="actions"><button class="btn primary" type="submit">Record Payment</button></div>
-    </form>
+
+    {% if is_buyer and order.status == 'received' and pay_invoice %}
+      {% if pay_invoice.can_pay %}
+        <div class="good"><strong>Pay Farmer:</strong> enter the amount actually paid. Full or partial payment is allowed; the Farmer confirms after receiving the money.</div>
+        <form method="post" action="{{ url_for('modules.farmer_marketplace_record_payment') }}" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
+          <input type="hidden" name="invoice_id" value="{{ pay_invoice.id }}"><input type="hidden" name="order_id" value="{{ order.id }}"><input type="hidden" name="payment_token" value="{{ pay_invoice.payment_token }}">
+          <div class="form-grid">
+            <div class="field"><label>Amount Paid</label><input type="number" name="amount" min="0.01" max="{{ pay_invoice.reportable_outstanding_display }}" step="0.01" value="{{ pay_invoice.reportable_outstanding_display }}" required></div>
+            <div class="field"><label>Payment Mode</label><select name="payment_mode">{% for v,l in payment.get('payment_modes',{}).items() %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+            <div class="field"><label>Reference</label><input name="reference" maxlength="120" placeholder="Required for UPI / Bank / Cheque"></div>
+            <div class="field"><label>Note</label><input name="note" maxlength="300" placeholder="Optional"></div>
+          </div>
+          <div class="actions"><button class="btn primary" type="submit">I Paid Farmer</button></div>
+        </form>
+      {% elif pay_invoice.has_pending_report %}
+        <div class="notice"><strong>Payment reported.</strong> Waiting for the Farmer to confirm receipt.</div>
+      {% else %}<div class="good">Payment is fully confirmed.</div>{% endif %}
+    {% elif is_buyer and order.status != 'received' %}
+      <div class="muted" style="margin-top:10px">Payment becomes available after you confirm the goods received.</div>
+    {% endif %}
+
+    {% if is_seller %}
+      {% if pending_payments %}
+        <div class="pending"><strong>Payments waiting for your confirmation</strong><div class="muted">Confirm only if the money is actually received.</div>
+          {% for p in pending_payments %}
+          <div class="pending-row">
+            <div><strong>₹{{ p.amount_display }}</strong> · {{ p.payment_mode_label }}{% if p.reference %}<div class="muted">Ref: {{ p.reference }}</div>{% endif %}</div>
+            <div class="actions" style="margin-top:0">
+              <form method="post" action="{{ url_for('modules.farmer_marketplace_confirm_payment', payment_id=p.id) }}"><input type="hidden" name="order_id" value="{{ order.id }}"><button class="btn primary" type="submit">Confirm Money Received</button></form>
+              <form method="post" action="{{ url_for('modules.farmer_marketplace_return_payment', payment_id=p.id) }}" style="display:flex;gap:6px;flex-wrap:wrap"><input type="hidden" name="order_id" value="{{ order.id }}"><input name="reason" minlength="4" required placeholder="Reason if not received" style="border:1px solid #d5e5da;border-radius:9px;padding:8px"><button class="btn warn" type="submit">Return</button></form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% elif order.status == 'received' and invoice.outstanding_display != '0.00' %}
+        <div class="muted" style="margin-top:10px">Waiting for the buyer to report payment.</div>
+      {% endif %}
     {% endif %}
   </section>
-  {% elif order.status in ['dispatched','received'] and order.financial_status == 'needs_repair' %}
-  <section class="card"><div class="notice"><strong>Sales receipt needs repair.</strong> Physical dispatch is already complete and stock must not be changed again.</div>{% if is_seller %}<form method="post" action="{{ url_for('modules.farmer_marketplace_order_repair', order_id=order.id) }}"><div class="actions"><button class="btn warn" type="submit">Create / Repair Sales Documents</button></div></form>{% endif %}</section>
+  {% elif order.status == 'received' and order.financial_status == 'needs_repair' %}
+  <section class="box"><div class="notice"><strong>Sales receipt needs repair.</strong> The physical stock movement is already preserved and will not be repeated.</div>{% if is_seller %}<form method="post" action="{{ url_for('modules.farmer_marketplace_order_repair', order_id=order.id) }}"><div class="actions"><button class="btn warn" type="submit">Repair Sales Documents</button></div></form>{% endif %}</section>
   {% endif %}
 
-  {% if is_seller %}
-  <section class="card">
-    <h3 style="margin-top:0">Farmer Action</h3>
-    {% if order.status == 'requested' %}
-      <div class="good">Approving reserves the required produce. It does <strong>not</strong> reduce physical stock yet.</div>
-      <form method="post" action="{{ url_for('modules.farmer_marketplace_order_approve', order_id=order.id) }}">
-        {% if order.payment_term == 'credit' %}<div class="field" style="max-width:280px;margin-top:10px"><label>Credit Days</label><input type="number" name="credit_days" value="7" min="0" max="365" required></div>{% endif %}
-        <div class="actions"><button class="btn primary" type="submit">Approve & Reserve Produce</button></div>
-      </form>
-      <form method="post" action="{{ url_for('modules.farmer_marketplace_order_reject', order_id=order.id) }}"><div class="field" style="max-width:520px;margin-top:12px"><label>Reason for rejection (optional)</label><input name="reason" maxlength="600" placeholder="Not enough quality stock, unavailable date, etc."></div><div class="actions"><button class="btn danger" type="submit">Reject Order</button></div></form>
-    {% elif order.status == 'approved' %}
-      <div class="good">Produce is reserved. Click dispatch only when the goods physically leave you.</div>
-      <form method="post" action="{{ url_for('modules.farmer_marketplace_order_dispatch', order_id=order.id) }}" onsubmit="return confirm('Confirm physical dispatch? This will reduce your produce stock.');"><div class="actions"><button class="btn primary" type="submit">Mark as Dispatched</button></div></form>
-      <form method="post" action="{{ url_for('modules.farmer_produce_market_cancel_order', order_id=order.id) }}" onsubmit="return confirm('Cancel this approved order and release the reserved stock?');"><input type="hidden" name="reason" value="Cancelled by Farmer before dispatch"><div class="actions"><button class="btn danger" type="submit">Cancel & Release Reservation</button></div></form>
-    {% elif order.status == 'dispatched' %}<div class="good">Goods are on the way. Waiting for {{ order.buyer.name }} to confirm receipt.</div>
-    {% elif order.status == 'received' %}<div class="good">Order complete. Buyer confirmed receipt.</div>
-    {% else %}<div class="muted">No action is required for this order.</div>{% endif %}
+  <section class="box technical">
+    <details><summary>More order information</summary>
+      <div class="facts">
+        <div class="fact"><span>Payment Term</span><strong>{{ order.payment_term_label }}</strong></div>
+        <div class="fact"><span>Unit Price</span><strong>₹{{ '%.2f'|format(order.unit_price or 0) }}</strong></div>
+        {% if purchase %}<div class="fact"><span>Purchase Entry</span><strong>{{ purchase.purchase_number }}</strong><div class="muted">Receipt {{ purchase.document_number }} · Outstanding ₹{{ purchase.outstanding_display }}</div></div>{% endif %}
+        {% if order.purchase_mode == 'bag' and order.package %}<div class="fact"><span>Bag / Pack</span><strong>{{ order.package.bag_count }} × {{ order.package.label }}</strong><div class="muted">{{ order.package.quantity_per_bag }} {{ order.unit_code }} each · ₹{{ '%.2f'|format(order.package.price_per_bag or 0) }} per pack</div></div>{% endif %}
+        {% if order.note %}<div class="fact"><span>Buyer Note</span><strong>{{ order.note }}</strong></div>{% endif %}
+      </div>
+    </details>
   </section>
-  {% endif %}
 
-  {% if is_buyer %}
-  <section class="card">
-    <h3 style="margin-top:0">Buyer Action</h3>
-    {% if order.status in ['requested','approved'] %}
-      <div class="muted">You can cancel before the Farmer dispatches the produce.</div>
-      <form method="post" action="{{ url_for('modules.farmer_produce_market_cancel_order', order_id=order.id) }}"><div class="field" style="max-width:520px;margin-top:10px"><label>Cancellation reason (optional)</label><input name="reason" maxlength="600"></div><div class="actions"><button class="btn danger" type="submit">Cancel Order</button></div></form>
-    {% elif order.status == 'dispatched' %}
-      <div class="notice">Confirm only after the produce physically reaches you. Your purchase entry is created automatically.</div>
-      <form method="post" action="{{ url_for('modules.farmer_produce_market_receive_order', order_id=order.id) }}" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
-        <input type="hidden" name="payment_token" value="{{ payment_token }}">
-        <div class="form-row">
-          <div class="field"><label>Payment at Receipt</label><select name="collection_option" id="marketCollection"><option value="none">No payment now</option><option value="full">Full payment</option><option value="partial">Partial payment</option></select></div>
-          <div class="field" id="marketAmount" style="display:none"><label>Amount</label><input type="number" name="amount" min="0.01" step="0.01" {% if invoice %}max="{{ invoice.outstanding_display }}"{% endif %}></div>
-          <div class="field" id="marketMode" style="display:none"><label>Payment Mode</label><select name="payment_mode"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option></select></div>
-          <div class="field" id="marketRef" style="display:none"><label>Reference</label><input name="reference" maxlength="120" placeholder="Required for non-cash"></div>
-        </div>
-        <input type="hidden" name="payment_note" value="Payment recorded at Farmer Produce Market receipt">
-        <div class="actions"><button class="btn primary" type="submit">Confirm Receipt</button></div>
-      </form>
-    {% elif order.status == 'received' %}<div class="good">Receipt confirmed. Your purchase entry has been created automatically.</div>{% else %}<div class="muted">No buyer action is required right now.</div>{% endif %}
-  </section>
-  {% endif %}
-
-  {% if purchase %}
-  <section class="card"><h3 style="margin-top:0">Buyer Purchase Entry</h3><div class="facts"><div class="fact"><span>Purchase</span><strong>{{ purchase.purchase_number }}</strong></div><div class="fact"><span>Sales Receipt</span><strong>{{ purchase.document_number }}</strong></div><div class="fact"><span>Total</span><strong>₹{{ purchase.total_display }}</strong></div><div class="fact"><span>Outstanding</span><strong>₹{{ purchase.outstanding_display }}</strong></div></div></section>
-  {% endif %}
+  <section class="box timeline"><details><summary>Order history</summary><div style="margin-top:10px">{% for h in order.status_history or [] %}<div style="padding:7px 0;border-bottom:1px solid #edf3ef"><strong>{{ h.status|replace('_',' ')|title }}</strong><div class="muted">{{ h.at|ist_datetime('%d %b %Y, %I:%M %p', '') }}{% if h.by %} · {{ h.by }}{% endif %}</div>{% if h.note %}<div>{{ h.note }}</div>{% endif %}</div>{% endfor %}</div></details></section>
 </div>
 <script>
-(function(){const s=document.getElementById('marketCollection'),a=document.getElementById('marketAmount'),m=document.getElementById('marketMode'),r=document.getElementById('marketRef');if(!s)return;function sync(){const paid=s.value!=='none';if(a)a.style.display=s.value==='partial'?'block':'none';if(m)m.style.display=paid?'block':'none';if(r)r.style.display=paid?'block':'none';}s.addEventListener('change',sync);sync();})();
+(()=>{document.querySelectorAll('.market-receipt-form tbody tr').forEach(row=>{const rec=row.querySelector('.mrec'),acc=row.querySelector('.macc'),dam=row.querySelector('.mdam'),rej=row.querySelector('.mrej'),miss=row.querySelector('.mmiss'),disp=parseFloat(row.dataset.dispatched||0)||0,n=x=>Math.max(0,parseFloat(x?.value||0)||0);const paint=()=>{miss.textContent=Math.max(0,disp-n(rec)).toFixed(3).replace(/0+$/,'').replace(/\.$/,'')||'0';};const balance=()=>{acc.value=Math.max(0,n(rec)-n(dam)-n(rej)).toFixed(3).replace(/0+$/,'').replace(/\.$/,'')||'0';paint();};rec.addEventListener('input',balance);dam.addEventListener('input',balance);rej.addEventListener('input',balance);acc.addEventListener('input',paint);paint();});})();
 </script>
+
+
+<style id="sds-commerce-redesign">
+:root{
+    --uc-green:#2b7346;
+    --uc-green-dark:#1f5f39;
+    --uc-green-soft:#eff8f1;
+    --uc-green-softer:#f7fbf8;
+    --uc-text:#1f3127;
+    --uc-muted:#6e7f74;
+    --uc-border:#dbe9df;
+    --uc-border-strong:#c8ddce;
+    --uc-bg:#f7faf8;
+    --uc-white:#fff;
+    --uc-warn:#9a6500;
+    --uc-danger:#a73535;
+    --uc-shadow:0 12px 32px rgba(26,72,43,.055);
+    --uc-shadow-hover:0 16px 34px rgba(31,102,59,.10);
+}
+
+@keyframes ucFadeUp{
+    from{opacity:0;transform:translateY(7px)}
+    to{opacity:1;transform:translateY(0)}
+}
+@keyframes ucPop{
+    from{opacity:0;transform:scale(.975) translateY(5px)}
+    to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page,.orders-page{
+    max-width:1500px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    color:var(--uc-text) !important;
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page{
+    background:#fff !important;
+    border:1px solid var(--uc-border) !important;
+    border-radius:20px !important;
+    box-shadow:var(--uc-shadow) !important;
+}
+
+h1,h2,h3{
+    color:#16251c;
+    letter-spacing:-.02em;
+}
+
+.muted,.small,.soft-note,.marketplace-help{
+    color:var(--uc-muted) !important;
+}
+
+button,a,input,select,textarea{
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+button,.btn,.link,.view,.head-btn,.filter-button,.back,.invoice-link,
+.primary,.secondary,.add,.addbtn,.paybtn,.pay-submit,.receive,
+.cart-primary,.cart-secondary,.clear-btn,.clear-link,.view-order-btn{
+    border-radius:10px !important;
+    transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease !important;
+}
+
+button:hover,.btn:hover,.link:hover,.view:hover,.head-btn:hover,.filter-button:hover,
+.primary:hover,.add:hover,.addbtn:hover,.paybtn:hover,.pay-submit:hover,.receive:hover,
+.cart-primary:hover,.view-order-btn:hover{
+    transform:translateY(-1px);
+}
+
+input,select,textarea,.filter-input,.filter-select{
+    border:1px solid #d6e3d9 !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#31463a !important;
+    outline:none !important;
+    box-shadow:none !important;
+}
+
+input:focus,select:focus,textarea:focus,.filter-input:focus,.filter-select:focus{
+    border-color:#8eb69a !important;
+    box-shadow:0 0 0 3px rgba(43,115,70,.07) !important;
+}
+
+.pill,.badge,.status-badge,.type-pill,.status-pill,.published-badge,.stage4-chip{
+    border-radius:8px !important;
+    font-weight:800 !important;
+}
+
+.table,.table-wrap,.table-shell,.earnings-table-wrap,.items-table{
+    border:1px solid var(--uc-border) !important;
+    border-radius:13px !important;
+    overflow:auto;
+    box-shadow:none !important;
+    background:#fff !important;
+}
+
+table th{
+    background:#f4f8f5 !important;
+    color:#607066 !important;
+    font-size:.63rem !important;
+    font-weight:850 !important;
+    text-transform:uppercase;
+    letter-spacing:.025em;
+}
+
+table td{
+    color:#3e5145 !important;
+}
+
+table tr{
+    transition:background .14s ease;
+}
+
+table tbody tr:hover td{
+    background:#fbfdfb !important;
+}
+
+.summary,.stats,.stat-grid,.status-grid,.facts,.grid{
+    gap:11px !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact,.box,.section,.action-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:14px !important;
+    background:#fff !important;
+    box-shadow:none !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact{
+    transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease;
+}
+
+.sum:hover,.stat:hover,.stat-card:hover,.status-card:hover,.fact:hover{
+    transform:translateY(-2px);
+    border-color:#b7d5c0 !important;
+    box-shadow:0 9px 22px rgba(31,102,59,.07) !important;
+}
+
+.notice,.info,.soft-note,.warn-note,.next-step,.table-info{
+    border-radius:11px !important;
+}
+
+.empty,.orders-empty{
+    color:#809087 !important;
+}
+
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+        animation:none !important;
+        transition:none !important;
+        scroll-behavior:auto !important;
+    }
+}
+</style>
+
+
+
+<style id="sds-orders-redesign">
+.orders-head,.top,.head,.fh{
+    margin-bottom:14px !important;
+}
+
+.orders-grid{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fill,minmax(285px,1fr)) !important;
+    gap:13px !important;
+}
+
+.order-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:16px !important;
+    background:#fff !important;
+    box-shadow:0 7px 20px rgba(26,72,43,.04) !important;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease !important;
+    animation:ucFadeUp .25s ease both;
+}
+
+.order-card:hover{
+    transform:translateY(-2px);
+    border-color:#aed0b7 !important;
+    box-shadow:var(--uc-shadow-hover) !important;
+}
+
+.order-number{
+    color:#1d3928 !important;
+    font-weight:900 !important;
+}
+
+.order-meta,.meta-row{
+    border-color:#edf2ee !important;
+}
+
+.view-order-btn,.head-btn,.btn,.view,.link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:37px;
+    padding:7px 11px;
+    border:1px solid #d2e1d6 !important;
+    background:#fff !important;
+    color:#2b7346 !important;
+    text-decoration:none !important;
+    font-size:.67rem !important;
+    font-weight:850 !important;
+}
+
+.view-order-btn.primary,.head-btn.primary,.btn.primary{
+    border-color:#2b7346 !important;
+    background:#2b7346 !important;
+    color:#fff !important;
+}
+
+.timeline,.history{
+    position:relative;
+}
+
+.event,.history-item,.step{
+    border-color:#e1ebe4 !important;
+    background:#fbfdfb !important;
+    border-radius:11px !important;
+}
+
+.action-card,.receive,.pay-form{
+    border:1px solid #d9e7dd !important;
+    border-radius:14px !important;
+    background:#fbfdfb !important;
+}
+
+@media(max-width:700px){
+    .orders-grid{
+        grid-template-columns:1fr !important;
+    }
+}
+</style>
+
 {% endblock %}

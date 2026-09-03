@@ -283,11 +283,10 @@
 <section class="accounting-gst-card" id="gst-tax-master" aria-labelledby="gstTaxMasterTitle">
     <div class="accounting-section-heading">
         <div>
-            <p class="accounting-eyebrow">Stage 4 · Batch 1</p>
+            <p class="accounting-eyebrow">GST setup</p>
             <h2 id="gstTaxMasterTitle">GST tax master</h2>
             <p class="accounting-section-description">
-                Protected CGST, SGST and IGST components, controlled taxability classifications,
-                and {% if streamlined_workflows_enabled %}validated active tax rates{% else %}maker-checker approved tax rates{% endif %} with permanent effective-date history.
+                Manage GST components, taxability and rates.
             </p>
         </div>
         {% if gst_tax_overview.foundation.is_complete %}
@@ -303,29 +302,29 @@
         <div class="accounting-notice danger">{{ gst_tax_setup_error }}</div>
     {% elif not accounting_entity %}
         <div class="accounting-notice info">
-            Initialize the active AVPL Accounting entity before configuring GST masters.
+            Initialize the AVPL Accounting entity first.
         </div>
     {% else %}
         <div class="accounting-gst-summary">
             <div>
                 <span>GST components</span>
                 <strong>{{ gst_tax_overview.foundation.present_component_count }} / {{ gst_tax_overview.foundation.required_component_count }}</strong>
-                <small>Protected CGST, SGST and IGST definitions</small>
+                <small>CGST, SGST and IGST</small>
             </div>
             <div>
                 <span>Taxability classes</span>
                 <strong>{{ gst_tax_overview.foundation.present_taxability_count }} / {{ gst_tax_overview.foundation.required_taxability_count }}</strong>
-                <small>Taxable, Exempt, Nil Rated and Non-GST</small>
+                <small>Taxability types</small>
             </div>
             <div>
                 <span>Effective today</span>
                 <strong>{{ gst_tax_overview.current_active_rows|length }}</strong>
-                <small>{{ gst_tax_overview.future_active_rows|length }} approved future rate(s)</small>
+                <small>{{ gst_tax_overview.future_active_rows|length }} future rate(s)</small>
             </div>
             <div>
-                <span>Approval queue</span>
+                <span>Needs attention</span>
                 <strong>{{ gst_tax_overview.counts.pending_approval }}</strong>
-                <small>{{ gst_tax_overview.counts.returned_for_correction }} returned for correction</small>
+                <small>{{ gst_tax_overview.counts.returned_for_correction }} need changes</small>
             </div>
         </div>
 
@@ -334,7 +333,7 @@
                 <div class="accounting-gst-foundation-heading">
                     <div>
                         <h3>GST components</h3>
-                        <p>Component selection logic is fixed; state determination is added in Stage 4 Batch 4.</p>
+                        <p>GST component rules are protected.</p>
                     </div>
                     <span class="accounting-state-pill {% if gst_tax_overview.foundation.drifted_components or gst_tax_overview.foundation.missing_components %}review{% else %}active{% endif %}">
                         {{ gst_tax_overview.foundation.present_component_count }} present
@@ -350,7 +349,7 @@
                     {% else %}
                         <div class="accounting-gst-foundation-card">
                             <strong>Not initialized</strong>
-                            <small>Super Admin must initialize the protected GST foundation.</small>
+                            <small>Initialize the GST foundation first.</small>
                         </div>
                     {% endfor %}
                 </div>
@@ -360,7 +359,7 @@
                 <div class="accounting-gst-foundation-heading">
                     <div>
                         <h3>Taxability classifications</h3>
-                        <p>Products will use these protected values during Stage 4 Batch 3 mapping.</p>
+                        <p>Used during product mapping.</p>
                     </div>
                     <span class="accounting-state-pill {% if gst_tax_overview.foundation.drifted_taxabilities or gst_tax_overview.foundation.missing_taxabilities %}review{% else %}active{% endif %}">
                         {{ gst_tax_overview.foundation.present_taxability_count }} present
@@ -376,7 +375,7 @@
                     {% else %}
                         <div class="accounting-gst-foundation-card">
                             <strong>Not initialized</strong>
-                            <small>Super Admin must initialize the protected taxability catalog.</small>
+                            <small>Initialize taxability options first.</small>
                         </div>
                     {% endfor %}
                 </div>
@@ -388,8 +387,7 @@
                 <div>
                     <strong>Initialize or repair the protected GST foundation</strong>
                     <p>
-                        The operation is idempotent. It creates only missing system masters and restores
-                        recognized protected definitions. Custom data is never silently overwritten.
+                        Creates missing masters and safely repairs protected ones.
                     </p>
                 </div>
                 <form method="post" action="{{ url_for('accounting.gst_tax_master_synchronize') }}">
@@ -403,11 +401,8 @@
         {% if gst_tax_overview.foundation.is_complete and gst_tax_capabilities.can_create %}
             <form class="accounting-gst-form" method="post" action="{{ url_for('accounting.gst_tax_rate_create') }}">
                 <div class="accounting-gst-form-heading">
-                    <h3>Create effective-dated GST rate</h3>
-                    <p>
-                        Accounts prepares the rate; AVPL Admin approves it. No default statutory rate is
-                        hard-coded, so the approved catalog can follow future legal changes safely.
-                    </p>
+                    <h3>Add GST Rate</h3>
+                    <p>Save a rate with its effective date.</p>
                 </div>
                 <div class="accounting-gst-form-grid">
                     <div class="accounting-gst-field">
@@ -431,9 +426,9 @@
                         <input id="gstEffectiveTo" name="effective_to" type="date">
                     </div>
                     <div class="accounting-gst-field span-2">
-                        <label for="gstSupersedes">Replaces an approved rate (optional)</label>
+                        <label for="gstSupersedes">Replaces rate (optional)</label>
                         <select id="gstSupersedes" name="supersedes_rate_id">
-                            <option value="">New independent rate code</option>
+                            <option value="">New rate</option>
                             {% for active_rate in gst_tax_overview.active_rows %}
                                 <option value="{{ active_rate.id }}">
                                     {{ active_rate.rate_code }} · {{ active_rate.total_rate_display }} · from {{ active_rate.effective_from_display }}
@@ -447,12 +442,13 @@
                     </div>
                 </div>
                 <div class="accounting-gst-form-actions">
-                    <button class="accounting-primary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate GST Rate{% else %}Create GST rate draft{% endif %}</button>
+                    <button class="accounting-gst-secondary-button" type="button" onclick="this.form.reset()">Cancel</button>
+                    <button class="accounting-primary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Create GST rate draft{% endif %}</button>
                 </div>
             </form>
         {% elif not gst_tax_overview.foundation.is_complete %}
             <div class="accounting-notice warning">
-                Complete the protected GST foundation before Accounts creates effective-dated tax rates.
+                Complete GST setup before adding rates.
             </div>
         {% endif %}
 
@@ -482,13 +478,11 @@
 
                         {% if rate.supersedes_rate_id %}
                             <div class="accounting-gst-rule">
-                                <strong>Replacement control:</strong> This rate supersedes {{ rate.supersedes_rate_code }}.
-                                Approval automatically closes the previous effective period one day before this rate begins.
+                                <strong>Replaces:</strong> {{ rate.supersedes_rate_code }}. Previous rate closes automatically.
                             </div>
                         {% else %}
                             <div class="accounting-gst-rule">
-                                <strong>Permanent history:</strong> Approved rate rows are not edited or deleted.
-                                Future changes use another effective-dated row.
+                                <strong>History:</strong> Approved rates stay unchanged; add a new rate for changes.
                             </div>
                         {% endif %}
 
@@ -503,7 +497,7 @@
                         {% endif %}
 
                         <details>
-                            <summary>View details and available actions</summary>
+                            <summary>View details & actions</summary>
                             <div class="accounting-gst-detail-body">
                                 {% if rate.description %}<p class="accounting-section-description">{{ rate.description }}</p>{% endif %}
 
@@ -534,7 +528,7 @@
                                             <div class="accounting-gst-field span-2">
                                                 <label>Replaces approved rate</label>
                                                 <select name="supersedes_rate_id">
-                                                    <option value="">New independent rate code</option>
+                                                    <option value="">New rate</option>
                                                     {% for active_rate in gst_tax_overview.active_rows %}
                                                         {% if active_rate.id != rate.id %}
                                                             <option value="{{ active_rate.id }}" {% if rate.supersedes_rate_id == active_rate.id %}selected{% endif %}>
@@ -550,11 +544,13 @@
                                             </div>
                                         </div>
                                         <div class="accounting-gst-actions">
-                                            <button class="accounting-gst-secondary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save changes{% endif %}</button>
+                                            <button class="accounting-gst-secondary-button" type="button" onclick="this.form.reset();this.closest('details').removeAttribute('open')">Cancel</button>
+                                            <button class="accounting-primary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save changes{% endif %}</button>
                                         </div>
                                     </form>
                                 {% endif %}
 
+                                {% if not streamlined_workflows_enabled %}
                                 {% if rate.status in ['draft', 'returned_for_correction'] and is_maker %}
                                     <div class="accounting-gst-actions">
                                         {% if gst_tax_capabilities.can_submit %}
@@ -567,7 +563,7 @@
                                         {% if gst_tax_capabilities.can_cancel %}
                                             <form method="post" action="{{ url_for('accounting.gst_tax_rate_cancel', rate_id=rate.id) }}">
                                                 <input type="hidden" name="version" value="{{ rate.version }}">
-                                                <input name="reason" placeholder="Mandatory cancellation reason" required>
+                                                <input name="reason" placeholder="Reason" required>
                                                 <button class="accounting-gst-danger-button" type="submit">Cancel draft</button>
                                             </form>
                                         {% endif %}
@@ -597,11 +593,13 @@
                                         {% if gst_tax_capabilities.can_return %}
                                             <form method="post" action="{{ url_for('accounting.gst_tax_rate_return', rate_id=rate.id) }}">
                                                 <input type="hidden" name="version" value="{{ rate.version }}">
-                                                <input name="return_reason" placeholder="Mandatory correction reason" required>
+                                                <input name="return_reason" placeholder="Reason" required>
                                                 <button class="accounting-gst-warning-button" type="submit">Return to Accounts</button>
                                             </form>
                                         {% endif %}
                                     </div>
+                                {% endif %}
+
                                 {% endif %}
 
                                 {% if rate.status == 'active' and gst_tax_capabilities.can_retire %}
@@ -628,13 +626,12 @@
         {% else %}
             <div class="accounting-gst-empty">
                 <strong>No GST tax rates have been configured.</strong>
-                <p>Accounts can create the first effective-dated rate after the protected foundation is verified.</p>
+                <p>You can add rates after GST setup is ready.</p>
             </div>
         {% endif %}
 
         <div class="accounting-gst-compliance-note">
-            <strong>Stage boundary:</strong> This batch defines GST components, taxability and effective-dated rates only.
-            HSN, units, product mapping and seller/place-of-supply state determination remain disabled until their respective Stage 4 batches.
+            <strong>Scope:</strong> GST components, taxability and rates.
         </div>
     {% endif %}
 </section>

@@ -189,12 +189,10 @@
 <section class="accounting-account-groups-card" id="account-groups">
     <div class="accounting-section-heading">
         <div>
-            <p class="accounting-eyebrow">Stage 3 · Batch 1</p>
-            <h2>Protected account groups</h2>
+            <p class="accounting-eyebrow">Accounting masters</p>
+            <h2>Account Groups</h2>
             <p class="accounting-section-description">
-                Permanent AVPL classification masters for future ledgers and voucher posting.
-                System groups are entity-scoped, audited and locked against casual rename,
-                deactivation or deletion.
+                Core groups used by ledgers and vouchers.
             </p>
         </div>
 
@@ -211,7 +209,7 @@
         <div class="accounting-notice danger">{{ account_group_setup_error }}</div>
     {% elif not accounting_entity %}
         <div class="accounting-notice info">
-            Initialize the active AVPL Accounting entity before creating protected account groups.
+            Initialize the AVPL Accounting entity first.
         </div>
     {% else %}
         <div class="accounting-group-summary-grid">
@@ -221,12 +219,12 @@
                 <small>Fixed protected AVPL master catalog</small>
             </div>
             <div>
-                <span>Present and active</span>
+                <span>Ready</span>
                 <strong>{{ account_group_overview.health.present_count }}</strong>
                 <small>{{ account_group_overview.active_count }} currently active records</small>
             </div>
             <div>
-                <span>Hierarchy health</span>
+                <span>Group health</span>
                 <strong>
                     {% if account_group_overview.health.is_complete %}
                         Verified
@@ -237,32 +235,29 @@
                 <small>{{ account_group_overview.health.missing_count }} missing · {{ account_group_overview.health.drifted_count }} drifted</small>
             </div>
             <div>
-                <span>Audit recovery</span>
+                <span>Audit issues</span>
                 <strong>{{ account_group_overview.audit_recovery_count }}</strong>
-                <small>Records requiring audit-log synchronization</small>
+                <small>Needs attention</small>
             </div>
         </div>
 
         {% if account_group_capabilities.can_bootstrap %}
             <div class="accounting-group-sync-box">
                 <div>
-                    <strong>Initialize or repair the protected catalog</strong>
+                    <strong>Check account groups</strong>
                     <p>
-                        The operation is idempotent. Re-running it creates only missing groups
-                        and restores recognized protected groups to their canonical definition.
-                        Conflicting custom data is never overwritten automatically.
+                        Creates missing groups and repairs safe definition drift.
                     </p>
                 </div>
                 <form method="post" action="{{ url_for('accounting.account_groups_synchronize') }}">
                     <button type="submit" class="accounting-primary-button">
-                        {% if account_group_overview.group_count %}Verify and repair groups{% else %}Initialize protected groups{% endif %}
+                        {% if account_group_overview.group_count %}Check & Repair Groups{% else %}Initialize Groups{% endif %}
                     </button>
                 </form>
             </div>
         {% elif not account_group_overview.health.is_complete %}
             <div class="accounting-notice warning">
-                Super Admin must initialize or repair the protected AVPL account groups.
-                After permission schema version 6 is installed, synchronize permanent user mappings once.
+                Super Admin must initialize or repair these groups.
             </div>
         {% endif %}
 
@@ -287,7 +282,7 @@
                 <div class="accounting-group-section-heading">
                     <div>
                         <h3>Primary groups</h3>
-                        <p>Top-level Balance Sheet and Profit &amp; Loss classifications.</p>
+                        <p>Balance Sheet and Profit &amp; Loss groups.</p>
                     </div>
                     <span>{{ account_group_overview.primary_groups|length }} groups</span>
                 </div>
@@ -329,7 +324,7 @@
                 <div class="accounting-group-section-heading">
                     <div>
                         <h3>Child groups</h3>
-                        <p>Operational classifications nested under Current Assets or Current Liabilities.</p>
+                        <p>Operational child groups.</p>
                     </div>
                     <span>{{ account_group_overview.child_groups|length }} groups</span>
                 </div>
@@ -369,7 +364,7 @@
         {% else %}
             <div class="accounting-empty-financial-years">
                 <strong>No protected account groups have been initialized.</strong>
-                <p>Super Admin must run the one-time idempotent initialization above.</p>
+                <p>Run the initialization above.</p>
             </div>
         {% endif %}
     {% endif %}

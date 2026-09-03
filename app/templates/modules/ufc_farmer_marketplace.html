@@ -2,7 +2,7 @@
 {% block title %}Farmer Marketplace Setup{% endblock %}
 {% block content %}
 <style>
-.fm{width:100%;padding:28px;border:1px solid #e3ebe5;border-radius:20px;background:#fff;box-shadow:0 12px 34px rgba(24,63,42,.06);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#435349}.fm-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid #e8eeea}.fm-head h2{margin:0;color:#17251d;font-size:1.65rem;font-weight:850;letter-spacing:-.025em}.fm-head p{margin:6px 0 0;color:#7b8880;font-size:.74rem;line-height:1.45}.fm-actions{display:flex;gap:7px;flex-wrap:wrap}.fm-btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 12px;border:1px solid #cfdcd3;border-radius:8px;background:#fff;color:#2f6e46;text-decoration:none;font:inherit;font-size:.68rem;font-weight:850;cursor:pointer}.fm-btn.primary{background:#397e51;border-color:#397e51;color:#fff}.fm-btn.danger{background:#fff;border-color:#efcaca;color:#a93a35}.fm-note{margin:16px 0;padding:12px 14px;border:1px solid #d7e4da;border-left:3px solid #5c9870;border-radius:9px;background:#f8fbf9;color:#526158;font-size:.7rem;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.sum{padding:14px;border:1px solid #e2eae4;border-radius:11px;background:#fbfdfb}.sum small{display:block;color:#78867d;font-size:.65rem;font-weight:750}.sum strong{display:block;margin-top:5px;color:#203529;font-size:1.08rem;font-weight:850}.filters{display:grid;grid-template-columns:minmax(220px,1fr) 180px auto;gap:8px;margin-bottom:14px}.filters input,.filters select{height:38px;border:1px solid #d8e1da;border-radius:8px;padding:0 10px;background:#fff;color:#34483b;font:inherit;font-size:.7rem;outline:none}.bulk{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0;padding:10px 11px;border:1px solid #e2eae4;border-radius:10px;background:#fbfdfb;font-size:.68rem}.bulk .count{margin-right:auto;color:#7b8880}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}.card{position:relative;border:1px solid #e2eae4;border-radius:12px;background:#fff;overflow:hidden}.card-top{display:flex;gap:10px;padding:12px;border-bottom:1px solid #edf2ee;background:#fbfdfb}.pick{width:18px;height:18px;margin-top:2px;accent-color:#397e51}.product h3{margin:0;color:#263b2f;font-size:.82rem;font-weight:850}.product p{margin:3px 0 0;color:#7b8880;font-size:.64rem}.status{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:7px;font-size:.59rem;font-weight:850;white-space:nowrap}.status.published{background:#ecfdf3;color:#237a43;border:1px solid #b7e4c7}.status.draft,.status.unpublished,.status.not_configured{background:#f5f7f6;color:#647067;border:1px solid #dde5df}.stock-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:11px 12px}.stock-box{padding:8px;border:1px solid #edf2ee;border-radius:8px;background:#fbfdfb}.stock-box small{display:block;color:#7b8880;font-size:.61rem}.stock-box strong{display:block;margin-top:3px;color:#263b2f;font-size:.72rem}.stock-box .good{color:#237a43}.setup{padding:0 12px 12px}.setup-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.field label{display:block;margin:0 0 5px;color:#526158;font-size:.65rem;font-weight:800}.field input,.field textarea{width:100%;border:1px solid #d8e1da;border-radius:8px;padding:8px 9px;font:inherit;font-size:.68rem;color:#34483b;background:#fff}.field input{height:36px}.field textarea{min-height:64px;resize:vertical}.field.full{grid-column:1/-1}.setup-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;flex-wrap:wrap}.margin{font-size:.65rem;color:#7b8880}.margin strong{color:#2f6e46}.empty{padding:32px;text-align:center;color:#87938b;border:1px dashed #cbd9cf;border-radius:10px}.out{color:#b45309!important}@media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr}.setup-grid{grid-template-columns:1fr 1fr}}@media(max-width:580px){.fm{padding:16px;border-radius:16px}.cards,.setup-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.fm-actions,.fm-actions a{width:100%}.bulk .fm-btn{flex:1 1 100%}}
+.fm{width:100%;padding:28px;border:1px solid #e3ebe5;border-radius:20px;background:#fff;box-shadow:0 12px 34px rgba(24,63,42,.06);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#435349}.fm-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid #e8eeea}.fm-head h2{margin:0;color:#17251d;font-size:1.65rem;font-weight:850;letter-spacing:-.025em}.fm-head p{margin:6px 0 0;color:#7b8880;font-size:.74rem;line-height:1.45}.fm-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.fm-btn{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 12px;border:1px solid #cfdcd3;border-radius:8px;background:#fff;color:#2f6e46;text-decoration:none;font:inherit;font-size:.68rem;font-weight:850;cursor:pointer}.fm-btn.primary{background:#397e51;border-color:#397e51;color:#fff}.fm-btn.danger{background:#fff;border-color:#efcaca;color:#a93a35}.delivery-control{display:flex;align-items:center;gap:9px;padding:6px 8px 6px 10px;border:1px solid #cfdcd3;border-radius:10px;background:#fbfdfb}.delivery-copy{display:grid;gap:1px;line-height:1}.delivery-copy strong{font-size:.68rem;color:#263b2f}.delivery-copy small{font-size:.58rem;color:#7b8880}.delivery-switch{position:relative;width:44px;height:24px;flex:0 0 44px}.delivery-switch input{position:absolute;opacity:0;pointer-events:none}.delivery-slider{position:absolute;inset:0;border-radius:999px;background:#cfd8d2;cursor:pointer;transition:.18s ease}.delivery-slider:after{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);transition:.18s ease}.delivery-switch input:checked+.delivery-slider{background:#397e51}.delivery-switch input:checked+.delivery-slider:after{transform:translateX(20px)}.delivery-switch input:focus-visible+.delivery-slider{outline:3px solid rgba(57,126,81,.2);outline-offset:2px}.delivery-state{margin:14px 0;padding:11px 13px;border-radius:10px;font-size:.68rem;font-weight:750}.delivery-state.on{border:1px solid #bee1c9;background:#f2fbf5;color:#286b40}.delivery-state.off{border:1px solid #efd7a9;background:#fffaf0;color:#8a5b0a}.fm-note{margin:16px 0;padding:12px 14px;border:1px solid #d7e4da;border-left:3px solid #5c9870;border-radius:9px;background:#f8fbf9;color:#526158;font-size:.7rem;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}.sum{padding:14px;border:1px solid #e2eae4;border-radius:11px;background:#fbfdfb}.sum small{display:block;color:#78867d;font-size:.65rem;font-weight:750}.sum strong{display:block;margin-top:5px;color:#203529;font-size:1.08rem;font-weight:850}.filters{display:grid;grid-template-columns:minmax(220px,1fr) 180px auto;gap:8px;margin-bottom:14px}.filters input,.filters select{height:38px;border:1px solid #d8e1da;border-radius:8px;padding:0 10px;background:#fff;color:#34483b;font:inherit;font-size:.7rem;outline:none}.bulk{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0;padding:10px 11px;border:1px solid #e2eae4;border-radius:10px;background:#fbfdfb;font-size:.68rem}.bulk .count{margin-right:auto;color:#7b8880}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}.card{position:relative;border:1px solid #e2eae4;border-radius:12px;background:#fff;overflow:hidden}.card-top{display:flex;gap:10px;padding:12px;border-bottom:1px solid #edf2ee;background:#fbfdfb}.pick{width:18px;height:18px;margin-top:2px;accent-color:#397e51}.product h3{margin:0;color:#263b2f;font-size:.82rem;font-weight:850}.product p{margin:3px 0 0;color:#7b8880;font-size:.64rem}.status{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:7px;font-size:.59rem;font-weight:850;white-space:nowrap}.status.published{background:#ecfdf3;color:#237a43;border:1px solid #b7e4c7}.status.draft,.status.unpublished,.status.not_configured{background:#f5f7f6;color:#647067;border:1px solid #dde5df}.stock-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:11px 12px}.stock-box{padding:8px;border:1px solid #edf2ee;border-radius:8px;background:#fbfdfb}.stock-box small{display:block;color:#7b8880;font-size:.61rem}.stock-box strong{display:block;margin-top:3px;color:#263b2f;font-size:.72rem}.stock-box .good{color:#237a43}.setup{padding:0 12px 12px}.setup-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.field label{display:block;margin:0 0 5px;color:#526158;font-size:.65rem;font-weight:800}.field input,.field textarea{width:100%;border:1px solid #d8e1da;border-radius:8px;padding:8px 9px;font:inherit;font-size:.68rem;color:#34483b;background:#fff}.field input{height:36px}.field textarea{min-height:64px;resize:vertical}.field.full{grid-column:1/-1}.setup-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;flex-wrap:wrap}.margin{font-size:.65rem;color:#7b8880}.margin strong{color:#2f6e46}.empty{padding:32px;text-align:center;color:#87938b;border:1px dashed #cbd9cf;border-radius:10px}.out{color:#b45309!important}@media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr}.setup-grid{grid-template-columns:1fr 1fr}}@media(max-width:580px){.fm{padding:16px;border-radius:16px}.cards,.setup-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.fm-actions,.fm-actions a{width:100%}.bulk .fm-btn{flex:1 1 100%}}
 </style>
 
 <div class="fm">
@@ -12,12 +12,29 @@
       <p>{{ overview.get('centre_name') }} · Set your Farmer selling price, then publish selected UFC-stock products.</p>
     </div>
     <div class="fm-actions">
+      <form method="post" action="{{ url_for('modules.ufc_farmer_marketplace') }}" class="delivery-control" id="deliveryForm">
+        <div class="delivery-copy">
+          <strong>{{ 'Delivery ON' if overview.get('delivery_enabled', True) else 'Delivery OFF' }}</strong>
+          <small>{{ 'Farmers can order' if overview.get('delivery_enabled', True) else 'Viewing only' }}</small>
+        </div>
+        <label class="delivery-switch" title="Turn Farmer ordering on or off">
+          <input type="checkbox" id="deliveryToggle" name="delivery_toggle" {% if overview.get('delivery_enabled', True) %}checked{% endif %} aria-label="Farmer delivery availability">
+          <span class="delivery-slider"></span>
+        </label>
+        <input type="hidden" name="delivery_enabled" id="deliveryEnabledValue" value="{{ 1 if overview.get('delivery_enabled', True) else 0 }}">
+      </form>
       <a class="fm-btn" href="{{ url_for('modules.ufc_stock') }}">My UFC Stock</a>
       <a class="fm-btn" href="{{ url_for('modules.ufc_purchases') }}">Purchase Entries</a>
     </div>
   </div>
 
-  <div class="fm-note"><strong>Simple rule:</strong> Publishing only controls Farmer visibility. It never adds, removes or reserves UFC stock. Farmers mapped to another UFC cannot see these listings.</div>
+  <div class="delivery-state {{ 'on' if overview.get('delivery_enabled', True) else 'off' }}">
+    {% if overview.get('delivery_enabled', True) %}
+      Delivery is ON — Farmers can view products and place orders.
+    {% else %}
+      Delivery is OFF — Farmers can still view products and prices, but new orders are temporarily disabled.
+    {% endif %}
+  </div>
 
   <div class="summary">
     <div class="sum"><small>UFC Stock Products</small><strong>{{ overview.get('summary',{}).get('stock_products',0) }}</strong></div>
@@ -44,8 +61,8 @@
     <div class="bulk">
       <label><input type="checkbox" id="selectAll"> Select all visible</label>
       <span class="count"><span id="selectedCount">0</span> selected</span>
-      <button class="fm-btn primary" type="submit" name="action" value="publish" onclick="return confirmBulk('publish')">Publish Selected</button>
-      <button class="fm-btn danger" type="submit" name="action" value="unpublish" onclick="return confirmBulk('remove')">Remove Selected</button>
+      <button class="fm-btn primary" type="submit" name="action" value="publish" onclick="return confirmBulk('publish',this)">Publish Selected</button>
+      <button class="fm-btn danger" type="submit" name="action" value="unpublish" onclick="return confirmBulk('remove',this)">Remove Selected</button>
     </div>
   </form>
 
@@ -104,6 +121,16 @@
 
 <script>
 (function(){
+  const deliveryToggle=document.getElementById('deliveryToggle');
+  const deliveryValue=document.getElementById('deliveryEnabledValue');
+  const deliveryForm=document.getElementById('deliveryForm');
+  if(deliveryToggle && deliveryValue && deliveryForm){
+    deliveryToggle.addEventListener('change',()=>{
+      deliveryValue.value=deliveryToggle.checked?'1':'0';
+      deliveryToggle.disabled=true;
+      deliveryForm.submit();
+    });
+  }
   const picks=[...document.querySelectorAll('.rowPick')];
   const selectAll=document.getElementById('selectAll');
   const count=document.getElementById('selectedCount');
@@ -114,12 +141,106 @@
   }
   picks.forEach(x=>x.addEventListener('change',refresh));
   if(selectAll) selectAll.addEventListener('change',()=>{picks.forEach(x=>x.checked=selectAll.checked);refresh();});
-  window.confirmBulk=function(action){
+  window.confirmBulk=function(action,button){
     const n=picks.filter(x=>x.checked).length;
     if(!n){alert('Select at least one product.');return false;}
-    return confirm(action==='publish' ? 'Publish the selected products to Farmers mapped to this UFC?' : 'Remove the selected products from the Farmer Marketplace?');
+    const isPublish=action==='publish';
+    return ufConfirmSubmit(
+      document.getElementById('bulkForm'),
+      isPublish?'Publish selected products?':'Remove selected products?',
+      isPublish?'The selected products will become visible to Farmers mapped to this UFC.':'The selected products will be removed from the Farmer Marketplace.',
+      isPublish?'Publish Products':'Remove Products',
+      isPublish?'default':'danger',
+      button
+    );
   };
   refresh();
 })();
 </script>
+
+
+<!-- UnnatFarm centered action confirmation modal -->
+<style id="uf-action-confirm-style">
+.uf-confirm-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(18,34,24,.48);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease}.uf-confirm-overlay.is-open{opacity:1;visibility:visible}.uf-confirm-card{width:min(100%,460px);background:#fff;border:1px solid #dbe9df;border-radius:18px;box-shadow:0 24px 70px rgba(17,49,30,.20);padding:24px;transform:translateY(5px) scale(.975);transition:transform .2s ease;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f3127}.uf-confirm-overlay.is-open .uf-confirm-card{transform:translateY(0) scale(1)}.uf-confirm-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;background:#eff8f1;border:1px solid #cfe3d5;color:#2b7346;font-size:1.35rem}.uf-confirm-card.is-danger .uf-confirm-icon{background:#fff4f3;border-color:#f2ceca;color:#b42318}.uf-confirm-card h3{margin:0;text-align:center;color:#17251d;font-size:1.08rem;font-weight:900;letter-spacing:-.015em}.uf-confirm-card p{margin:9px auto 0;max-width:390px;text-align:center;color:#6e7f74;font-size:.78rem;line-height:1.55}.uf-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}.uf-confirm-btn{min-height:40px;border-radius:9px;padding:9px 13px;font:inherit;font-size:.76rem;font-weight:850;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease}.uf-confirm-btn:hover{transform:translateY(-1px)}.uf-confirm-btn.back{background:#fff;border:1px solid #d6e3d9;color:#2f6e46}.uf-confirm-btn.back:hover{border-color:#b8d2c0;background:#f8fbf9}.uf-confirm-btn.confirm{background:#2b7346;border:1px solid #2b7346;color:#fff;box-shadow:0 7px 16px rgba(43,115,70,.14)}.uf-confirm-btn.confirm:hover{background:#1f5f39;border-color:#1f5f39}.uf-confirm-card.is-danger .uf-confirm-btn.confirm{background:#b42318;border-color:#b42318;box-shadow:0 7px 16px rgba(180,35,24,.12)}.uf-confirm-card.is-danger .uf-confirm-btn.confirm:hover{background:#922018;border-color:#922018}@media(max-width:520px){.uf-confirm-overlay{padding:14px}.uf-confirm-card{padding:20px 16px;border-radius:16px}.uf-confirm-actions{grid-template-columns:1fr}.uf-confirm-btn.confirm{order:-1}}@media(prefers-reduced-motion:reduce){.uf-confirm-overlay,.uf-confirm-card,.uf-confirm-btn{transition:none!important}.uf-confirm-btn:hover{transform:none}}
+</style>
+<div class="uf-confirm-overlay" id="ufActionConfirm" aria-hidden="true">
+  <div class="uf-confirm-card" id="ufActionConfirmCard" role="dialog" aria-modal="true" aria-labelledby="ufActionConfirmTitle" aria-describedby="ufActionConfirmMessage">
+    <div class="uf-confirm-icon" id="ufActionConfirmIcon" aria-hidden="true">✓</div>
+    <h3 id="ufActionConfirmTitle">Confirm action</h3>
+    <p id="ufActionConfirmMessage">Please confirm before continuing.</p>
+    <div class="uf-confirm-actions">
+      <button class="uf-confirm-btn back" id="ufActionConfirmBack" type="button">Go Back</button>
+      <button class="uf-confirm-btn confirm" id="ufActionConfirmProceed" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+<script id="uf-action-confirm-script">
+(function(){
+  const overlay=document.getElementById('ufActionConfirm');
+  const card=document.getElementById('ufActionConfirmCard');
+  const title=document.getElementById('ufActionConfirmTitle');
+  const message=document.getElementById('ufActionConfirmMessage');
+  const icon=document.getElementById('ufActionConfirmIcon');
+  const back=document.getElementById('ufActionConfirmBack');
+  const proceed=document.getElementById('ufActionConfirmProceed');
+  if(!overlay||!card||!title||!message||!back||!proceed)return;
+  let pendingAction=null;
+  let lastFocused=null;
+  function closeConfirm(){
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden','true');
+    pendingAction=null;
+    if(lastFocused&&typeof lastFocused.focus==='function')lastFocused.focus();
+  }
+  window.ufOpenConfirm=function(options){
+    const o=options||{};
+    lastFocused=document.activeElement;
+    pendingAction=typeof o.onConfirm==='function'?o.onConfirm:null;
+    title.textContent=o.title||'Confirm action';
+    message.textContent=o.message||'Please confirm before continuing.';
+    proceed.textContent=o.confirmText||'Confirm';
+    back.textContent=o.cancelText||'Go Back';
+    const danger=o.tone==='danger';
+    card.classList.toggle('is-danger',danger);
+    icon.textContent=o.icon||(danger?'!':'✓');
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden','false');
+    window.setTimeout(()=>back.focus(),0);
+    return false;
+  };
+  window.ufConfirmSubmit=function(form,titleText,messageText,confirmText,tone,submitter){
+    return window.ufOpenConfirm({
+      title:titleText,
+      message:messageText,
+      confirmText:confirmText||'Confirm',
+      tone:tone||'default',
+      icon:tone==='danger'?'!':'✓',
+      onConfirm:function(){
+        if(!form)return;
+        if(submitter&&typeof form.requestSubmit==='function'){
+          form.requestSubmit(submitter);
+        }else if(submitter&&submitter.name){
+          const hidden=document.createElement('input');
+          hidden.type='hidden';hidden.name=submitter.name;hidden.value=submitter.value;
+          form.appendChild(hidden);
+          HTMLFormElement.prototype.submit.call(form);
+        }else{
+          HTMLFormElement.prototype.submit.call(form);
+        }
+      }
+    });
+  };
+  back.addEventListener('click',closeConfirm);
+  proceed.addEventListener('click',function(){
+    const action=pendingAction;
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden','true');
+    pendingAction=null;
+    if(action)action();
+  });
+  overlay.addEventListener('click',function(e){if(e.target===overlay)closeConfirm();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay.classList.contains('is-open'))closeConfirm();});
+})();
+</script>
+
 {% endblock %}

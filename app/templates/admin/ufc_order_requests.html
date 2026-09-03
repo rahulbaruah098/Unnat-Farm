@@ -5,381 +5,24 @@
 {% block content %}
 
 <style>
-.s4-page{
-    width:100%;
-    max-width:1600px;
-    margin:0 auto;
-    padding:28px;
-    border:1px solid rgba(47,122,76,.11);
-    border-radius:22px;
-    background:#fff;
-    box-shadow:0 16px 40px rgba(28,72,43,.07);
-    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    color:#435349;
-}
+:root{--green:#397e51;--green-dark:#2f6e46;--ink:#17251d;--text:#435349;--muted:#748279;--line:#e1e9e3;--soft:#f7faf8;--soft2:#fbfdfb;--shadow:0 14px 36px rgba(28,72,43,.07)}
+*{box-sizing:border-box}
+@keyframes ufFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes ufPop{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:scale(1)}}
 
-.s4-head{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:18px;
-    flex-wrap:wrap;
-    margin-bottom:22px;
-}
-
-.s4-head h2{
-    margin:0;
-    color:#17251d;
-    font-size:clamp(1.5rem,2vw,2rem);
-    font-weight:800;
-    line-height:1.2;
-    letter-spacing:-.02em;
-}
-
-.s4-head p{
-    margin:7px 0 0;
-    max-width:760px;
-    color:#748279;
-    font-size:.82rem;
-    line-height:1.5;
-}
-
-.head-actions{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-}
-
-.btn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:39px;
-    padding:8px 14px;
-    border:1px solid rgba(47,122,76,.14);
-    border-radius:9px;
-    background:#fff;
-    color:#526158;
-    text-decoration:none;
-    font-size:.74rem;
-    font-weight:800;
-    transition:background .18s ease,border-color .18s ease,color .18s ease;
-}
-
-.btn:hover{
-    background:#f7fbf8;
-    border-color:rgba(47,122,76,.26);
-    color:#2f6e46;
-}
-
-.flow{
-    margin-bottom:18px;
-    padding:13px 15px;
-    border:1px solid rgba(47,122,76,.14);
-    border-radius:11px;
-    background:#f7fbf8;
-    color:#526158;
-    font-size:.76rem;
-    line-height:1.5;
-}
-
-.flow strong{
-    color:#2f6e46;
-}
-
-.stats{
-    display:grid;
-    grid-template-columns:repeat(6,minmax(0,1fr));
-    gap:10px;
-    margin-bottom:16px;
-}
-
-.stat{
-    min-width:0;
-    padding:13px;
-    border:1px solid rgba(47,122,76,.10);
-    border-radius:11px;
-    background:#fbfdfb;
-}
-
-.stat small{
-    display:block;
-    margin-bottom:6px;
-    color:#7b8a80;
-    font-size:.68rem;
-    font-weight:750;
-    line-height:1.35;
-}
-
-.stat strong{
-    display:block;
-    color:#22372a;
-    font-size:1.25rem;
-    font-weight:850;
-}
-
-.toolbar{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) 220px auto;
-    gap:9px;
-    margin-bottom:16px;
-    padding:13px;
-    border:1px solid rgba(47,122,76,.09);
-    border-radius:11px;
-    background:#fbfdfb;
-}
-
-.toolbar input,
-.toolbar select{
-    width:100%;
-    min-width:0;
-    height:41px;
-    border:1px solid rgba(47,122,76,.14);
-    border-radius:9px;
-    padding:0 11px;
-    background:#fff;
-    color:#263b2f;
-    font:inherit;
-    font-size:.78rem;
-    outline:none;
-}
-
-.toolbar input::placeholder{
-    color:#94a098;
-    opacity:.85;
-}
-
-.toolbar input:focus,
-.toolbar select:focus{
-    border-color:rgba(47,122,76,.38);
-    box-shadow:0 0 0 4px rgba(47,122,76,.06);
-}
-
-.toolbar button{
-    height:41px;
-    border:1px solid #397e51;
-    border-radius:9px;
-    padding:0 17px;
-    background:#397e51;
-    color:#fff;
-    font:inherit;
-    font-size:.74rem;
-    font-weight:800;
-    cursor:pointer;
-}
-
-.toolbar button:hover{
-    background:#2f6e46;
-    border-color:#2f6e46;
-}
-
-.table-wrap{
-    width:100%;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    border:1px solid rgba(47,122,76,.09);
-    border-radius:11px;
-    background:#fff;
-}
-
-.tbl{
-    width:100%;
-    min-width:1050px;
-    border-collapse:collapse;
-}
-
-.tbl th,
-.tbl td{
-    padding:10px 11px;
-    border-bottom:1px solid #edf2ee;
-    text-align:left;
-    vertical-align:top;
-    font-size:.72rem;
-    line-height:1.4;
-}
-
-.tbl th{
-    background:#f6f9f7;
-    color:#6e7e74;
-    font-size:.63rem;
-    font-weight:800;
-    letter-spacing:.03em;
-    text-transform:uppercase;
-    white-space:nowrap;
-}
-
-.tbl td{
-    color:#435349;
-}
-
-.tbl tbody tr:last-child td{
-    border-bottom:none;
-}
-
-.tbl tbody tr:hover td{
-    background:#fbfdfb;
-}
-
-.tbl strong{
-    color:#304438;
-    font-weight:800;
-}
-
-.tbl small{
-    color:#829087;
-    font-size:.66rem;
-}
-
-.badge{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:25px;
-    padding:4px 8px;
-    border-radius:7px;
-    font-size:.63rem;
-    font-weight:800;
-    border:1px solid #dcece1;
-    background:#f8fcf9;
-    white-space:nowrap;
-}
-
-.requested{
-    background:#eff6ff;
-    border-color:#bfdbfe;
-    color:#1d4ed8;
-}
-
-.approved{
-    background:#ecfdf3;
-    border-color:#b7e4c7;
-    color:#237a43;
-}
-
-.rejected,
-.cancelled{
-    background:#fef2f2;
-    border-color:#fecaca;
-    color:#b91c1c;
-}
-
-.dispatched{
-    background:#fff7e6;
-    border-color:#f4d38a;
-    color:#8a5b00;
-}
-
-.received{
-    background:#f0fdf4;
-    border-color:#b7e4c7;
-    color:#166534;
-}
-
-.view{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:32px;
-    padding:6px 10px;
-    border:1px solid rgba(47,122,76,.14);
-    border-radius:8px;
-    background:#fff;
-    color:#2f6e46;
-    text-decoration:none;
-    font-size:.68rem;
-    font-weight:800;
-}
-
-.view:hover{
-    background:#f7fbf8;
-    border-color:rgba(47,122,76,.26);
-}
-
-.empty{
-    padding:30px !important;
-    text-align:center !important;
-    color:#829087 !important;
-}
-
-.pagination{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-top:18px;
-}
-
-.pagination a{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:35px;
-    padding:7px 11px;
-    border:1px solid rgba(47,122,76,.14);
-    border-radius:8px;
-    background:#fff;
-    color:#2f6e46;
-    text-decoration:none;
-    font-size:.7rem;
-    font-weight:800;
-}
-
-.pagination a:hover{
-    background:#f7fbf8;
-    border-color:rgba(47,122,76,.26);
-}
-
-@media(max-width:1100px){
-    .stats{
-        grid-template-columns:repeat(3,1fr);
-    }
-
-    .toolbar{
-        grid-template-columns:1fr 200px;
-    }
-
-    .toolbar button{
-        grid-column:1/-1;
-    }
-}
-
-@media(max-width:760px){
-    .s4-page{
-        padding:20px;
-        border-radius:18px;
-    }
-
-    .toolbar{
-        grid-template-columns:1fr;
-    }
-
-    .toolbar button{
-        grid-column:auto;
-    }
-}
-
-@media(max-width:620px){
-    .s4-page{
-        padding:15px;
-        border-radius:16px;
-    }
-
-    .stats{
-        grid-template-columns:repeat(2,1fr);
-    }
-
-    .head-actions,
-    .head-actions a{
-        width:100%;
-    }
-}
-
-@media(max-width:380px){
-    .stats{
-        grid-template-columns:1fr;
-    }
-}
+.s4-page{width:100%;max-width:1600px;margin:0 auto;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+.s4-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:var(--shadow);margin-bottom:12px;animation:ufFadeUp .28s ease both}
+.s4-head h2{margin:0;color:var(--ink);font-size:clamp(1.42rem,2vw,1.85rem);font-weight:850;letter-spacing:-.025em}.s4-head p{margin:6px 0 0;max-width:760px;color:var(--muted);font-size:.76rem;line-height:1.5}
+.head-actions{display:flex;gap:7px;flex-wrap:wrap}.btn,.view,.pager a{display:inline-flex;align-items:center;justify-content:center;min-height:37px;padding:7px 12px;border:1px solid #d6e3d9;border-radius:9px;background:#fff;color:var(--green-dark);text-decoration:none;font-size:.69rem;font-weight:800;transition:.18s ease}.btn:hover,.view:hover,.pager a:hover{background:#f3f8f4;border-color:#bdd2c4;transform:translateY(-1px)}
+.flow{margin-bottom:12px;padding:11px 13px;border:1px solid #d8e7dc;border-radius:10px;background:#f6fbf7;color:#526158;font-size:.7rem;line-height:1.5}.flow strong{color:var(--green-dark)}
+.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:12px}.stat{padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:0 8px 22px rgba(28,72,43,.035);animation:ufFadeUp .3s ease both}.stat small{display:block;margin-bottom:5px;color:var(--muted);font-size:.62rem;font-weight:750}.stat strong{display:block;color:#203529;font-size:1.13rem;font-weight:850}
+.toolbar{display:grid;grid-template-columns:minmax(0,1fr) 210px auto;gap:8px;margin-bottom:12px;padding:11px;border:1px solid var(--line);border-radius:11px;background:var(--soft2)}.toolbar input,.toolbar select{height:39px;border:1px solid #d8e1da;border-radius:8px;padding:0 10px;background:#fff;color:#34483b;font:inherit;font-size:.7rem;outline:none}.toolbar input:focus,.toolbar select:focus{border-color:#82ad90;box-shadow:0 0 0 3px rgba(47,110,70,.06)}.toolbar button{height:39px;border:1px solid var(--green);border-radius:8px;padding:0 15px;background:var(--green);color:#fff;font:inherit;font-size:.69rem;font-weight:800;cursor:pointer}.toolbar button:hover{background:var(--green-dark)}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 8px 22px rgba(28,72,43,.035)}.tbl{width:100%;min-width:1050px;border-collapse:collapse}.tbl th,.tbl td{padding:10px 11px;border-bottom:1px solid #edf2ee;text-align:left;vertical-align:middle;font-size:.69rem;line-height:1.4}.tbl th{background:#f5f8f6;color:#68776e;font-size:.59rem;font-weight:850;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}.tbl tbody tr{transition:background .15s ease}.tbl tbody tr:hover td{background:#f9fcfa}.tbl tbody tr:last-child td{border-bottom:0}.tbl strong{color:#263b2f}.tbl small{color:#829087;font-size:.62rem}
+.badge{display:inline-flex;align-items:center;min-height:23px;padding:4px 7px;border-radius:7px;font-size:.59rem;font-weight:850;border:1px solid #dce6df;background:#f7faf8;white-space:nowrap}.requested{background:#eef6ff;border-color:#c8ddf5;color:#235aa6}.approved,.received{background:#edf8f0;border-color:#c5e1cd;color:#237a43}.rejected,.cancelled{background:#fff1f1;border-color:#f1cccc;color:#b42318}.dispatched{background:#fff7e6;border-color:#eed393;color:#8a5b00}
+.pager{display:flex;justify-content:flex-end;gap:7px;margin-top:12px}
+@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.s4-head{padding:15px;border-radius:14px}.head-actions,.head-actions .btn{width:100%}.stats{grid-template-columns:repeat(2,1fr)}.toolbar{grid-template-columns:1fr}.table-wrap{border:0;background:transparent;box-shadow:none;overflow:visible}.tbl{display:block;min-width:0}.tbl thead{display:none}.tbl tbody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tbl tr{display:block;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 8px 22px rgba(28,72,43,.04);animation:ufFadeUp .25s ease both}.tbl td{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border:0;text-align:right}.tbl td:before{content:attr(data-label);color:var(--muted);font-size:.6rem;font-weight:750;text-transform:uppercase;text-align:left}.tbl td:last-child{padding-top:9px}.tbl .view{width:100%}.pager{justify-content:center}}
+@media(max-width:520px){.stats,.tbl tbody{grid-template-columns:1fr}}
 </style>
 
 <div class="s4-page">
@@ -390,7 +33,6 @@
 
       <h2>UFC Order Requests</h2>
 
-      <p>One simple queue for products requested by UFC Centres. Approving reserves stock; dispatching reduces physical AVPL stock.</p>
 
     </div>
 
@@ -408,7 +50,6 @@
 
   </div>
 
-  <div class="flow"><strong>Workflow:</strong> UFC Request → AVPL Approve/Reject → Approved stock is reserved → Dispatch → UFC confirms receipt. Approval alone never reduces physical stock.</div>
 
   <div class="stats">
 
@@ -452,13 +93,16 @@
 
           <td><strong>{{ row.centre_name }}</strong><br><small>{{ row.centre_uid }}</small></td>
 
-          <td><strong>{{ row.product_name }}</strong><br><small>{{ row.product_code or '-' }}</small></td>
+          <td>
+            <strong>{{ row.product_summary or row.product_name }}</strong>
+            {% if row.is_multi_item_order %}<br><small>{{ row.item_count }} product lines · open order for line details</small>{% else %}<br><small>{{ row.product_code or '-' }}</small>{% endif %}
+          </td>
 
-          <td>{{ row.requested_quantity_display }} {{ row.unit_code }}</td>
+          <td>{% if row.is_multi_item_order %}{{ row.item_count }} product lines{% else %}{{ row.requested_quantity_display }} {{ row.unit_code }}{% endif %}</td>
 
-          <td>{{ row.approved_quantity_display if row.approved_quantity else '-' }}</td>
+          <td>{% if row.is_multi_item_order %}{% if row.status == 'requested' %}-{% else %}Line-wise{% endif %}{% else %}{{ row.approved_quantity_display if row.approved_quantity else '-' }}{% endif %}</td>
 
-          <td>{% if row.status in ['approved','dispatched','received','cancelled'] %}₹{{ row.unit_price_display }}{% else %}-{% endif %}</td>
+          <td>{% if row.status in ['approved','dispatched','received','cancelled'] %}{% if row.is_multi_item_order %}Line-wise{% else %}₹{{ row.unit_price_display }}{% endif %}{% else %}-{% endif %}</td>
 
           <td>{% if row.status in ['approved','dispatched','received','cancelled'] %}<strong>₹{{ row.total_amount_display }}</strong>{% else %}-{% endif %}</td>
 

@@ -135,19 +135,17 @@
 <section class="accounting-number-series-card" id="number-series">
     <div class="accounting-section-heading">
         <div>
-            <p class="accounting-eyebrow">Stage 2 · Batch 6</p>
-            <h2>Invoice and voucher number series</h2>
+            <p class="accounting-eyebrow">Document numbering</p>
+            <h2>Document Numbering</h2>
             <p class="accounting-section-description">
-                Official document numbers are controlled by Accounting entity,
-                Financial Year and document type. Accounts prepares each series;
-                AVPL Admin approves or sends it back for correction.
+                Set invoice and voucher numbering by Financial Year.
             </p>
         </div>
 
         {% if number_series_overview.required_count > 0 and number_series_overview.active_count == number_series_overview.required_count %}
             <span class="accounting-state-pill active">All required series active</span>
         {% elif number_series_overview.pending_count > 0 %}
-            <span class="accounting-state-pill review">{{ number_series_overview.pending_count }} awaiting approval</span>
+            <span class="accounting-state-pill review">{{ number_series_overview.pending_count }} needs review</span>
         {% elif number_series_overview.configured_scope_count > 0 %}
             <span class="accounting-state-pill pending">Setup in progress</span>
         {% else %}
@@ -159,60 +157,53 @@
         <div class="accounting-notice danger">{{ number_series_setup_error }}</div>
     {% elif not accounting_entity %}
         <div class="accounting-notice info">
-            Initialize the AVPL Accounting entity before configuring document numbering.
+            Initialize the AVPL Accounting entity first.
         </div>
     {% elif not open_financial_years %}
         <div class="accounting-notice info">
-            Approve and open a Financial Year before configuring invoice and voucher series.
+            Open a Financial Year first.
         </div>
     {% elif not configuration_overview.entity_profile.active or not configuration_overview.accounting_policy.active %}
         <div class="accounting-notice warning">
-            The approved AVPL entity profile and Accounting policy settings are required before number-series setup.
+            Complete Business Profile and Accounting Settings first.
         </div>
     {% else %}
         <div class="accounting-number-summary-grid">
             <div>
                 <span>Required scopes</span>
                 <strong>{{ number_series_overview.required_count }}</strong>
-                <small>Across all approved open Financial Years</small>
+                <small>Current Financial Years</small>
             </div>
             <div>
                 <span>Active series</span>
                 <strong>{{ number_series_overview.active_count }}</strong>
-                <small>Available to future posting services</small>
+                <small>Ready for posting</small>
             </div>
             <div>
                 <span>Working revisions</span>
                 <strong>{{ number_series_overview.working_count }}</strong>
-                <small>Draft, returned or pending approval</small>
+                <small>Draft or review</small>
             </div>
             <div>
                 <span>Returned</span>
                 <strong>{{ number_series_overview.returned_count }}</strong>
-                <small>Waiting for Accounts correction</small>
+                <small>Needs changes</small>
             </div>
         </div>
 
-        <div class="accounting-number-flow" aria-label="Number-series workflow">
-            <div><span>1</span><strong>Accounts prepares</strong></div>
-            <div><span>2</span><strong>Accounts submits</strong></div>
-            <div><span>3</span><strong>AVPL Admin reviews</strong></div>
-            <div><span>4</span><strong>Activate or return</strong></div>
-            <div><span>5</span><strong>Posting service reserves atomically</strong></div>
-        </div>
 
-        <div class="accounting-notice info compact">
-            This screen configures and previews numbering only. It does not issue an official invoice or voucher number.
-            Future purchase, sales, payment, POS and voucher services will reserve numbers atomically with idempotency and recovery tracking.
+        <div class="accounting-number-flow" aria-label="Number-series workflow">
+            <div><span>1</span><strong>Configure</strong></div>
+            <div><span>2</span><strong>Review</strong></div>
+            <div><span>3</span><strong>Use</strong></div>
         </div>
 
         {% if number_series_capabilities.can_create %}
             <div class="accounting-number-initialize">
                 <div>
-                    <strong>Create missing default drafts</strong>
+                    <strong>Create missing series</strong>
                     <p>
-                        Creates only missing scopes using <code>{ENTITY}/{TYPE}/{FY}/000001</code>.
-                        Existing active or working series are never overwritten.
+                        Uses the standard pattern. Existing series stay unchanged.
                     </p>
                 </div>
                 <form method="post" action="{{ url_for('accounting.number_series_initialize') }}">
@@ -225,7 +216,7 @@
                         </select>
                     </label>
                     <button type="submit" class="accounting-primary-button">
-                        Create missing drafts
+                        Create Missing Series
                     </button>
                 </form>
             </div>
@@ -245,31 +236,29 @@
                 </div>
 
                 <label class="accounting-number-bulk-note">
-                    <span>Shared submission note</span>
+                    <span>Note</span>
                     <input
                         type="text"
                         name="bulk_submission_note"
                         maxlength="500"
-                        placeholder="Optional note applied to every selected series"
+                        placeholder="Optional note"
                     >
                 </label>
 
                 <div class="accounting-number-bulk-actions">
                     <button type="button" class="accounting-secondary-button" id="numberSeriesSelectAll">
-                        Select all eligible
+                        Select all
                     </button>
                     <button type="button" class="accounting-secondary-button" id="numberSeriesClearAll">
                         Clear
                     </button>
                     <button type="submit" class="accounting-primary-button" id="numberSeriesBulkSubmitButton" disabled>
-                        Submit selected to AVPL Admin
+                        Send Selected for Review
                     </button>
                 </div>
 
                 <p class="accounting-number-bulk-help">
-                    Bulk submission uses the last saved values of each draft. Save any edited prefix, suffix,
-                    starting number, padding or correction response before selecting it.
-                    The page refreshes only once after the complete batch is processed.
+                    Save edits, then send selected items for review.
                 </p>
             </form>
         {% endif %}
@@ -288,12 +277,12 @@
                 </div>
 
                 <label class="accounting-number-bulk-note">
-                    <span>Shared approval note</span>
+                    <span>Review note</span>
                     <input
                         type="text"
                         name="bulk_approval_note"
                         maxlength="500"
-                        placeholder="Optional note applied to every approved series"
+                        placeholder="Optional note"
                     >
                 </label>
 
@@ -305,14 +294,12 @@
                         Clear
                     </button>
                     <button type="submit" class="accounting-primary-button" id="numberSeriesBulkApproveButton" disabled>
-                        Approve & activate selected
+                        Activate Selected
                     </button>
                 </div>
 
                 <p class="accounting-number-bulk-help">
-                    Review the submitted previews below, select any pending series, then approve them together.
-                    Each series still keeps its own maker-checker validation, version check, workflow history and audit record.
-                    The page refreshes only once after the batch is processed.
+                    Review selected series before activation.
                 </p>
             </form>
         {% endif %}
@@ -385,6 +372,7 @@
                                         <div>
                                             <strong>{{ scope.label }}</strong>
                                             <p>{{ scope.description }}</p>
+                                            {% if working %}<small>Maker: {{ working.created_by_name or 'Accounts' }}</small>{% elif active %}<small>Maker: {{ active.created_by_name or 'Accounts' }}</small>{% endif %}
                                         </div>
                                         <div class="accounting-number-item-statuses">
                                             {% if active %}
@@ -404,7 +392,7 @@
                                     {% if active %}
                                         <div class="accounting-number-active-panel">
                                             <div>
-                                                <span>Approved pattern</span>
+                                                <span>Active pattern</span>
                                                 <strong>{{ active.next_preview }}</strong>
                                                 <small>Next official number preview</small>
                                             </div>
@@ -427,7 +415,7 @@
 
                                         {% if active.recovery_required %}
                                             <div class="accounting-notice danger compact">
-                                                This active series contains a number-generation recovery marker and requires Super Admin review.
+                                                Number recovery needs Super Admin review.
                                             </div>
                                         {% endif %}
                                     {% endif %}
@@ -485,13 +473,13 @@
                                                         <span>Current preview</span>
                                                         <strong>{{ working.preview_number }}</strong>
                                                     </div>
-                                                    <button type="submit" class="accounting-secondary-button">Save draft</button>
+                                                    <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="accounting-secondary-button" onclick="this.form.reset()">Cancel</button><button type="submit" class="accounting-secondary-button">Save</button></div>
                                                 </div>
                                             </form>
                                         {% else %}
                                             <div class="accounting-number-working-summary">
                                                 <div>
-                                                    <span>Submitted preview</span>
+                                                    <span>Preview</span>
                                                     <strong>{{ working.preview_number }}</strong>
                                                 </div>
                                                 <div>
@@ -514,7 +502,7 @@
                                                 <form method="post" action="{{ url_for('accounting.number_series_submit', category=scope.category, series_id=working.id) }}">
                                                     <input type="hidden" name="version" value="{{ working.version }}">
                                                     <input type="text" name="submission_note" placeholder="Submission note (optional)">
-                                                    <button type="submit" class="accounting-primary-button">Submit to AVPL Admin</button>
+                                                    <button type="submit" class="accounting-primary-button">Send for Review</button>
                                                 </form>
                                             {% endif %}
 
@@ -522,7 +510,7 @@
                                                 <form method="post" action="{{ url_for('accounting.number_series_withdraw', category=scope.category, series_id=working.id) }}">
                                                     <input type="hidden" name="version" value="{{ working.version }}">
                                                     <input type="text" name="reason" required minlength="3" placeholder="Reason for withdrawal">
-                                                    <button type="submit" class="accounting-secondary-button">Withdraw to draft</button>
+                                                    <button type="submit" class="accounting-secondary-button">Withdraw</button>
                                                 </form>
                                             {% endif %}
 
@@ -530,22 +518,22 @@
                                                 <form method="post" action="{{ url_for('accounting.number_series_approve', category=scope.category, series_id=working.id) }}">
                                                     <input type="hidden" name="version" value="{{ working.version }}">
                                                     <input type="text" name="approval_note" placeholder="Approval note (optional)">
-                                                    <button type="submit" class="accounting-primary-button">Approve and activate</button>
+                                                    <button type="submit" class="accounting-primary-button">Activate</button>
                                                 </form>
                                             {% endif %}
 
                                             {% if working.status == 'pending_approval' and number_series_capabilities.can_return %}
                                                 <form method="post" action="{{ url_for('accounting.number_series_return', category=scope.category, series_id=working.id) }}">
                                                     <input type="hidden" name="version" value="{{ working.version }}">
-                                                    <input type="text" name="reason" required minlength="3" placeholder="Mandatory correction reason">
-                                                    <button type="submit" class="accounting-danger-button">Send back</button>
+                                                    <input type="text" name="reason" required minlength="3" placeholder="Reason">
+                                                    <button type="submit" class="accounting-danger-button">Request Changes</button>
                                                 </form>
                                             {% endif %}
                                         </div>
 
                                         {% if working.workflow_history %}
                                             <details class="accounting-history accounting-number-history">
-                                                <summary>Revision workflow ({{ working.workflow_history|length }})</summary>
+                                                <summary>History ({{ working.workflow_history|length }})</summary>
                                                 <div class="accounting-history-list">
                                                     {% for event in working.workflow_history|reverse %}
                                                         <div>
@@ -568,13 +556,13 @@
                                             <input type="hidden" name="suffix" value="{{ active.suffix }}">
                                             <input type="hidden" name="starting_number" value="{{ active.next_number }}">
                                             <input type="hidden" name="padding" value="{{ active.padding }}">
-                                            <input type="hidden" name="change_note" value="Started a controlled revision from the active series.">
-                                            <button type="submit" class="accounting-secondary-button">Create revision draft</button>
+                                            <input type="hidden" name="change_note" value="Started a numbering revision.">
+                                            <button type="submit" class="accounting-secondary-button">Edit Numbering</button>
                                         </form>
                                     {% elif not active and not working %}
                                         <div class="accounting-number-missing">
                                             <strong>Series not configured</strong>
-                                            <p>Accounts must create a draft before this document type can receive official numbers.</p>
+                                            <p>Create a series before this document type can be used.</p>
                                         </div>
                                     {% endif %}
                                 </article>
@@ -665,15 +653,25 @@
         }
 
         const labelText = selected.length === 1 ? '1 selected series' : `${selected.length} selected series`;
-        if(!window.confirm(`Submit ${labelText} to AVPL Admin?`)){
-            event.preventDefault();
+        if(bulkForm.dataset.confirmed === '1'){
+            delete bulkForm.dataset.confirmed;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+            selectAllButton.disabled = true;
+            clearAllButton.disabled = true;
             return;
         }
 
-        submitButton.disabled = true;
-        submitButton.textContent = 'Submitting selected series...';
-        selectAllButton.disabled = true;
-        clearAllButton.disabled = true;
+        event.preventDefault();
+        window.ufConfirm({
+            title: 'Send Selected for Review series?',
+            message: `Send ${labelText} for review?`,
+            action: 'Send Selected for Review'
+        }).then(confirmed => {
+            if(!confirmed) return;
+            bulkForm.dataset.confirmed = '1';
+            bulkForm.requestSubmit(submitButton);
+        });
     });
 
     updateBulkState();
@@ -729,15 +727,25 @@
         }
 
         const labelText = selected.length === 1 ? '1 selected series' : `${selected.length} selected series`;
-        if(!window.confirm(`Approve and activate ${labelText}?`)){
-            event.preventDefault();
+        if(bulkForm.dataset.confirmed === '1'){
+            delete bulkForm.dataset.confirmed;
+            approveButton.disabled = true;
+            approveButton.textContent = 'Approving...';
+            selectAllButton.disabled = true;
+            clearAllButton.disabled = true;
             return;
         }
 
-        approveButton.disabled = true;
-        approveButton.textContent = 'Approving selected series...';
-        selectAllButton.disabled = true;
-        clearAllButton.disabled = true;
+        event.preventDefault();
+        window.ufConfirm({
+            title: 'Activate Selected series?',
+            message: `Activate ${labelText}?`,
+            action: 'Activate Selected'
+        }).then(confirmed => {
+            if(!confirmed) return;
+            bulkForm.dataset.confirmed = '1';
+            bulkForm.requestSubmit(approveButton);
+        });
     });
 
     updateBulkApproveState();

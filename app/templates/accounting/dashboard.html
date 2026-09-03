@@ -2260,6 +2260,106 @@
 }
 
 
+
+/* === Compact UnnatFarm Accounting UI === */
+.accounting-shell{
+    max-width:1500px !important;
+    gap:14px !important;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    color:#1f3127;
+}
+.accounting-hero{
+    padding:18px 20px !important;
+    border-radius:18px !important;
+    border-color:#dbe9df !important;
+    box-shadow:0 12px 32px rgba(26,72,43,.055) !important;
+}
+.accounting-hero h1{font-size:clamp(1.55rem,2.2vw,2rem) !important;color:#16251c !important;font-weight:900 !important;}
+.accounting-subtitle{margin-top:7px !important;font-size:.9rem !important;line-height:1.45 !important;color:#6e7f74 !important;max-width:720px !important;}
+.accounting-eyebrow{margin-bottom:5px !important;font-size:.68rem !important;letter-spacing:.06em !important;color:#397e51 !important;}
+.accounting-access-badge,.accounting-state-pill,.accounting-status-badge{
+    border-radius:8px !important;
+    padding:6px 9px !important;
+    font-size:.72rem !important;
+}
+.accounting-status-grid{gap:10px !important;}
+.accounting-status-card{min-height:0 !important;padding:14px 15px !important;border-radius:14px !important;box-shadow:0 8px 20px rgba(26,72,43,.045) !important;}
+.accounting-status-card strong{font-size:1rem !important;}
+.accounting-status-card p{margin-top:5px !important;font-size:.8rem !important;line-height:1.4 !important;}
+.accounting-card-label{margin-bottom:7px !important;font-size:.65rem !important;}
+.accounting-section-heading{padding-bottom:12px !important;gap:12px !important;}
+.accounting-section-heading h2,.accounting-roadmap-heading h2{font-size:1.18rem !important;color:#17251d !important;font-weight:850 !important;}
+.accounting-section-description{margin-top:5px !important;font-size:.82rem !important;line-height:1.4 !important;color:#6e7f74 !important;max-width:760px !important;}
+.accounting-roadmap-card,.accounting-entity-card,
+[class^="accounting-"][class*="-card"]{
+    border-color:#dbe9df !important;
+    border-radius:16px !important;
+    box-shadow:0 10px 26px rgba(26,72,43,.05) !important;
+}
+.accounting-roadmap-card,.accounting-entity-card{padding:18px !important;}
+.accounting-roadmap-heading{padding-bottom:12px !important;}
+.accounting-checklist{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:9px !important;padding-top:12px !important;}
+.accounting-checklist-item{grid-template-columns:30px 1fr !important;gap:10px !important;padding:11px 12px !important;border-radius:12px !important;background:#f6fbf7 !important;border-color:#dbe9df !important;}
+.accounting-checklist-item>span{width:30px !important;height:30px !important;border-radius:8px !important;font-size:.78rem !important;}
+.accounting-checklist-item strong{font-size:.86rem !important;}
+.accounting-checklist-item p{margin-top:3px !important;font-size:.75rem !important;line-height:1.35 !important;}
+.accounting-primary-button,.accounting-secondary-button,.accounting-voucher-danger-button,
+.accounting-shell button,.accounting-shell .btn{
+    min-height:38px;
+    border-radius:9px !important;
+    font-weight:800 !important;
+}
+.accounting-primary-button{background:#2b7346 !important;border-color:#2b7346 !important;color:#fff !important;}
+.accounting-secondary-button{background:#fff !important;color:#2b7346 !important;border-color:#c8ddce !important;}
+.accounting-shell input,.accounting-shell select,.accounting-shell textarea{
+    border-radius:9px !important;
+    border-color:#d6e3d9 !important;
+}
+.accounting-shell input:not([type="checkbox"]):not([type="radio"]),.accounting-shell select{min-height:40px !important;}
+.accounting-shell textarea{min-height:72px;}
+.accounting-notice{border-radius:10px !important;padding:10px 12px !important;font-size:.8rem !important;line-height:1.4 !important;}
+.accounting-config-summary-grid>div,.accounting-mapping-summary-grid>div,.accounting-voucher-summary>div,
+.accounting-voucher-meta>div,.accounting-voucher-totals>div{padding:10px !important;border-radius:10px !important;}
+.accounting-voucher-form,.accounting-voucher-row,.accounting-voucher-lines-panel{padding:14px !important;border-radius:13px !important;}
+.accounting-voucher-grid{gap:10px !important;margin-top:12px !important;}
+.accounting-voucher-list{gap:11px !important;}
+.accounting-voucher-line{padding:11px !important;border-radius:11px !important;}
+.accounting-voucher-tag{border-radius:7px !important;padding:5px 7px !important;}
+.accounting-number-series-item,.accounting-party-row,.accounting-product-mapping-row{border-radius:13px !important;}
+.accounting-muted,.accounting-number-bulk-help{font-size:.78rem !important;line-height:1.4 !important;color:#748279 !important;}
+@media(max-width:900px){.accounting-checklist{grid-template-columns:1fr !important;}}
+@media(max-width:640px){
+    .accounting-hero{padding:16px !important;}
+    .accounting-roadmap-card,.accounting-entity-card{padding:14px !important;}
+    .accounting-shell button[type="submit"]{max-width:100%;}
+}
+
+/* Centered confirmation modal */
+.uf-confirm-backdrop{
+    position:fixed;inset:0;z-index:10050;display:none;align-items:center;justify-content:center;
+    padding:20px;background:rgba(18,31,23,.46);backdrop-filter:blur(3px);
+}
+.uf-confirm-backdrop.is-open{display:flex;animation:ufFade .18s ease both;}
+.uf-confirm-card{
+    width:min(100%,460px);background:#fff;border:1px solid #dbe9df;border-radius:17px;
+    box-shadow:0 24px 70px rgba(20,48,31,.2);padding:22px;transform-origin:center;
+    animation:ufPop .2s ease both;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+.uf-confirm-icon{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;background:#eff8f1;color:#2b7346;font-size:1.1rem;margin-bottom:13px;}
+.uf-confirm-card.is-danger .uf-confirm-icon{background:#fff1f0;color:#b42318;}
+.uf-confirm-card h3{margin:0;color:#17251d;font-size:1.08rem;font-weight:900;}
+.uf-confirm-card p{margin:7px 0 0;color:#6e7f74;font-size:.86rem;line-height:1.45;}
+.uf-confirm-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;}
+.uf-confirm-actions button{min-height:39px;border-radius:9px;padding:0 14px;font:inherit;font-weight:800;cursor:pointer;}
+.uf-confirm-cancel{background:#fff;border:1px solid #d6e3d9;color:#435349;}
+.uf-confirm-ok{background:#2b7346;border:1px solid #2b7346;color:#fff;}
+.uf-confirm-card.is-danger .uf-confirm-ok{background:#b42318;border-color:#b42318;}
+@keyframes ufFade{from{opacity:0}to{opacity:1}}
+@keyframes ufPop{from{opacity:0;transform:translateY(5px) scale(.975)}to{opacity:1;transform:none}}
+@media(max-width:520px){.uf-confirm-actions{flex-direction:column-reverse}.uf-confirm-actions button{width:100%}}
+@media(prefers-reduced-motion:reduce){.uf-confirm-backdrop.is-open,.uf-confirm-card{animation:none!important}}
+.accounting-quick-nav{position:sticky;top:10px;z-index:40;display:flex;gap:7px;overflow-x:auto;padding:9px;margin:0 0 16px;border:1px solid #dbe9df;border-radius:13px;background:rgba(255,255,255,.96);box-shadow:0 8px 24px rgba(26,72,43,.06);scrollbar-width:thin}.accounting-quick-nav a{flex:0 0 auto;display:inline-flex;align-items:center;min-height:35px;padding:7px 11px;border-radius:8px;color:#526158;text-decoration:none;font-size:.73rem;font-weight:800}.accounting-quick-nav a:hover,.accounting-quick-nav a:focus{background:#eff8f1;color:#2f6e46;outline:none}.accounting-quick-nav a.primary{background:#2b7346;color:#fff}.accounting-form-cancel{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border:1px solid #d5e2d8;border-radius:9px;background:#fff;color:#526158;font:inherit;font-size:.75rem;font-weight:800;cursor:pointer}.accounting-section-description{max-width:720px}.accounting-maker-compact{color:#748279;font-size:.72rem;font-weight:600}.accounting-roadmap-card{margin-top:18px}
+
 </style>
 {% endblock %}
 
@@ -2267,11 +2367,10 @@
 <section class="accounting-shell" aria-labelledby="accountingPageTitle">
     <div class="accounting-hero">
         <div>
-            <p class="accounting-eyebrow">UnnatFarm Finance Control</p>
+            <p class="accounting-eyebrow">Finance</p>
             <h1 id="accountingPageTitle">Accounting</h1>
             <p class="accounting-subtitle">
-                Accounting keeps the full audit, numbering, tax and ledger controls, while routine setup is streamlined for day-to-day use.
-                Financial-year controls, posted-document corrections, reversals and other high-risk actions remain protected.
+                Setup, transactions and controls in one place.
             </p>
         </div>
 
@@ -2282,32 +2381,43 @@
     </div>
 
     {% if streamlined_workflows_enabled %}
-    <div class="accounting-notice success" role="status">
-        <strong>Simplified workflow is active.</strong> Routine Accounting masters are validated and activated on Save, so Accounts users do not need a separate Submit → Approve cycle. High-risk financial controls still use controlled actions and remain fully audited.
-    </div>
+    <div class="accounting-notice success" role="status">Routine setup activates on Save. Financial controls remain protected.</div>
     {% endif %}
+
+    <nav class="accounting-quick-nav" aria-label="Accounting sections">
+        <a class="primary" href="#voucher-engine">Vouchers</a>
+        <a href="#product-accounting-mapping">Products</a>
+        <a href="#party-ledgers">Parties</a>
+        <a href="#ledger-masters">Ledgers</a>
+        <a href="#gst-tax-master">GST</a>
+        <a href="#hsn-master">HSN</a>
+        <a href="#units-master">Units</a>
+        <a href="#financial-years">Financial Year</a>
+        <a href="#number-series">Numbering</a>
+        {% if user_access_capabilities.can_view %}<a href="#user-access">Access</a>{% endif %}
+    </nav>
 
     <div class="accounting-status-grid">
         <article class="accounting-status-card">
             <span class="accounting-card-label">Module status</span>
             <strong>Foundation active</strong>
-            <p>The Accounting blueprint and entity boundary remain isolated.</p>
+            <p>Core setup is available.</p>
         </article>
 
         <article class="accounting-status-card">
             <span class="accounting-card-label">Financial years</span>
             <strong>{{ financial_years|length }}</strong>
-            <p>{{ open_financial_years|length }} approved and open for future posting.</p>
+            <p>{{ open_financial_years|length }} open for posting.</p>
         </article>
 
         <article class="accounting-status-card">
-            <span class="accounting-card-label">Controlled review queue</span>
+            <span class="accounting-card-label">Needs review</span>
             {% if streamlined_workflows_enabled %}
                 <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count }}</strong>
-                <p>Only protected Financial Year and numbering controls require a separate review in streamlined mode.</p>
+                <p>Protected controls only.</p>
             {% else %}
                 <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count + party_ledger_overview.counts.pending_approval + gst_tax_overview.counts.pending_approval + unit_overview.custom_pending|length + unit_overview.conversion_pending|length + hsn_overview.pending_rows|length }}</strong>
-                <p>Strict maker-checker mode is enabled, including routine master approvals.</p>
+                <p>Maker-checker mode is active.</p>
             {% endif %}
         </article>
     </div>
@@ -2316,7 +2426,7 @@
         <div class="accounting-section-heading">
             <div>
                 <p class="accounting-eyebrow">Entity foundation</p>
-                <h2>AVPL Accounting entity</h2>
+                <h2>AVPL Accounting</h2>
             </div>
 
             {% if accounting_entity %}
@@ -2374,21 +2484,19 @@
 
             {% if accounting_entity.profile_status != 'complete' %}
                 <div class="accounting-notice warning">
-                    The AVPL entity is active but its approved legal and Accounting
-                    profile is still incomplete. Complete the controlled setup below.
+                    Complete the Business Profile below.
                 </div>
             {% endif %}
         {% else %}
             <div class="accounting-empty-state">
                 <div>
                     {% if entity_access_missing %}
-                        <strong>The AVPL Accounting entity is not assigned to this user.</strong>
-                        <p>Contact an authorized controller to restore entity access.</p>
+                        <strong>The AVPL Accounting is not assigned to this user.</strong>
+                        <p>Contact an authorized admin.</p>
                     {% else %}
                         <strong>The permanent AVPL books have not been initialized.</strong>
                         <p>
-                            Financial Years cannot be created until the isolated AVPL
-                            Accounting entity exists.
+                            Initialize AVPL Accounting before creating Financial Years.
                         </p>
                     {% endif %}
                 </div>
@@ -2396,12 +2504,12 @@
                 {% if not entity_access_missing and session.get('role') == 'super_admin' %}
                     <form method="post" action="{{ url_for('accounting.setup_avpl_entity') }}">
                         <button type="submit" class="accounting-primary-button">
-                            Initialize AVPL Entity
+                            Initialize AVPL
                         </button>
                     </form>
                 {% elif not entity_access_missing %}
                     <div class="accounting-notice info">
-                        Super Admin must complete the one-time entity initialization.
+                        Super Admin must initialize AVPL Accounting.
                     </div>
                 {% endif %}
             </div>
@@ -2411,17 +2519,15 @@
     <div class="accounting-financial-year-card" id="financial-years">
         <div class="accounting-section-heading">
             <div>
-                <p class="accounting-eyebrow">Stage 2 · Financial Year foundation</p>
-                <h2>Financial Year control</h2>
+                <p class="accounting-eyebrow">Financial Year</p>
+                <h2>Financial Years</h2>
                 <p class="accounting-section-description">
-                    AVPL Admin creates and corrects. Super Admin approves opening and
-                    controlled close, lock, unlock or reopen requests. Accounts can use
-                    only an approved, open and unlocked year.
+                    Open and control Financial Years.
                 </p>
             </div>
 
             {% if financial_year_control_overview.pending_count %}
-                <span class="accounting-state-pill review">Lifecycle approval pending</span>
+                <span class="accounting-state-pill review">Lifecycle review</span>
             {% elif open_financial_years %}
                 <span class="accounting-state-pill active">Open year available</span>
             {% elif locked_financial_years %}
@@ -2429,7 +2535,7 @@
             {% elif closed_financial_years %}
                 <span class="accounting-state-pill pending">Financial Year closed</span>
             {% elif pending_financial_years %}
-                <span class="accounting-state-pill review">Opening approval pending</span>
+                <span class="accounting-state-pill review">Opening review</span>
             {% else %}
                 <span class="accounting-state-pill pending">Setup required</span>
             {% endif %}
@@ -2437,7 +2543,7 @@
 
         {% if not financial_year_capabilities.can_view %}
             <div class="accounting-notice danger">
-                Financial Year visibility is not enabled for this user.
+                Financial Year access is disabled.
             </div>
         {% elif financial_year_setup_error %}
             <div class="accounting-notice danger">
@@ -2445,14 +2551,13 @@
             </div>
         {% elif not accounting_entity %}
             <div class="accounting-notice info">
-                Initialize the AVPL Accounting entity before creating a Financial Year.
+                Initialize the AVPL Accounting before creating a Financial Year.
             </div>
         {% else %}
             <div class="accounting-workflow-strip" aria-label="Financial Year workflow">
-                <div><span>1</span><strong>AVPL Admin creates draft</strong></div>
-                <div><span>2</span><strong>AVPL Admin submits</strong></div>
-                <div><span>3</span><strong>Super Admin reviews</strong></div>
-                <div><span>4</span><strong>Approve or return</strong></div>
+                <div><span>1</span><strong>Create</strong></div>
+                <div><span>2</span><strong>Review</strong></div>
+                <div><span>3</span><strong>Open</strong></div>
             </div>
 
             {% if financial_year_control_setup_error %}
@@ -2461,8 +2566,7 @@
                 </div>
             {% elif not financial_year_control_capabilities.can_view %}
                 <div class="accounting-notice warning">
-                    Financial Year lifecycle permissions are not synchronized for this user yet.
-                    Super Admin should synchronize permanent access mappings once.
+                    Sync this user’s Accounting permissions.
                 </div>
             {% endif %}
 
@@ -2470,8 +2574,8 @@
                 <form class="accounting-form-card" method="post" action="{{ url_for('accounting.financial_year_create') }}">
                     <div class="accounting-form-heading">
                         <div>
-                            <strong>Create Financial Year draft</strong>
-                            <p>Dates are checked for duplicates and overlap before saving.</p>
+                            <strong>New Financial Year</strong>
+                            
                         </div>
                         <span>{{ financial_year_defaults.display_name }}</span>
                     </div>
@@ -2485,8 +2589,9 @@
                             <span>End date</span>
                             <input type="date" name="end_date" value="{{ financial_year_defaults.end_date }}" required>
                         </label>
-                        <div class="accounting-form-action">
-                            <button type="submit" class="accounting-primary-button">Create draft</button>
+                        <div class="accounting-form-action" style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button type="button" class="accounting-form-cancel" onclick="this.form.reset()">Cancel</button>
+                            <button type="submit" class="accounting-primary-button">Create</button>
                         </div>
                     </div>
                 </form>
@@ -2508,22 +2613,8 @@
                             </div>
 
                             <div class="accounting-record-meta">
-                                <div>
-                                    <span>Created by</span>
-                                    <strong>{{ fy.created_by_name or 'AVPL Admin' }}</strong>
-                                </div>
-                                <div>
-                                    <span>Submitted by</span>
-                                    <strong>{{ fy.submitted_by_name or '—' }}</strong>
-                                </div>
-                                <div>
-                                    <span>Approved by</span>
-                                    <strong>{{ fy.approved_by_name or '—' }}</strong>
-                                </div>
-                                <div>
-                                    <span>Posting status</span>
-                                    <strong>{% if fy.usable_for_posting %}Available{% else %}Not available{% endif %}</strong>
-                                </div>
+                                <div><span>Maker</span><strong>{{ fy.created_by_name or 'AVPL Admin' }}</strong></div>
+                                <div><span>Posting</span><strong>{% if fy.usable_for_posting %}Available{% else %}Blocked{% endif %}</strong></div>
                             </div>
 
                             {% if fy.return_reason %}
@@ -2545,7 +2636,7 @@
                                     {% if financial_year_capabilities.can_edit %}
                                         <form method="post" action="{{ url_for('accounting.financial_year_edit', financial_year_id=fy.id) }}" class="accounting-action-form">
                                             <input type="hidden" name="version" value="{{ fy.version }}">
-                                            <strong>Edit draft</strong>
+                                            <strong>Edit</strong>
                                             <div class="accounting-inline-fields">
                                                 <label>
                                                     <span>Start</span>
@@ -2557,19 +2648,22 @@
                                                 </label>
                                             </div>
                                             <label>
-                                                <span>Correction/update note</span>
+                                                <span>Update note</span>
                                                 <textarea name="correction_note" rows="2" placeholder="Describe the change made"></textarea>
                                             </label>
-                                            <button type="submit" class="accounting-secondary-button">Save changes</button>
+                                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                                <button type="button" class="accounting-form-cancel" onclick="this.form.reset()">Cancel</button>
+                                                <button type="submit" class="accounting-primary-button">Save Changes</button>
+                                            </div>
                                         </form>
                                     {% endif %}
 
                                     {% if financial_year_capabilities.can_submit %}
                                         <form method="post" action="{{ url_for('accounting.financial_year_submit', financial_year_id=fy.id) }}" class="accounting-action-form highlighted">
                                             <input type="hidden" name="version" value="{{ fy.version }}">
-                                            <strong>{% if fy.status == 'returned_for_correction' %}Resubmit corrected year{% else %}Submit for approval{% endif %}</strong>
+                                            <strong>{% if fy.status == 'returned_for_correction' %}Resubmit corrected year{% else %}Send for Review{% endif %}</strong>
                                             <label>
-                                                <span>{% if fy.status == 'returned_for_correction' %}Correction response{% else %}Submission note{% endif %}</span>
+                                                <span>{% if fy.status == 'returned_for_correction' %}Correction response{% else %}Note{% endif %}</span>
                                                 <textarea name="submission_note" rows="3" {% if fy.status == 'returned_for_correction' %}required{% endif %} placeholder="{% if fy.status == 'returned_for_correction' %}Explain how the requested correction was completed{% else %}Optional note for Super Admin{% endif %}"></textarea>
                                             </label>
                                             <button type="submit" class="accounting-primary-button">
@@ -2588,7 +2682,7 @@
                                         <span>Reason</span>
                                         <textarea name="reason" rows="2" required placeholder="Why are you withdrawing this submission?"></textarea>
                                     </label>
-                                    <button type="submit" class="accounting-secondary-button">Withdraw to draft</button>
+                                    <button type="submit" class="accounting-secondary-button">Withdraw</button>
                                 </form>
                             {% endif %}
 
@@ -2597,19 +2691,19 @@
                                     {% if financial_year_capabilities.can_approve %}
                                         <form method="post" action="{{ url_for('accounting.financial_year_approve', financial_year_id=fy.id) }}" class="accounting-action-form highlighted">
                                             <input type="hidden" name="version" value="{{ fy.version }}">
-                                            <strong>Approve and open</strong>
-                                            <p>This makes the year available to Accounts for future postings.</p>
-                                            <button type="submit" class="accounting-primary-button">Approve Financial Year</button>
+                                            <strong>Open Financial Year</strong>
+                                            <p>Makes this year available for posting.</p>
+                                            <button type="submit" class="accounting-primary-button">Approve</button>
                                         </form>
                                     {% endif %}
 
                                     {% if financial_year_capabilities.can_return %}
                                         <form method="post" action="{{ url_for('accounting.financial_year_return', financial_year_id=fy.id) }}" class="accounting-action-form danger-zone">
                                             <input type="hidden" name="version" value="{{ fy.version }}">
-                                            <strong>Send back for correction</strong>
+                                            <strong>Request Changes</strong>
                                             <label>
-                                                <span>Mandatory correction reason</span>
-                                                <textarea name="reason" rows="3" required placeholder="Clearly mention what AVPL Admin must correct"></textarea>
+                                                <span>Reason</span>
+                                                <textarea name="reason" rows="3" required placeholder="What needs to change?"></textarea>
                                             </label>
                                             <button type="submit" class="accounting-danger-button">Send back</button>
                                         </form>
@@ -2619,22 +2713,22 @@
 
                             {% if fy.status == 'open' and not fy.is_locked %}
                                 <div class="accounting-notice success compact">
-                                    This Financial Year is approved, open and available for future Accounting postings.
+                                    Open for posting.
                                 </div>
                             {% elif fy.status == 'closed' %}
                                 <div class="accounting-notice warning compact">
-                                    This Financial Year is closed. New Accounting posting is blocked.
+                                    Closed · Posting blocked
                                 </div>
                             {% elif fy.status == 'locked' or fy.is_locked %}
                                 <div class="accounting-notice danger compact">
-                                    This Financial Year is locked under final protection. Posting and direct reopening are blocked.
+                                    Locked · Posting blocked
                                 </div>
                             {% endif %}
 
                             {% include "accounting/_financial_year_lifecycle_panel.html" %}
 
                             <details class="accounting-history">
-                                <summary>Workflow history ({{ fy.workflow_history|length }})</summary>
+                                <summary>History ({{ fy.workflow_history|length }})</summary>
                                 <div class="accounting-history-list">
                                     {% for event in fy.workflow_history|reverse %}
                                         <div>
@@ -2653,7 +2747,7 @@
             {% else %}
                 <div class="accounting-empty-financial-years">
                     <strong>No Financial Year has been created.</strong>
-                    <p>AVPL Admin must create the first draft and submit it to Super Admin.</p>
+                    <p>Create the first Financial Year draft.</p>
                 </div>
             {% endif %}
         {% endif %}
@@ -2690,19 +2784,17 @@
         <div class="accounting-user-access-card" id="user-access">
             <div class="accounting-section-heading">
                 <div>
-                    <p class="accounting-eyebrow">Stage 2 · Access control</p>
-                    <h2>User-to-entity access</h2>
+                    <p class="accounting-eyebrow">Access</p>
+                    <h2>Accounting Access</h2>
                     <p class="accounting-section-description">
-                        Permanent mappings replace the temporary role fallback. Super Admin
-                        controls AVPL Admin and Accounts mappings; AVPL Admin can manage only
-                        Accounts-role users assigned to the AVPL books.
+                        Manage Accounting access.
                     </p>
                 </div>
 
                 {% if user_access_summary.fallback_count == 0 and user_access_summary.eligible_count > 0 %}
-                    <span class="accounting-state-pill active">Permanent mappings active</span>
+                    <span class="accounting-state-pill active">Access ready</span>
                 {% elif user_access_summary.eligible_count > 0 %}
-                    <span class="accounting-state-pill review">Migration fallback remains</span>
+                    <span class="accounting-state-pill review">Needs review</span>
                 {% else %}
                     <span class="accounting-state-pill pending">No eligible users</span>
                 {% endif %}
@@ -2714,7 +2806,7 @@
                 </div>
             {% elif not accounting_entity %}
                 <div class="accounting-notice info">
-                    Initialize the AVPL Accounting entity before assigning permanent user access.
+                    Initialize the AVPL Accounting before assigning permanent user access.
                 </div>
             {% else %}
                 <div class="accounting-access-summary-grid">
@@ -2750,13 +2842,12 @@
                         <div>
                             <strong>Synchronize mappings and permission schema</strong>
                             <p>
-                                Missing mappings are created. Existing selections are preserved,
-                                while permissions introduced by completed batches are added safely.
+                                Creates missing mappings without changing existing selections.
                             </p>
                         </div>
                         <form method="post" action="{{ url_for('accounting.user_access_initialize') }}">
                             <button type="submit" class="accounting-primary-button">
-                                Synchronize access mappings
+                                Sync access
                             </button>
                         </form>
                     </div>
@@ -2786,13 +2877,11 @@
 
                                 {% if not access_row.is_explicit %}
                                     <div class="accounting-notice warning compact">
-                                        This user is still using the temporary role-based migration
-                                        fallback. Saving the form creates a permanent exact mapping.
+                                        Save to create a permanent mapping.
                                     </div>
                                 {% elif not access_row.permission_schema_current %}
                                     <div class="accounting-notice warning compact">
-                                        This mapping uses an older permission schema. Run the Super Admin
-                                        synchronization before testing newly added Accounting functions.
+                                        Sync permissions to update this mapping.
                                     </div>
                                 {% endif %}
 
@@ -2807,7 +2896,7 @@
                                                 <input type="checkbox" name="accounting_enabled" value="1" {% if access_row.accounting_enabled %}checked{% endif %}>
                                                 <span>
                                                     <strong>Accounting access enabled</strong>
-                                                    <small>Disabling takes effect on the user's next Accounting request.</small>
+                                                    <small>Applies on the next Accounting request.</small>
                                                 </span>
                                             </label>
                                         </div>
@@ -2860,14 +2949,14 @@
                                                 <strong>{{ access_row.version if access_row.version else 'New' }}</strong>
                                             </div>
                                             <button type="submit" class="accounting-primary-button">
-                                                Save permanent mapping
+                                                Save access
                                             </button>
                                         </div>
                                     </form>
                                 {% else %}
                                     <div class="accounting-access-readonly">
                                         <strong>Read-only access summary</strong>
-                                        <p>This user can be changed only by an authorized controller.</p>
+                                        <p>Only an authorized admin can edit this user.</p>
                                     </div>
                                 {% endif %}
 
@@ -2892,7 +2981,7 @@
                 {% else %}
                     <div class="accounting-empty-financial-years">
                         <strong>No eligible Accounting users were found.</strong>
-                        <p>Create or activate AVPL Admin and Accounts users in the existing Users module first.</p>
+                        <p>Create or activate Accounting users first.</p>
                     </div>
                 {% endif %}
             {% endif %}
@@ -2902,8 +2991,8 @@
     <div class="accounting-roadmap-card">
         <div class="accounting-roadmap-heading">
             <div>
-                <p class="accounting-eyebrow">Controlled rollout</p>
-                <h2>Foundation checkpoints</h2>
+                <p class="accounting-eyebrow">Setup status</p>
+                <h2>Accounting Setup</h2>
             </div>
             <span>Stage 4 · Batch 4</span>
         </div>
@@ -2913,23 +3002,23 @@
                 <span aria-hidden="true">✓</span>
                 <div>
                     <strong>Accounting blueprint and protected access</strong>
-                    <p>Available only to Super Admin, AVPL Admin and Accounts.</p>
+                    <p>Role-based Accounting access.</p>
                 </div>
             </div>
 
             <div class="accounting-checklist-item {% if accounting_entity %}complete{% else %}pending{% endif %}">
                 <span aria-hidden="true">{% if accounting_entity %}✓{% else %}2{% endif %}</span>
                 <div>
-                    <strong>Permanent AVPL Accounting entity</strong>
-                    <p>Independent Accounting identity with safe indexes and audit logging.</p>
+                    <strong>Permanent AVPL Accounting</strong>
+                    <p>AVPL Accounting entity and audit setup.</p>
                 </div>
             </div>
 
             <div class="accounting-checklist-item {% if financial_years %}complete{% else %}pending{% endif %}">
                 <span aria-hidden="true">{% if financial_years %}✓{% else %}3{% endif %}</span>
                 <div>
-                    <strong>Financial Year maker-checker workflow</strong>
-                    <p>Draft, submit, withdraw, return, correct, resubmit and approve/open controls.</p>
+                    <strong>Financial Year controls</strong>
+                    <p>Financial Year workflow.</p>
                 </div>
             </div>
 
@@ -2937,63 +3026,63 @@
                 <span aria-hidden="true">{% if user_access_summary.explicit_count == user_access_summary.eligible_count and user_access_summary.eligible_count > 0 %}✓{% else %}4{% endif %}</span>
                 <div>
                     <strong>Permanent user-to-entity mapping</strong>
-                    <p>Exact permissions, AVPL entity assignment, disable controls and audit history.</p>
+                    <p>User access and permissions.</p>
                 </div>
             </div>
 
             <div class="accounting-checklist-item {% if configuration_overview.entity_profile.active %}complete{% else %}pending{% endif %}">
                 <span aria-hidden="true">{% if configuration_overview.entity_profile.active %}✓{% else %}5{% endif %}</span>
                 <div>
-                    <strong>Approved AVPL entity profile</strong>
-                    <p>Versioned legal, GST, address, books-start and default Financial Year configuration.</p>
+                    <strong>Business profile</strong>
+                    <p>Legal, GST and books profile.</p>
                 </div>
             </div>
 
             <div class="accounting-checklist-item {% if configuration_overview.accounting_policy.active %}complete{% else %}pending{% endif %}">
                 <span aria-hidden="true">{% if configuration_overview.accounting_policy.active %}✓{% else %}6{% endif %}</span>
                 <div>
-                    <strong>Approved Accounting policy settings</strong>
-                    <p>Weighted Average, maker-checker, stock, backdating, document and payment defaults.</p>
+                    <strong>Accounting settings</strong>
+                    <p>Core Accounting defaults.</p>
                 </div>
             </div>
 
             <div class="accounting-checklist-item {% if number_series_overview.active_count == number_series_overview.required_count and number_series_overview.required_count > 0 %}complete{% else %}pending{% endif %}">
                 <span aria-hidden="true">{% if number_series_overview.active_count == number_series_overview.required_count and number_series_overview.required_count > 0 %}✓{% else %}7{% endif %}</span>
                 <div>
-                    <strong>Entity-wise invoice and voucher numbering</strong>
-                    <p>Financial-Year series, maker-checker approval, atomic reservation and non-reuse recovery controls.</p>
+                    <strong>Invoice & voucher numbering</strong>
+                    <p>Invoice and voucher numbering.</p>
                 </div>
             </div>
 
             <div class="accounting-checklist-item {% if entity_mapping_overview.is_complete %}complete{% else %}pending{% endif %}">
                 <span aria-hidden="true">{% if entity_mapping_overview.is_complete %}✓{% else %}8{% endif %}</span>
                 <div>
-                    <strong>Disabled future Accounting hierarchy</strong>
-                    <p>Centres mapped under AVPL, Mitras linked under Centres and Farmers prepared under Mitras without enabling future books.</p>
+                    <strong>Centre & Farmer mapping</strong>
+                    <p>Centre, Mitra and Farmer mapping.</p>
                 </div>
             </div>
 
             <div class="accounting-checklist-item {% if account_group_overview.health.is_complete %}complete{% else %}pending{% endif %}">
                 <span aria-hidden="true">{% if account_group_overview.health.is_complete %}✓{% else %}9{% endif %}</span>
                 <div>
-                    <strong>Protected AVPL account groups</strong>
-                    <p>Fifteen permanent system classifications with entity isolation, hierarchy validation, audit history and rename/deletion protection.</p>
+                    <strong>Account groups</strong>
+                    <p>Protected account groups.</p>
                 </div>
             </div>
 
             <div class="accounting-checklist-item {% if ledger_overview.health.is_complete %}complete{% else %}pending{% endif %}">
                 <span aria-hidden="true">{% if ledger_overview.health.is_complete %}✓{% else %}10{% endif %}</span>
                 <div>
-                    <strong>Protected default AVPL ledgers</strong>
-                    <p>Fourteen permanent cash, trade, GST, inventory and settlement ledgers with protected identity, account-group mapping and posting-ready metadata.</p>
+                    <strong>Default ledgers</strong>
+                    <p>Default Accounting ledgers.</p>
                 </div>
             </div>
 
             <div class="accounting-checklist-item {% if party_ledger_overview.counts.active > 0 or party_ledger_overview.non_cancelled_count > 0 %}complete{% else %}pending{% endif %}">
                 <span aria-hidden="true">{% if party_ledger_overview.counts.active > 0 or party_ledger_overview.non_cancelled_count > 0 %}✓{% else %}11{% endif %}</span>
                 <div>
-                    <strong>Supplier and customer party ledgers</strong>
-                    <p>GST/PAN-validated AVPL party masters with maker-checker approval, credit terms, deactivation controls and permanent audit history.</p>
+                    <strong>Suppliers & customers</strong>
+                    <p>Supplier and customer masters.</p>
                 </div>
             </div>
 
@@ -3001,7 +3090,7 @@
                 <span aria-hidden="true">{% if gst_tax_overview.foundation.is_complete %}✓{% else %}12{% endif %}</span>
                 <div>
                     <strong>GST tax master foundation</strong>
-                    <p>Protected CGST, SGST and IGST components, Taxable/Exempt/Nil Rated/Non-GST classification and effective-dated maker-checker tax rates.</p>
+                    <p>GST components, taxability and rates.</p>
                 </div>
             </div>
 
@@ -3009,7 +3098,7 @@
                 <span aria-hidden="true">{% if unit_overview.foundation.is_complete %}✓{% else %}13{% endif %}</span>
                 <div>
                     <strong>Protected UQC units and alternate conversions</strong>
-                    <p>Official GST UQC foundation, custom unit maker-checker workflow, decimal controls and approved direct conversion factors.</p>
+                    <p>Units and conversions.</p>
                 </div>
             </div>
 
@@ -3017,7 +3106,7 @@
                 <span aria-hidden="true">{% if hsn_overview.active_rows|length > 0 %}✓{% else %}14{% endif %}</span>
                 <div>
                     <strong>HSN classification master</strong>
-                    <p>Validated 4/6/8-digit goods HSN records mapped to taxability and effective-dated GST rate codes.</p>
+                    <p>HSN and GST mapping.</p>
                 </div>
             </div>
 
@@ -3025,7 +3114,7 @@
                 <span aria-hidden="true">{% if product_mapping_overview.active_mapped_product_count > 0 %}✓{% else %}15{% endif %}</span>
                 <div>
                     <strong>Product Accounting mapping</strong>
-                    <p>Approved AVPL product links to HSN, taxability, units and purchase, sales and inventory ledgers without altering operational product records.</p>
+                    <p>Product Accounting mapping.</p>
                 </div>
             </div>
 
@@ -3033,7 +3122,7 @@
                 <span aria-hidden="true">{% if gst_determination_overview.prerequisites.is_ready %}✓{% else %}16{% endif %}</span>
                 <div>
                     <strong>State and GST determination service</strong>
-                    <p>Posting-ready seller-state, party-state and place-of-supply logic with CGST + SGST, IGST and non-taxable treatment.</p>
+                    <p>GST place-of-supply rules.</p>
                 </div>
             </div>
 
@@ -3041,10 +3130,88 @@
                 <span aria-hidden="true">{% if product_tracking_overview.active_profile_count > 0 or product_tracking_overview.prerequisites.has_accounting_ready_products %}✓{% else %}17{% endif %}</span>
                 <div>
                     <strong>Optional barcode, batch and expiry controls</strong>
-                    <p>Approved product-level enforcement policies, barcode uniqueness, shelf-life safeguards and posting-ready lot validation without changing operational stock.</p>
+                    <p>Barcode, batch and expiry controls.</p>
                 </div>
             </div>
         </div>
     </div>
+
+
+<div class="uf-confirm-backdrop" id="ufConfirmModal" aria-hidden="true">
+    <div class="uf-confirm-card" role="dialog" aria-modal="true" aria-labelledby="ufConfirmTitle" aria-describedby="ufConfirmMessage">
+        <div class="uf-confirm-icon" aria-hidden="true">✓</div>
+        <h3 id="ufConfirmTitle">Confirm action</h3>
+        <p id="ufConfirmMessage">Continue with this action?</p>
+        <div class="uf-confirm-actions">
+            <button type="button" class="uf-confirm-cancel" id="ufConfirmCancel">Go Back</button>
+            <button type="button" class="uf-confirm-ok" id="ufConfirmOk">Confirm</button>
+        </div>
+    </div>
+</div>
+<script>
+(function(){
+    const modal=document.getElementById('ufConfirmModal');
+    if(!modal) return;
+    const card=modal.querySelector('.uf-confirm-card');
+    const title=document.getElementById('ufConfirmTitle');
+    const message=document.getElementById('ufConfirmMessage');
+    const cancel=document.getElementById('ufConfirmCancel');
+    const ok=document.getElementById('ufConfirmOk');
+    let resolver=null;
+    let lastFocus=null;
+
+    function close(result){
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden','true');
+        document.body.style.overflow='';
+        if(lastFocus && typeof lastFocus.focus==='function') lastFocus.focus();
+        const done=resolver; resolver=null;
+        if(done) done(result);
+    }
+
+    window.ufConfirm=function(options){
+        const opts=typeof options==='string'?{message:options}:(options||{});
+        if(resolver) close(false);
+        lastFocus=document.activeElement;
+        title.textContent=opts.title||'Confirm action';
+        message.textContent=opts.message||'Continue with this action?';
+        ok.textContent=opts.action||'Confirm';
+        card.classList.toggle('is-danger',opts.tone==='danger');
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden','false');
+        document.body.style.overflow='hidden';
+        setTimeout(()=>ok.focus(),0);
+        return new Promise(resolve=>{resolver=resolve;});
+    };
+
+    cancel.addEventListener('click',()=>close(false));
+    ok.addEventListener('click',()=>close(true));
+    modal.addEventListener('click',e=>{if(e.target===modal) close(false);});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('is-open')) close(false);});
+
+    document.addEventListener('submit',function(event){
+        const form=event.target;
+        if(!(form instanceof HTMLFormElement) || !form.dataset.confirmMessage) return;
+        if(form.dataset.confirmBypass==='1'){
+            delete form.dataset.confirmBypass;
+            return;
+        }
+        event.preventDefault();
+        const submitter=event.submitter;
+        window.ufConfirm({
+            title:form.dataset.confirmTitle||'Confirm action',
+            message:form.dataset.confirmMessage,
+            action:form.dataset.confirmAction||'Confirm',
+            tone:form.dataset.confirmTone||'normal'
+        }).then(confirmed=>{
+            if(!confirmed) return;
+            form.dataset.confirmBypass='1';
+            if(typeof form.requestSubmit==='function') form.requestSubmit(submitter||undefined);
+            else form.submit();
+        });
+    },true);
+})();
+</script>
+
 </section>
 {% endblock %}

@@ -777,10 +777,27 @@ def serialize_voucher(voucher):
 # ---------------------------------------------------------------------------
 
 
-def create_voucher_draft(accounting_entity_id, actor_user_id, raw_payload):
-    actor = _get_actor(actor_user_id, allowed_roles={"accounts", "super_admin"})
+def create_voucher_draft(
+    accounting_entity_id,
+    actor_user_id,
+    raw_payload,
+    *,
+    allowed_roles=None,
+    required_permission=None,
+):
+    """Create a voucher draft.
+
+    Optional role/permission overrides are reserved for tightly-scoped domain
+    services (for example supplier-purchase finalization). Existing Accounting
+    callers keep the original maker permissions by default.
+    """
+    actor = _get_actor(
+        actor_user_id,
+        allowed_roles=allowed_roles or {"accounts", "super_admin"},
+    )
     entity = _assert_active_avpl_entity(accounting_entity_id)
-    _require_permission(actor, entity["_id"], CREATE_PERMISSION)
+    permission = CREATE_PERMISSION if required_permission is None else required_permission
+    _require_permission(actor, entity["_id"], permission)
     ensure_voucher_indexes()
 
     idempotency_key = _normalize_idempotency_key(
@@ -1113,11 +1130,23 @@ def _save_draft_lines(
     return updated
 
 
-def add_voucher_draft_line(voucher_id, actor_user_id, raw_payload, expected_version):
-    actor = _get_actor(actor_user_id, allowed_roles={"accounts", "super_admin"})
+def add_voucher_draft_line(
+    voucher_id,
+    actor_user_id,
+    raw_payload,
+    expected_version,
+    *,
+    allowed_roles=None,
+    required_permission=None,
+):
+    actor = _get_actor(
+        actor_user_id,
+        allowed_roles=allowed_roles or {"accounts", "super_admin"},
+    )
     voucher = _get_voucher(voucher_id)
     entity = _assert_active_avpl_entity(voucher.get("accounting_entity_id"))
-    _require_permission(actor, entity["_id"], EDIT_PERMISSION)
+    permission = EDIT_PERMISSION if required_permission is None else required_permission
+    _require_permission(actor, entity["_id"], permission)
     expected_version = _assert_draft_mutable(voucher, actor, expected_version)
 
     existing_lines = list(voucher.get("draft_lines") or [])
@@ -1253,14 +1282,22 @@ def remove_voucher_draft_line(voucher_id, line_id, actor_user_id, expected_versi
     }
 
 
-def validate_voucher_draft(voucher_id, actor_user_id, expected_version):
+def validate_voucher_draft(
+    voucher_id,
+    actor_user_id,
+    expected_version,
+    *,
+    allowed_roles=None,
+    required_permission=None,
+):
     actor = _get_actor(
         actor_user_id,
-        allowed_roles={"accounts", "avpl_admin", "super_admin"},
+        allowed_roles=allowed_roles or {"accounts", "avpl_admin", "super_admin"},
     )
     voucher = _get_voucher(voucher_id)
     entity = _assert_active_avpl_entity(voucher.get("accounting_entity_id"))
-    _require_permission(actor, entity["_id"], VALIDATE_PERMISSION)
+    permission = VALIDATE_PERMISSION if required_permission is None else required_permission
+    _require_permission(actor, entity["_id"], permission)
 
     if voucher.get("status") != STATUS_DRAFT:
         raise ValueError("Only draft vouchers can be validated.")

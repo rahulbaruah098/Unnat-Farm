@@ -282,7 +282,7 @@
             <a class="btn" href="{{ url_for('admin.goods_receipts') }}">Back</a>
             <a class="btn" href="{{ url_for('admin.purchase_order_detail', order_id=receipt.purchase_order_id) }}">View Purchase Order</a>
             {% if receipt.status in ['draft','returned_for_correction'] %}<a class="btn primary" href="{{ url_for('admin.edit_goods_receipt_view', receipt_id=receipt.id) }}">Edit</a>{% endif %}
-            {% if linked_purchase_invoice %}<a class="btn primary" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=linked_purchase_invoice.id) }}">View Purchase Invoice</a>{% elif receipt.status == 'posted' and can_record_purchase_invoice %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=receipt.purchase_order_id, grn_id=receipt.id) }}">Record Purchase Invoice</a>{% endif %}
+            {% if linked_purchase_invoice %}<a class="btn primary" href="{{ url_for('admin.supplier_invoice_detail', invoice_id=linked_purchase_invoice.id) }}">{{ 'View Purchase Invoice' if linked_purchase_invoice.posting_status == 'posted' else 'Complete Purchase' }}</a>{% elif receipt.status == 'posted' and can_record_purchase_invoice %}<a class="btn primary" href="{{ url_for('admin.create_supplier_invoice_view', po_id=receipt.purchase_order_id, grn_id=receipt.id) }}">Record Purchase Invoice</a>{% endif %}
         </div>
     </div>
 

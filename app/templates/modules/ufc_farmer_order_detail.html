@@ -257,22 +257,24 @@
   .grid{grid-template-columns:1fr}
   .head{gap:12px}
 }
+.table-wrap{overflow-x:auto;border:1px solid #dfeae3;border-radius:10px;margin-top:12px}.items-table{width:100%;border-collapse:collapse;font-size:.75rem}.items-table th,.items-table td{padding:10px;border-bottom:1px solid #e8efea;text-align:left}.items-table th{background:#f7fbf8;color:#708078;font-size:.64rem;text-transform:uppercase}.items-table input{width:100%;min-width:90px;height:38px;border:1px solid #d5e3da;border-radius:8px;padding:0 8px}
 </style>
 <div class="page">
-  <div class="head"><div><h2>{{ order.order_number }}</h2><div class="muted">{{ order.farmer_name }} · {{ order.product_name }}</div></div><span class="pill">{{ order.status_label }}</span></div>
+  <div class="head"><div><h2>{{ order.order_number }}</h2><div class="muted">{{ order.farmer_name }} · {{ order.product_summary or order.product_name }}</div></div><span class="pill">{{ order.status_label }}</span></div>
   <div class="grid">
-    <div class="box"><small>Requested</small><strong>{{ order.requested_quantity_display }} {{ order.unit_code }}</strong></div>
-    <div class="box"><small>Approved</small><strong>{{ order.approved_quantity_display }} {{ order.unit_code }}</strong></div>
-    <div class="box"><small>Farmer Price</small><strong>₹{{ order.unit_price_display }} / {{ order.unit_code }}</strong></div>
+    <div class="box"><small>Requested</small><strong>{% if order.is_multi_item_order %}{{ order.item_count }} product lines{% else %}{{ order.requested_quantity_display }} {{ order.unit_code }}{% endif %}</strong></div>
+    <div class="box"><small>Approved</small><strong>{% if order.is_multi_item_order %}{{ order.approved_item_count }} / {{ order.item_count }} lines{% else %}{{ order.approved_quantity_display }} {{ order.unit_code }}{% endif %}</strong></div>
+    <div class="box"><small>Farmer Price</small><strong>{% if order.is_multi_item_order %}Line-wise pricing{% else %}₹{{ order.unit_price_display }} / {{ order.unit_code }}{% endif %}</strong></div>
     <div class="box"><small>Order Value</small><strong>₹{{ order.grand_total_display }}</strong></div>
     <div class="box"><small>Payment Term</small><strong>{{ order.payment_term_label or 'Pay on Delivery' }}</strong></div>
   </div>
+  {% if order.is_multi_item_order %}<div class="card" style="margin-top:14px"><h3>Order Items</h3><div class="table-wrap"><table class="items-table"><thead><tr><th>Product</th><th>Requested</th><th>Approved</th><th>Price</th><th>Status</th></tr></thead><tbody>{% for line in order.get('items',[]) %}<tr><td><strong>{{ line.product_name }}</strong></td><td>{{ line.requested_quantity_display }} {{ line.unit_code }}</td><td>{{ line.approved_quantity_display }} {{ line.unit_code }}</td><td>₹{{ line.unit_price_display }} / {{ line.unit_code }}</td><td>{{ line.status_label }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
 
   <div class="actions">
     {% if order.status == 'requested' %}
     <form class="card" method="post" action="{{ url_for('modules.approve_farmer_order_view', order_id=order.id) }}">
       <h3>Approve & Reserve</h3><div class="muted">Physical stock stays unchanged until delivery.</div>
-      <input type="number" step="0.0001" min="0.0001" max="{{ order.requested_quantity }}" name="approved_quantity" value="{{ order.requested_quantity_display }}" required>
+      {% if order.is_multi_item_order %}<div class="table-wrap"><table class="items-table"><thead><tr><th>Product</th><th>Requested</th><th>Approve Qty</th></tr></thead><tbody>{% for line in order.get('items',[]) %}<tr><td><strong>{{ line.product_name }}</strong></td><td>{{ line.requested_quantity_display }} {{ line.unit_code }}</td><td><input type="number" step="0.0001" min="0" max="{{ line.requested_quantity }}" name="approved_quantity_{{ line.line_id }}" value="{{ line.requested_quantity_display }}" required></td></tr>{% endfor %}</tbody></table></div>{% else %}<input type="number" step="0.0001" min="0.0001" max="{{ order.requested_quantity }}" name="approved_quantity" value="{{ order.requested_quantity_display }}" required>{% endif %}
       {% if order.payment_term == 'credit' %}
       <label><strong>Credit Days</strong></label><input type="number" name="payment_due_days" min="0" max="365" step="1" value="{{ order.payment_due_days or 0 }}" placeholder="0">
       <div class="muted">Optional. 0 means due immediately; enter e.g. 7 or 15 days if credit is approved.</div>
@@ -284,35 +286,350 @@
     </form>
 
     {% elif order.status == 'approved' %}
-    <form class="card" method="post" action="{{ url_for('modules.deliver_farmer_order_view', order_id=order.id) }}" onsubmit="return confirm('Confirm physical delivery? UFC stock will reduce now and the Farmer invoice will be created automatically. Payment stays separate.');">
-      <h3>Mark Goods Delivered</h3>
-      <div class="muted">Use this only when the goods are physically handed over/delivered to the Farmer. UFC stock reduces once, and the UFC Sale, Farmer Purchase and invoice are created automatically.</div>
+    <form class="card" method="post" action="{{ url_for('modules.deliver_farmer_order_view', order_id=order.id) }}" onsubmit="return ufConfirmSubmit(this,'Confirm dispatch?','UFC stock will reduce now. The Farmer will confirm the actual received quantities before payment becomes due.','Confirm Dispatch','default')">
+      <h3>Dispatch Products</h3>
+      <div class="muted">Confirm when the approved products leave the UFC. Stock reduces once. The Farmer then records what actually arrived.</div>
       <textarea name="delivery_note" rows="2" placeholder="Optional delivery / acknowledgement note"></textarea>
-      <button type="submit">Confirm Delivery</button>
+      <button type="submit">Confirm Dispatch</button>
     </form>
     <form class="card danger" method="post" action="{{ url_for('modules.cancel_farmer_order_view', order_id=order.id) }}">
-      <h3>Cancel Before Delivery</h3><div class="muted">Reserved stock will be released automatically.</div>
+      <h3>Cancel Before Dispatch</h3><div class="muted">Reserved stock will be released automatically.</div>
       <textarea name="reason" rows="2" placeholder="Cancellation reason"></textarea><button type="submit">Cancel & Release Stock</button>
     </form>
     {% endif %}
   </div>
 
-  {% if order.status == 'delivered' %}
-    <div class="success"><strong>Delivered.</strong> UFC stock has been reduced. UFC Sale, Farmer Purchase and invoice are automatic.<br>
-      <strong>Payment is separate:</strong> {{ order.payment_status_label }}{% if order.outstanding_amount is not none %} · Outstanding ₹{{ order.outstanding_amount_display }}{% endif %}.
-      The Farmer can report a full or partial payment from <strong>My Payments</strong>; your UFC confirms it after the money is actually received.
-    </div>
+  {% if order.status in ['dispatched','received','delivered'] %}
+    {% if order.status == 'dispatched' %}<div class="notice"><strong>Dispatched.</strong> {{ order.dispatched_item_count }} / {{ order.item_count }} product line(s) left the UFC. Waiting for the Farmer to confirm actual receipt. No payment is due yet.</div>{% else %}
+    <div class="success"><strong>{{ order.receipt_status_label or 'Received' }}.</strong> Farmer accepted {{ order.accepted_item_count }} / {{ order.dispatched_item_count }} dispatched line(s).{% if order.receipt_adjustment_amount %} Receipt adjustment: ₹{{ order.receipt_adjustment_amount_display }}.{% endif %}<br><strong>Payment:</strong> {{ order.payment_status_label }}{% if order.outstanding_amount is not none %} · Outstanding ₹{{ order.outstanding_amount_display }}{% endif %}.</div>
     {% if order.invoice_id_str %}<p><a class="back" href="{{ url_for('modules.farmer_sales_invoice_print', invoice_id=order.invoice_id_str) }}" target="_blank">View / Print Invoice →</a></p>{% endif %}
-    {% if order.financial_sync_status == 'repair_required' %}
-      <div class="notice"><strong>Sales document sync needs repair:</strong> {{ order.financial_sync_error }}
-        <form method="post" action="{{ url_for('modules.repair_farmer_order_financials', order_id=order.id) }}" style="margin-top:10px;">
-          <button type="submit" style="border:0;border-radius:10px;padding:9px 13px;background:#b45309;color:#fff;font:inherit;font-weight:900;">Create / Repair Sales Documents</button>
-        </form>
-      </div>
+    {% if order.financial_sync_status == 'repair_required' %}<div class="notice"><strong>Sales document sync needs repair:</strong> {{ order.financial_sync_error }}<form method="post" action="{{ url_for('modules.repair_farmer_order_financials', order_id=order.id) }}" style="margin-top:10px;"><button type="submit" style="border:0;border-radius:10px;padding:9px 13px;background:#b45309;color:#fff;font:inherit;font-weight:900;">Create / Repair Sales Documents</button></form></div>{% endif %}
     {% endif %}
   {% endif %}
 
   {% if order.history %}<div class="history"><h3>Order Timeline</h3>{% for h in order.history|reverse %}<div class="history-item"><strong>{{ h.action|replace('_',' ')|title }}</strong> <span class="muted">· {{ h.actor_name }}</span>{% if h.note %}<div class="muted">{{ h.note }}</div>{% endif %}</div>{% endfor %}</div>{% endif %}
   <a class="back" href="{{ url_for('modules.centre_orders') }}">← Back to Farmer Orders</a>
 </div>
+
+
+<style id="sds-commerce-redesign">
+:root{
+    --uc-green:#2b7346;
+    --uc-green-dark:#1f5f39;
+    --uc-green-soft:#eff8f1;
+    --uc-green-softer:#f7fbf8;
+    --uc-text:#1f3127;
+    --uc-muted:#6e7f74;
+    --uc-border:#dbe9df;
+    --uc-border-strong:#c8ddce;
+    --uc-bg:#f7faf8;
+    --uc-white:#fff;
+    --uc-warn:#9a6500;
+    --uc-danger:#a73535;
+    --uc-shadow:0 12px 32px rgba(26,72,43,.055);
+    --uc-shadow-hover:0 16px 34px rgba(31,102,59,.10);
+}
+
+@keyframes ucFadeUp{
+    from{opacity:0;transform:translateY(7px)}
+    to{opacity:1;transform:translateY(0)}
+}
+@keyframes ucPop{
+    from{opacity:0;transform:scale(.975) translateY(5px)}
+    to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page,.orders-page{
+    max-width:1500px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    color:var(--uc-text) !important;
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page{
+    background:#fff !important;
+    border:1px solid var(--uc-border) !important;
+    border-radius:20px !important;
+    box-shadow:var(--uc-shadow) !important;
+}
+
+h1,h2,h3{
+    color:#16251c;
+    letter-spacing:-.02em;
+}
+
+.muted,.small,.soft-note,.marketplace-help{
+    color:var(--uc-muted) !important;
+}
+
+button,a,input,select,textarea{
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+button,.btn,.link,.view,.head-btn,.filter-button,.back,.invoice-link,
+.primary,.secondary,.add,.addbtn,.paybtn,.pay-submit,.receive,
+.cart-primary,.cart-secondary,.clear-btn,.clear-link,.view-order-btn{
+    border-radius:10px !important;
+    transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease !important;
+}
+
+button:hover,.btn:hover,.link:hover,.view:hover,.head-btn:hover,.filter-button:hover,
+.primary:hover,.add:hover,.addbtn:hover,.paybtn:hover,.pay-submit:hover,.receive:hover,
+.cart-primary:hover,.view-order-btn:hover{
+    transform:translateY(-1px);
+}
+
+input,select,textarea,.filter-input,.filter-select{
+    border:1px solid #d6e3d9 !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#31463a !important;
+    outline:none !important;
+    box-shadow:none !important;
+}
+
+input:focus,select:focus,textarea:focus,.filter-input:focus,.filter-select:focus{
+    border-color:#8eb69a !important;
+    box-shadow:0 0 0 3px rgba(43,115,70,.07) !important;
+}
+
+.pill,.badge,.status-badge,.type-pill,.status-pill,.published-badge,.stage4-chip{
+    border-radius:8px !important;
+    font-weight:800 !important;
+}
+
+.table,.table-wrap,.table-shell,.earnings-table-wrap,.items-table{
+    border:1px solid var(--uc-border) !important;
+    border-radius:13px !important;
+    overflow:auto;
+    box-shadow:none !important;
+    background:#fff !important;
+}
+
+table th{
+    background:#f4f8f5 !important;
+    color:#607066 !important;
+    font-size:.63rem !important;
+    font-weight:850 !important;
+    text-transform:uppercase;
+    letter-spacing:.025em;
+}
+
+table td{
+    color:#3e5145 !important;
+}
+
+table tr{
+    transition:background .14s ease;
+}
+
+table tbody tr:hover td{
+    background:#fbfdfb !important;
+}
+
+.summary,.stats,.stat-grid,.status-grid,.facts,.grid{
+    gap:11px !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact,.box,.section,.action-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:14px !important;
+    background:#fff !important;
+    box-shadow:none !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact{
+    transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease;
+}
+
+.sum:hover,.stat:hover,.stat-card:hover,.status-card:hover,.fact:hover{
+    transform:translateY(-2px);
+    border-color:#b7d5c0 !important;
+    box-shadow:0 9px 22px rgba(31,102,59,.07) !important;
+}
+
+.notice,.info,.soft-note,.warn-note,.next-step,.table-info{
+    border-radius:11px !important;
+}
+
+.empty,.orders-empty{
+    color:#809087 !important;
+}
+
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+        animation:none !important;
+        transition:none !important;
+        scroll-behavior:auto !important;
+    }
+}
+</style>
+
+
+
+<style id="sds-orders-redesign">
+.orders-head,.top,.head,.fh{
+    margin-bottom:14px !important;
+}
+
+.orders-grid{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fill,minmax(285px,1fr)) !important;
+    gap:13px !important;
+}
+
+.order-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:16px !important;
+    background:#fff !important;
+    box-shadow:0 7px 20px rgba(26,72,43,.04) !important;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease !important;
+    animation:ucFadeUp .25s ease both;
+}
+
+.order-card:hover{
+    transform:translateY(-2px);
+    border-color:#aed0b7 !important;
+    box-shadow:var(--uc-shadow-hover) !important;
+}
+
+.order-number{
+    color:#1d3928 !important;
+    font-weight:900 !important;
+}
+
+.order-meta,.meta-row{
+    border-color:#edf2ee !important;
+}
+
+.view-order-btn,.head-btn,.btn,.view,.link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:37px;
+    padding:7px 11px;
+    border:1px solid #d2e1d6 !important;
+    background:#fff !important;
+    color:#2b7346 !important;
+    text-decoration:none !important;
+    font-size:.67rem !important;
+    font-weight:850 !important;
+}
+
+.view-order-btn.primary,.head-btn.primary,.btn.primary{
+    border-color:#2b7346 !important;
+    background:#2b7346 !important;
+    color:#fff !important;
+}
+
+.timeline,.history{
+    position:relative;
+}
+
+.event,.history-item,.step{
+    border-color:#e1ebe4 !important;
+    background:#fbfdfb !important;
+    border-radius:11px !important;
+}
+
+.action-card,.receive,.pay-form{
+    border:1px solid #d9e7dd !important;
+    border-radius:14px !important;
+    background:#fbfdfb !important;
+}
+
+@media(max-width:700px){
+    .orders-grid{
+        grid-template-columns:1fr !important;
+    }
+}
+</style>
+
+
+
+<!-- UnnatFarm centered action confirmation modal -->
+<style id="uf-action-confirm-style">
+.uf-confirm-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(18,34,24,.48);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease}.uf-confirm-overlay.is-open{opacity:1;visibility:visible}.uf-confirm-card{width:min(100%,460px);background:#fff;border:1px solid #dbe9df;border-radius:18px;box-shadow:0 24px 70px rgba(17,49,30,.20);padding:24px;transform:translateY(5px) scale(.975);transition:transform .2s ease;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f3127}.uf-confirm-overlay.is-open .uf-confirm-card{transform:translateY(0) scale(1)}.uf-confirm-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;background:#eff8f1;border:1px solid #cfe3d5;color:#2b7346;font-size:1.35rem}.uf-confirm-card.is-danger .uf-confirm-icon{background:#fff4f3;border-color:#f2ceca;color:#b42318}.uf-confirm-card h3{margin:0;text-align:center;color:#17251d;font-size:1.08rem;font-weight:900;letter-spacing:-.015em}.uf-confirm-card p{margin:9px auto 0;max-width:390px;text-align:center;color:#6e7f74;font-size:.78rem;line-height:1.55}.uf-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}.uf-confirm-btn{min-height:40px;border-radius:9px;padding:9px 13px;font:inherit;font-size:.76rem;font-weight:850;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease}.uf-confirm-btn:hover{transform:translateY(-1px)}.uf-confirm-btn.back{background:#fff;border:1px solid #d6e3d9;color:#2f6e46}.uf-confirm-btn.back:hover{border-color:#b8d2c0;background:#f8fbf9}.uf-confirm-btn.confirm{background:#2b7346;border:1px solid #2b7346;color:#fff;box-shadow:0 7px 16px rgba(43,115,70,.14)}.uf-confirm-btn.confirm:hover{background:#1f5f39;border-color:#1f5f39}.uf-confirm-card.is-danger .uf-confirm-btn.confirm{background:#b42318;border-color:#b42318;box-shadow:0 7px 16px rgba(180,35,24,.12)}.uf-confirm-card.is-danger .uf-confirm-btn.confirm:hover{background:#922018;border-color:#922018}@media(max-width:520px){.uf-confirm-overlay{padding:14px}.uf-confirm-card{padding:20px 16px;border-radius:16px}.uf-confirm-actions{grid-template-columns:1fr}.uf-confirm-btn.confirm{order:-1}}@media(prefers-reduced-motion:reduce){.uf-confirm-overlay,.uf-confirm-card,.uf-confirm-btn{transition:none!important}.uf-confirm-btn:hover{transform:none}}
+</style>
+<div class="uf-confirm-overlay" id="ufActionConfirm" aria-hidden="true">
+  <div class="uf-confirm-card" id="ufActionConfirmCard" role="dialog" aria-modal="true" aria-labelledby="ufActionConfirmTitle" aria-describedby="ufActionConfirmMessage">
+    <div class="uf-confirm-icon" id="ufActionConfirmIcon" aria-hidden="true">✓</div>
+    <h3 id="ufActionConfirmTitle">Confirm action</h3>
+    <p id="ufActionConfirmMessage">Please confirm before continuing.</p>
+    <div class="uf-confirm-actions">
+      <button class="uf-confirm-btn back" id="ufActionConfirmBack" type="button">Go Back</button>
+      <button class="uf-confirm-btn confirm" id="ufActionConfirmProceed" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+<script id="uf-action-confirm-script">
+(function(){
+  const overlay=document.getElementById('ufActionConfirm');
+  const card=document.getElementById('ufActionConfirmCard');
+  const title=document.getElementById('ufActionConfirmTitle');
+  const message=document.getElementById('ufActionConfirmMessage');
+  const icon=document.getElementById('ufActionConfirmIcon');
+  const back=document.getElementById('ufActionConfirmBack');
+  const proceed=document.getElementById('ufActionConfirmProceed');
+  if(!overlay||!card||!title||!message||!back||!proceed)return;
+  let pendingAction=null;
+  let lastFocused=null;
+  function closeConfirm(){
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden','true');
+    pendingAction=null;
+    if(lastFocused&&typeof lastFocused.focus==='function')lastFocused.focus();
+  }
+  window.ufOpenConfirm=function(options){
+    const o=options||{};
+    lastFocused=document.activeElement;
+    pendingAction=typeof o.onConfirm==='function'?o.onConfirm:null;
+    title.textContent=o.title||'Confirm action';
+    message.textContent=o.message||'Please confirm before continuing.';
+    proceed.textContent=o.confirmText||'Confirm';
+    back.textContent=o.cancelText||'Go Back';
+    const danger=o.tone==='danger';
+    card.classList.toggle('is-danger',danger);
+    icon.textContent=o.icon||(danger?'!':'✓');
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden','false');
+    window.setTimeout(()=>back.focus(),0);
+    return false;
+  };
+  window.ufConfirmSubmit=function(form,titleText,messageText,confirmText,tone,submitter){
+    return window.ufOpenConfirm({
+      title:titleText,
+      message:messageText,
+      confirmText:confirmText||'Confirm',
+      tone:tone||'default',
+      icon:tone==='danger'?'!':'✓',
+      onConfirm:function(){
+        if(!form)return;
+        if(submitter&&typeof form.requestSubmit==='function'){
+          form.requestSubmit(submitter);
+        }else if(submitter&&submitter.name){
+          const hidden=document.createElement('input');
+          hidden.type='hidden';hidden.name=submitter.name;hidden.value=submitter.value;
+          form.appendChild(hidden);
+          HTMLFormElement.prototype.submit.call(form);
+        }else{
+          HTMLFormElement.prototype.submit.call(form);
+        }
+      }
+    });
+  };
+  back.addEventListener('click',closeConfirm);
+  proceed.addEventListener('click',function(){
+    const action=pendingAction;
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden','true');
+    pendingAction=null;
+    if(action)action();
+  });
+  overlay.addEventListener('click',function(e){if(e.target===overlay)closeConfirm();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay.classList.contains('is-open'))closeConfirm();});
+})();
+</script>
+
 {% endblock %}

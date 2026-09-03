@@ -2,6 +2,242 @@
 <style>.wrap{width:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d}.head,.section{background:#fff;border:1px solid rgba(47,122,76,.11);border-radius:11px;padding:19px;margin-bottom:14px}.head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.head h1{margin:0}.muted{color:#748279}.btn{display:inline-flex;padding:9px 13px;border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#f7fbf8;color:#2f6e46;text-decoration:none;font-weight:900}.table{overflow:auto}.table table{width:100%;border-collapse:collapse;min-width:900px}.table th,.table td{padding:10px;border-bottom:1px solid #edf3ef;text-align:left}.table th{background:#f7fbf8}.pill{padding:4px 8px;border-radius:9px;background:#eef7f1;color:#2f6e46;font-weight:900;font-size:.76rem}.search{display:flex;gap:7px;margin:12px 0}.search input{flex:1;border:1px solid rgba(47,122,76,.14);border-radius:11px;padding:9px;font:inherit}</style>
 <div class="wrap"><div class="head"><div><h1>Produce Purchases</h1><div class="muted">Automatically created after you confirm receipt of a Farmer Produce Market order.</div></div><a class="btn" href="{{ url_for('modules.farmer_produce_market_my_orders') }}">My Produce Orders</a></div>
 <form class="search"><input name="q" value="{{ overview.query }}" placeholder="Search purchases"><button class="btn">Search</button></form>
-<div class="section"><h3>Purchase Entries</h3><div class="table"><table><thead><tr><th>Purchase</th><th>Farmer</th><th>Produce</th><th>Quantity</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th></th></tr></thead><tbody>{% for p in overview.rows %}<tr><td><strong>{{ p.purchase_number }}</strong><div class="muted">{{ p.document_number }}</div></td><td>{{ p.seller_farmer_name }}</td><td>{{ p.product_name }}</td><td>{{ p.quantity_description or (p.quantity_display ~ ' ' ~ p.unit_code) }}</td><td>₹{{ p.total_display }}</td><td>₹{{ p.amount_paid_display }}</td><td>₹{{ p.outstanding_display }}</td><td><span class="pill">{{ p.payment_status_label }}</span></td><td><a class="btn" href="{{ url_for('modules.farmer_produce_market_order_detail', order_id=p.farmer_marketplace_order_id_str) }}">Open Order</a></td></tr>{% else %}<tr><td colspan="9" style="text-align:center;padding:25px;color:#687a70">No received Farmer produce purchases yet.</td></tr>{% endfor %}</tbody></table></div></div>
+<div class="section"><h3>Purchase Entries</h3><div class="table"><table><thead><tr><th>Purchase</th><th>Farmer</th><th>Produce</th><th>Quantity</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Status</th><th></th></tr></thead><tbody>{% for p in overview.rows %}<tr><td><strong>{{ p.purchase_number }}</strong><div class="muted">{{ p.document_number }}</div></td><td>{{ p.seller_farmer_name }}</td><td><strong>{{ p.product_summary or p.product_name }}</strong>{% if p.item_count > 1 %}<div class="muted">{{ p.item_count }} produce lines</div>{% endif %}</td><td>{% if p.item_count > 1 %}Multiple units{% else %}{{ p.quantity_description or (p.quantity_display ~ ' ' ~ p.unit_code) }}{% endif %}</td><td>₹{{ p.total_display }}</td><td>₹{{ p.amount_paid_display }}</td><td>₹{{ p.outstanding_display }}</td><td><span class="pill">{{ p.payment_status_label }}</span></td><td><a class="btn" href="{{ url_for('modules.farmer_produce_market_order_detail', order_id=p.farmer_marketplace_order_id_str) }}">Open Order</a></td></tr>{% else %}<tr><td colspan="9" style="text-align:center;padding:25px;color:#687a70">No received Farmer produce purchases yet.</td></tr>{% endfor %}</tbody></table></div></div>
 {% if overview.stock_rows %}<div class="section"><h3>Received Produce Stock</h3><div class="muted">Institutional Farmer-produce stock is kept separate from normal input-product inventory until a controlled mapping/use workflow moves it.</div><div class="table"><table><thead><tr><th>Lot</th><th>Produce</th><th>Source Farmer</th><th>Available</th><th>Received</th></tr></thead><tbody>{% for s in overview.stock_rows %}<tr><td>{{ s.lot_number }}</td><td>{{ s.product_name }}{% if s.grade %}<div class="muted">{{ s.grade }}</div>{% endif %}</td><td>{{ s.source_farmer_name }}</td><td><strong>{{ s.quantity_display }} {{ s.unit_code }}</strong></td><td>{{ s.received_at|ist_date('%d %b %Y', '') }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}</div>
+
+
+<style id="sds-commerce-redesign">
+:root{
+    --uc-green:#2b7346;
+    --uc-green-dark:#1f5f39;
+    --uc-green-soft:#eff8f1;
+    --uc-green-softer:#f7fbf8;
+    --uc-text:#1f3127;
+    --uc-muted:#6e7f74;
+    --uc-border:#dbe9df;
+    --uc-border-strong:#c8ddce;
+    --uc-bg:#f7faf8;
+    --uc-white:#fff;
+    --uc-warn:#9a6500;
+    --uc-danger:#a73535;
+    --uc-shadow:0 12px 32px rgba(26,72,43,.055);
+    --uc-shadow-hover:0 16px 34px rgba(31,102,59,.10);
+}
+
+@keyframes ucFadeUp{
+    from{opacity:0;transform:translateY(7px)}
+    to{opacity:1;transform:translateY(0)}
+}
+@keyframes ucPop{
+    from{opacity:0;transform:scale(.975) translateY(5px)}
+    to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page,.orders-page{
+    max-width:1500px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    color:var(--uc-text) !important;
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page{
+    background:#fff !important;
+    border:1px solid var(--uc-border) !important;
+    border-radius:20px !important;
+    box-shadow:var(--uc-shadow) !important;
+}
+
+h1,h2,h3{
+    color:#16251c;
+    letter-spacing:-.02em;
+}
+
+.muted,.small,.soft-note,.marketplace-help{
+    color:var(--uc-muted) !important;
+}
+
+button,a,input,select,textarea{
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+button,.btn,.link,.view,.head-btn,.filter-button,.back,.invoice-link,
+.primary,.secondary,.add,.addbtn,.paybtn,.pay-submit,.receive,
+.cart-primary,.cart-secondary,.clear-btn,.clear-link,.view-order-btn{
+    border-radius:10px !important;
+    transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease !important;
+}
+
+button:hover,.btn:hover,.link:hover,.view:hover,.head-btn:hover,.filter-button:hover,
+.primary:hover,.add:hover,.addbtn:hover,.paybtn:hover,.pay-submit:hover,.receive:hover,
+.cart-primary:hover,.view-order-btn:hover{
+    transform:translateY(-1px);
+}
+
+input,select,textarea,.filter-input,.filter-select{
+    border:1px solid #d6e3d9 !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#31463a !important;
+    outline:none !important;
+    box-shadow:none !important;
+}
+
+input:focus,select:focus,textarea:focus,.filter-input:focus,.filter-select:focus{
+    border-color:#8eb69a !important;
+    box-shadow:0 0 0 3px rgba(43,115,70,.07) !important;
+}
+
+.pill,.badge,.status-badge,.type-pill,.status-pill,.published-badge,.stage4-chip{
+    border-radius:8px !important;
+    font-weight:800 !important;
+}
+
+.table,.table-wrap,.table-shell,.earnings-table-wrap,.items-table{
+    border:1px solid var(--uc-border) !important;
+    border-radius:13px !important;
+    overflow:auto;
+    box-shadow:none !important;
+    background:#fff !important;
+}
+
+table th{
+    background:#f4f8f5 !important;
+    color:#607066 !important;
+    font-size:.63rem !important;
+    font-weight:850 !important;
+    text-transform:uppercase;
+    letter-spacing:.025em;
+}
+
+table td{
+    color:#3e5145 !important;
+}
+
+table tr{
+    transition:background .14s ease;
+}
+
+table tbody tr:hover td{
+    background:#fbfdfb !important;
+}
+
+.summary,.stats,.stat-grid,.status-grid,.facts,.grid{
+    gap:11px !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact,.box,.section,.action-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:14px !important;
+    background:#fff !important;
+    box-shadow:none !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact{
+    transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease;
+}
+
+.sum:hover,.stat:hover,.stat-card:hover,.status-card:hover,.fact:hover{
+    transform:translateY(-2px);
+    border-color:#b7d5c0 !important;
+    box-shadow:0 9px 22px rgba(31,102,59,.07) !important;
+}
+
+.notice,.info,.soft-note,.warn-note,.next-step,.table-info{
+    border-radius:11px !important;
+}
+
+.empty,.orders-empty{
+    color:#809087 !important;
+}
+
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+        animation:none !important;
+        transition:none !important;
+        scroll-behavior:auto !important;
+    }
+}
+</style>
+
+
+
+<style id="sds-orders-redesign">
+.orders-head,.top,.head,.fh{
+    margin-bottom:14px !important;
+}
+
+.orders-grid{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fill,minmax(285px,1fr)) !important;
+    gap:13px !important;
+}
+
+.order-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:16px !important;
+    background:#fff !important;
+    box-shadow:0 7px 20px rgba(26,72,43,.04) !important;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease !important;
+    animation:ucFadeUp .25s ease both;
+}
+
+.order-card:hover{
+    transform:translateY(-2px);
+    border-color:#aed0b7 !important;
+    box-shadow:var(--uc-shadow-hover) !important;
+}
+
+.order-number{
+    color:#1d3928 !important;
+    font-weight:900 !important;
+}
+
+.order-meta,.meta-row{
+    border-color:#edf2ee !important;
+}
+
+.view-order-btn,.head-btn,.btn,.view,.link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:37px;
+    padding:7px 11px;
+    border:1px solid #d2e1d6 !important;
+    background:#fff !important;
+    color:#2b7346 !important;
+    text-decoration:none !important;
+    font-size:.67rem !important;
+    font-weight:850 !important;
+}
+
+.view-order-btn.primary,.head-btn.primary,.btn.primary{
+    border-color:#2b7346 !important;
+    background:#2b7346 !important;
+    color:#fff !important;
+}
+
+.timeline,.history{
+    position:relative;
+}
+
+.event,.history-item,.step{
+    border-color:#e1ebe4 !important;
+    background:#fbfdfb !important;
+    border-radius:11px !important;
+}
+
+.action-card,.receive,.pay-form{
+    border:1px solid #d9e7dd !important;
+    border-radius:14px !important;
+    background:#fbfdfb !important;
+}
+
+@media(max-width:700px){
+    .orders-grid{
+        grid-template-columns:1fr !important;
+    }
+}
+</style>
+
 {% endblock %}

@@ -555,6 +555,9 @@ def get_stock_overview(actor_user_id, search=""):
             "waste_out": "Loss / Wastage",
             "sale_void_in": "Sale Cancelled · Stock Restored",
             "marketplace_sale_out": "Marketplace Order Dispatched",
+            "manual_adjustment_in": "Stock Adjusted · Added",
+            "manual_adjustment_out": "Stock Adjusted · Reduced",
+            "manual_adjustment_summary": "Manual Stock Adjustment",
         }.get(item.get("movement_type"), str(item.get("movement_type") or "Movement").replace("_", " ").title())
         movements.append(item)
     return {
@@ -563,6 +566,7 @@ def get_stock_overview(actor_user_id, search=""):
         "movements": movements,
         "query": q,
         "loss_token": f"LOSS-{uuid4().hex.upper()}",
+        "adjustment_token": f"ADJ-{uuid4().hex.upper()}",
     }
 
 
@@ -570,6 +574,18 @@ def _allocate_stock(profile, product_key, quantity_value, *, movement_type, refe
     required = _decimal(quantity_value)
     if required <= 0:
         raise ValueError("Quantity must be greater than zero.")
+
+    counter_field = {
+        "sale_out": "sold_quantity",
+        "waste_out": "waste_quantity",
+        "manual_adjustment_out": "adjustment_out_quantity",
+    }.get(movement_type, "waste_quantity")
+    reference_type = {
+        "sale_out": "sale",
+        "waste_out": "stock_loss",
+        "manual_adjustment_out": "stock_adjustment",
+    }.get(movement_type, "stock_loss")
+
     lots = list(mongo.db[LOT_COLLECTION].find({
         "farmer_user_id": profile["user_id"],
         "product_key": product_key,
@@ -578,7 +594,7 @@ def _allocate_stock(profile, product_key, quantity_value, *, movement_type, refe
     }).sort([("harvest_date", ASCENDING), ("created_at", ASCENDING), ("_id", ASCENDING)]))
     total = sum((max(_decimal(lot.get("available_quantity")) - _decimal(lot.get("reserved_quantity")), Decimal("0")) for lot in lots), Decimal("0"))
     if total + Decimal("0.0004") < required:
-        raise ValueError(f"Only {_qty(total)} is currently available. Reduce the quantity and try again.")
+        raise ValueError(f"Only {_qty(total)} is currently available. Reserved stock cannot be reduced.")
 
     remaining = required
     applied = []
@@ -589,12 +605,14 @@ def _allocate_stock(profile, product_key, quantity_value, *, movement_type, refe
             reserved = max(_decimal(lot.get("reserved_quantity")), Decimal("0"))
             available = max(_decimal(lot.get("available_quantity")) - reserved, Decimal("0"))
             take = min(available, remaining)
+            if take <= Decimal("0"):
+                continue
             result = mongo.db[LOT_COLLECTION].update_one(
                 {"_id": lot["_id"], "available_quantity": {"$gte": float(reserved + take)}, "status": "active"},
                 {
                     "$inc": {
                         "available_quantity": -float(take),
-                        "sold_quantity" if movement_type == "sale_out" else "waste_quantity": float(take),
+                        counter_field: float(take),
                     },
                     "$set": {"updated_at": now_utc()},
                 },
@@ -607,10 +625,9 @@ def _allocate_stock(profile, product_key, quantity_value, *, movement_type, refe
             raise RuntimeError("Produce stock changed while this transaction was being saved. Refresh and try again.")
     except Exception:
         for allocation in applied:
-            increment_field = "sold_quantity" if movement_type == "sale_out" else "waste_quantity"
             mongo.db[LOT_COLLECTION].update_one(
                 {"_id": allocation["lot_id"]},
-                {"$inc": {"available_quantity": allocation["quantity"], increment_field: -allocation["quantity"]}, "$set": {"updated_at": now_utc()}},
+                {"$inc": {"available_quantity": allocation["quantity"], counter_field: -allocation["quantity"]}, "$set": {"updated_at": now_utc()}},
             )
         raise
 
@@ -628,7 +645,7 @@ def _allocate_stock(profile, product_key, quantity_value, *, movement_type, refe
                 "movement_type": movement_type,
                 "quantity": allocation["quantity"],
                 "direction": "out",
-                "reference_type": "sale" if movement_type == "sale_out" else "stock_loss",
+                "reference_type": reference_type,
                 "reference_id": reference_id,
                 "reference_number": reference_number,
                 "note": _clean(note, 500),
@@ -636,17 +653,15 @@ def _allocate_stock(profile, product_key, quantity_value, *, movement_type, refe
             })
             movement_ids.append(movement.inserted_id)
     except Exception:
-        increment_field = "sold_quantity" if movement_type == "sale_out" else "waste_quantity"
         for allocation in applied:
             mongo.db[LOT_COLLECTION].update_one(
                 {"_id": allocation["lot_id"]},
-                {"$inc": {"available_quantity": allocation["quantity"], increment_field: -allocation["quantity"]}, "$set": {"updated_at": now_utc()}},
+                {"$inc": {"available_quantity": allocation["quantity"], counter_field: -allocation["quantity"]}, "$set": {"updated_at": now_utc()}},
             )
         if movement_ids:
             mongo.db[MOVEMENT_COLLECTION].delete_many({"_id": {"$in": movement_ids}})
         raise RuntimeError("Produce stock movement could not be saved safely. No stock change was kept.")
     return applied
-
 
 def record_stock_loss(actor_user_id, product_key, quantity, *, reason="wastage", note="", idempotency_key=""):
     _ensure_indexes()
@@ -689,6 +704,147 @@ def record_stock_loss(actor_user_id, product_key, quantity, *, reason="wastage",
         raise
     _audit(profile, "record_stock_loss", "stock_loss", result.inserted_id, f"{_qty(quantity_value)} {sample.get('unit_code') or ''} {sample.get('product_name') or ''} recorded as {_clean(reason,80)}.")
     return {"message": "Produce stock updated.", "idempotent_replay": False}
+
+
+def record_stock_adjustment(actor_user_id, product_key, direction, quantity, *, reason="stock_count", note="", idempotency_key=""):
+    """Apply a simple, audited manual correction to Farmer produce stock.
+
+    Only unreserved quantity can be reduced. An increase creates a dedicated
+    adjustment lot so the original Production / Harvest record is never
+    rewritten and historical stock provenance remains clear.
+    """
+    _ensure_indexes()
+    profile = _get_farmer(actor_user_id)
+    product_key = _clean(product_key, 250)
+    if not product_key:
+        raise ValueError("Choose a produce item.")
+
+    action = str(direction or "").strip().lower()
+    if action not in {"increase", "decrease"}:
+        raise ValueError("Choose Add Stock or Reduce Stock.")
+
+    quantity_value = _decimal(quantity)
+    if quantity_value <= 0:
+        raise ValueError("Adjustment quantity must be greater than zero.")
+
+    sample = mongo.db[LOT_COLLECTION].find_one({
+        "farmer_user_id": profile["user_id"],
+        "product_key": product_key,
+        "status": {"$ne": "cancelled"},
+    })
+    if not sample:
+        raise ValueError("Produce stock was not found. Add Production first.")
+
+    token = _clean(idempotency_key, 120) or f"ADJ-{uuid4().hex.upper()}"
+    existing = mongo.db[MOVEMENT_COLLECTION].find_one({
+        "farmer_user_id": profile["user_id"],
+        "idempotency_key": token,
+        "movement_type": "manual_adjustment_summary",
+    })
+    if existing:
+        return {"message": "This stock adjustment was already saved.", "idempotent_replay": True}
+
+    reason_text = _clean(reason or "stock_count", 100)
+    note_text = _clean(note, 500)
+    reference_number = _next_number("farmer_stock_adjustment", "FADJ")
+    timestamp = now_utc()
+    summary = {
+        "farmer_user_id": profile["user_id"],
+        "farmer_user_id_str": profile["user_id_str"],
+        "product_key": product_key,
+        "product_name": sample.get("product_name") or "Produce",
+        "unit_code": sample.get("unit_code") or "KG",
+        "movement_type": "manual_adjustment_summary",
+        "idempotency_key": token,
+        "adjustment_direction": action,
+        "quantity": float(quantity_value),
+        "direction": "in" if action == "increase" else "out",
+        "reference_type": "stock_adjustment",
+        "reference_number": reference_number,
+        "reason": reason_text,
+        "note": note_text,
+        "created_at": timestamp,
+    }
+    summary_result = mongo.db[MOVEMENT_COLLECTION].insert_one(summary)
+
+    try:
+        if action == "decrease":
+            _allocate_stock(
+                profile,
+                product_key,
+                quantity_value,
+                movement_type="manual_adjustment_out",
+                reference_id=summary_result.inserted_id,
+                reference_number=reference_number,
+                note=f"{reason_text} · {note_text}".strip(" ·"),
+            )
+        else:
+            lot_number = _next_number("farmer_stock_adjustment_lot", "FADJLOT")
+            lot = {
+                "lot_number": lot_number,
+                "production_entry_id": None,
+                "production_entry_id_str": "",
+                "farmer_user_id": profile["user_id"],
+                "farmer_user_id_str": profile["user_id_str"],
+                "farmer_name": profile["name"],
+                "centre_uid": profile["centre_uid"],
+                "product_name": sample.get("product_name") or "Produce",
+                "product_key": product_key,
+                "variety": sample.get("variety") or "",
+                "grade": sample.get("grade") or "",
+                "unit_code": sample.get("unit_code") or "KG",
+                "harvest_date": business_today().isoformat(),
+                "original_quantity": 0.0,
+                "available_quantity": float(quantity_value),
+                "sold_quantity": 0.0,
+                "waste_quantity": 0.0,
+                "reserved_quantity": 0.0,
+                "adjustment_in_quantity": float(quantity_value),
+                "adjustment_out_quantity": 0.0,
+                "source_type": "manual_stock_adjustment",
+                "adjustment_reference": reference_number,
+                "status": "active",
+                "created_at": timestamp,
+                "updated_at": timestamp,
+            }
+            lot_result = mongo.db[LOT_COLLECTION].insert_one(lot)
+            try:
+                mongo.db[MOVEMENT_COLLECTION].insert_one({
+                    "farmer_user_id": profile["user_id"],
+                    "farmer_user_id_str": profile["user_id_str"],
+                    "product_key": product_key,
+                    "product_name": lot["product_name"],
+                    "unit_code": lot["unit_code"],
+                    "lot_id": lot_result.inserted_id,
+                    "lot_number": lot_number,
+                    "movement_type": "manual_adjustment_in",
+                    "quantity": float(quantity_value),
+                    "direction": "in",
+                    "reference_type": "stock_adjustment",
+                    "reference_id": summary_result.inserted_id,
+                    "reference_number": reference_number,
+                    "note": f"{reason_text} · {note_text}".strip(" ·"),
+                    "created_at": timestamp,
+                })
+            except Exception:
+                mongo.db[LOT_COLLECTION].delete_one({"_id": lot_result.inserted_id})
+                raise
+    except Exception:
+        mongo.db[MOVEMENT_COLLECTION].delete_one({"_id": summary_result.inserted_id})
+        raise
+
+    verb = "added to" if action == "increase" else "reduced from"
+    _audit(
+        profile,
+        "adjust_produce_stock",
+        "stock_adjustment",
+        summary_result.inserted_id,
+        f"{_qty(quantity_value)} {sample.get('unit_code') or ''} {verb} {sample.get('product_name') or 'produce'} · {reason_text}.",
+    )
+    return {
+        "message": f"Stock updated: {_qty(quantity_value)} {sample.get('unit_code') or ''} {verb} {sample.get('product_name') or 'produce'}.",
+        "idempotent_replay": False,
+    }
 
 
 def _resolve_mapped_ufc(profile):

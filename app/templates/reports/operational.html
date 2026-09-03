@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block title %}{{ report.title }} | UnnatFarm MIS{% endblock %}
+{% block extra_head %}{% include 'reports/_operational_styles.html' %}{% endblock %}
+{% block content %}
+{% set qs = request.query_string.decode('utf-8') %}
+<div class="opr">
+  <section class="opr-head">
+    <div>
+      <h1>{{ report.title }}</h1>
+      <p>{{ report.subtitle }}</p>
+      <div class="opr-scope">{{ report.scope_label }}</div>
+    </div>
+    {% if report.exportable %}
+    <div class="opr-actions">
+      <a class="opr-btn" href="{{ url_for('reports.operational_export', section=report.section, file_type='xlsx') }}{% if qs %}?{{ qs }}{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Excel
+      </a>
+      <a class="opr-btn" href="{{ url_for('reports.operational_export', section=report.section, file_type='pdf') }}{% if qs %}?{{ qs }}{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l4 4v14H7zM14 3v5h5M9.5 13h5M9.5 16h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        PDF
+      </a>
+    </div>
+    {% endif %}
+  </section>
+
+  <nav class="opr-tabs" aria-label="Report sections">
+    {% for key, label in report.nav %}
+      {% if key == 'overview' %}
+        {% set tab_url = url_for('reports.overview') %}
+      {% else %}
+        {% set tab_url = url_for('reports.operational', section=key) %}
+      {% endif %}
+      <a href="{{ tab_url }}{% if navigation_query %}?{{ navigation_query }}{% endif %}" class="{% if report.section == key %}active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+
+  {% if report.filter_options.periods %}
+  <form class="opr-filter" method="get" action="{% if report.section == 'overview' %}{{ url_for('reports.overview') }}{% else %}{{ url_for('reports.operational', section=report.section) }}{% endif %}" id="reportFilters">
+    <div class="field">
+      <label for="period">Period</label>
+      <select name="period" id="period">
+        {% for value, label in report.filter_options.periods %}<option value="{{ value }}" {% if report.filters.period == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+
+    {% if report.show_filters.farmer %}
+    <div class="field">
+      <label for="farmer">Farmer</label>
+      <select name="farmer" id="farmer"><option value="">All Farmers</option>{% for item in report.filter_options.farmers %}<option value="{{ item.value }}" {% if report.filters.farmer == item.value %}selected{% endif %}>{{ item.label }}</option>{% endfor %}</select>
+    </div>
+    {% endif %}
+
+    {% if report.show_filters.mitra %}
+    <div class="field">
+      <label for="mitra">Mitra</label>
+      <select name="mitra" id="mitra"><option value="">All Mitras</option>{% for item in report.filter_options.mitras %}<option value="{{ item.value }}" {% if report.filters.mitra == item.value %}selected{% endif %}>{{ item.label }}</option>{% endfor %}</select>
+    </div>
+    {% endif %}
+
+    {% if report.show_filters.product %}
+    <div class="field">
+      <label for="product">Product / Produce</label>
+      <select name="product" id="product"><option value="">All Products</option>{% for product in report.filter_options.products %}<option value="{{ product }}" {% if report.filters.product == product %}selected{% endif %}>{{ product }}</option>{% endfor %}</select>
+    </div>
+    {% endif %}
+
+    {% if report.show_filters.status %}
+    <div class="field">
+      <label for="status">Status</label>
+      <select name="status" id="status">{% for value, label in report.filter_options.statuses %}<option value="{{ value }}" {% if report.filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    </div>
+    {% endif %}
+
+    {% if report.show_filters.q %}
+    <div class="field">
+      <label for="q">Search</label>
+      <input type="search" name="q" id="q" value="{{ report.filters.q }}" placeholder="Name or reference">
+    </div>
+    {% endif %}
+
+    <div class="field opr-custom-date {% if report.filters.period != 'custom' %}hidden-filter{% endif %}">
+      <label for="from">From</label><input type="date" name="from" id="from" value="{{ report.filters.from_text }}">
+    </div>
+    <div class="field opr-custom-date {% if report.filters.period != 'custom' %}hidden-filter{% endif %}">
+      <label for="to">To</label><input type="date" name="to" id="to" value="{{ report.filters.to_text }}">
+    </div>
+
+    <div class="opr-filter-actions">
+      <button class="opr-btn primary" type="submit">Apply</button>
+      {% if report.section == 'overview' %}<a class="opr-btn" href="{{ url_for('reports.overview') }}">Reset</a>{% else %}<a class="opr-btn" href="{{ url_for('reports.operational', section=report.section) }}">Reset</a>{% endif %}
+    </div>
+  </form>
+  {% endif %}
+
+  {% if report.kpis %}
+  <section class="opr-kpis">
+    {% for kpi in report.kpis %}
+    <article class="opr-kpi {{ kpi.tone }}" style="animation-delay:{{ loop.index0 * 35 }}ms">
+      <small>{{ kpi.label }}</small>
+      <strong>{% if kpi.kind == 'money' %}₹{{ '{:,.2f}'.format(kpi.value or 0) }}{% else %}{{ kpi.value }}{% endif %}</strong>
+      {% if kpi.note %}<div class="note">{{ kpi.note }}</div>{% endif %}
+    </article>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if report.notice %}<div class="opr-note"><span class="opr-note-icon">i</span><span>{{ report.notice }}</span></div>{% endif %}
+
+  <div class="opr-grid">
+    {% if report.trend and report.trend.points %}
+    <section class="opr-card">
+      <header class="opr-card-head"><h2>{{ report.trend.title }}</h2><span class="count">{{ report.filters.period_label }}</span></header>
+      <div class="opr-chart-wrap">
+        <div class="opr-chart" aria-label="{{ report.trend.title }}">
+          {% for point in report.trend.points %}
+          <div class="opr-bar-wrap" title="{{ point.label }}: ₹{{ '{:,.2f}'.format(point.value or 0) }}">
+            <div class="opr-bar-value">₹{{ '{:,.0f}'.format(point.value or 0) }}</div>
+            <div class="opr-bar" style="height:{{ point.height }}%"></div>
+            <div class="opr-bar-label">{{ point.label }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% for table in report.tables %}
+    <section class="opr-card opr-data-card" data-page-size="20">
+      <header class="opr-card-head"><h2>{{ table.title }}</h2><span class="count">{{ table.rows|length }} record{% if table.rows|length != 1 %}s{% endif %}</span></header>
+      {% if table.rows %}
+      <div class="opr-table-wrap">
+        <table class="opr-table">
+          <thead><tr>{% for key, label, kind in table.columns %}<th>{{ label }}</th>{% endfor %}</tr></thead>
+          <tbody>
+          {% for row in table.rows %}
+            <tr data-report-row>
+            {% for key, label, kind in table.columns %}
+              {% set value = row.get(key) %}
+              <td>
+                {% if kind == 'money' %}<span class="opr-money">₹{{ '{:,.2f}'.format(value or 0) }}</span>
+                {% elif kind == 'money_optional' %}{% if value is none %}—{% else %}<span class="opr-money">₹{{ '{:,.2f}'.format(value or 0) }}</span>{% endif %}
+                {% elif kind == 'date' %}{% if value %}{{ value.strftime('%d %b %Y') if value.strftime is defined else value }}{% else %}—{% endif %}
+                {% elif kind == 'qty_with_unit' %}{{ ('%.2f'|format(value or 0)).rstrip('0').rstrip('.') }} {{ row.get('unit') or row.get('unit_code') or '' }}
+                {% elif kind == 'status' %}<span class="opr-status" data-status="{{ (value or '')|lower|replace(' ','_') }}">{{ value or '—' }}</span>
+                {% else %}{{ value if value not in [none, ''] else '—' }}{% endif %}
+              </td>
+            {% endfor %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="opr-pager" data-report-pager>
+        <span data-page-info></span>
+        <div class="opr-pager-actions"><button type="button" class="opr-page-btn" data-prev>Previous</button><button type="button" class="opr-page-btn" data-next>Next</button></div>
+      </div>
+      {% else %}<div class="opr-empty">{{ table.empty }}</div>{% endif %}
+    </section>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+(function(){
+  const period=document.getElementById('period');
+  const custom=[...document.querySelectorAll('.opr-custom-date')];
+  function toggleDates(){const show=period&&period.value==='custom';custom.forEach(el=>el.classList.toggle('hidden-filter',!show));}
+  if(period){period.addEventListener('change',toggleDates);toggleDates();}
+
+  document.querySelectorAll('.opr-data-card').forEach(card=>{
+    const rows=[...card.querySelectorAll('[data-report-row]')];
+    const pager=card.querySelector('[data-report-pager]');
+    if(!pager||!rows.length)return;
+    const size=parseInt(card.dataset.pageSize||'20',10);let page=1;const pages=Math.max(1,Math.ceil(rows.length/size));
+    const info=pager.querySelector('[data-page-info]'),prev=pager.querySelector('[data-prev]'),next=pager.querySelector('[data-next]');
+    function draw(){const start=(page-1)*size,end=Math.min(start+size,rows.length);rows.forEach((row,i)=>row.hidden=!(i>=start&&i<end));info.textContent=`${start+1}–${end} of ${rows.length}`;prev.disabled=page<=1;next.disabled=page>=pages;pager.hidden=rows.length<=size;}
+    prev.addEventListener('click',()=>{if(page>1){page--;draw();card.scrollIntoView({behavior:'smooth',block:'start'});}});
+    next.addEventListener('click',()=>{if(page<pages){page++;draw();card.scrollIntoView({behavior:'smooth',block:'start'});}});draw();
+  });
+})();
+</script>
+{% endblock %}

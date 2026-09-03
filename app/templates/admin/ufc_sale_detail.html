@@ -133,6 +133,8 @@
     text-decoration:underline!important;
 }
 
+.sale-lines{overflow-x:auto;border:1px solid rgba(47,122,76,.10);border-radius:10px}.sale-lines table{width:100%;border-collapse:collapse;min-width:860px}.sale-lines th,.sale-lines td{padding:10px;border-bottom:1px solid #e8efea;text-align:left;vertical-align:top}.sale-lines th{background:#f7fbf8;color:#718077;font-size:.64rem;text-transform:uppercase;letter-spacing:.04em}.sale-lines td{font-size:.74rem}.sale-lines tr:last-child td{border-bottom:0}.sale-lines .right{text-align:right;white-space:nowrap}
+
 @media(max-width:900px){
     .sd{padding:20px}
     .grid{grid-template-columns:repeat(2,1fr)}
@@ -150,9 +152,9 @@
   <div class="head"><div><h2>{{ sale.sale_number }}</h2><p>{{ sale.centre_name }} · {{ sale.centre_uid }} · {{ sale.avpl_order_number }}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="{{ url_for('admin.ufc_sales') }}">← Sales to UFC</a>{% if sale.invoice %}<a class="btn" target="_blank" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=sale.invoice.id) }}">Print Invoice</a>{% endif %}</div></div>
 
   <div class="grid">
-    <div class="info"><small>Product</small><strong>{{ sale.product_name }}</strong><small>{{ sale.product_code or '-' }}</small></div>
-    <div class="info"><small>Quantity</small><strong>{{ sale.quantity_display }} {{ sale.unit_code }}</strong></div>
-    <div class="info"><small>Sale Price</small><strong>₹{{ sale.unit_price_display }} / {{ sale.unit_code }}</strong></div>
+    <div class="info"><small>Products</small><strong>{{ sale.product_summary or sale.product_name }}</strong><small>{% if sale.is_multi_item_order %}{{ sale.item_count }} product lines{% else %}{{ sale.product_code or '-' }}{% endif %}</small></div>
+    <div class="info"><small>Quantity</small><strong>{% if sale.is_multi_item_order %}Line-wise quantities{% else %}{{ sale.quantity_display }} {{ sale.unit_code }}{% endif %}</strong></div>
+    <div class="info"><small>Sale Price</small><strong>{% if sale.is_multi_item_order %}Line-wise pricing{% else %}₹{{ sale.unit_price_display }} / {{ sale.unit_code }}{% endif %}</strong></div>
     <div class="info"><small>Invoice</small><strong>{{ sale.invoice_number or '-' }}</strong></div>
     <div class="info"><small>Taxable Value</small><strong>₹{{ sale.taxable_value_display }}</strong></div>
     <div class="info"><small>Invoice Total</small><strong>₹{{ sale.grand_total_display }}</strong></div>
@@ -160,11 +162,22 @@
     <div class="info"><small>Outstanding</small><strong>₹{{ sale.outstanding_amount_display }}</strong></div>
   </div>
 
-  {% if sale.invoice %}
-  <div class="section"><h3>Tax & Invoice</h3><div class="money"><div class="info"><small>HSN / GST</small><strong>{{ sale.invoice.hsn_code or '-' }} · {{ sale.invoice.gst_rate_display }}%</strong></div><div class="info"><small>CGST + SGST</small><strong>₹{{ sale.invoice.cgst_amount_display }} + ₹{{ sale.invoice.sgst_amount_display }}</strong></div><div class="info"><small>IGST</small><strong>₹{{ sale.invoice.igst_amount_display }}</strong></div></div></div>
+  {% if sale.is_multi_item_order %}
+  <div class="section">
+    <h3>Products in this Sale</h3>
+    <div class="sale-lines"><table><thead><tr><th>Product</th><th>Qty</th><th class="right">Rate</th><th class="right">Taxable</th><th class="right">GST</th><th class="right">Invoice Total</th><th class="right">COGS</th><th class="right">Margin</th></tr></thead><tbody>
+      {% for line in sale.get('items',[]) %}
+      <tr><td><strong>{{ line.product_name }}</strong><br><small>{{ line.product_code or '-' }}</small></td><td>{{ line.quantity_display }} {{ line.unit_code }}</td><td class="right">₹{{ line.unit_price_display }}</td><td class="right">₹{{ line.taxable_value_display }}</td><td class="right">{{ line.gst_rate_display }}%<br><small>₹{{ line.gst_amount_display }}</small></td><td class="right"><strong>₹{{ line.grand_total_display }}</strong></td><td class="right">₹{{ line.estimated_cogs_display }}</td><td class="right">₹{{ line.gross_margin_amount_display }}</td></tr>
+      {% endfor %}
+    </tbody></table></div>
+  </div>
   {% endif %}
 
-  <div class="section"><h3>Profit Snapshot</h3><div class="money"><div class="info"><small>Estimated WAC</small><strong>₹{{ sale.invoice.estimated_unit_cost_display if sale.invoice else '0.00' }}</strong></div><div class="info"><small>Estimated Cost of Goods</small><strong>₹{{ sale.estimated_cogs_display }}</strong></div><div class="info"><small>Estimated Gross Margin</small><strong class="good">₹{{ sale.gross_margin_display }} · {{ sale.gross_margin_percent_display }}%</strong></div></div><p style="margin:10px 0 0;color:#64748b">Margin uses the current safe weighted purchase cost derived from posted GRNs. Payment expenses and other overheads are not included here.</p></div>
+  {% if sale.invoice %}
+  <div class="section"><h3>Tax & Invoice</h3><div class="money"><div class="info"><small>Tax Classification</small><strong>{% if sale.is_multi_item_order %}Line-wise HSN / GST{% else %}{{ sale.invoice.hsn_code or '-' }} · {{ sale.invoice.gst_rate_display }}%{% endif %}</strong></div><div class="info"><small>CGST + SGST</small><strong>₹{{ sale.invoice.cgst_amount_display }} + ₹{{ sale.invoice.sgst_amount_display }}</strong></div><div class="info"><small>IGST</small><strong>₹{{ sale.invoice.igst_amount_display }}</strong></div></div></div>
+  {% endif %}
+
+  <div class="section"><h3>Profit Snapshot</h3><div class="money"><div class="info"><small>Cost Basis</small><strong>{% if sale.is_multi_item_order %}Line-wise WAC{% else %}₹{{ sale.invoice.estimated_unit_cost_display if sale.invoice else '0.00' }} / {{ sale.unit_code }}{% endif %}</strong></div><div class="info"><small>Estimated Cost of Goods</small><strong>₹{{ sale.estimated_cogs_display }}</strong></div><div class="info"><small>Estimated Gross Margin</small><strong class="good">₹{{ sale.gross_margin_display }} · {{ sale.gross_margin_percent_display }}%</strong></div></div><p style="margin:10px 0 0;color:#64748b">Margin uses the weighted purchase cost from posted GRNs for each product line. Payment expenses and other overheads are not included.</p></div>
 
   <div class="section"><h3>Financial Link</h3><p style="margin:0;color:#475569">Payment: <strong>{{ sale.payment_status_label }}</strong> · Paid <strong>₹{{ sale.amount_paid_display }}</strong> · Outstanding <strong>₹{{ sale.outstanding_amount_display }}</strong>.{% if sale.ufc_payable %} The UFC Payable is linked to this same invoice.{% endif %} <a href="{{ url_for('admin.payments_dashboard') }}" style="color:#2f7a4c;font-weight:900;">Open Payments & Settlement</a>. Accounting settlement events remain under the existing controlled posting workflow.</p></div>
 

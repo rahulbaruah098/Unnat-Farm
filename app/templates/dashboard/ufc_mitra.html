@@ -10,7 +10,7 @@
         background:rgba(255,255,255,.94);
         box-shadow:0 22px 55px rgba(23,37,42,.10);
         backdrop-filter:blur(14px);
-        font-family:"Times New Roman", Georgia, serif;
+        font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     }
 
     .mitra-head{
@@ -445,7 +445,7 @@
    <div class="mitra-head">
     <div>
         <h2>Welcome, {{ current_display_name }}</h2>
-        <p class="mitra-subtitle">UFC Mitra Dashboard</p>
+        <p class="mitra-subtitle">Mitra Dashboard</p>
     </div>
 
     <div class="mitra-photo-wrap">
@@ -464,7 +464,7 @@
 </div>
 
     <div class="uid-card">
-        <span>Your Mitra UID</span>
+        <span>Mitra UID</span>
         <strong class="masked-uid" data-real-uid="{{ session.get('mitra_uid') or '' }}">********</strong>
         <button type="button" class="btn-soft uid-toggle">👁</button>
     </div>
@@ -476,23 +476,23 @@
         </div>
 
         <div class="stat">
-            <span>Input Bonus 2%</span>
+            <span>Input Bonus</span>
             <strong>{{ data.input_bonus }}</strong>
         </div>
 
         <div class="stat">
-            <span>Output Bonus 2%</span>
+            <span>Produce Bonus</span>
             <strong>{{ data.output_bonus }}</strong>
         </div>
 
         <div class="stat"><span>Approved Farmers</span><strong>{{ data.approved_farmer_count }}</strong></div>
-        <div class="stat"><span>Profiles Pending</span><strong>{{ data.pending_farmer_count }}</strong></div>
-        <div class="stat"><span>Centre Farmer Orders Pending</span><strong>{{ data.centre_farmer_orders_pending }}</strong></div>
-        <div class="stat"><span>Recorded Input Volume</span><strong>₹{{ "%.2f"|format(data.monthly_purchase_total|float) }}</strong></div>
-        <div class="stat"><span>Recorded Sales Volume</span><strong>₹{{ "%.2f"|format(data.monthly_sales_total|float) }}</strong></div>
+        <div class="stat"><span>Pending Profiles</span><strong>{{ data.pending_farmer_count }}</strong></div>
+        <div class="stat"><span>Pending Farmer Orders</span><strong>{{ data.centre_farmer_orders_pending }}</strong></div>
+        <div class="stat"><span>Inputs This Month</span><strong>₹{{ "%.2f"|format(data.monthly_purchase_total|float) }}</strong></div>
+        <div class="stat"><span>Sales This Month</span><strong>₹{{ "%.2f"|format(data.monthly_sales_total|float) }}</strong></div>
     </div>
 
-    <h3 class="section-title">Month-wise Sales</h3>
+    <h3 class="section-title">Monthly Sales</h3>
 
   <div class="table-shell desktop-table-shell">
         <table class="mitra-table">
@@ -542,7 +542,7 @@
     {% endfor %}
 </div>
 
-    <h3 class="section-title">Farmer List</h3>
+    <h3 class="section-title">My Farmers</h3>
 
 <div class="table-shell desktop-table-shell">
         <table class="mitra-table">

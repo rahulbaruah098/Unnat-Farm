@@ -1,7 +1,45 @@
-{% extends 'base.html' %}{% block title %}My Produce Listings{% endblock %}{% block content %}
-<style>.wrap{width:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d}.head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:#fff;border:1px solid rgba(47,122,76,.11);border-radius:18px;padding:20px}.head h1{margin:0}.muted{color:#748279}.btn{display:inline-flex;padding:9px 13px;border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#f7fbf8;color:#2f6e46;text-decoration:none;font-weight:900;cursor:pointer;font:inherit}.btn.primary{background:#397e51;color:#fff}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:14px 0}.stat{padding:12px;background:#fff;border:1px solid #e1eee5;border-radius:11px}.stat strong{display:block;font-size:1.25rem}.table{overflow:auto;background:#fff;border:1px solid rgba(47,122,76,.11);border-radius:11px}.table table{width:100%;border-collapse:collapse;min-width:1050px}.table th,.table td{padding:11px;border-bottom:1px solid #edf3ef;text-align:left;vertical-align:top}.table th{background:#f7fbf8}.pill{display:inline-flex;padding:4px 8px;border-radius:9px;background:#eef7f1;color:#2f6e46;font-weight:900;font-size:.76rem}.actions{display:flex;gap:5px;flex-wrap:wrap}.actions form{margin:0}.search{margin:12px 0;display:flex;gap:7px}.search input{flex:1;border:1px solid rgba(47,122,76,.14);border-radius:11px;padding:9px;font:inherit}@media(max-width:650px){.stats{grid-template-columns:1fr 1fr}.head{padding:15px}}</style>
-<div class="wrap"><div class="head"><div><h1>My Produce Listings</h1><div class="muted">Publish harvest stock for Farmers, your assigned UFC Centre and AVPL to order.</div></div><a class="btn primary" href="{{ url_for('modules.farmer_marketplace_listing_new') }}">+ Sell on Marketplace</a></div>
-<div class="stats"><div class="stat"><span class="muted">Listings</span><strong>{{ overview.summary.total or 0 }}</strong></div><div class="stat"><span class="muted">Live</span><strong>{{ overview.summary.live or 0 }}</strong></div><div class="stat"><span class="muted">Available</span><strong>{{ overview.summary.available or 0 }}</strong></div><div class="stat"><span class="muted">Open orders</span><strong>{{ overview.summary.orders or 0 }}</strong></div></div>
-<form class="search"><input name="q" value="{{ overview.query }}" placeholder="Search your listings"><button class="btn">Search</button></form>
-<div class="table"><table><thead><tr><th>Listing</th><th>Produce</th><th>Offered</th><th>Reserved</th><th>Sold</th><th>Available Now</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody>{% for p in overview.rows %}<tr><td><strong>{{ p.listing_number }}</strong></td><td>{{ p.title or p.product_name }}<div class="muted">{{ p.unit_code }}{% if p.variety %} · {{ p.variety }}{% endif %}</div></td><td>{{ p.listed_quantity_display }} {{ p.unit_code }}</td><td>{{ p.reserved_quantity_display }}</td><td>{{ p.fulfilled_quantity_display }}</td><td><strong>{{ p.available_to_order_display }} {{ p.unit_code }}</strong></td><td>{% if p.selling_mode in ['loose','both'] %}₹{{ p.loose_price_display }}/{{ p.unit_code }}{% endif %}{% if p.package_options %}<div class="muted">{{ p.package_options|length }} bag option(s)</div>{% endif %}</td><td><span class="pill">{{ p.status_label }}</span></td><td><div class="actions"><a class="btn" href="{{ url_for('modules.farmer_marketplace_listing_edit', listing_id=p.id) }}">Edit</a>{% if p.status == 'published' %}<form method="post" action="{{ url_for('modules.farmer_marketplace_listing_status', listing_id=p.id) }}"><input type="hidden" name="status" value="paused"><button class="btn">Pause</button></form>{% else %}<form method="post" action="{{ url_for('modules.farmer_marketplace_listing_status', listing_id=p.id) }}"><input type="hidden" name="status" value="published"><button class="btn primary">Publish</button></form>{% endif %}</div></td></tr>{% else %}<tr><td colspan="9" style="text-align:center;padding:28px;color:#687a70">No listings yet. Add harvest stock, then publish it here.</td></tr>{% endfor %}</tbody></table></div></div>
+{% extends 'base.html' %}
+{% block title %}My Listings{% endblock %}
+{% block content %}
+<style>
+.list-wrap{width:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d}.list-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid #dfece3;border-radius:18px;padding:18px 20px}.list-head h1{margin:0 0 3px;font-size:1.7rem}.muted{color:#748279}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 13px;border:1px solid #d7e7dc;border-radius:10px;background:#f8fbf9;color:#2f6e46;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.btn.primary{background:#397e51;color:#fff;border-color:#397e51}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.stat{background:#fff;border:1px solid #dfece3;border-radius:12px;padding:12px 14px}.stat span{display:block;color:#748279;font-size:.82rem}.stat strong{font-size:1.35rem}.search{display:flex;gap:8px;margin-bottom:14px}.search input{flex:1;min-width:0;border:1px solid #d9e8de;border-radius:10px;padding:10px 12px;font:inherit}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.card{background:#fff;border:1px solid #dfece3;border-radius:15px;padding:15px;box-shadow:0 8px 22px rgba(15,23,42,.04)}.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.card h3{margin:0;font-size:1rem}.pill{display:inline-flex;padding:4px 8px;border-radius:999px;background:#edf7f0;color:#2f6e46;font-size:.72rem;font-weight:900}.available{margin:14px 0 4px;font-size:1.35rem;font-weight:950;color:#2f7a4c}.price{font-weight:850}.meta{margin-top:10px;padding-top:10px;border-top:1px solid #edf3ef;color:#6e7c73;font-size:.8rem}.actions{display:flex;gap:7px;margin-top:13px;flex-wrap:wrap}.actions form{margin:0}.empty{grid-column:1/-1;background:#fff;border:1px solid #dfece3;border-radius:15px;padding:30px;text-align:center;color:#718078}@media(max-width:980px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.list-head{padding:15px}.stats{grid-template-columns:repeat(3,1fr)}.cards{grid-template-columns:1fr}.search{flex-direction:column}.search .btn{width:100%}}
+</style>
+<div class="list-wrap">
+  <div class="list-head">
+    <div><h1>My Listings</h1><div class="muted">Produce you are offering for sale.</div></div>
+    <a class="btn primary" href="{{ url_for('modules.farmer_marketplace_listing_new') }}">+ Sell Produce</a>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span>Live Listings</span><strong>{{ overview.summary.live or 0 }}</strong></div>
+    <div class="stat"><span>Listings Ready</span><strong>{{ overview.summary.available or 0 }}</strong></div>
+    <div class="stat"><span>Open Orders</span><strong>{{ overview.summary.orders or 0 }}</strong></div>
+  </div>
+
+  <form class="search"><input name="q" value="{{ overview.query }}" placeholder="Search produce"><button class="btn">Search</button></form>
+
+  <div class="cards">
+    {% for p in overview.rows %}
+      <article class="card">
+        <div class="top"><div><h3>{{ p.title or p.product_name }}</h3><div class="muted">{{ p.product_name }} · {{ p.listing_number }}</div></div><span class="pill">{{ p.status_label }}</span></div>
+        <div class="available">{{ p.available_to_order_display }} {{ p.unit_code }} open for orders</div>
+        <div class="price">
+          {% if p.selling_mode in ['loose','both'] %}₹{{ p.loose_price_display }} / {{ p.unit_code }}{% endif %}
+          {% if p.package_options %}{% if p.selling_mode in ['loose','both'] %}<span class="muted"> · </span>{% endif %}{{ p.package_options|length }} pack option{{ '' if p.package_options|length == 1 else 's' }}{% endif %}
+        </div>
+        <div class="meta">My Stock {{ p.farm_stock_available_display }} {{ p.unit_code }} available · Reserved {{ p.reserved_quantity_display }} · Sold {{ p.fulfilled_quantity_display }}</div>
+        <div class="actions">
+          <a class="btn" href="{{ url_for('modules.farmer_marketplace_listing_edit', listing_id=p.id) }}">Edit</a>
+          {% if p.status == 'published' %}
+            <form method="post" action="{{ url_for('modules.farmer_marketplace_listing_status', listing_id=p.id) }}"><input type="hidden" name="status" value="paused"><button class="btn">Pause</button></form>
+          {% else %}
+            <form method="post" action="{{ url_for('modules.farmer_marketplace_listing_status', listing_id=p.id) }}"><input type="hidden" name="status" value="published"><button class="btn primary">Publish</button></form>
+          {% endif %}
+        </div>
+      </article>
+    {% else %}
+      <div class="empty">No listings yet. Add production, check your stock, then sell it here.</div>
+    {% endfor %}
+  </div>
+</div>
 {% endblock %}

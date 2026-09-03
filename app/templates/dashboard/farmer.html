@@ -1,852 +1,114 @@
 {% extends 'base.html' %}
 {% block content %}
-
 <style>
-.farmer-dashboard{
-    width:100%;
-    display:grid;
-    gap:18px;
-    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    color:#435349;
-}
-
-.page-card,
-.section-card{
-    width:100%;
-    max-width:1600px;
-    margin:0 auto;
-    border:1px solid rgba(47,122,76,.11);
-    border-radius:22px;
-    padding:28px;
-    background:#fff;
-    box-shadow:0 16px 40px rgba(28,72,43,.07);
-    overflow:hidden;
-}
-
-.dashboard-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:18px;
-    flex-wrap:wrap;
-    margin-bottom:22px;
-}
-
-.dashboard-title{
-    min-width:0;
-    flex:1 1 420px;
-}
-
-.page-kicker{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:26px;
-    padding:5px 9px;
-    margin-bottom:8px;
-    border-radius:7px;
-    background:#f0f7f2;
-    color:#2f6e46;
-    border:1px solid rgba(47,122,76,.12);
-    font-size:.62rem;
-    font-weight:800;
-    letter-spacing:.05em;
-    text-transform:uppercase;
-}
-
-.dashboard-title h2{
-    margin:0;
-    color:#17251d;
-    font-size:clamp(1.5rem,2.2vw,2rem);
-    font-weight:800;
-    line-height:1.2;
-    letter-spacing:-.02em;
-    white-space:normal;
-    overflow-wrap:anywhere;
-}
-
-.farmer-subtitle{
-    margin:7px 0 0;
-    color:#748279;
-    font-size:.82rem;
-    line-height:1.5;
-    font-weight:600;
-}
-
-.farmer-photo-wrap{
-    width:108px;
-    height:108px;
-    flex:0 0 108px;
-    border-radius:18px;
-    overflow:hidden;
-    background:#f4f7f5;
-    border:1px solid rgba(47,122,76,.10);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.farmer-profile-photo{
-    width:100%;
-    height:100%;
-    object-fit:contain;
-    object-position:center;
-    display:block;
-    background:#f4f7f5;
-}
-
-.farmer-profile-placeholder{
-    width:100%;
-    height:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#edf7f0;
-    color:#397e51;
-    font-size:2rem;
-    font-weight:850;
-}
-
-.stat-grid{
-    display:grid;
-    grid-template-columns:repeat(5,minmax(0,1fr));
-    gap:10px;
-    margin:0 0 18px;
-}
-
-.stat{
-    min-width:0;
-    padding:14px;
-    border:1px solid rgba(47,122,76,.10);
-    border-radius:11px;
-    background:#fbfdfb;
-}
-
-.stat span{
-    display:block;
-    margin-bottom:7px;
-    color:#7b8a80;
-    font-size:.67rem;
-    font-weight:750;
-    line-height:1.35;
-}
-
-.stat strong{
-    display:block;
-    color:#22372a;
-    font-size:1.08rem;
-    font-weight:850;
-    line-height:1.15;
-    overflow-wrap:anywhere;
-}
-
-.info-banner{
-    display:flex;
-    align-items:center;
-    gap:8px 16px;
-    flex-wrap:wrap;
-    margin:0;
-    padding:12px 14px;
-    border:1px solid rgba(47,122,76,.12);
-    border-radius:10px;
-    background:#f7fbf8;
-    color:#526158;
-    font-size:.72rem;
-    font-weight:700;
-    line-height:1.45;
-}
-
-.info-banner strong{
-    color:#2f6e46;
-    font-weight:800;
-}
-
-.section-head{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:14px;
-    flex-wrap:wrap;
-    margin-bottom:14px;
-}
-
-.section-head h3{
-    margin:0;
-    color:#263b2f;
-    font-size:.92rem;
-    font-weight:800;
-    line-height:1.25;
-}
-
-.section-head p{
-    margin:5px 0 0;
-    color:#748279;
-    font-size:.72rem;
-    font-weight:600;
-    line-height:1.45;
-}
-
-.table-shell{
-    width:100%;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    border:1px solid rgba(47,122,76,.09);
-    border-radius:11px;
-    background:#fff;
-    margin-bottom:0;
-}
-
-.farmer-table{
-    width:100%;
-    min-width:760px;
-    border-collapse:collapse;
-    background:#fff;
-}
-
-.farmer-table th,
-.farmer-table td{
-    padding:10px 11px;
-    border-bottom:1px solid #edf2ee;
-    text-align:left;
-    vertical-align:middle;
-    color:#435349;
-    font-size:.72rem;
-    line-height:1.4;
-}
-
-.farmer-table th{
-    background:#f6f9f7;
-    color:#6e7e74;
-    font-size:.63rem;
-    font-weight:800;
-    letter-spacing:.03em;
-    text-transform:uppercase;
-    white-space:nowrap;
-}
-
-.farmer-table td{
-    font-weight:650;
-}
-
-.farmer-table tr:last-child td{
-    border-bottom:none;
-}
-
-.farmer-table tr:hover td{
-    background:#fbfdfb;
-}
-
-.amount-text{
-    color:#237a43;
-    font-weight:800;
-}
-
-.status-pill{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:24px;
-    padding:4px 8px;
-    border-radius:7px;
-    background:#ecfdf3;
-    color:#237a43;
-    border:1px solid #b7e4c7;
-    font-weight:800;
-    font-size:.63rem;
-    text-transform:capitalize;
-    white-space:nowrap;
-}
-
-.mobile-card-list{
-    display:none;
-}
-
-.mobile-info-card{
-    border:1px solid rgba(47,122,76,.10);
-    border-radius:11px;
-    background:#fff;
-    padding:13px;
-    min-width:250px;
-    max-width:250px;
-    flex:0 0 250px;
-}
-
-.mobile-info-row{
-    display:flex;
-    flex-direction:column;
-    gap:3px;
-    padding:7px 0;
-    border-bottom:1px solid #edf2ee;
-}
-
-.mobile-info-row:last-child{
-    border-bottom:none;
-}
-
-.mobile-info-label{
-    color:#829087;
-    font-size:.64rem;
-    font-weight:750;
-}
-
-.mobile-info-value{
-    color:#304438;
-    font-size:.74rem;
-    font-weight:750;
-    word-break:break-word;
-}
-
-.mobile-empty-card{
-    min-width:250px;
-    max-width:250px;
-    flex:0 0 250px;
-    padding:16px;
-    border:1px dashed rgba(47,122,76,.18);
-    border-radius:11px;
-    background:#fbfdfb;
-    color:#829087;
-    font-size:.72rem;
-    font-weight:700;
-    text-align:center;
-}
-
-.product-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:12px;
-    margin:0;
-}
-
-.product-card{
-    display:flex;
-    flex-direction:column;
-    min-height:100%;
-    background:#fff;
-    border:1px solid rgba(47,122,76,.10);
-    border-radius:12px;
-    padding:13px;
-    overflow:hidden;
-}
-
-.product-card img,
-.no-image{
-    width:100%;
-    height:175px;
-    border-radius:9px;
-    margin-bottom:12px;
-    background:#f4f7f5;
-    border:1px solid rgba(47,122,76,.08);
-}
-
-.product-card img{
-    object-fit:contain;
-    object-position:center;
-    display:block;
-}
-
-.no-image{
-    color:#7b8a80;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:.72rem;
-    font-weight:750;
-}
-
-.product-card h4{
-    margin:0 0 6px;
-    color:#263b2f;
-    font-size:.84rem;
-    line-height:1.3;
-    font-weight:800;
-    overflow-wrap:anywhere;
-}
-
-.product-card p{
-    margin:3px 0;
-    color:#65746b;
-    font-size:.69rem;
-    line-height:1.4;
-    font-weight:600;
-}
-
-.product-card strong{
-    display:block;
-    margin-top:7px;
-    color:#237a43;
-    font-size:.82rem;
-    font-weight:850;
-}
-
-.product-qty{
-    display:inline-flex;
-    align-items:center;
-    width:max-content;
-    max-width:100%;
-    margin-top:7px;
-    padding:5px 8px;
-    border-radius:7px;
-    background:#f0f7f2;
-    color:#2f6e46;
-    border:1px solid rgba(47,122,76,.12);
-    font-size:.64rem;
-    font-weight:800;
-}
-
-.product-footer{
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    gap:10px;
-    margin-top:auto;
-    padding-top:12px;
-    border-top:1px solid #edf2ee;
-}
-
-.product-footer small{
-    display:block;
-    margin-top:4px;
-    color:#829087;
-    font-size:.63rem;
-    font-weight:700;
-}
-
-.product-footer a{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:31px;
-    padding:6px 10px;
-    border:1px solid rgba(47,122,76,.14);
-    border-radius:8px;
-    background:#fff;
-    color:#2f6e46;
-    text-decoration:none;
-    font-size:.66rem;
-    font-weight:800;
-}
-
-.product-footer a:hover{
-    background:#f7fbf8;
-}
-
-.order-form{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    flex-wrap:wrap;
-    justify-content:flex-end;
-}
-
-.order-form input{
-    width:76px;
-    min-height:36px;
-    padding:7px 8px;
-    border:1px solid rgba(47,122,76,.14);
-    border-radius:8px;
-    background:#fff;
-    color:#263b2f;
-    font:inherit;
-    font-size:.7rem;
-    font-weight:700;
-    outline:none;
-}
-
-.order-form input:focus{
-    border-color:rgba(47,122,76,.38);
-    box-shadow:0 0 0 3px rgba(47,122,76,.05);
-}
-
-.order-form button{
-    min-height:36px;
-    border:1px solid #397e51;
-    border-radius:8px;
-    padding:7px 12px;
-    background:#397e51;
-    color:#fff;
-    font:inherit;
-    font-size:.69rem;
-    font-weight:800;
-    cursor:pointer;
-}
-
-.order-form button:hover{
-    background:#2f6e46;
-    border-color:#2f6e46;
-}
-
-.empty-product{
-    margin:0;
-    padding:18px;
-    border:1px dashed rgba(47,122,76,.18);
-    border-radius:11px;
-    background:#fbfdfb;
-    color:#829087;
-    font-size:.72rem;
-    font-weight:700;
-    text-align:center;
-}
-
-.section-link{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:34px;
-    padding:7px 11px;
-    border-radius:8px;
-    background:#fff;
-    color:#2f6e46;
-    border:1px solid rgba(47,122,76,.14);
-    font-size:.68rem;
-    font-weight:800;
-    text-decoration:none;
-}
-
-.section-link:hover{
-    background:#f7fbf8;
-}
-
-@media(max-width:1200px){
-    .stat-grid{
-        grid-template-columns:repeat(4,minmax(0,1fr));
-    }
-}
-
-@media(max-width:900px){
-    .page-card,
-    .section-card{
-        padding:20px;
-        border-radius:18px;
-    }
-
-    .stat-grid{
-        grid-template-columns:repeat(2,minmax(0,1fr));
-    }
-
-    .desktop-table-shell{
-        display:none;
-    }
-
-    .mobile-card-list{
-        display:flex;
-        gap:12px;
-        overflow-x:auto;
-        -webkit-overflow-scrolling:touch;
-        padding:2px 1px 8px;
-        margin-bottom:0;
-    }
-
-    .product-grid{
-        display:flex;
-        gap:12px;
-        overflow-x:auto;
-        -webkit-overflow-scrolling:touch;
-        padding:2px 1px 8px;
-    }
-
-    .product-card{
-        min-width:250px;
-        max-width:250px;
-        flex:0 0 250px;
-    }
-
-    .product-footer{
-        align-items:stretch;
-        flex-direction:column;
-    }
-
-    .order-form{
-        justify-content:space-between;
-        width:100%;
-    }
-
-    .order-form input{
-        flex:1 1 auto;
-        width:auto;
-    }
-
-    .order-form button{
-        flex:0 0 auto;
-    }
-
-    .farmer-photo-wrap{
-        width:84px;
-        height:84px;
-        flex-basis:84px;
-    }
-}
-
-@media(max-width:520px){
-    .page-card,
-    .section-card{
-        padding:15px;
-        border-radius:16px;
-    }
-
-    .dashboard-head{
-        align-items:center;
-        flex-wrap:nowrap;
-        gap:12px;
-    }
-
-    .dashboard-title h2{
-        font-size:1.2rem;
-    }
-
-    .farmer-subtitle{
-        font-size:.72rem;
-    }
-
-    .farmer-photo-wrap{
-        width:72px;
-        height:72px;
-        flex-basis:72px;
-        border-radius:14px;
-    }
-
-    .stat-grid{
-        grid-template-columns:repeat(2,minmax(0,1fr));
-        gap:8px;
-    }
-
-    .stat{
-        padding:11px;
-    }
-
-    .stat span{
-        font-size:.61rem;
-    }
-
-    .stat strong{
-        font-size:.92rem;
-    }
-
-    .section-head{
-        flex-direction:column;
-        align-items:stretch;
-    }
-
-    .section-link{
-        width:100%;
-    }
-
-    .mobile-info-card,
-    .mobile-empty-card,
-    .product-card{
-        min-width:235px;
-        max-width:235px;
-        flex-basis:235px;
-    }
-
-    .product-card img,
-    .no-image{
-        height:155px;
-    }
-}
+.fd{max-width:1450px;margin:0 auto;display:grid;gap:17px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203128}.fd-card{background:#fff;border:1px solid #dbe9df;border-radius:20px;box-shadow:0 12px 30px rgba(29,75,44,.05)}
+.fd-hero{padding:23px 25px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.fd-hello{display:flex;align-items:center;gap:14px;min-width:0}.fd-avatar{width:54px;height:54px;border-radius:15px;overflow:hidden;background:#edf7f0;border:1px solid #d1e6d7;display:grid;place-items:center;color:#2b7447;font-size:1.2rem;font-weight:900;flex:0 0 auto}.fd-avatar img{width:100%;height:100%;object-fit:cover}.fd-kicker{font-size:.68rem;font-weight:850;color:#5d7767;margin-bottom:4px}.fd-hero h1{margin:0;color:#17281e;font-size:clamp(1.45rem,2.1vw,2rem);line-height:1.08;letter-spacing:-.03em}.fd-hero p{margin:6px 0 0;color:#718076;font-size:.78rem;font-weight:600}.fd-centre{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fd-chip{min-height:34px;display:inline-flex;align-items:center;padding:7px 10px;border:1px solid #cfe2d4;border-radius:10px;background:#f6fbf7;color:#2e6d45;font-size:.69rem;font-weight:800;text-decoration:none}
+.fd-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}.fd-kpi{min-height:138px;padding:17px;border:1px solid #dbe9df;border-radius:16px;background:#fff;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:.18s ease}.fd-kpi:hover{transform:translateY(-2px);border-color:#a9cfb5;box-shadow:0 10px 24px rgba(31,102,59,.08)}.fd-kpi-top{display:flex;align-items:center;justify-content:space-between}.fd-icon{width:34px;height:34px;border-radius:10px;background:#eff8f1;color:#267044;display:grid;place-items:center;font-weight:900}.fd-arrow{color:#9aa99f;font-weight:900}.fd-kpi strong{margin-top:16px;color:#173020;font-size:clamp(1.45rem,2.2vw,2rem);font-weight:900;line-height:1;letter-spacing:-.03em}.fd-kpi span{margin-top:8px;color:#607066;font-size:.74rem;font-weight:800}.fd-kpi small{margin-top:4px;color:#8b9890;font-size:.63rem;font-weight:650;line-height:1.3}
+.fd-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr);gap:17px}.fd-section{padding:20px}.fd-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}.fd-head h2{margin:0;font-size:1rem;font-weight:850;color:#253a2d}.fd-head a{font-size:.69rem;font-weight:800;color:#2b7346;text-decoration:none}.fd-head a:hover{text-decoration:underline}
+.fd-attention{display:grid;gap:9px}.fd-attn{min-height:57px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid #e0ebe3;border-radius:12px;background:#fbfdbb;text-decoration:none;color:inherit;background:#fbfdfb}.fd-attn:hover{background:#f6fbf7;border-color:#bdd8c5}.fd-attn-left{display:flex;align-items:center;gap:10px}.fd-dot{width:9px;height:9px;border-radius:50%;background:#e5a92f;box-shadow:0 0 0 5px #fff7e6}.fd-attn b{font-size:.75rem;color:#31463a}.fd-attn-value{font-size:.76rem;font-weight:900;color:#276f43;white-space:nowrap}.fd-clear{padding:20px;border:1px solid #d8eadc;border-radius:13px;background:#f4fbf6;text-align:center;color:#2e7044;font-size:.8rem;font-weight:850}
+.fd-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.fd-action{min-height:72px;padding:12px;border:1px solid #dce9df;border-radius:13px;display:flex;align-items:center;gap:10px;text-decoration:none;color:#294032;font-size:.75rem;font-weight:850}.fd-action:hover{background:#f5faf6;border-color:#b8d7c1}.fd-action-icon{width:34px;height:34px;border-radius:10px;background:#eff8f1;color:#2a7346;display:grid;place-items:center;font-weight:900;flex:0 0 auto}
+.fd-month{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}.fd-month-item{padding:16px;border:1px solid #e0ebe3;border-radius:13px;background:#fbfdfb}.fd-month-item span{display:block;color:#74847a;font-size:.66rem;font-weight:760}.fd-month-item strong{display:block;margin-top:8px;color:#1d3426;font-size:1.18rem;font-weight:900;line-height:1.15}.fd-month-item small{display:block;margin-top:4px;color:#95a198;font-size:.61rem;font-weight:650}
+.fd-activity{display:grid}.fd-activity-row{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:10px;padding:11px 0;border-bottom:1px solid #edf2ee}.fd-activity-row:last-child{border-bottom:none}.fd-mark{width:8px;height:8px;margin-top:5px;border-radius:50%;background:#68a67c}.fd-activity-title{font-size:.74rem;color:#31463a;font-weight:820}.fd-activity-detail{margin-top:2px;color:#7c8a81;font-size:.66rem;font-weight:620}.fd-time{font-size:.62rem;color:#8b9990;font-weight:700;white-space:nowrap}.fd-empty{padding:16px;text-align:center;color:#849188;font-size:.74rem}
+@media(max-width:1050px){.fd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fd-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.fd{gap:13px}.fd-hero{padding:18px}.fd-kpis{gap:9px}.fd-kpi{min-height:122px;padding:14px}.fd-kpi strong{font-size:1.45rem}.fd-section{padding:16px}.fd-actions{grid-template-columns:1fr}.fd-month{grid-template-columns:repeat(2,minmax(0,1fr))}.fd-centre{width:100%}.fd-chip{flex:1;justify-content:center}.fd-activity-row{grid-template-columns:8px minmax(0,1fr)}.fd-time{grid-column:2;margin-top:2px}}
 </style>
 
-<div class="farmer-dashboard">
-
-    <div class="page-card">
-        <div class="dashboard-head">
-    <div class="dashboard-title">
-        <span class="page-kicker">Farmer Overview</span>
-        <h2>Welcome, {{ current_display_name }}</h2>
-        <p class="farmer-subtitle">Farmer Dashboard</p>
-    </div>
-
-    <div class="farmer-photo-wrap">
-        {% if data.profile_photo %}
-            <img
-                src="{{ url_for('documents.serve', filename=data.profile_photo) }}"
-                alt="Farmer Profile Photo"
-                class="farmer-profile-photo"
-            >
-        {% else %}
-            <div class="farmer-profile-placeholder">
-                {{ (data.farmer_name or current_display_name or 'F')[:1]|upper }}
+<div class="fd">
+    <section class="fd-card fd-hero">
+        <div class="fd-hello">
+            <div class="fd-avatar">
+                {% if data.profile_photo %}<img src="{{ url_for('documents.serve', filename=data.profile_photo) }}" alt="Profile photo">{% else %}{{ (data.farmer_name or 'F')[:1]|upper }}{% endif %}
             </div>
-        {% endif %}
-    </div>
-</div>
-
-        <div class="stat-grid">
-            <div class="stat">
-                <span>Finance Eligibility</span>
-                <strong>{{ 'Enabled' if data.finance_enabled else 'Locked' }}</strong>
-            </div>
-
-            <div class="stat">
-                <span>Insurance Eligibility</span>
-                <strong>{{ 'Enabled' if data.insurance_enabled else 'Locked' }}</strong>
-            </div>
-
-            <div class="stat"><span>Produce Saleable Stock</span><strong>{{ data.produce_stock_saleable }}</strong></div>
-            <div class="stat"><span>Produce Reserved</span><strong>{{ data.produce_stock_reserved }}</strong></div>
-            <div class="stat"><span>Active Produce Listings</span><strong>{{ data.active_listings }}</strong></div>
-            <div class="stat"><span>Orders Received In Progress</span><strong>{{ data.orders_received_pending }}</strong></div>
-            <div class="stat"><span>Input Purchases</span><strong>₹{{ "%.2f"|format(data.input_purchase_value|float) }}</strong></div>
-            <div class="stat"><span>Produce Sales</span><strong>₹{{ "%.2f"|format(data.produce_sales_value|float) }}</strong></div>
-            <div class="stat"><span>Money to Receive</span><strong>₹{{ "%.2f"|format(data.money_to_receive|float) }}</strong></div>
-            <div class="stat"><span>Money to Pay</span><strong>₹{{ "%.2f"|format(data.money_to_pay|float) }}</strong></div>
-        </div>
-
-        <div class="info-banner">
-            <span>Mapped  UFC Centre: <strong>{{ data.farmer.centre_uid }}</strong></span>
-            <span>Mapped UFC Mitra: <strong>{{ data.farmer.mitra_uid }}</strong></span>
-        </div>
-    </div>
-
-    <section class="section-card">
-        <div class="section-head">
             <div>
-                <h3>Recent Purchases</h3>
-                <p>Your latest purchase records are shown below.</p>
+                <div class="fd-kicker">MY FARM DASHBOARD</div>
+                <h1>Hello, {{ data.farmer_name or 'Farmer' }}</h1>
+                <p>See what needs your attention and how your farm is doing this month.</p>
             </div>
         </div>
+        <div class="fd-centre">
+            <span class="fd-chip">{{ data.centre_name or data.farmer.centre_uid or 'My UFC Centre' }}</span>
+            <a class="fd-chip" href="{{ url_for('reports.overview') }}">My Reports</a>
+        </div>
+    </section>
 
-        <div class="table-shell desktop-table-shell">
-            <table class="farmer-table">
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Amount</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for p in data.purchases %}
-                    <tr>
-                        <td>{{ p.product_name }}</td>
-                        <td><span class="amount-text">{{ p.amount }}</span></td>
-                        <td>{{ p.created_at }}</td>
-                    </tr>
-                {% else %}
-                    <tr>
-                        <td colspan="3">No purchases yet.</td>
-                    </tr>
+    <section class="fd-kpis" aria-label="Farmer dashboard summary">
+        <a class="fd-kpi" href="{{ url_for('modules.farmer_produce_stock') }}">
+            <div class="fd-kpi-top"><span class="fd-icon">P</span><span class="fd-arrow">→</span></div>
+            <strong>{{ data.kpis.produce_products_ready or 0 }}</strong>
+            <span>Produce in Stock</span>
+            <small>Products with quantity ready to sell</small>
+        </a>
+        <a class="fd-kpi" href="{{ url_for('modules.farmer_payments') }}">
+            <div class="fd-kpi-top"><span class="fd-icon">₹</span><span class="fd-arrow">→</span></div>
+            <strong>₹{{ "%.2f"|format(data.kpis.money_to_receive|float) }}</strong>
+            <span>Money to Receive</span>
+            <small>Receivables tracked in My Payments</small>
+        </a>
+        <a class="fd-kpi" href="{{ url_for('modules.farmer_marketplace_orders_received') }}">
+            <div class="fd-kpi-top"><span class="fd-icon">O</span><span class="fd-arrow">→</span></div>
+            <strong>{{ data.kpis.orders_needing_action or 0 }}</strong>
+            <span>Orders Need Action</span>
+            <small>Approve, dispatch, deliver or confirm payment</small>
+        </a>
+        <a class="fd-kpi" href="{{ url_for('reports.overview') }}">
+            <div class="fd-kpi-top"><span class="fd-icon">S</span><span class="fd-arrow">→</span></div>
+            <strong>₹{{ "%.2f"|format(data.kpis.sales_this_month|float) }}</strong>
+            <span>Sales This Month</span>
+            <small>Produce sales across your selling channels</small>
+        </a>
+    </section>
+
+    <div class="fd-grid">
+        <section class="fd-card fd-section">
+            <div class="fd-head"><h2>What Needs Your Attention</h2></div>
+            {% if data.needs_attention %}
+            <div class="fd-attention">
+                {% for item in data.needs_attention %}
+                <a class="fd-attn" href="{{ url_for(item.endpoint) }}">
+                    <div class="fd-attn-left"><span class="fd-dot"></span><b>{{ item.label }}</b></div>
+                    <span class="fd-attn-value">{% if item.amount is defined %}₹{{ "%.2f"|format(item.amount|float) }}{% else %}{{ item.count }}{% endif %} →</span>
+                </a>
                 {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="mobile-card-list">
-            {% for p in data.purchases %}
-                <div class="mobile-info-card">
-                    <div class="mobile-info-row">
-                        <span class="mobile-info-label">Product</span>
-                        <span class="mobile-info-value">{{ p.product_name }}</span>
-                    </div>
-
-                    <div class="mobile-info-row">
-                        <span class="mobile-info-label">Amount</span>
-                        <span class="mobile-info-value amount-text">{{ p.amount }}</span>
-                    </div>
-
-                    <div class="mobile-info-row">
-                        <span class="mobile-info-label">Date</span>
-                        <span class="mobile-info-value">{{ p.created_at }}</span>
-                    </div>
-                </div>
-            {% else %}
-                <div class="mobile-empty-card">No purchases yet.</div>
-            {% endfor %}
-        </div>
-    </section>
-
-    <section class="section-card">
-        <div class="section-head">
-            <div>
-                <h3>Recommended AVPL Products</h3>
-                <p>Suggested products available for your farming needs.</p>
             </div>
-        </div>
-
-        <div class="product-grid">
-            {% for p in data.recommended_products %}
-                <div class="product-card">
-                    {% if p.image_name %}
-                        <img src="{{ url_for('documents.serve', filename=p.image_name) }}"
-                             alt="{{ p.name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% elif p.picture %}
-                        <img src="{{ url_for('documents.serve', filename=p.picture) }}"
-                             alt="{{ p.name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% elif p.file_path %}
-                        <img src="{{ url_for('documents.serve', filename=p.file_path) }}"
-                             alt="{{ p.name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% elif p.image %}
-                        <img src="{{ url_for('documents.serve', filename=p.image) }}"
-                             alt="{{ p.name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% else %}
-                        <div class="no-image">No Image</div>
-                    {% endif %}
-
-                 <h4>{{ p.name }}</h4>
-<p>{{ p.category or '-' }}</p>
-<p>{{ p.type or '-' }}</p>
-
-<span class="product-qty">
-    Available:
-    {% if p.available_quantity is defined and p.available_quantity is not none %}
-        {{ p.available_quantity }}
-    {% elif p.quantity is defined and p.quantity is not none %}
-        {{ p.quantity }}
-    {% elif p.stock_quantity is defined and p.stock_quantity is not none %}
-        {{ p.stock_quantity }}
-    {% elif p.stock is defined and p.stock is not none %}
-        {{ p.stock }}
-    {% else %}
-        -
-    {% endif %}
-</span>
-
-<strong>₹{{ p.price or '-' }}</strong>
-                </div>
             {% else %}
-                <p class="empty-product">No recommended products available.</p>
-            {% endfor %}
-        </div>
-    </section>
+            <div class="fd-clear">✓ You’re all caught up</div>
+            {% endif %}
+        </section>
 
-    <section class="section-card">
-        <div class="section-head">
-            <div>
-                <h3>Farmer Produce Market</h3>
-                <p>Browse live Stage 9 produce listings. Orders, bag/loose pricing, reservation and payment use the linked produce workflow.</p>
+        <section class="fd-card fd-section">
+            <div class="fd-head"><h2>Quick Actions</h2></div>
+            <div class="fd-actions">
+                <a class="fd-action" href="{{ url_for('modules.farmer_marketplace') }}"><span class="fd-action-icon">B</span>Buy Farm Inputs</a>
+                <a class="fd-action" href="{{ url_for('modules.farmer_production') }}"><span class="fd-action-icon">+</span>Add Production</a>
+                <a class="fd-action" href="{{ url_for('modules.farmer_marketplace_listing_new') }}"><span class="fd-action-icon">S</span>Sell Produce</a>
+                <a class="fd-action" href="{{ url_for('modules.farmer_payments') }}"><span class="fd-action-icon">₹</span>My Payments</a>
             </div>
-            <a href="{{ url_for('modules.farmer_produce_market') }}" class="section-link">Open Produce Market</a>
-        </div>
+        </section>
+    </div>
 
-        <div class="product-grid">
-            {% for p in data.farmer_products_marketplace[:6] %}
-                <div class="product-card">
-                    <div class="no-image">Produce</div>
-                    <h4>{{ p.product_name or 'Produce' }}</h4>
-                    <p>Farmer: {{ p.farmer_name or '-' }}</p>
-                    <p>Variety: {{ p.variety or '-' }} · Grade: {{ p.grade or '-' }}</p>
-                    <p>{{ p.village or p.district or 'Location not specified' }}</p>
-                    <div class="product-footer">
-                        <div>
-                            <strong>{% if p.loose_price %}₹{{ p.loose_price }}/{{ p.unit_code or 'KG' }}{% else %}Package pricing{% endif %}</strong>
-                            <span class="product-qty">Published listing</span>
-                        </div>
-                        <a href="{{ url_for('modules.farmer_produce_market') }}">View</a>
-                    </div>
-                </div>
-            {% else %}
-                <p class="empty-product">No farmer produce listings are currently published.</p>
-            {% endfor %}
+    <section class="fd-card fd-section">
+        <div class="fd-head"><h2>My Farm This Month</h2><a href="{{ url_for('reports.overview') }}">View Details →</a></div>
+        <div class="fd-month">
+            <div class="fd-month-item"><span>Produced</span><strong>{{ data.month_snapshot.produced or '0' }}</strong><small>{{ data.month_snapshot.production_batches or 0 }} production entries</small></div>
+            <div class="fd-month-item"><span>Sold</span><strong>{{ data.month_snapshot.sold or '0' }}</strong><small>Produce quantity sold</small></div>
+            <div class="fd-month-item"><span>Sales Value</span><strong>₹{{ "%.2f"|format(data.month_snapshot.sales_value|float) }}</strong><small>Value of sales this month</small></div>
+            <div class="fd-month-item"><span>Money Received</span><strong>₹{{ "%.2f"|format(data.month_snapshot.money_received|float) }}</strong><small>Payments actually confirmed</small></div>
         </div>
     </section>
 
+    <section class="fd-card fd-section">
+        <div class="fd-head"><h2>Recent Activity</h2></div>
+        {% if data.recent_activity %}
+        <div class="fd-activity">
+            {% for item in data.recent_activity %}
+            <div class="fd-activity-row">
+                <span class="fd-mark"></span>
+                <div><div class="fd-activity-title">{{ item.title }}</div><div class="fd-activity-detail">{{ item.detail }}</div></div>
+                <div class="fd-time">{{ item.at|ist_datetime('%d %b, %I:%M %p') }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}<div class="fd-empty">No recent activity yet.</div>{% endif %}
+    </section>
 </div>
-
 {% endblock %}

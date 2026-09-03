@@ -38,7 +38,7 @@
 <div class="purchase-head">
 <div class="purchase-title-wrap">
 <div class="purchase-head-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M6 3h12l2 4v14H4V7l2-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 11h8M8 15h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-<div><div class="purchase-eyebrow">AVPL Operations</div><h2>AVPL Purchases</h2><p>A simple four-step flow for buying goods from suppliers and bringing accepted goods into AVPL stock.</p></div>
+<div><div class="purchase-eyebrow">AVPL Operations</div><h2>AVPL Purchases</h2></div>
 </div>
 <a class="primary-link" href="{{ url_for('admin.create_purchase_order_view') }}">+ New Purchase Order</a>
 </div>
@@ -47,10 +47,10 @@
 <div class="section-heading"><h3 class="section-title">Purchase Workflow</h3><span class="section-meta">Supplier → PO → GRN → Invoice</span></div>
 
 <div class="flow">
-<div class="step"><div class="step-top"><div class="step-no">01</div><div class="step-label">Step One</div></div><h3>Supplier</h3><p>Add the supplier once. Use the same supplier for every future purchase.</p><a href="{{ url_for('admin.supplier_master') }}">Manage Suppliers →</a></div>
-<div class="step"><div class="step-top"><div class="step-no">02</div><div class="step-label">Step Two</div></div><h3>Purchase Order</h3><p>Select the supplier, products, quantity and purchase rate.</p><a href="{{ url_for('admin.purchase_orders') }}">Open Purchase Orders →</a></div>
-<div class="step"><div class="step-top"><div class="step-no">03</div><div class="step-label">Step Three</div></div><h3>Receive Goods</h3><p>Enter what physically arrived. Only accepted quantity becomes AVPL stock.</p><a href="{{ url_for('admin.goods_receipts') }}">Receive Goods →</a></div>
-<div class="step"><div class="step-top"><div class="step-no">04</div><div class="step-label">Step Four</div></div><h3>Supplier Invoice</h3><p>Record the supplier invoice. The system checks it against the PO and received goods.</p><a href="{{ url_for('admin.supplier_invoices') }}">Record Invoice →</a></div>
+<div class="step"><div class="step-top"><div class="step-no">01</div><div class="step-label">Step One</div></div><h3>Supplier</h3><br><a href="{{ url_for('admin.supplier_master') }}">Manage Suppliers →</a></div>
+<div class="step"><div class="step-top"><div class="step-no">02</div><div class="step-label">Step Two</div></div><h3>Purchase Order</h3><br><a href="{{ url_for('admin.purchase_orders') }}">Open Purchase Orders →</a></div>
+<div class="step"><div class="step-top"><div class="step-no">03</div><div class="step-label">Step Three</div></div><h3>Receive Goods</h3><br><a href="{{ url_for('admin.goods_receipts') }}">Receive Goods →</a></div>
+<div class="step"><div class="step-top"><div class="step-no">04</div><div class="step-label">Step Four</div></div><h3>Supplier Invoice</h3><br><a href="{{ url_for('admin.supplier_invoices') }}">Record Invoice →</a></div>
 </div>
 
 <div class="section-heading"><h3 class="section-title">Purchase Snapshot</h3><span class="section-meta">Current overview</span></div>
@@ -61,7 +61,6 @@
 <div class="summary-card"><small>Supplier Invoices</small><strong>{{ invoice_overview.get('rows', [])|length }}</strong></div>
 </div>
 
-<div class="help"><div><strong>Easy rule:</strong> Purchase Order means “we intend to buy.” Receive Goods means “the goods physically arrived.” Supplier Invoice means “the supplier has billed us.” Stock increases only from accepted goods at Goods Receipt.</div></div>
 
 <div class="quick-panel"><div class="quick-title">Quick Access</div><div class="quick">
 <a href="{{ url_for('admin.current_stock') }}">View Current Stock</a>

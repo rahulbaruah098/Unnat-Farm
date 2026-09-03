@@ -1,16 +1,471 @@
 {% extends 'base.html' %}
 {% block title %}UFC Stock{% endblock %}
+
 {% block content %}
 <style>
-.us{max-width:1600px;margin:0 auto;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#263b2f}.hero,.section{background:#fff;border:1px solid rgba(47,122,76,.11);border-radius:17px;box-shadow:0 14px 36px rgba(28,72,43,.06)}.hero{padding:20px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start}.hero h1{margin:0}.muted{color:#748279}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:8px 13px;border:1px solid #d7e4da;border-radius:9px;background:#fff;color:#2f6e46;text-decoration:none;font-weight:850}.btn.primary{background:#397e51;border-color:#397e51;color:#fff}.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0}.sum{padding:13px;border:1px solid #e1e9e3;border-radius:11px;background:#fbfdfb}.sum small{display:block;color:#748279}.sum strong{display:block;margin-top:4px;font-size:1.18rem}.search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:12px 0}.search input{height:41px;border:1px solid #d8e1da;border-radius:9px;padding:0 11px;font:inherit}.search button{border:0;border-radius:9px;background:#397e51;color:#fff;padding:0 16px;font-weight:850}.section{padding:17px;margin-top:12px}.section-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px}.section h2{margin:0;font-size:1.08rem}.tag{display:inline-flex;padding:5px 8px;border-radius:8px;font-size:.68rem;font-weight:900}.tag.input{background:#eef6ff;color:#235aa6}.tag.output{background:#fff7e6;color:#8a5b00}.table{overflow:auto;border:1px solid #e1e9e3;border-radius:10px}.table table{width:100%;min-width:1050px;border-collapse:collapse}.table th,.table td{padding:9px 10px;border-bottom:1px solid #edf2ee;text-align:left;vertical-align:top;font-size:.74rem}.table th{background:#f6f9f7;color:#68776e;font-size:.65rem;text-transform:uppercase}.sale{color:#237a43;font-weight:900}.empty{text-align:center!important;padding:24px!important;color:#829087}.note{padding:10px;border-radius:9px;background:#f7fbf8;color:#526158;font-size:.75rem;margin-top:9px}@media(max-width:760px){.summary{grid-template-columns:repeat(2,1fr)}.hero,.section{padding:13px}.search{grid-template-columns:1fr}.actions,.actions a{width:100%}}@media(max-width:480px){.summary{grid-template-columns:1fr}}
+*{box-sizing:border-box}
+
+.stock-page{
+    width:100%;
+    max-width:1600px;
+    margin:0 auto;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#33443a;
+}
+
+.stock-header,
+.stock-section{
+    background:#fff;
+    border:1px solid #e2eae4;
+    border-radius:16px;
+    box-shadow:0 10px 28px rgba(31,75,48,.05);
+}
+
+.stock-header{padding:20px}
+
+.stock-header-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
+}
+
+.stock-header h1{
+    margin:0;
+    color:#17251d;
+    font-size:1.55rem;
+    font-weight:800;
+}
+
+.page-subtitle{
+    margin-top:6px;
+    color:#748279;
+    font-size:.78rem;
+    line-height:1.5;
+}
+
+.header-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:8px 13px;
+    border:1px solid #d6e1d9;
+    border-radius:8px;
+    background:#fff;
+    color:#2f6e46;
+    text-decoration:none;
+    font-size:.72rem;
+    font-weight:800;
+}
+
+.btn:hover{background:#f6faf7}
+
+.btn-primary{
+    background:#397e51;
+    border-color:#397e51;
+    color:#fff;
+}
+
+.btn-primary:hover{background:#2f6e46}
+
+.summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin:14px 0;
+}
+
+.summary-card{
+    padding:14px;
+    border:1px solid #e2eae4;
+    border-radius:11px;
+    background:#fbfdfb;
+}
+
+.summary-card span{
+    display:block;
+    color:#748279;
+    font-size:.66rem;
+    font-weight:700;
+}
+
+.summary-card strong{
+    display:block;
+    margin-top:5px;
+    color:#203529;
+    font-size:1.1rem;
+    font-weight:850;
+}
+
+.search-form{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+    margin-bottom:14px;
+}
+
+.search-form input{
+    height:40px;
+    border:1px solid #d8e1da;
+    border-radius:8px;
+    padding:0 11px;
+    background:#fff;
+    color:#34483b;
+    font:inherit;
+    font-size:.72rem;
+    outline:none;
+}
+
+.search-form input:focus{
+    border-color:#82ad90;
+    box-shadow:0 0 0 3px rgba(47,110,70,.06);
+}
+
+.search-form button{
+    min-height:40px;
+    padding:0 16px;
+    border:1px solid #397e51;
+    border-radius:8px;
+    background:#397e51;
+    color:#fff;
+    font:inherit;
+    font-size:.7rem;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.stock-section{
+    padding:18px;
+    margin-top:12px;
+}
+
+.section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+}
+
+.section-title-wrap h2{
+    margin:6px 0 0;
+    color:#263b2f;
+    font-size:1rem;
+    font-weight:800;
+}
+
+.section-title-wrap p{
+    margin:5px 0 0;
+    color:#748279;
+    font-size:.72rem;
+    line-height:1.45;
+    max-width:900px;
+}
+
+.section-badge{
+    display:inline-flex;
+    align-items:center;
+    min-height:24px;
+    padding:4px 8px;
+    border-radius:7px;
+    font-size:.61rem;
+    font-weight:850;
+    letter-spacing:.02em;
+}
+
+.section-badge.inputs{
+    background:#eef6ff;
+    color:#235aa6;
+}
+
+.section-badge.produce{
+    background:#fff7e6;
+    color:#8a5b00;
+}
+
+.table-wrap{
+    width:100%;
+    overflow-x:auto;
+    border:1px solid #e1e9e3;
+    border-radius:10px;
+    background:#fff;
+}
+
+.stock-table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:980px;
+}
+
+.stock-table th,
+.stock-table td{
+    padding:10px 11px;
+    border-bottom:1px solid #edf2ee;
+    text-align:left;
+    vertical-align:middle;
+    color:#435349;
+    font-size:.7rem;
+    line-height:1.4;
+}
+
+.stock-table th{
+    background:#f5f8f6;
+    color:#68776e;
+    font-size:.61rem;
+    font-weight:850;
+    text-transform:uppercase;
+    white-space:nowrap;
+}
+
+.stock-table tr:last-child td{border-bottom:0}
+
+.stock-table strong{color:#263b2f}
+
+.available{
+    color:#237a43;
+    font-weight:850;
+}
+
+.product-code{
+    margin-top:2px;
+    color:#7c8981;
+    font-size:.63rem;
+}
+
+.sell-link{
+    color:#2f6e46;
+    font-weight:850;
+    text-decoration:none;
+}
+
+.sell-link:hover{text-decoration:underline}
+
+.empty{
+    padding:26px!important;
+    text-align:center!important;
+    color:#87938b!important;
+}
+
+.info-note{
+    margin-top:10px;
+    padding:10px 12px;
+    border:1px solid #d7e4da;
+    border-radius:8px;
+    background:#f8fbf9;
+    color:#526158;
+    font-size:.69rem;
+    line-height:1.5;
+}
+
+@media(max-width:900px){
+    .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:760px){
+    .stock-header,
+    .stock-section{
+        padding:14px;
+        border-radius:14px;
+    }
+
+    .header-actions,
+    .header-actions .btn{width:100%}
+
+    .search-form{grid-template-columns:1fr}
+
+    .search-form button{width:100%}
+}
+
+@media(max-width:480px){
+    .summary-grid{grid-template-columns:1fr}
+}
 </style>
-<div class="us">
-  <section class="hero"><div><h1>My UFC Stock</h1><div class="muted">{{ overview.centre_name }} · Input Stock and Farmer Produce are shown together here, but remain separate inventory pools internally.</div></div><div class="actions"><a class="btn primary" href="{{ url_for('modules.pos') }}">Open UFC POS</a><a class="btn" href="{{ url_for('modules.ufc_farmer_marketplace') }}">Farmer Marketplace Setup</a><a class="btn" href="{{ url_for('modules.ufc_avpl_orders') }}">My AVPL Orders</a></div></section>
-  <div class="summary"><div class="sum"><small>Input Products</small><strong>{{ overview.summary.product_count or 0 }}</strong></div><div class="sum"><small>Input Stock Value</small><strong>₹{{ overview.summary.stock_value or '0.00' }}</strong></div><div class="sum"><small>Farmer Produce Items</small><strong>{{ output_overview.summary.product_count or 0 }}</strong></div><div class="sum"><small>Farmer Produce Cost Value</small><strong>₹{{ output_overview.summary.stock_value or '0.00' }}</strong></div></div>
-  <form class="search" method="get"><input name="q" value="{{ overview.query }}" placeholder="Search both Input Stock and Farmer Produce"><button type="submit">Search</button></form>
 
-  <section class="section"><div class="section-head"><div><span class="tag input">INPUT STOCK</span><h2 style="margin-top:6px">Products Received from AVPL</h2><div class="muted">Used for UFC → Farmer input sales and UFC POS. Existing batch, reservation, expiry and weighted-cost controls remain intact.</div></div></div><div class="table"><table><thead><tr><th>Product</th><th>Category</th><th>Role</th><th>Physical</th><th>Reserved</th><th>Saleable</th><th>Blocked/Damaged</th><th>Batches</th><th>Avg Purchase Cost</th><th>Stock Value</th></tr></thead><tbody>{% for row in overview.rows %}<tr><td><strong>{{ row.product_name }}</strong><div class="muted">{{ row.product_code }}</div></td><td>{{ row.category }}</td><td>{{ row.product_role }}</td><td>{{ row.physical_quantity }} {{ row.unit_code }}</td><td>{{ row.reserved_quantity }}</td><td class="sale">{{ row.saleable_quantity }}</td><td>{{ row.blocked_quantity }}</td><td>{{ row.batch_count }}</td><td>₹{{ row.weighted_average_cost }}</td><td><strong>₹{{ row.stock_value }}</strong></td></tr>{% else %}<tr><td colspan="10" class="empty">No AVPL-derived Input Stock found.</td></tr>{% endfor %}</tbody></table></div></section>
+<div class="stock-page">
 
-  <section class="section"><div class="section-head"><div><span class="tag output">FARMER PRODUCE / OUTPUT STOCK</span><h2 style="margin-top:6px">Produce Purchased & Received from Farmers</h2><div class="muted">This stock comes from confirmed Farmer Produce Market receipts. Lots retain the Farmer source and purchase cost even though POS shows one combined saleable quantity per produce item.</div></div></div><div class="table"><table><thead><tr><th>Produce</th><th>Source Farmer(s)</th><th>Variety / Grade</th><th>Available</th><th>Lots</th><th>Avg Purchase Cost</th><th>Stock Value</th><th>POS</th></tr></thead><tbody>{% for row in output_overview.rows %}<tr><td><strong>{{ row.product_name }}</strong><div class="muted">{{ row.unit_code }}</div></td><td>{{ row.source_farmer_names or 'Farmer Produce Market' }}</td><td>{{ row.variety or '—' }}{% if row.grade %} · {{ row.grade }}{% endif %}</td><td class="sale">{{ row.available_display }} {{ row.unit_code }}</td><td>{{ row.batch_count }}</td><td>₹{{ row.unit_cost_display }} / {{ row.unit_code }}</td><td><strong>₹{{ '%.2f'|format((row.available_quantity|float) * (row.unit_cost|float)) }}</strong></td><td><a href="{{ url_for('modules.pos') }}" style="color:#2f6e46;font-weight:900;text-decoration:none">Sell →</a></td></tr>{% else %}<tr><td colspan="8" class="empty">No Farmer Produce stock has been received by this UFC yet.</td></tr>{% endfor %}</tbody></table></div><div class="note"><strong>Important:</strong> Input Stock and Farmer Produce are not merged into one backend balance. UFC POS can sell both, but every sale deducts from the correct original lot/pool.</div></section>
+    <section class="stock-header">
+        <div class="stock-header-row">
+
+            <div>
+                <h1>UFC Stock</h1>
+                <div class="page-subtitle">
+                    {{ overview.centre_name }} · View farm inputs and farmer produce available at your centre.
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a class="btn btn-primary" href="{{ url_for('modules.pos') }}">POS Sale</a>
+                <a class="btn" href="{{ url_for('modules.ufc_farmer_marketplace') }}">Farmer Products</a>
+                <a class="btn" href="{{ url_for('modules.ufc_avpl_orders') }}">AVPL Orders</a>
+            </div>
+
+        </div>
+    </section>
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <span>Farm Input Products</span>
+            <strong>{{ overview.summary.product_count or 0 }}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Farm Input Stock Value</span>
+            <strong>₹{{ overview.summary.stock_value or '0.00' }}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Farmer Produce Items</span>
+            <strong>{{ output_overview.summary.product_count or 0 }}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Farmer Produce Value</span>
+            <strong>₹{{ output_overview.summary.stock_value or '0.00' }}</strong>
+        </div>
+    </div>
+
+    <form class="search-form" method="get">
+        <input
+            type="text"
+            name="q"
+            value="{{ overview.query }}"
+            placeholder="Search product, produce or code"
+        >
+        <button type="submit">Search</button>
+    </form>
+
+    <section class="stock-section">
+        <div class="section-head">
+            <div class="section-title-wrap">
+                <span class="section-badge inputs">FARM INPUTS</span>
+                <h2>Farm Inputs from AVPL</h2>
+                <p>Products received from AVPL and available for sale to farmers through UFC or POS.</p>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="stock-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Type</th>
+                        <th>Total Stock</th>
+                        <th>Reserved</th>
+                        <th>Available</th>
+                        <th>Blocked / Damaged</th>
+                        <th>Batches</th>
+                        <th>Avg. Cost</th>
+                        <th>Stock Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in overview.rows %}
+                    <tr>
+                        <td>
+                            <strong>{{ row.product_name }}</strong>
+                            <div class="product-code">{{ row.product_code }}</div>
+                        </td>
+                        <td>{{ row.category }}</td>
+                        <td>{{ row.product_role }}</td>
+                        <td>{{ row.physical_quantity }} {{ row.unit_code }}</td>
+                        <td>{{ row.reserved_quantity }}</td>
+                        <td class="available">{{ row.saleable_quantity }}</td>
+                        <td>{{ row.blocked_quantity }}</td>
+                        <td>{{ row.batch_count }}</td>
+                        <td>₹{{ row.weighted_average_cost }}</td>
+                        <td><strong>₹{{ row.stock_value }}</strong></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="empty">No farm input stock available.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="stock-section">
+        <div class="section-head">
+            <div class="section-title-wrap">
+                <span class="section-badge produce">FARMER PRODUCE</span>
+                <h2>Produce Bought from Farmers</h2>
+                <p>Produce received from farmers and currently available for sale through UFC POS.</p>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="stock-table">
+                <thead>
+                    <tr>
+                        <th>Produce</th>
+                        <th>Farmer</th>
+                        <th>Variety / Grade</th>
+                        <th>Available</th>
+                        <th>Lots</th>
+                        <th>Avg. Cost</th>
+                        <th>Stock Value</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in output_overview.rows %}
+                    <tr>
+                        <td>
+                            <strong>{{ row.product_name }}</strong>
+                            <div class="product-code">{{ row.unit_code }}</div>
+                        </td>
+
+                        <td>{{ row.source_farmer_names or 'Farmer Produce Market' }}</td>
+
+                        <td>
+                            {{ row.variety or '—' }}
+                            {% if row.grade %} · {{ row.grade }}{% endif %}
+                        </td>
+
+                        <td class="available">
+                            {{ row.available_display }} {{ row.unit_code }}
+                        </td>
+
+                        <td>{{ row.batch_count }}</td>
+
+                        <td>₹{{ row.unit_cost_display }} / {{ row.unit_code }}</td>
+
+                        <td>
+                            <strong>
+                                ₹{{ '%.2f'|format((row.available_quantity|float) * (row.unit_cost|float)) }}
+                            </strong>
+                        </td>
+
+                        <td>
+                            <a class="sell-link" href="{{ url_for('modules.pos') }}">Sell</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="empty">No farmer produce stock available.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-note">
+            <strong>Note:</strong>
+            Farm Inputs and Farmer Produce are managed separately in stock.
+            POS automatically deducts the sold quantity from the correct stock source.
+        </div>
+    </section>
+
 </div>
 {% endblock %}

@@ -10,6 +10,12 @@ from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING, ReturnDocument
 
 from app.extensions import mongo
+from app.services.commerce_receipt_service import (
+    normalize_receipt_lines,
+    proportional_amount,
+    receipt_label,
+    summarize_receipt,
+)
 from app.utils.helpers import now_utc
 
 
@@ -273,6 +279,93 @@ def _product_saleable(entity_id, product_id):
     return total
 
 
+def _line_id():
+    return uuid4().hex[:12]
+
+
+def _order_items(order):
+    """Return normalized AVPL→UFC order lines while preserving legacy orders.
+
+    New commerce orders persist an ``items`` array. Historical Stage-4 records
+    remain single-line documents, so this helper presents both shapes through
+    one internal interface without rewriting old data.
+    """
+    raw_items = order.get("items") or []
+    if raw_items:
+        return [dict(item or {}) for item in raw_items if isinstance(item, dict)]
+    return [{
+        "line_id": "legacy",
+        "source_product_id": order.get("source_product_id"),
+        "source_product_id_str": str(order.get("source_product_id") or ""),
+        "product_name": order.get("product_name") or "Product",
+        "product_code": order.get("product_code") or "",
+        "category": order.get("category") or "",
+        "product_role": order.get("product_role") or "",
+        "unit_code": order.get("unit_code") or "Unit",
+        "requested_quantity": order.get("requested_quantity") or 0,
+        "approved_quantity": order.get("approved_quantity") or 0,
+        "reserved_quantity": order.get("reserved_quantity") or 0,
+        "dispatched_quantity": order.get("dispatched_quantity") or 0,
+        "received_quantity": order.get("received_quantity") or 0,
+        "unit_price": order.get("unit_price") or 0,
+        "line_total": order.get("total_amount") or 0,
+        "status": order.get("status") or "requested",
+        "reservation_allocations": order.get("reservation_allocations") or [],
+    }]
+
+
+def _serialize_order_item(item):
+    row = dict(item or {})
+    row["source_product_id_str"] = str(row.get("source_product_id") or row.get("source_product_id_str") or "")
+    row["requested_quantity_display"] = _qty(row.get("requested_quantity"))
+    row["approved_quantity_display"] = _qty(row.get("approved_quantity"))
+    row["dispatched_quantity_display"] = _qty(row.get("dispatched_quantity"))
+    row["received_quantity_display"] = _qty(row.get("received_quantity"))
+    row["physically_received_quantity_display"] = _qty(row.get("physically_received_quantity") if row.get("physically_received_quantity") is not None else row.get("received_quantity"))
+    row["accepted_quantity_display"] = _qty(row.get("accepted_quantity") if row.get("accepted_quantity") is not None else row.get("received_quantity"))
+    row["damaged_quantity_display"] = _qty(row.get("damaged_quantity"))
+    row["rejected_quantity_display"] = _qty(row.get("rejected_quantity"))
+    row["missing_quantity_display"] = _qty(row.get("missing_quantity"))
+    row["unit_price_display"] = _money(row.get("unit_price"))
+    row["line_total_display"] = _money(row.get("line_total"))
+    line_status = str(row.get("status") or "requested")
+    row["status_label"] = {
+        "requested": "Requested",
+        "approved": "Approved",
+        "partially_approved": "Partially Approved",
+        "rejected": "Not Approved",
+        "dispatched": "Dispatched",
+        "received": "Received",
+    }.get(line_status, line_status.replace("_", " ").title())
+    return row
+
+
+def _primary_item(order):
+    items = _order_items(order)
+    return items[0] if items else {}
+
+
+def _copy_line_to_legacy_fields(document, item):
+    """Mirror the first line into legacy fields so old screens/reports remain safe."""
+    item = item or {}
+    document.update({
+        "source_product_id": item.get("source_product_id"),
+        "source_product_id_str": str(item.get("source_product_id") or ""),
+        "product_name": item.get("product_name") or "Multiple products",
+        "product_code": item.get("product_code") or "",
+        "category": item.get("category") or "",
+        "product_role": item.get("product_role") or "",
+        "unit_code": item.get("unit_code") or "Unit",
+        "requested_quantity": float(_decimal(item.get("requested_quantity"))),
+        "approved_quantity": float(_decimal(item.get("approved_quantity"))),
+        "reserved_quantity": float(_decimal(item.get("reserved_quantity"))),
+        "dispatched_quantity": float(_decimal(item.get("dispatched_quantity"))),
+        "received_quantity": float(_decimal(item.get("received_quantity"))),
+        "unit_price": float(_decimal(item.get("unit_price"))),
+    })
+    return document
+
+
 def _serialize_order(order):
     if not order:
         return None
@@ -282,10 +375,11 @@ def _serialize_order(order):
     row["avpl_sale_id_str"] = str(row.get("avpl_sale_id") or "")
     row["avpl_sales_invoice_id_str"] = str(row.get("avpl_sales_invoice_id") or "")
     row["invoice_grand_total_display"] = _money(row.get("invoice_grand_total"))
-    row["status_label"] = ORDER_STATUS_LABELS.get(
-        str(row.get("status") or "requested"),
-        str(row.get("status") or "requested").replace("_", " ").title(),
-    )
+    status = str(row.get("status") or "requested")
+    if status == "approved" and row.get("approval_scope") == "partial":
+        row["status_label"] = "Partially Approved"
+    else:
+        row["status_label"] = ORDER_STATUS_LABELS.get(status, status.replace("_", " ").title())
     row["requested_quantity_display"] = _qty(row.get("requested_quantity"))
     row["approved_quantity_display"] = _qty(row.get("approved_quantity"))
     row["dispatched_quantity_display"] = _qty(row.get("dispatched_quantity"))
@@ -296,6 +390,23 @@ def _serialize_order(order):
     row["payment_status_label"] = PAYMENT_STATUS_LABELS.get(str(row.get("payment_status") or "unpaid"), str(row.get("payment_status") or "unpaid").replace("_", " ").title())
     row["amount_paid_display"] = _money(row.get("amount_paid") if row.get("amount_paid") is not None else row.get("paid_amount"))
     row["outstanding_amount_display"] = _money(row.get("outstanding_amount") if row.get("outstanding_amount") is not None else row.get("invoice_grand_total") or row.get("total_amount"))
+    row["items"] = [_serialize_order_item(item) for item in _order_items(row)]
+    row["item_count"] = len(row["items"])
+    row["is_multi_item_order"] = row.get("is_multi_item_order") is True or row["item_count"] > 1
+    row["product_summary"] = (
+        row["items"][0].get("product_name") or "Product"
+        if row["item_count"] == 1
+        else f"{row['item_count']} products"
+    )
+    row["approved_item_count"] = sum(1 for item in row["items"] if _decimal(item.get("approved_quantity")) > 0)
+    row["dispatched_item_count"] = sum(1 for item in row["items"] if _decimal(item.get("dispatched_quantity")) > 0)
+    row["received_item_count"] = sum(1 for item in row["items"] if _decimal(item.get("physically_received_quantity") if item.get("physically_received_quantity") is not None else item.get("received_quantity")) > 0)
+    row["accepted_item_count"] = sum(1 for item in row["items"] if _decimal(item.get("accepted_quantity") if item.get("accepted_quantity") is not None else item.get("received_quantity")) > 0)
+    row["discrepancy_item_count"] = sum(1 for item in row["items"] if _decimal(item.get("discrepancy_quantity")) > 0)
+    row["receipt_status"] = row.get("receipt_status") or ("full" if row.get("status") == "received" and not row["discrepancy_item_count"] else ("discrepancy" if row.get("status") == "received" else "none"))
+    row["receipt_status_label"] = receipt_label(row["receipt_status"])
+    row["accepted_value_display"] = _money(row.get("accepted_goods_total") if row.get("accepted_goods_total") is not None else row.get("settlement_total") or 0)
+    row["receipt_adjustment_display"] = _money(row.get("receipt_adjustment_amount") or 0)
     return row
 
 
@@ -441,6 +552,152 @@ def create_ufc_order_request(actor_user_id, centre_uid_hint, product_id, quantit
     }
 
 
+def create_ufc_cart_order_request(actor_user_id, centre_uid_hint, items, note="", payment_term="credit", idempotency_key=""):
+    """Create one AVPL order containing multiple product lines.
+
+    The server re-reads Product Master, publication state and saleable inventory
+    for every line. Browser cart totals are never trusted. Duplicate products are
+    merged before validation so one checkout cannot oversubscribe a SKU by
+    submitting it twice.
+    """
+    _ensure_indexes()
+    actor, centre_uid, centre_name = _get_ufc_actor(actor_user_id, centre_uid_hint)
+    entity = _active_avpl_entity()
+    if not entity:
+        raise RuntimeError("The active AVPL Accounting entity is unavailable.")
+    if not isinstance(items, list):
+        raise ValueError("Your cart is invalid. Refresh the Marketplace and try again.")
+    if not items:
+        raise ValueError("Your cart is empty.")
+    if len(items) > 40:
+        raise ValueError("A single order can contain at most 40 products.")
+
+    payment_term = _clean_text(payment_term, 40).lower() or "credit"
+    if payment_term == "prepaid_online":
+        raise ValueError("Online prepaid payment is coming soon. Choose Pay on Delivery or Credit / Pay Later for now.")
+    if payment_term not in {"cod", "credit"}:
+        raise ValueError("Select Pay on Delivery or Credit / Pay Later.")
+
+    merged = {}
+    for raw in items:
+        if not isinstance(raw, dict):
+            raise ValueError("One cart line is invalid.")
+        oid = _to_object_id(raw.get("product_id") or raw.get("source_product_id"))
+        qty = _decimal(raw.get("quantity"))
+        if not oid or qty <= 0:
+            raise ValueError("Every cart product must have a valid quantity greater than zero.")
+        key = str(oid)
+        if key not in merged:
+            merged[key] = {"product_id": oid, "quantity": Decimal("0")}
+        merged[key]["quantity"] += qty
+
+    lines = []
+    for merged_row in merged.values():
+        product_oid = merged_row["product_id"]
+        requested = merged_row["quantity"]
+        product = mongo.db.products.find_one({
+            "_id": product_oid,
+            "is_deleted": {"$ne": True},
+            "is_active": {"$ne": False},
+            "status": {"$nin": ["disabled", "deleted"]},
+            "unnatfarm_eligible": {"$ne": False},
+        })
+        if not product:
+            raise ValueError("One product in your cart is no longer active. Remove it and try again.")
+        if not _is_published(entity["_id"], product_oid):
+            raise ValueError(f"{product.get('name') or 'A product'} is no longer published to UFC Centres.")
+        saleable = _product_saleable(entity["_id"], product_oid)
+        unit_code = product.get("base_unit_code") or product.get("base_unit_name") or "Unit"
+        if saleable <= 0:
+            raise ValueError(f"{product.get('name') or 'A product'} is currently out of stock at AVPL.")
+        if requested > saleable:
+            raise ValueError(f"Only {_qty(saleable)} {unit_code} of {product.get('name') or 'this product'} is currently saleable at AVPL.")
+        lines.append({
+            "line_id": _line_id(),
+            "source_product_id": product_oid,
+            "source_product_id_str": str(product_oid),
+            "product_name": product.get("name") or product.get("product_name") or "Product",
+            "product_code": product.get("product_code") or "",
+            "category": product.get("category") or "",
+            "product_role": product.get("product_role") or product.get("type") or "",
+            "unit_code": unit_code,
+            "requested_quantity": float(requested),
+            "approved_quantity": 0.0,
+            "reserved_quantity": 0.0,
+            "dispatched_quantity": 0.0,
+            "received_quantity": 0.0,
+            "unit_price": 0.0,
+            "line_total": 0.0,
+            "status": "requested",
+            "reservation_allocations": [],
+        })
+
+    token = _clean_text(idempotency_key, 120) or f"AVPLCART-{uuid4().hex.upper()}"
+    existing = mongo.db[ORDER_COLLECTION].find_one({"checkout_token": token})
+    if existing:
+        if str(existing.get("requested_by") or "") != str(actor.get("_id") or ""):
+            raise PermissionError("This checkout token belongs to another user.")
+        return {"order": _serialize_order(existing), "message": "This cart order was already submitted."}
+
+    timestamp = now_utc()
+    document = {
+        "order_number": _next_order_number(),
+        "checkout_token": token,
+        "commerce_version": 2,
+        "is_multi_item_order": len(lines) > 1,
+        "item_count": len(lines),
+        "items": lines,
+        "accounting_entity_id": entity["_id"],
+        "accounting_entity_id_str": str(entity["_id"]),
+        "centre_uid": centre_uid,
+        "centre_name": centre_name,
+        "requested_by": actor["_id"],
+        "requested_by_str": str(actor["_id"]),
+        "requested_by_name": actor.get("resolved_name") or centre_name,
+        "total_amount": 0.0,
+        "request_note": _clean_text(note, 1000),
+        "status": "requested",
+        "approval_scope": "pending",
+        "stock_reserved": False,
+        "stock_dispatched": False,
+        "ufc_stock_posted": False,
+        "purchase_entry_created": False,
+        "accounting_status": "not_posted",
+        "payment_term": payment_term,
+        "payment_term_label": PAYMENT_TERM_LABELS.get(payment_term, payment_term.replace("_", " ").title()),
+        "payment_status": "not_recorded",
+        "financial_sync_status": "not_applicable",
+        "financial_sync_error": None,
+        "avpl_sale_id": None,
+        "avpl_sale_number": "",
+        "avpl_sales_invoice_id": None,
+        "avpl_sales_invoice_number": "",
+        "history": [],
+        "created_at": timestamp,
+        "updated_at": timestamp,
+    }
+    _copy_line_to_legacy_fields(document, lines[0])
+    try:
+        result = mongo.db[ORDER_COLLECTION].insert_one(document)
+        document["_id"] = result.inserted_id
+    except Exception:
+        existing = mongo.db[ORDER_COLLECTION].find_one({"checkout_token": token})
+        if existing:
+            return {"order": _serialize_order(existing), "message": "This cart order was already submitted."}
+        raise
+
+    _append_history(
+        document["_id"], action="request_cart_order", actor=actor,
+        note=document.get("request_note") or f"UFC requested {len(lines)} product line(s) from AVPL.",
+        to_status="requested",
+    )
+    _notify_avpl_admins(
+        "New UFC Cart Order",
+        f"{centre_name} ({centre_uid}) requested {len(lines)} product line(s) in order {document.get('order_number')}.",
+    )
+    return {"order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": document["_id"]})), "message": f"Order request sent to AVPL with {len(lines)} product line(s)."}
+
+
 def _candidate_avpl_lots(entity_id, product_id):
     rows = list(mongo.db[AVPL_LOT_COLLECTION].find({
         "accounting_entity_id": entity_id,
@@ -458,13 +715,24 @@ def _candidate_avpl_lots(entity_id, product_id):
     )
 
 
-def _reserve_avpl_stock(order, approved_quantity, actor):
+def _reserve_avpl_stock(order, approved_quantity, actor, item=None):
+    """Reserve FEFO AVPL stock for one order line.
+
+    ``item`` is optional to keep historical single-line orders fully compatible.
+    New allocations carry their own product snapshot so later dispatch/receipt
+    does not depend on the order-level legacy mirror.
+    """
+    effective = dict(order)
+    if item:
+        effective.update(item)
     needed = _decimal(approved_quantity)
     allocations = []
     reserved_updates = []
     today_iso = business_today().strftime("%Y-%m-%d")
+    product_id = effective.get("source_product_id")
+    line_id = (item or {}).get("line_id") or "legacy"
 
-    for lot in _candidate_avpl_lots(order["accounting_entity_id"], order["source_product_id"]):
+    for lot in _candidate_avpl_lots(order["accounting_entity_id"], product_id):
         if needed <= 0:
             break
         saleable = _lot_saleable(lot)
@@ -472,56 +740,46 @@ def _reserve_avpl_stock(order, approved_quantity, actor):
             continue
         take = min(needed, saleable)
         take_float = float(take)
-
         query = {
             "_id": lot["_id"],
             "accounting_entity_id": order["accounting_entity_id"],
             "status": {"$nin": ["cancelled", "expired"]},
             "$and": [
-                {
-                    "$or": [
-                        {"expiry_date": {"$exists": False}},
-                        {"expiry_date": None},
-                        {"expiry_date": ""},
-                        {"expiry_date": {"$gte": today_iso}},
-                    ]
-                },
-                {
-                    "$expr": {
-                        "$gte": [
-                            {
-                                "$subtract": [
-                                    {"$ifNull": ["$available_quantity", 0]},
-                                    {
-                                        "$add": [
-                                            {"$ifNull": ["$reserved_quantity", 0]},
-                                            {"$ifNull": ["$damaged_quantity", 0]},
-                                            {"$ifNull": ["$blocked_quantity", 0]},
-                                        ]
-                                    },
-                                ]
-                            },
-                            take_float,
-                        ]
-                    }
-                },
+                {"$or": [
+                    {"expiry_date": {"$exists": False}}, {"expiry_date": None},
+                    {"expiry_date": ""}, {"expiry_date": {"$gte": today_iso}},
+                ]},
+                {"$expr": {"$gte": [
+                    {"$subtract": [
+                        {"$ifNull": ["$available_quantity", 0]},
+                        {"$add": [
+                            {"$ifNull": ["$reserved_quantity", 0]},
+                            {"$ifNull": ["$damaged_quantity", 0]},
+                            {"$ifNull": ["$blocked_quantity", 0]},
+                        ]},
+                    ]},
+                    take_float,
+                ]}},
             ],
         }
         result = mongo.db[AVPL_LOT_COLLECTION].update_one(
             query,
-            {
-                "$inc": {"reserved_quantity": take_float},
-                "$set": {"updated_at": now_utc(), "last_reservation_order_id": order["_id"]},
-            },
+            {"$inc": {"reserved_quantity": take_float}, "$set": {"updated_at": now_utc(), "last_reservation_order_id": order["_id"]}},
         )
         if result.modified_count != 1:
-            # Concurrent order/adjustment changed this lot. Skip it and continue.
             continue
-
         reserved_updates.append((lot["_id"], take_float))
         allocations.append({
+            "line_id": line_id,
             "inventory_lot_id": lot["_id"],
             "inventory_lot_id_str": str(lot["_id"]),
+            "source_product_id": product_id,
+            "source_product_id_str": str(product_id or ""),
+            "product_code": effective.get("product_code") or "",
+            "product_name": effective.get("product_name") or "Product",
+            "category": effective.get("category") or "",
+            "product_role": effective.get("product_role") or "",
+            "unit_price": float(_decimal(effective.get("unit_price"))),
             "quantity": take_float,
             "quantity_display": _qty(take),
             "warehouse_code": lot.get("warehouse_code") or "AVPL-MAIN",
@@ -531,7 +789,7 @@ def _reserve_avpl_stock(order, approved_quantity, actor):
             "barcode": lot.get("barcode") or "",
             "manufacturing_date": lot.get("manufacturing_date") or "",
             "expiry_date": lot.get("expiry_date") or "",
-            "unit_code": lot.get("unit_code") or order.get("unit_code") or "Unit",
+            "unit_code": lot.get("unit_code") or effective.get("unit_code") or "Unit",
         })
         needed -= take
 
@@ -541,50 +799,46 @@ def _reserve_avpl_stock(order, approved_quantity, actor):
                 {"_id": lot_id, "reserved_quantity": {"$gte": quantity_value}},
                 {"$inc": {"reserved_quantity": -quantity_value}, "$set": {"updated_at": now_utc()}},
             )
-        raise RuntimeError(
-            "AVPL stock changed while this order was being approved. Refresh the order and try again."
-        )
+        raise RuntimeError("AVPL stock changed while this order was being approved. Refresh the order and try again.")
 
     timestamp = now_utc()
     for allocation in allocations:
-        source_key = f"UFC-RESERVE:{order['_id']}:{allocation['inventory_lot_id']}"
+        source_key = f"UFC-RESERVE:{order['_id']}:{line_id}:{allocation['inventory_lot_id']}"
         mongo.db[AVPL_MOVEMENT_COLLECTION].update_one(
             {"source_posting_key": source_key},
-            {
-                "$setOnInsert": {
-                    "source_posting_key": source_key,
-                    "movement_uid": uuid4().hex,
-                    "accounting_entity_id": order["accounting_entity_id"],
-                    "accounting_entity_id_str": str(order["accounting_entity_id"]),
-                    "source_document_type": "ufc_order",
-                    "source_document_id": order["_id"],
-                    "source_document_id_str": str(order["_id"]),
-                    "source_document_number": order.get("order_number") or "",
-                    "source_product_id": order["source_product_id"],
-                    "source_product_id_str": str(order["source_product_id"]),
-                    "product_code": order.get("product_code") or "",
-                    "product_name": order.get("product_name") or "Product",
-                    "movement_type": "reservation",
-                    "direction": "reserve",
-                    "quantity": allocation["quantity"],
-                    "quantity_display": allocation["quantity_display"],
-                    "unit_code": allocation.get("unit_code") or order.get("unit_code") or "Unit",
-                    "warehouse_code": allocation.get("warehouse_code") or "",
-                    "warehouse_name": allocation.get("warehouse_name") or "",
-                    "warehouse_bin": allocation.get("warehouse_bin") or "",
-                    "barcode": allocation.get("barcode") or "",
-                    "batch_number": allocation.get("batch_number") or "",
-                    "manufacturing_date": allocation.get("manufacturing_date") or "",
-                    "expiry_date": allocation.get("expiry_date") or "",
-                    "movement_date": business_today().strftime("%Y-%m-%d"),
-                    "reason": f"Reserved for UFC order {order.get('order_number') or ''} ({order.get('centre_uid') or ''}).",
-                    "posted_by": actor["_id"],
-                    "posted_by_name": actor.get("resolved_name") or "",
-                    "posted_at": timestamp,
-                    "created_at": timestamp,
-                }
-            },
-            upsert=True,
+            {"$setOnInsert": {
+                "source_posting_key": source_key,
+                "movement_uid": uuid4().hex,
+                "accounting_entity_id": order["accounting_entity_id"],
+                "accounting_entity_id_str": str(order["accounting_entity_id"]),
+                "source_document_type": "ufc_order",
+                "source_document_id": order["_id"],
+                "source_document_id_str": str(order["_id"]),
+                "source_document_number": order.get("order_number") or "",
+                "line_id": line_id,
+                "source_product_id": allocation.get("source_product_id"),
+                "source_product_id_str": allocation.get("source_product_id_str") or "",
+                "product_code": allocation.get("product_code") or "",
+                "product_name": allocation.get("product_name") or "Product",
+                "movement_type": "reservation",
+                "direction": "reserve",
+                "quantity": allocation["quantity"],
+                "quantity_display": allocation["quantity_display"],
+                "unit_code": allocation.get("unit_code") or effective.get("unit_code") or "Unit",
+                "warehouse_code": allocation.get("warehouse_code") or "",
+                "warehouse_name": allocation.get("warehouse_name") or "",
+                "warehouse_bin": allocation.get("warehouse_bin") or "",
+                "barcode": allocation.get("barcode") or "",
+                "batch_number": allocation.get("batch_number") or "",
+                "manufacturing_date": allocation.get("manufacturing_date") or "",
+                "expiry_date": allocation.get("expiry_date") or "",
+                "movement_date": business_today().strftime("%Y-%m-%d"),
+                "reason": f"Reserved for UFC order {order.get('order_number') or ''} ({order.get('centre_uid') or ''}).",
+                "posted_by": actor["_id"],
+                "posted_by_name": actor.get("resolved_name") or "",
+                "posted_at": timestamp,
+                "created_at": timestamp,
+            }}, upsert=True,
         )
     return allocations
 
@@ -679,6 +933,121 @@ def approve_ufc_order(actor_user_id, order_id, approved_quantity, unit_price, no
         "order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": oid})),
         "message": "UFC order approved and AVPL stock reserved successfully.",
     }
+
+
+def approve_ufc_cart_order(actor_user_id, order_id, approvals, note="", credit_period_days=0):
+    """Approve/reject AVPL cart lines atomically from the operator's perspective."""
+    _ensure_indexes()
+    actor = _get_avpl_actor(actor_user_id, action=True)
+    oid = _to_object_id(order_id)
+    if not oid:
+        raise ValueError("Invalid UFC order request.")
+    order = mongo.db[ORDER_COLLECTION].find_one({"_id": oid})
+    if not order:
+        raise ValueError("UFC order request was not found.")
+    items = _order_items(order)
+    if not order.get("items"):
+        raise ValueError("This is a single-product historical order. Use the normal approval form.")
+    if order.get("status") != "requested":
+        raise ValueError("Only a requested order can be approved.")
+    if not isinstance(approvals, list):
+        raise ValueError("Approval lines are invalid.")
+    try:
+        credit_days = int(str(credit_period_days or 0).strip() or 0)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Credit Days must be a whole number.") from exc
+    if credit_days < 0 or credit_days > 365:
+        raise ValueError("Credit Days must be between 0 and 365.")
+
+    approval_map = {str(row.get("line_id") or ""): row for row in approvals if isinstance(row, dict)}
+    if not approval_map:
+        raise ValueError("Enter approval quantities for the order lines.")
+
+    prepared = []
+    all_allocations = []
+    try:
+        for item in items:
+            line_id = str(item.get("line_id") or "")
+            request_row = approval_map.get(line_id, {})
+            approved = _decimal(request_row.get("approved_quantity"))
+            requested = _decimal(item.get("requested_quantity"))
+            price = _decimal(request_row.get("unit_price"))
+            if approved < 0 or approved > requested:
+                raise ValueError(f"Approved quantity for {item.get('product_name') or 'a product'} must be between 0 and {_qty(requested)} {item.get('unit_code') or 'units'}.")
+            if approved > 0 and price <= 0:
+                raise ValueError(f"Enter a selling price for {item.get('product_name') or 'each approved product'}.")
+            product = mongo.db.products.find_one({"_id": item.get("source_product_id"), "is_deleted": {"$ne": True}, "is_active": {"$ne": False}, "status": {"$nin": ["disabled", "deleted"]}})
+            if approved > 0 and not product:
+                raise ValueError(f"{item.get('product_name') or 'A product'} is no longer active in Product Master.")
+            line = dict(item)
+            line["approved_quantity"] = float(approved)
+            line["reserved_quantity"] = float(approved)
+            line["unit_price"] = float(price) if approved > 0 else 0.0
+            line["line_total"] = float((approved * price).quantize(Decimal('0.01'))) if approved > 0 else 0.0
+            line["status"] = "rejected" if approved <= 0 else ("approved" if approved == requested else "partially_approved")
+            if approved > 0:
+                allocations = _reserve_avpl_stock(order, approved, actor, item=line)
+                line["reservation_allocations"] = allocations
+                all_allocations.extend(allocations)
+            else:
+                line["reservation_allocations"] = []
+            prepared.append(line)
+    except Exception:
+        for allocation in all_allocations:
+            lot_id = _to_object_id(allocation.get("inventory_lot_id"))
+            qty = float(_decimal(allocation.get("quantity")))
+            if lot_id and qty > 0:
+                mongo.db[AVPL_LOT_COLLECTION].update_one({"_id": lot_id, "reserved_quantity": {"$gte": qty}}, {"$inc": {"reserved_quantity": -qty}, "$set": {"updated_at": now_utc()}})
+        if all_allocations:
+            keys = [f"UFC-RESERVE:{oid}:{a.get('line_id') or 'legacy'}:{a.get('inventory_lot_id')}" for a in all_allocations]
+            mongo.db[AVPL_MOVEMENT_COLLECTION].delete_many({"source_posting_key": {"$in": keys}})
+        raise
+
+    approved_lines = [line for line in prepared if _decimal(line.get("approved_quantity")) > 0]
+    if not approved_lines:
+        timestamp = now_utc()
+        result = mongo.db[ORDER_COLLECTION].update_one({"_id": oid, "status": "requested"}, {"$set": {
+            "items": prepared, "status": "rejected", "approval_scope": "none", "rejection_reason": _clean_text(note, 1000) or "No order line was approved.",
+            "rejected_by": actor["_id"], "rejected_by_name": actor.get("resolved_name") or "", "rejected_at": timestamp, "updated_at": timestamp,
+        }})
+        if result.modified_count != 1:
+            raise RuntimeError("The order changed while approval was being saved. Refresh and try again.")
+        _append_history(oid, action="reject_cart_order", actor=actor, note=note or "No cart line was approved.", from_status="requested", to_status="rejected")
+        _notify_user(order.get("requested_by"), "AVPL Order Not Approved", f"No product line in order {order.get('order_number')} was approved.", "ufc_admin")
+        return {"order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": oid})), "message": "No order line was approved; the order was rejected."}
+
+    total = sum((_decimal(line.get("line_total")) for line in prepared), Decimal("0"))
+    partial = len(approved_lines) != len(prepared) or any(line.get("status") == "partially_approved" for line in prepared)
+    timestamp = now_utc()
+    primary = approved_lines[0]
+    update = {
+        "items": prepared,
+        "item_count": len(prepared),
+        "approved_item_count": len(approved_lines),
+        "approval_scope": "partial" if partial else "full",
+        "total_amount": float(total),
+        "credit_period_days": credit_days,
+        "approval_note": _clean_text(note, 1000),
+        "reservation_allocations": all_allocations,
+        "stock_reserved": True,
+        "status": "approved",
+        "approved_by": actor["_id"],
+        "approved_by_name": actor.get("resolved_name") or "",
+        "approved_at": timestamp,
+        "updated_at": timestamp,
+    }
+    _copy_line_to_legacy_fields(update, primary)
+    result = mongo.db[ORDER_COLLECTION].update_one({"_id": oid, "status": "requested", "stock_reserved": {"$ne": True}}, {"$set": update})
+    if result.modified_count != 1:
+        for allocation in all_allocations:
+            lot_id = _to_object_id(allocation.get("inventory_lot_id")); qty = float(_decimal(allocation.get("quantity")))
+            if lot_id and qty > 0:
+                mongo.db[AVPL_LOT_COLLECTION].update_one({"_id": lot_id, "reserved_quantity": {"$gte": qty}}, {"$inc": {"reserved_quantity": -qty}, "$set": {"updated_at": now_utc()}})
+        raise RuntimeError("The order changed while approval was being saved. Refresh and try again.")
+
+    _append_history(oid, action="approve_cart_order", actor=actor, note=note or f"Approved {len(approved_lines)} of {len(prepared)} product line(s).", from_status="requested", to_status="approved")
+    _notify_user(order.get("requested_by"), "AVPL Cart Order Approved", f"Order {order.get('order_number')} has {len(approved_lines)} approved product line(s).", "ufc_admin")
+    return {"order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": oid})), "message": "Cart order approved and AVPL stock reserved line by line."}
 
 
 def reject_ufc_order(actor_user_id, order_id, reason=""):
@@ -872,126 +1241,84 @@ def dispatch_ufc_order(actor_user_id, order_id, dispatch_note="", transporter=""
             quantity_value = float(_decimal(allocation.get("quantity")))
             if not lot_id or quantity_value <= 0:
                 raise RuntimeError("The reservation contains an invalid stock lot.")
-
             result = mongo.db[AVPL_LOT_COLLECTION].update_one(
                 {
-                    "_id": lot_id,
-                    "status": {"$nin": ["cancelled", "expired"]},
-                    "available_quantity": {"$gte": quantity_value},
-                    "reserved_quantity": {"$gte": quantity_value},
-                    "$or": [
-                        {"expiry_date": {"$exists": False}},
-                        {"expiry_date": None},
-                        {"expiry_date": ""},
-                        {"expiry_date": {"$gte": today_iso}},
-                    ],
+                    "_id": lot_id, "status": {"$nin": ["cancelled", "expired"]},
+                    "available_quantity": {"$gte": quantity_value}, "reserved_quantity": {"$gte": quantity_value},
+                    "$or": [{"expiry_date": {"$exists": False}}, {"expiry_date": None}, {"expiry_date": ""}, {"expiry_date": {"$gte": today_iso}}],
                 },
-                {
-                    "$inc": {
-                        "available_quantity": -quantity_value,
-                        "reserved_quantity": -quantity_value,
-                        "issued_quantity": quantity_value,
-                    },
-                    "$set": {"updated_at": now_utc(), "last_dispatch_order_id": oid},
-                },
+                {"$inc": {"available_quantity": -quantity_value, "reserved_quantity": -quantity_value, "issued_quantity": quantity_value}, "$set": {"updated_at": now_utc(), "last_dispatch_order_id": oid}},
             )
             if result.modified_count != 1:
-                raise RuntimeError(
-                    "A reserved batch is no longer dispatchable (stock changed or expired). Cancel/release this order and approve it again."
-                )
+                raise RuntimeError("A reserved batch is no longer dispatchable (stock changed or expired). Cancel/release this order and approve it again.")
             moved.append((lot_id, quantity_value))
     except Exception:
         for lot_id, quantity_value in reversed(moved):
-            mongo.db[AVPL_LOT_COLLECTION].update_one(
-                {"_id": lot_id},
-                {"$inc": {
-                    "available_quantity": quantity_value,
-                    "reserved_quantity": quantity_value,
-                    "issued_quantity": -quantity_value,
-                }, "$set": {"updated_at": now_utc()}},
-            )
+            mongo.db[AVPL_LOT_COLLECTION].update_one({"_id": lot_id}, {"$inc": {"available_quantity": quantity_value, "reserved_quantity": quantity_value, "issued_quantity": -quantity_value}, "$set": {"updated_at": now_utc()}})
         raise
 
     timestamp = now_utc()
     for allocation in allocations:
-        source_key = f"UFC-DISPATCH:{oid}:{allocation.get('inventory_lot_id')}"
+        line_id = allocation.get("line_id") or "legacy"
+        source_key = f"UFC-DISPATCH:{oid}:{line_id}:{allocation.get('inventory_lot_id')}"
         mongo.db[AVPL_MOVEMENT_COLLECTION].update_one(
             {"source_posting_key": source_key},
             {"$setOnInsert": {
-                "source_posting_key": source_key,
-                "movement_uid": uuid4().hex,
-                "accounting_entity_id": order.get("accounting_entity_id"),
-                "accounting_entity_id_str": str(order.get("accounting_entity_id") or ""),
-                "source_document_type": "ufc_order_dispatch",
-                "source_document_id": oid,
-                "source_document_id_str": str(oid),
-                "source_document_number": order.get("order_number") or "",
-                "source_product_id": order.get("source_product_id"),
-                "source_product_id_str": str(order.get("source_product_id") or ""),
-                "product_code": order.get("product_code") or "",
-                "product_name": order.get("product_name") or "Product",
-                "movement_type": "sale",
-                "direction": "out",
-                "quantity": float(_decimal(allocation.get("quantity"))),
-                "quantity_display": _qty(allocation.get("quantity")),
+                "source_posting_key": source_key, "movement_uid": uuid4().hex,
+                "accounting_entity_id": order.get("accounting_entity_id"), "accounting_entity_id_str": str(order.get("accounting_entity_id") or ""),
+                "source_document_type": "ufc_order_dispatch", "source_document_id": oid, "source_document_id_str": str(oid), "source_document_number": order.get("order_number") or "",
+                "line_id": line_id,
+                "source_product_id": allocation.get("source_product_id") or order.get("source_product_id"),
+                "source_product_id_str": str(allocation.get("source_product_id") or order.get("source_product_id") or ""),
+                "product_code": allocation.get("product_code") or order.get("product_code") or "",
+                "product_name": allocation.get("product_name") or order.get("product_name") or "Product",
+                "movement_type": "sale", "direction": "out",
+                "quantity": float(_decimal(allocation.get("quantity"))), "quantity_display": _qty(allocation.get("quantity")),
                 "unit_code": allocation.get("unit_code") or order.get("unit_code") or "Unit",
-                "warehouse_code": allocation.get("warehouse_code") or "",
-                "warehouse_name": allocation.get("warehouse_name") or "",
-                "warehouse_bin": allocation.get("warehouse_bin") or "",
-                "barcode": allocation.get("barcode") or "",
-                "batch_number": allocation.get("batch_number") or "",
-                "manufacturing_date": allocation.get("manufacturing_date") or "",
-                "expiry_date": allocation.get("expiry_date") or "",
+                "warehouse_code": allocation.get("warehouse_code") or "", "warehouse_name": allocation.get("warehouse_name") or "", "warehouse_bin": allocation.get("warehouse_bin") or "",
+                "barcode": allocation.get("barcode") or "", "batch_number": allocation.get("batch_number") or "", "manufacturing_date": allocation.get("manufacturing_date") or "", "expiry_date": allocation.get("expiry_date") or "",
                 "movement_date": business_today().strftime("%Y-%m-%d"),
                 "reason": f"Dispatched to UFC {order.get('centre_uid') or ''} against order {order.get('order_number') or ''}.",
-                "posted_by": actor["_id"],
-                "posted_by_name": actor.get("resolved_name") or "",
-                "posted_at": timestamp,
-                "created_at": timestamp,
-            }},
-            upsert=True,
+                "posted_by": actor["_id"], "posted_by_name": actor.get("resolved_name") or "", "posted_at": timestamp, "created_at": timestamp,
+            }}, upsert=True,
         )
 
-    dispatch_quantity = sum(_decimal(a.get("quantity")) for a in allocations)
-    mongo.db[ORDER_COLLECTION].update_one(
-        {"_id": oid, "status": "approved", "stock_dispatched": {"$ne": True}},
-        {"$set": {
-            "status": "dispatched",
-            "stock_reserved": False,
-            "stock_dispatched": True,
-            "reserved_quantity": 0.0,
-            "dispatched_quantity": float(dispatch_quantity),
-            "dispatch_allocations": allocations,
-            "dispatch_note": _clean_text(dispatch_note, 1000),
-            "transporter_name": _clean_text(transporter, 120),
-            "vehicle_number": _clean_text(vehicle_number, 30).upper(),
-            "dispatched_by": actor["_id"],
-            "dispatched_by_name": actor.get("resolved_name") or "",
-            "dispatched_at": timestamp,
-            "updated_at": timestamp,
-        }},
-    )
-    _sync_legacy_product_quantity(order["accounting_entity_id"], order["source_product_id"])
-    _append_history(
-        oid,
-        action="dispatch_order",
-        actor=actor,
-        note=dispatch_note or "AVPL physically dispatched the reserved goods to UFC.",
-        from_status="approved",
-        to_status="dispatched",
-    )
-    _notify_user(
-        order.get("requested_by"),
-        "AVPL Order Dispatched",
-        f"Order {order.get('order_number')} has been dispatched. Confirm receipt after the goods physically arrive at your UFC.",
-        "ufc_admin",
-    )
+    items = _order_items(order)
+    dispatched_items = []
+    approved_line_ids = set()
+    for item in items:
+        line = dict(item)
+        approved = _decimal(line.get("approved_quantity"))
+        if approved > 0:
+            line["dispatched_quantity"] = float(approved)
+            line["reserved_quantity"] = 0.0
+            line["status"] = "dispatched"
+            approved_line_ids.add(str(line.get("line_id") or "legacy"))
+        dispatched_items.append(line)
+    primary = next((line for line in dispatched_items if _decimal(line.get("dispatched_quantity")) > 0), dispatched_items[0] if dispatched_items else {})
+    update = {
+        "status": "dispatched", "stock_reserved": False, "stock_dispatched": True,
+        "reservation_allocations": allocations, "dispatch_allocations": allocations,
+        "items": dispatched_items if order.get("items") else order.get("items"),
+        "dispatched_item_count": len(approved_line_ids),
+        "dispatch_note": _clean_text(dispatch_note, 1000), "transporter_name": _clean_text(transporter, 120), "vehicle_number": _clean_text(vehicle_number, 30).upper(),
+        "dispatched_by": actor["_id"], "dispatched_by_name": actor.get("resolved_name") or "", "dispatched_at": timestamp, "updated_at": timestamp,
+    }
+    if order.get("items"):
+        _copy_line_to_legacy_fields(update, primary)
+    else:
+        update["reserved_quantity"] = 0.0
+        update["dispatched_quantity"] = float(sum((_decimal(a.get("quantity")) for a in allocations), Decimal("0")))
+    mongo.db[ORDER_COLLECTION].update_one({"_id": oid, "status": "approved", "stock_dispatched": {"$ne": True}}, {"$set": update})
 
-    # Stage 5 financial documents are deliberately decoupled from physical stock.
-    # Dispatch must remain valid even if invoice numbering/accounting configuration
-    # temporarily needs repair. The financial sync is idempotent and can be retried.
-    financial_result = None
-    financial_warning = None
+    product_ids = {a.get("source_product_id") or order.get("source_product_id") for a in allocations}
+    for product_id in product_ids:
+        if product_id:
+            _sync_legacy_product_quantity(order["accounting_entity_id"], product_id)
+    _append_history(oid, action="dispatch_order", actor=actor, note=dispatch_note or "AVPL physically dispatched the reserved goods to UFC.", from_status="approved", to_status="dispatched")
+    _notify_user(order.get("requested_by"), "AVPL Order Dispatched", f"Order {order.get('order_number')} has been dispatched. Confirm receipt after the goods physically arrive at your UFC.", "ufc_admin")
+
+    financial_result = None; financial_warning = None
     try:
         from app.services.avpl_ufc_sales_service import ensure_sales_documents_for_order
         financial_result = ensure_sales_documents_for_order(actor["_id"], oid)
@@ -1002,203 +1329,240 @@ def dispatch_ufc_order(actor_user_id, order_id, dispatch_note="", transporter=""
             mark_sales_sync_error(oid, financial_warning)
         except Exception:
             pass
-
-    return {
-        "order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": oid})),
-        "financial": financial_result,
-        "financial_warning": financial_warning,
-        "message": "Order dispatched. AVPL physical stock has been reduced.",
-    }
+    return {"order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": oid})), "financial": financial_result, "financial_warning": financial_warning, "message": "Order dispatched. AVPL physical stock has been reduced line by line."}
 
 
 def _ufc_lot_key(centre_uid, product_id, allocation):
     batch = allocation.get("batch_number") or "NO-BATCH"
     expiry = allocation.get("expiry_date") or "NO-EXPIRY"
-    return ":".join([
-        str(centre_uid),
-        str(product_id),
-        str(batch),
-        str(expiry),
-    ])
+    return ":".join([str(centre_uid), str(product_id), str(batch), str(expiry)])
 
 
-def _apply_ufc_inventory(order, actor):
+def _accepted_dispatch_allocations(order, receipt_lines):
+    """Return dispatch-lot slices for accepted quantities only."""
+    accepted_by_line = {
+        str(line.get("line_id") or "legacy"): _decimal(line.get("accepted_quantity"))
+        for line in (receipt_lines or [])
+        if isinstance(line, dict) and line.get("receipt_applicable")
+    }
+    remaining = dict(accepted_by_line)
+    selected = []
     allocations = order.get("dispatch_allocations") or order.get("reservation_allocations") or []
+    for allocation in allocations:
+        line_id = str(allocation.get("line_id") or "legacy")
+        need = max(remaining.get(line_id, Decimal("0")), Decimal("0"))
+        if need <= 0:
+            continue
+        available = max(_decimal(allocation.get("quantity")), Decimal("0"))
+        take = min(need, available)
+        if take <= 0:
+            continue
+        row = dict(allocation)
+        row["quantity"] = float(take)
+        row["quantity_display"] = _qty(take)
+        selected.append(row)
+        remaining[line_id] = need - take
+    unresolved = {line_id: qty for line_id, qty in remaining.items() if qty > Decimal("0.0001")}
+    if unresolved:
+        raise RuntimeError("Accepted receipt quantity could not be matched to the dispatched AVPL stock lots. Refresh and try again.")
+    return selected
+
+
+def _apply_ufc_inventory(order, actor, receipt_lines=None):
+    receipt_lines = receipt_lines or normalize_receipt_lines(_order_items(order), None)
+    allocations = _accepted_dispatch_allocations(order, receipt_lines)
     timestamp = now_utc()
     for index, allocation in enumerate(allocations, start=1):
         quantity_value = float(_decimal(allocation.get("quantity")))
         if quantity_value <= 0:
             continue
-        receipt_key = f"AVPL-ORDER-RECEIPT:{order['_id']}:{allocation.get('inventory_lot_id') or index}"
-        lot_key = _ufc_lot_key(order.get("centre_uid"), order.get("source_product_id"), allocation)
+        product_id = allocation.get("source_product_id") or order.get("source_product_id")
+        product_name = allocation.get("product_name") or order.get("product_name") or "Product"
+        product_code = allocation.get("product_code") or order.get("product_code") or ""
+        category = allocation.get("category") or order.get("category") or ""
+        product_role = allocation.get("product_role") or order.get("product_role") or ""
+        unit_code = allocation.get("unit_code") or order.get("unit_code") or "Unit"
+        unit_price = _decimal(allocation.get("unit_price"))
+        if unit_price <= 0:
+            matched = next((x for x in _order_items(order) if str(x.get("line_id") or "legacy") == str(allocation.get("line_id") or "legacy")), {})
+            unit_price = _decimal(matched.get("unit_price") or order.get("unit_price"))
+        line_id = allocation.get("line_id") or "legacy"
+        receipt_key = f"AVPL-ORDER-RECEIPT:{order['_id']}:{line_id}:{allocation.get('inventory_lot_id') or index}"
+        lot_key = _ufc_lot_key(order.get("centre_uid"), product_id, allocation)
         existing = mongo.db[UFC_LOT_COLLECTION].find_one({"lot_key": lot_key})
         if existing:
             mongo.db[UFC_LOT_COLLECTION].update_one(
                 {"_id": existing["_id"], "applied_receipt_keys": {"$ne": receipt_key}},
-                {
-                    "$inc": {
-                        "received_quantity": quantity_value,
-                        "available_quantity": quantity_value,
-                        "purchase_cost_total": quantity_value * float(_decimal(order.get("unit_price"))),
-                    },
-                    "$addToSet": {
-                        "applied_receipt_keys": receipt_key,
-                        "source_order_ids": order["_id"],
-                        "source_order_numbers": order.get("order_number") or "",
-                    },
-                    "$set": {
-                        "last_purchase_price": float(_decimal(order.get("unit_price"))),
-                        "last_receipt_at": timestamp,
-                        "updated_at": timestamp,
-                    },
-                },
+                {"$inc": {"received_quantity": quantity_value, "available_quantity": quantity_value, "purchase_cost_total": quantity_value * float(unit_price)},
+                 "$addToSet": {"applied_receipt_keys": receipt_key, "source_order_ids": order["_id"], "source_order_numbers": order.get("order_number") or ""},
+                 "$set": {"last_purchase_price": float(unit_price), "last_receipt_at": timestamp, "updated_at": timestamp}},
             )
         else:
             mongo.db[UFC_LOT_COLLECTION].update_one(
                 {"lot_key": lot_key},
                 {"$setOnInsert": {
-                    "lot_key": lot_key,
-                    "centre_uid": order.get("centre_uid"),
-                    "centre_name": order.get("centre_name") or order.get("centre_uid"),
-                    "source_product_id": order.get("source_product_id"),
-                    "source_product_id_str": str(order.get("source_product_id") or ""),
-                    "product_code": order.get("product_code") or "",
-                    "product_name": order.get("product_name") or "Product",
-                    "category": order.get("category") or "",
-                    "product_role": order.get("product_role") or "",
-                    "unit_code": allocation.get("unit_code") or order.get("unit_code") or "Unit",
-                    "warehouse_code": f"{str(order.get('centre_uid') or 'UFC').upper()}-MAIN",
-                    "warehouse_name": f"{order.get('centre_name') or order.get('centre_uid') or 'UFC'} Main Stock",
-                    "source_avpl_warehouse_code": allocation.get("warehouse_code") or "",
-                    "barcode": allocation.get("barcode") or "",
-                    "batch_number": allocation.get("batch_number") or "",
-                    "manufacturing_date": allocation.get("manufacturing_date") or "",
-                    "expiry_date": allocation.get("expiry_date") or "",
-                    "received_quantity": quantity_value,
-                    "available_quantity": quantity_value,
-                    "reserved_quantity": 0.0,
-                    "damaged_quantity": 0.0,
-                    "blocked_quantity": 0.0,
-                    "issued_quantity": 0.0,
-                    "purchase_cost_total": quantity_value * float(_decimal(order.get("unit_price"))),
-                    "last_purchase_price": float(_decimal(order.get("unit_price"))),
-                    "status": "available",
-                    "applied_receipt_keys": [receipt_key],
-                    "source_order_ids": [order["_id"]],
-                    "source_order_numbers": [order.get("order_number") or ""],
-                    "created_by": actor["_id"],
-                    "created_at": timestamp,
-                    "last_receipt_at": timestamp,
-                    "updated_at": timestamp,
-                }},
-                upsert=True,
+                    "lot_key": lot_key, "centre_uid": order.get("centre_uid"), "centre_name": order.get("centre_name") or order.get("centre_uid"),
+                    "source_type": "avpl_purchase", "source_product_id": product_id, "source_product_id_str": str(product_id or ""),
+                    "product_name": product_name, "product_code": product_code, "category": category, "product_role": product_role,
+                    "unit_code": unit_code, "warehouse_code": f"{str(order.get('centre_uid') or 'UFC').upper()}-MAIN", "warehouse_name": f"{order.get('centre_name') or order.get('centre_uid')} Main Stock",
+                    "source_avpl_inventory_lot_id": allocation.get("inventory_lot_id"), "source_avpl_inventory_lot_id_str": str(allocation.get("inventory_lot_id") or ""),
+                    "batch_number": allocation.get("batch_number") or "", "manufacturing_date": allocation.get("manufacturing_date") or "", "expiry_date": allocation.get("expiry_date") or "",
+                    "received_quantity": quantity_value, "available_quantity": quantity_value, "reserved_quantity": 0.0, "damaged_quantity": 0.0, "blocked_quantity": 0.0, "issued_quantity": 0.0,
+                    "purchase_cost_total": quantity_value * float(unit_price), "last_purchase_price": float(unit_price), "status": "available",
+                    "applied_receipt_keys": [receipt_key], "source_order_ids": [order["_id"]], "source_order_numbers": [order.get("order_number") or ""],
+                    "created_by": actor["_id"], "created_at": timestamp, "last_receipt_at": timestamp, "updated_at": timestamp,
+                }}, upsert=True,
             )
 
-        movement_key = f"UFC-RECEIPT:{order['_id']}:{allocation.get('inventory_lot_id') or index}"
+        movement_key = f"UFC-RECEIPT:{order['_id']}:{line_id}:{allocation.get('inventory_lot_id') or index}"
         mongo.db[UFC_MOVEMENT_COLLECTION].update_one(
             {"source_posting_key": movement_key},
             {"$setOnInsert": {
-                "source_posting_key": movement_key,
-                "movement_uid": uuid4().hex,
-                "centre_uid": order.get("centre_uid"),
-                "centre_name": order.get("centre_name") or order.get("centre_uid"),
-                "source_document_type": "avpl_order_receipt",
-                "source_document_id": order["_id"],
-                "source_document_id_str": str(order["_id"]),
-                "source_document_number": order.get("order_number") or "",
-                "source_product_id": order.get("source_product_id"),
-                "source_product_id_str": str(order.get("source_product_id") or ""),
-                "product_code": order.get("product_code") or "",
-                "product_name": order.get("product_name") or "Product",
-                "movement_type": "purchase_receipt",
-                "direction": "in",
-                "quantity": quantity_value,
-                "quantity_display": _qty(quantity_value),
-                "unit_code": allocation.get("unit_code") or order.get("unit_code") or "Unit",
-                "warehouse_code": f"{str(order.get('centre_uid') or 'UFC').upper()}-MAIN",
-                "batch_number": allocation.get("batch_number") or "",
-                "manufacturing_date": allocation.get("manufacturing_date") or "",
-                "expiry_date": allocation.get("expiry_date") or "",
-                "movement_date": business_today().strftime("%Y-%m-%d"),
-                "reason": f"Received from AVPL against order {order.get('order_number') or ''}.",
-                "posted_by": actor["_id"],
-                "posted_by_name": actor.get("resolved_name") or "",
-                "posted_at": timestamp,
-                "created_at": timestamp,
-            }},
-            upsert=True,
+                "source_posting_key": movement_key, "movement_uid": uuid4().hex,
+                "centre_uid": order.get("centre_uid"), "centre_name": order.get("centre_name") or order.get("centre_uid"),
+                "source_document_type": "avpl_order_receipt", "source_document_id": order["_id"], "source_document_id_str": str(order["_id"]), "source_document_number": order.get("order_number") or "",
+                "line_id": line_id, "source_product_id": product_id, "source_product_id_str": str(product_id or ""), "product_code": product_code, "product_name": product_name,
+                "movement_type": "purchase_receipt", "direction": "in", "quantity": quantity_value, "quantity_display": _qty(quantity_value), "unit_code": unit_code,
+                "warehouse_code": f"{str(order.get('centre_uid') or 'UFC').upper()}-MAIN", "batch_number": allocation.get("batch_number") or "", "manufacturing_date": allocation.get("manufacturing_date") or "", "expiry_date": allocation.get("expiry_date") or "",
+                "movement_date": business_today().strftime("%Y-%m-%d"), "reason": f"Accepted from AVPL against order {order.get('order_number') or ''}.",
+                "posted_by": actor["_id"], "posted_by_name": actor.get("resolved_name") or "", "posted_at": timestamp, "created_at": timestamp,
+            }}, upsert=True,
         )
 
+def _accepted_avpl_invoice_lines(order, invoice, receipt_lines):
+    invoice_lines = (invoice or {}).get("items") or []
+    invoice_by_line = {str(x.get("line_id") or "legacy"): x for x in invoice_lines if isinstance(x, dict)}
+    order_by_line = {str(x.get("line_id") or "legacy"): x for x in _order_items(order)}
+    rows = []
+    totals = {"taxable_value": Decimal("0"), "cgst_amount": Decimal("0"), "sgst_amount": Decimal("0"), "igst_amount": Decimal("0"), "gst_amount": Decimal("0"), "grand_total": Decimal("0")}
+    for receipt in receipt_lines or []:
+        if not isinstance(receipt, dict) or not receipt.get("receipt_applicable"):
+            continue
+        accepted = _decimal(receipt.get("accepted_quantity"))
+        if accepted <= 0:
+            continue
+        line_id = str(receipt.get("line_id") or "legacy")
+        source = order_by_line.get(line_id, receipt)
+        dispatched = _decimal(receipt.get("dispatched_quantity_for_receipt") or source.get("dispatched_quantity") or source.get("approved_quantity"))
+        inv_line = invoice_by_line.get(line_id, {})
+        price = _decimal(source.get("unit_price"))
+        taxable = proportional_amount(inv_line.get("taxable_value", dispatched * price), accepted, dispatched)
+        cgst = proportional_amount(inv_line.get("cgst_amount"), accepted, dispatched)
+        sgst = proportional_amount(inv_line.get("sgst_amount"), accepted, dispatched)
+        igst = proportional_amount(inv_line.get("igst_amount"), accepted, dispatched)
+        gst = proportional_amount(inv_line.get("gst_amount", cgst + sgst + igst), accepted, dispatched)
+        grand = proportional_amount(inv_line.get("grand_total", taxable + gst), accepted, dispatched)
+        if grand <= 0:
+            grand = (taxable + cgst + sgst + igst).quantize(Decimal("0.01"))
+        totals["taxable_value"] += taxable; totals["cgst_amount"] += cgst; totals["sgst_amount"] += sgst; totals["igst_amount"] += igst; totals["gst_amount"] += gst; totals["grand_total"] += grand
+        rows.append({
+            "line_id": line_id,
+            "source_product_id": source.get("source_product_id"), "source_product_id_str": str(source.get("source_product_id") or ""),
+            "product_name": source.get("product_name") or "Product", "product_code": source.get("product_code") or "", "category": source.get("category") or "", "product_role": source.get("product_role") or "",
+            "quantity": float(accepted), "accepted_quantity": float(accepted), "quantity_display": _qty(accepted), "unit_code": source.get("unit_code") or "Unit",
+            "unit_price": float(price), "unit_price_display": _money(price),
+            "taxable_value": float(taxable), "hsn_code": inv_line.get("hsn_code") or "", "taxability_code": inv_line.get("taxability_code") or "",
+            "gst_rate": float(_decimal(inv_line.get("gst_rate"))), "cgst_amount": float(cgst), "sgst_amount": float(sgst), "igst_amount": float(igst), "gst_amount": float(gst),
+            "line_total": float(grand), "line_total_display": _money(grand),
+        })
+    return rows, {key: value.quantize(Decimal("0.01")) for key, value in totals.items()}
 
-def _create_ufc_purchase_entry(order, actor):
+
+def _apply_avpl_receipt_settlement(order, receipt_lines, receipt_summary):
+    try:
+        from app.services.avpl_ufc_sales_service import (
+            INVOICE_COLLECTION, RECEIVABLE_COLLECTION, SALE_COLLECTION, UFC_PAYABLE_COLLECTION,
+        )
+    except Exception:
+        return None
+    invoice = mongo.db[INVOICE_COLLECTION].find_one({"avpl_ufc_order_id": order["_id"]})
+    if not invoice:
+        return None
+    accepted_lines, totals = _accepted_avpl_invoice_lines(order, invoice, receipt_lines)
+    original_total = _decimal(invoice.get("grand_total"))
+    settlement_total = totals["grand_total"]
+    paid = max(_decimal(invoice.get("amount_paid") if invoice.get("amount_paid") is not None else invoice.get("paid_amount")), Decimal("0"))
+    outstanding = max(settlement_total - paid, Decimal("0"))
+    status = "paid" if outstanding <= Decimal("0.004") else ("partially_paid" if paid > Decimal("0.004") else "unpaid")
+    adjustment = max(original_total - settlement_total, Decimal("0"))
+    common = {
+        "settlement_total": float(settlement_total),
+        "accepted_goods_total": float(settlement_total),
+        "receipt_adjustment_amount": float(adjustment),
+        "receipt_status": receipt_summary.get("receipt_status") or "full",
+        "receipt_lines": accepted_lines,
+        "payment_status": status,
+        "amount_paid": float(min(paid, settlement_total) if settlement_total >= 0 else paid),
+        "outstanding_amount": float(outstanding),
+        "updated_at": now_utc(),
+    }
+    mongo.db[INVOICE_COLLECTION].update_one({"_id": invoice["_id"]}, {"$set": {**common, "receipt_finalized": True}})
+    sale_id = invoice.get("avpl_ufc_sale_id")
+    if sale_id:
+        mongo.db[SALE_COLLECTION].update_one({"_id": sale_id}, {"$set": {**common, "status": "received"}})
+    mongo.db[RECEIVABLE_COLLECTION].update_one({"avpl_ufc_order_id": order["_id"]}, {"$set": {**common, "amount": float(settlement_total), "status": "closed" if status == "paid" else "open"}})
+    mongo.db[UFC_PAYABLE_COLLECTION].update_one({"avpl_ufc_order_id": order["_id"]}, {"$set": {**common, "amount": float(settlement_total), "status": "closed" if status == "paid" else "open"}})
+    return mongo.db[INVOICE_COLLECTION].find_one({"_id": invoice["_id"]})
+
+
+def _create_ufc_purchase_entry(order, actor, receipt_lines=None):
     existing = mongo.db[UFC_PURCHASE_COLLECTION].find_one({"avpl_ufc_order_id": order["_id"]})
     if existing:
         return existing
     timestamp = now_utc()
-    quantity_value = _decimal(order.get("dispatched_quantity") or order.get("approved_quantity"))
-    price = _decimal(order.get("unit_price"))
-    total = quantity_value * price
     invoice = None
     try:
         from app.services.avpl_ufc_sales_service import INVOICE_COLLECTION
         invoice = mongo.db[INVOICE_COLLECTION].find_one({"avpl_ufc_order_id": order["_id"]})
-        if invoice:
-            total = _decimal(invoice.get("grand_total"), str(total))
     except Exception:
         invoice = None
+
+    receipt_lines = receipt_lines or normalize_receipt_lines(_order_items(order), None)
+    purchase_items, accepted_totals = _accepted_avpl_invoice_lines(order, invoice, receipt_lines)
+    if not purchase_items:
+        # A fully missing/rejected receipt is still a valid goods-receipt event;
+        # keep a zero-value purchase record for audit and settlement clarity.
+        for line in receipt_lines:
+            if not line.get("receipt_applicable"):
+                continue
+            purchase_items.append({
+                "line_id": line.get("line_id") or "legacy", "source_product_id": line.get("source_product_id"), "source_product_id_str": str(line.get("source_product_id") or ""),
+                "product_name": line.get("product_name") or "Product", "product_code": line.get("product_code") or "", "category": line.get("category") or "", "product_role": line.get("product_role") or "",
+                "quantity": 0.0, "accepted_quantity": 0.0, "quantity_display": "0", "unit_code": line.get("unit_code") or "Unit", "unit_price": float(_decimal(line.get("unit_price"))), "unit_price_display": _money(line.get("unit_price")),
+                "taxable_value": 0.0, "gst_rate": 0.0, "cgst_amount": 0.0, "sgst_amount": 0.0, "igst_amount": 0.0, "gst_amount": 0.0, "line_total": 0.0, "line_total_display": "0.00",
+            })
+    total = accepted_totals["grand_total"]
+    original_total = _decimal((invoice or {}).get("grand_total"), str(total))
+    primary = next((x for x in purchase_items if _decimal(x.get("accepted_quantity") if x.get("accepted_quantity") is not None else x.get("quantity")) > 0), purchase_items[0] if purchase_items else _primary_item(order))
+    summary = summarize_receipt(receipt_lines)
     document = {
         "purchase_number": _next_purchase_number(order.get("centre_uid")),
-        "centre_uid": order.get("centre_uid"),
-        "centre_name": order.get("centre_name") or order.get("centre_uid"),
-        "seller_type": "avpl",
-        "seller_name": "AVPL",
-        "avpl_ufc_order_id": order["_id"],
-        "avpl_ufc_order_id_str": str(order["_id"]),
-        "avpl_order_number": order.get("order_number") or "",
-        "source_product_id": order.get("source_product_id"),
-        "source_product_id_str": str(order.get("source_product_id") or ""),
-        "product_name": order.get("product_name") or "Product",
-        "product_code": order.get("product_code") or "",
-        "category": order.get("category") or "",
-        "product_role": order.get("product_role") or "",
-        "quantity": float(quantity_value),
-        "quantity_display": _qty(quantity_value),
-        "unit_code": order.get("unit_code") or "Unit",
-        "unit_price": float(price),
-        "unit_price_display": _money(price),
-        "total_amount": float(total),
-        "total_amount_display": _money(total),
-        "avpl_sales_invoice_id": (invoice or {}).get("_id"),
-        "avpl_sales_invoice_id_str": str((invoice or {}).get("_id") or ""),
-        "avpl_sales_invoice_number": (invoice or {}).get("invoice_number") or "",
-        "invoice_date": (invoice or {}).get("invoice_date"),
-        "due_date": (invoice or {}).get("due_date"),
-        "hsn_code": (invoice or {}).get("hsn_code") or "",
-        "taxability_code": (invoice or {}).get("taxability_code") or "",
-        "taxable_value": float(_decimal((invoice or {}).get("taxable_value"))),
-        "gst_rate": float(_decimal((invoice or {}).get("gst_rate"))),
-        "cgst_amount": float(_decimal((invoice or {}).get("cgst_amount"))),
-        "sgst_amount": float(_decimal((invoice or {}).get("sgst_amount"))),
-        "igst_amount": float(_decimal((invoice or {}).get("igst_amount"))),
-        "gst_amount": float(_decimal((invoice or {}).get("gst_amount"))),
-        "purchase_date": timestamp,
-        "status": "received",
-        "accounting_status": "not_posted",
-        "payment_status": "unpaid" if invoice else "not_recorded",
-        "amount_paid": 0.0,
-        "outstanding_amount": float(total),
+        "centre_uid": order.get("centre_uid"), "centre_name": order.get("centre_name") or order.get("centre_uid"),
+        "seller_type": "avpl", "seller_name": "AVPL",
+        "avpl_ufc_order_id": order["_id"], "avpl_ufc_order_id_str": str(order["_id"]), "avpl_order_number": order.get("order_number") or "",
+        "commerce_version": 2 if order.get("items") else 1, "items": purchase_items, "item_count": len(purchase_items) or 1,
+        "source_product_id": primary.get("source_product_id"), "source_product_id_str": str(primary.get("source_product_id") or ""),
+        "product_name": primary.get("product_name") or "Product", "product_code": primary.get("product_code") or "", "category": primary.get("category") or "", "product_role": primary.get("product_role") or "",
+        "quantity": float(_decimal(primary.get("accepted_quantity") if primary.get("accepted_quantity") is not None else primary.get("quantity"))),
+        "quantity_display": _qty(primary.get("accepted_quantity") if primary.get("accepted_quantity") is not None else primary.get("quantity")),
+        "unit_code": primary.get("unit_code") or "Unit", "unit_price": float(_decimal(primary.get("unit_price"))), "unit_price_display": _money(primary.get("unit_price")),
+        "original_invoice_total": float(original_total), "total_amount": float(total), "total_amount_display": _money(total),
+        "receipt_adjustment_amount": float(max(original_total-total, Decimal("0"))), "receipt_status": summary.get("receipt_status"), "receipt_lines": receipt_lines,
+        "avpl_sales_invoice_id": (invoice or {}).get("_id"), "avpl_sales_invoice_id_str": str((invoice or {}).get("_id") or ""), "avpl_sales_invoice_number": (invoice or {}).get("invoice_number") or "",
+        "invoice_date": (invoice or {}).get("invoice_date"), "due_date": (invoice or {}).get("due_date"),
+        "hsn_code": (invoice or {}).get("hsn_code") or "", "taxability_code": (invoice or {}).get("taxability_code") or "",
+        "taxable_value": float(accepted_totals["taxable_value"]), "gst_rate": float(_decimal((invoice or {}).get("gst_rate"))),
+        "cgst_amount": float(accepted_totals["cgst_amount"]), "sgst_amount": float(accepted_totals["sgst_amount"]), "igst_amount": float(accepted_totals["igst_amount"]), "gst_amount": float(accepted_totals["gst_amount"]),
+        "purchase_date": timestamp, "status": "received", "accounting_status": "not_posted",
+        "payment_status": "unpaid" if total > 0 else "paid", "amount_paid": 0.0, "outstanding_amount": float(total),
         "financial_link_status": "linked" if invoice else "awaiting_avpl_invoice",
-        "received_by": actor["_id"],
-        "received_by_name": actor.get("resolved_name") or "",
-        "created_at": timestamp,
-        "updated_at": timestamp,
+        "received_by": actor["_id"], "received_by_name": actor.get("resolved_name") or "", "created_at": timestamp, "updated_at": timestamp,
     }
     result = mongo.db[UFC_PURCHASE_COLLECTION].insert_one(document)
     document["_id"] = result.inserted_id
     return document
 
-
-def receive_ufc_order(actor_user_id, centre_uid_hint, order_id, receipt_note=""):
+def receive_ufc_order(actor_user_id, centre_uid_hint, order_id, receipt_note="", receipt_lines=None):
     _ensure_indexes()
     actor, centre_uid, centre_name = _get_ufc_actor(actor_user_id, centre_uid_hint)
     oid = _to_object_id(order_id)
@@ -1209,67 +1573,67 @@ def receive_ufc_order(actor_user_id, centre_uid_hint, order_id, receipt_note="")
         raise ValueError("This AVPL order does not belong to your UFC Centre.")
     if order.get("status") == "received" and order.get("ufc_stock_posted") is True:
         purchase = mongo.db[UFC_PURCHASE_COLLECTION].find_one({"avpl_ufc_order_id": oid})
-        return {
-            "order": _serialize_order(order),
-            "purchase": purchase,
-            "message": "This order was already received and added to UFC stock.",
-        }
+        return {"order": _serialize_order(order), "purchase": purchase, "message": "This receipt is already confirmed. Stock and payable were not changed again."}
     if order.get("status") != "dispatched" or order.get("stock_dispatched") is not True:
         raise ValueError("Only a physically dispatched AVPL order can be received.")
 
-    # Both operations are idempotent. If a local server stops midway, pressing
-    # Confirm Receipt again safely finishes the missing pieces without double stock.
-    _apply_ufc_inventory(order, actor)
-    purchase = _create_ufc_purchase_entry(order, actor)
-    try:
-        from app.services.avpl_ufc_sales_service import link_ufc_purchase_financials
-        purchase = link_ufc_purchase_financials(oid) or purchase
-    except Exception:
-        # Receipt/stock is the physical source of truth and must not be rolled back
-        # by a recoverable financial-linking problem.
-        pass
-    received_qty = _decimal(order.get("dispatched_quantity") or order.get("approved_quantity"))
+    receipt_items = normalize_receipt_lines(
+        _order_items(order), receipt_lines,
+        dispatched_fields=("dispatched_quantity", "approved_quantity"),
+        price_field="unit_price",
+        line_total_field="line_total",
+        allow_legacy_full_receipt=True,
+    )
+    summary = summarize_receipt(receipt_items)
+
+    # Stock is created strictly from buyer-accepted quantities. Missing, damaged
+    # and rejected quantities never enter UFC saleable stock.
+    _apply_ufc_inventory(order, actor, receipt_items)
+    purchase = _create_ufc_purchase_entry(order, actor, receipt_items)
+    adjusted_invoice = _apply_avpl_receipt_settlement(order, receipt_items, summary)
+
+    updated_items = []
+    for line in receipt_items:
+        row = dict(line)
+        if row.get("receipt_applicable"):
+            row["status"] = "received" if _decimal(row.get("discrepancy_quantity")) <= Decimal("0.0001") else "received_with_discrepancy"
+        updated_items.append(row)
+    primary = next((line for line in updated_items if line.get("receipt_applicable")), updated_items[0] if updated_items else {})
     timestamp = now_utc()
-    mongo.db[ORDER_COLLECTION].update_one(
-        {"_id": oid, "centre_uid": centre_uid, "status": "dispatched"},
-        {"$set": {
-            "status": "received",
-            "received_quantity": float(received_qty),
-            "ufc_stock_posted": True,
-            "purchase_entry_created": True,
-            "ufc_purchase_entry_id": purchase.get("_id"),
-            "ufc_purchase_number": purchase.get("purchase_number") or "",
-            "receipt_note": _clean_text(receipt_note, 1000),
-            "received_by": actor["_id"],
-            "received_by_name": actor.get("resolved_name") or centre_name,
-            "received_at": timestamp,
-            "updated_at": timestamp,
-        }},
-    )
+    settlement_total = _decimal((adjusted_invoice or {}).get("settlement_total"), str(purchase.get("total_amount") or 0))
+    original_total = _decimal((adjusted_invoice or {}).get("grand_total"), str(order.get("invoice_grand_total") or order.get("total_amount") or settlement_total))
+    update = {
+        "status": "received", "receipt_status": summary.get("receipt_status"), "receipt_finalized": True,
+        "ufc_stock_posted": True, "purchase_entry_created": True,
+        "ufc_purchase_entry_id": purchase.get("_id"), "ufc_purchase_number": purchase.get("purchase_number") or "",
+        "items": updated_items if order.get("items") else order.get("items"),
+        "received_item_count": summary.get("received_item_count"), "accepted_item_count": summary.get("accepted_item_count"), "discrepancy_item_count": summary.get("discrepancy_item_count"),
+        "accepted_goods_total": float(settlement_total), "settlement_total": float(settlement_total), "receipt_adjustment_amount": float(max(original_total-settlement_total, Decimal("0"))),
+        "receipt_note": _clean_text(receipt_note, 1000), "received_by": actor["_id"], "received_by_name": actor.get("resolved_name") or centre_name,
+        "received_at": timestamp, "updated_at": timestamp,
+    }
+    if order.get("items"):
+        _copy_line_to_legacy_fields(update, primary)
+    else:
+        update["received_quantity"] = float(_decimal(primary.get("physically_received_quantity")))
+        update["accepted_quantity"] = float(_decimal(primary.get("accepted_quantity")))
+        update["damaged_quantity"] = float(_decimal(primary.get("damaged_quantity")))
+        update["rejected_quantity"] = float(_decimal(primary.get("rejected_quantity")))
+        update["missing_quantity"] = float(_decimal(primary.get("missing_quantity")))
+    mongo.db[ORDER_COLLECTION].update_one({"_id": oid, "centre_uid": centre_uid, "status": "dispatched"}, {"$set": update})
     try:
         from app.services.avpl_ufc_sales_service import link_ufc_purchase_financials
         purchase = link_ufc_purchase_financials(oid) or purchase
     except Exception:
         pass
 
-    _append_history(
-        oid,
-        action="receive_order",
-        actor=actor,
-        note=receipt_note or "UFC confirmed physical receipt; purchase entry and UFC stock were created.",
-        from_status="dispatched",
-        to_status="received",
-    )
-    _notify_avpl_admins(
-        "UFC Confirmed Receipt",
-        f"{centre_name} ({centre_uid}) received order {order.get('order_number')} - {_qty(received_qty)} {order.get('unit_code') or 'units'} of {order.get('product_name')}.",
-    )
-    return {
-        "order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": oid})),
-        "purchase": purchase,
-        "message": "Goods received. UFC purchase entry and UFC stock were created successfully.",
-    }
-
+    note = receipt_note or ("UFC accepted all dispatched goods." if summary.get("receipt_status") == "full" else f"UFC receipt recorded with {summary.get('discrepancy_item_count')} discrepant product line(s).")
+    _append_history(oid, action="receive_order", actor=actor, note=note, from_status="dispatched", to_status="received")
+    _notify_avpl_admins("UFC Confirmed Receipt", f"{centre_name} ({centre_uid}) received order {order.get('order_number')}. Accepted payable value: ₹{_money(settlement_total)}.")
+    message = "Goods received. Accepted quantities were added to UFC stock and are now payable."
+    if summary.get("receipt_status") == "discrepancy":
+        message = f"Receipt saved with discrepancy. Only accepted goods worth ₹{_money(settlement_total)} are payable; missing/damaged/rejected goods were excluded."
+    return {"order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": oid})), "purchase": purchase, "message": message}
 
 def get_order(order_id, *, centre_uid=None):
     oid = _to_object_id(order_id)
@@ -1295,7 +1659,9 @@ def _order_search_query(search):
         {"centre_uid": {"$regex": escaped, "$options": "i"}},
         {"centre_name": {"$regex": escaped, "$options": "i"}},
         {"product_name": {"$regex": escaped, "$options": "i"}},
+        {"items.product_name": {"$regex": escaped, "$options": "i"}},
         {"product_code": {"$regex": escaped, "$options": "i"}},
+        {"items.product_code": {"$regex": escaped, "$options": "i"}},
     ]}
 
 
@@ -1467,11 +1833,24 @@ def get_ufc_purchase_overview(actor_user_id, centre_uid_hint, *, search=""):
             {"avpl_order_number": {"$regex": escaped, "$options": "i"}},
             {"avpl_sales_invoice_number": {"$regex": escaped, "$options": "i"}},
             {"product_name": {"$regex": escaped, "$options": "i"}},
+            {"items.product_name": {"$regex": escaped, "$options": "i"}},
         ]
     rows = []
     total_value = Decimal("0")
     for item in mongo.db[UFC_PURCHASE_COLLECTION].find(query).sort("purchase_date", DESCENDING):
         total_value += _decimal(item.get("total_amount"))
+        serialized_items = []
+        for source in item.get("items") or []:
+            if not isinstance(source, dict):
+                continue
+            line = dict(source)
+            line["quantity_display"] = _qty(line.get("quantity") if line.get("quantity") is not None else line.get("received_quantity"))
+            line["unit_price_display"] = _money(line.get("unit_price"))
+            line["taxable_value_display"] = _money(line.get("taxable_value"))
+            line["gst_amount_display"] = _money(line.get("gst_amount"))
+            line["line_total_display"] = _money(line.get("line_total") if line.get("line_total") is not None else line.get("grand_total"))
+            serialized_items.append(line)
+        item_count = len(serialized_items) or int(item.get("item_count") or 1)
         rows.append({
             **item,
             "id": str(item.get("_id") or ""),
@@ -1484,6 +1863,10 @@ def get_ufc_purchase_overview(actor_user_id, centre_uid_hint, *, search=""):
             "total_amount_display": item.get("total_amount_display") or _money(item.get("total_amount")),
             "amount_paid_display": _money(item.get("amount_paid")),
             "outstanding_amount_display": _money(item.get("outstanding_amount")),
+            "items": serialized_items,
+            "item_count": item_count,
+            "is_multi_item_order": item_count > 1,
+            "product_summary": (serialized_items[0].get("product_name") if len(serialized_items) == 1 else (f"{item_count} products" if item_count > 1 else item.get("product_name") or "Product")),
         })
     return {
         "rows": rows,

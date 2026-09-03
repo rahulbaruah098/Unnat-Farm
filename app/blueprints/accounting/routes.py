@@ -81,6 +81,7 @@ from app.services.accounting_hsn_service import (
     withdraw_hsn_master,
 )
 from app.services.accounting_product_mapping_service import (
+    activate_product_mapping,
     approve_product_mapping,
     cancel_product_mapping,
     create_product_mapping,
@@ -1149,6 +1150,7 @@ def dashboard():
         "total_mapping_count": 0,
         "active_operational_product_count": 0,
         "active_mapped_product_count": 0,
+        "needs_activation_count": 0,
         "unmapped_active_product_count": 0,
         "audit_recovery_count": 0,
         "options": get_product_mapping_option_catalog(),
@@ -2794,6 +2796,20 @@ def product_mapping_edit(mapping_id):
             mapping_id, session["user_id"], request.form.get("version"), request.form
         ),
         streamline_kind="product_mapping",
+    )
+
+
+@accounting_bp.route("/product-mappings/<mapping_id>/activate", methods=["POST"])
+@login_required
+@roles_required("accounts", "avpl_admin", "super_admin")
+def product_mapping_activate(mapping_id):
+    return _run_product_mapping_action(
+        lambda: activate_product_mapping(
+            mapping_id,
+            session["user_id"],
+            request.form.get("version"),
+            request.form.get("note"),
+        )
     )
 
 

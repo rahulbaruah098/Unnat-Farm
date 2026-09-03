@@ -1,5 +1,65 @@
-{% extends 'base.html' %}{% block title %}System Health | UnnatFarm MIS{% endblock %}{% block extra_head %}{% include 'reports/_styles.html' %}{% endblock %}{% block content %}
-<div class="s10-shell"><section class="s10-hero"><div><h1>System Health & Go-Live Readiness</h1><p>A read-only operational health screen for the final database-reset test and production hardening.</p></div><span class="s10-badge">Health {{ report.summary.score }}%</span></section>{% include 'reports/_tabs.html' %}
-<div class="s10-grid"><div class="s10-card"><small>Health Score</small><strong>{{ report.summary.score }}%</strong><div class="s10-progress" style="margin-top:10px"><span style="width:{{ report.summary.score }}%"></span></div></div><div class="s10-card"><small>Checks Healthy</small><strong>{{ report.summary.healthy }}/{{ report.summary.total }}</strong></div><div class="s10-card"><small>Needs Attention</small><strong>{{ report.summary.attention }}</strong></div><div class="s10-card"><small>Critical Blockers</small><strong>{{ report.summary.critical }}</strong></div><div class="s10-card"><small>Reconciliation Critical</small><strong>{{ report.reconciliation.summary.critical }}</strong></div><div class="s10-card"><small>Orphan Payments</small><strong>{{ report.reconciliation.summary.orphan_payments }}</strong></div></div>
-<section class="s10-section"><div class="s10-section-head"><div><h2>Readiness Checks</h2><p>Critical red checks should be resolved before final go-live.</p></div><a class="s10-btn secondary s10-no-print" href="{{ url_for('reports.api_health') }}">JSON Health API</a></div>{% for c in report.checks %}<div class="s10-health {{ '' if c.ok else 'attn' }}"><div class="s10-health-icon">{{ '✓' if c.ok else '!' }}</div><div><strong>{{ c.name }}</strong><div style="color:#6c7e74;font-size:.84rem;margin-top:3px">{{ c.detail }}</div></div><span class="s10-pill {{ 'good' if c.ok else ('bad' if c.severity=='critical' else 'warn') }}">{{ 'Healthy' if c.ok else 'Attention' }}</span></div>{% endfor %}</section>
-<section class="s10-section"><div class="s10-section-head"><div><h2>Latest Reconciliation Summary</h2></div><a class="s10-btn secondary" href="{{ url_for('reports.reconciliation') }}">Open Reconciliation</a></div><div class="s10-grid" style="padding:16px;margin:0"><div class="s10-card"><small>Issues</small><strong>{{ report.reconciliation.summary.issues }}</strong></div><div class="s10-card"><small>Critical</small><strong>{{ report.reconciliation.summary.critical }}</strong></div><div class="s10-card"><small>Warnings</small><strong>{{ report.reconciliation.summary.warnings }}</strong></div><div class="s10-card"><small>Chains</small><strong>{{ report.reconciliation.summary.transaction_chains_checked }}</strong></div></div></section></div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}System Health | UnnatFarm MIS{% endblock %}
+{% block extra_head %}
+{% include 'reports/_styles.html' %}
+<style>
+.sh-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}.sh-status{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.sh-check{display:grid;grid-template-columns:42px minmax(170px,.75fr) minmax(100px,.35fr) 1.5fr auto;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid #edf2ee}.sh-check:last-child{border-bottom:0}.sh-check-icon{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;background:#dcfce7;color:#166534}.sh-check.attn .sh-check-icon{background:#fef3c7;color:#92400e}.sh-check.critical .sh-check-icon{background:#fee2e2;color:#991b1b}.sh-category{font-size:.75rem;font-weight:850;color:#708178;text-transform:uppercase;letter-spacing:.35px}.sh-detail{color:#52665c;font-size:.84rem;line-height:1.45}.sh-action{margin-top:5px;color:#315c45;font-size:.8rem;font-weight:750}.sh-score-note{font-size:.78rem;color:#73827a;margin-top:7px}
+@media(max-width:960px){.sh-check{grid-template-columns:42px 1fr}.sh-check .sh-category,.sh-check .sh-detail,.sh-check .sh-pill{grid-column:2}}@media(max-width:650px){.sh-actions{justify-content:flex-start}.sh-check{grid-template-columns:1fr}.sh-check .sh-category,.sh-check .sh-detail,.sh-check .sh-pill{grid-column:auto}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="s10-shell">
+  {% set critical = report.summary.critical|int %}
+  {% set attention = report.summary.attention|int %}
+  {% set state = 'Critical' if critical else ('Attention Required' if attention else 'Healthy') %}
+  {% set state_class = 'bad' if critical else ('warn' if attention else 'good') %}
+
+  <section class="s10-hero">
+    <div>
+      <div class="sh-status"><h1>System Health</h1><span class="s10-pill {{ state_class }}">{{ state }}</span></div>
+      <p>One place to see business-logic, accounting, stock and payment checks across UnnatFarm.</p>
+    </div>
+    <div class="sh-actions s10-no-print">
+      <a class="s10-btn secondary" href="{{ url_for('reports.reconciliation') }}">Reconciliation</a>
+      <a class="s10-btn secondary" href="{{ url_for('reports.control_export', report_name='system-health', file_type='xlsx') }}">Excel</a>
+      <a class="s10-btn" href="{{ url_for('reports.control_export', report_name='system-health', file_type='pdf') }}">PDF</a>
+    </div>
+  </section>
+
+  {% include 'reports/_tabs.html' %}
+
+  <div class="s10-grid">
+    <div class="s10-card"><small>Health Score</small><strong>{{ report.summary.score }}%</strong><div class="s10-progress" style="margin-top:10px"><span style="width:{{ report.summary.score }}%"></span></div><div class="sh-score-note">{{ state }}</div></div>
+    <div class="s10-card"><small>Healthy Checks</small><strong>{{ report.summary.healthy }}/{{ report.summary.total }}</strong><div class="sub">Passing now</div></div>
+    <div class="s10-card"><small>Needs Attention</small><strong>{{ report.summary.attention }}</strong><div class="sub">Review recommended</div></div>
+    <div class="s10-card"><small>Critical Blockers</small><strong>{{ report.summary.critical }}</strong><div class="sub">Resolve before go-live</div></div>
+    <div class="s10-card"><small>Reconciliation Issues</small><strong>{{ report.reconciliation.summary.issues }}</strong><div class="sub">Across linked records</div></div>
+    <div class="s10-card"><small>Reconciliation Critical</small><strong>{{ report.reconciliation.summary.critical }}</strong><div class="sub">High-impact mismatches</div></div>
+    <div class="s10-card"><small>Orphan Payments</small><strong>{{ report.reconciliation.summary.orphan_payments }}</strong><div class="sub">Missing valid source link</div></div>
+  </div>
+
+  <section class="s10-section">
+    <div class="s10-section-head"><div><h2>Health Checks</h2><p>Open only the checks that need action. Healthy checks require no work.</p></div><a class="s10-btn secondary s10-no-print" href="{{ url_for('reports.api_health') }}">Health API</a></div>
+    {% for c in report.checks %}
+      <div class="sh-check {{ '' if c.ok else ('critical' if c.severity=='critical' else 'attn') }}">
+        <div class="sh-check-icon">{{ '✓' if c.ok else '!' }}</div>
+        <strong>{{ c.name }}</strong>
+        <div class="sh-category">{{ c.category or 'System' }}</div>
+        <div class="sh-detail">{{ c.detail }}{% if not c.ok and c.recommended_action %}<div class="sh-action">Next: {{ c.recommended_action }}</div>{% endif %}</div>
+        <span class="s10-pill sh-pill {{ 'good' if c.ok else ('bad' if c.severity=='critical' else 'warn') }}">{{ 'Healthy' if c.ok else ('Critical' if c.severity=='critical' else 'Attention') }}</span>
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="s10-section">
+    <div class="s10-section-head"><div><h2>Latest Reconciliation</h2><p>Quick view of linked stock and financial consistency.</p></div><a class="s10-btn secondary" href="{{ url_for('reports.reconciliation') }}">Review Issues</a></div>
+    <div class="s10-grid" style="padding:16px;margin:0">
+      <div class="s10-card"><small>Issues</small><strong>{{ report.reconciliation.summary.issues }}</strong></div>
+      <div class="s10-card"><small>Critical</small><strong>{{ report.reconciliation.summary.critical }}</strong></div>
+      <div class="s10-card"><small>Warnings</small><strong>{{ report.reconciliation.summary.warnings }}</strong></div>
+      <div class="s10-card"><small>Chains Checked</small><strong>{{ report.reconciliation.summary.transaction_chains_checked }}</strong></div>
+    </div>
+  </section>
+</div>
+{% endblock %}

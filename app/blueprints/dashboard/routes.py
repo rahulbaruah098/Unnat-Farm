@@ -10,9 +10,12 @@ from app.services.dashboard_service import (
     get_centre_dashboard,
     get_mitra_dashboard,
     get_farmer_dashboard,
+    get_simple_ufc_dashboard,
+    get_simple_farmer_dashboard,
 )
 from app.services.ufc_farmer_marketplace_service import get_farmer_marketplace
 from app.services.avpl_accounts_operations_service import get_accounts_dashboard_overview
+from app.services.management_dashboard_service import get_management_dashboard
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -639,33 +642,32 @@ def home():
         return render_template("dashboard/super_admin.html", stats=get_system_overview())
 
     if role == "avpl_admin":
-        return render_template("dashboard/avpl_admin.html", stats=get_system_overview())
+        try:
+            data = get_management_dashboard(session.get("user_id"), "avpl_admin")
+        except Exception as exc:
+            current_app.logger.exception("AVPL management dashboard unavailable: %s", exc)
+            data = {
+                "role": "avpl_admin", "title": "AVPL Operations",
+                "subtitle": "Operational control and business attention.",
+                "kpis": [], "attention": [], "snapshot": [], "recent": [],
+                "health": {"score": 0, "critical": 0, "attention": 0, "reconciliation_issues": 0, "reconciliation_critical": 0},
+                "setup_required": False,
+            }
+        return render_template("dashboard/avpl_admin.html", data=data)
 
     if role == "accounts":
-        product_summary, farmer_products = get_farmer_product_dashboard()
         try:
-            accounts_overview = get_accounts_dashboard_overview(session.get("user_id"))
-        except (ValueError, PermissionError, RuntimeError) as exc:
-            current_app.logger.warning("Accounts dashboard financial overview unavailable: %s", exc)
-            accounts_overview = {
-                "supplier_purchase_value": "0.00",
-                "ufc_sales_value": "0.00",
-                "supplier_outstanding": "0.00",
-                "ufc_receivable": "0.00",
-                "cost_of_goods_sold": "0.00",
-                "gross_margin": "0.00",
-                "gross_margin_percent": "0.00",
-                "supplier_order_count": 0,
-                "ufc_order_count": 0,
-                "transaction_count": 0,
+            data = get_management_dashboard(session.get("user_id"), "accounts")
+        except Exception as exc:
+            current_app.logger.exception("Accounts management dashboard unavailable: %s", exc)
+            data = {
+                "role": "accounts", "title": "Accounts Control",
+                "subtitle": "Financial actions and exceptions that need attention.",
+                "kpis": [], "attention": [], "snapshot": [], "recent": [],
+                "health": {"score": 0, "critical": 0, "attention": 0, "reconciliation_issues": 0, "reconciliation_critical": 0},
+                "setup_required": False,
             }
-        return render_template(
-            "dashboard/accounts.html",
-            stats=get_system_overview(),
-            accounts_overview=accounts_overview,
-            product_summary=product_summary,
-            farmer_products=farmer_products,
-        )
+        return render_template("dashboard/accounts.html", data=data)
 
     if role == "sales_nelocals":
         product_summary, farmer_products = get_farmer_product_dashboard()
@@ -689,7 +691,10 @@ def home():
         )
 
     if role == "ufc_admin":
-        data = get_centre_dashboard(session.get("centre_uid"))
+        data = get_simple_ufc_dashboard(
+            session.get("centre_uid"),
+            actor_user_id=session.get("user_id"),
+        )
         return render_template("dashboard/ufc_admin.html", data=data)
 
     if role == "ufc_mitra":
@@ -732,7 +737,7 @@ def home():
         return render_template("dashboard/ufc_mitra.html", data=data)
 
     if role == "farmer":
-        data = get_farmer_dashboard(user.get("phone"), user_id=user.get("_id"))
+        data = get_simple_farmer_dashboard(user.get("phone"), user_id=user.get("_id"))
 
         if not isinstance(data, dict):
             data = {}

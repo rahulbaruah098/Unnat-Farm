@@ -51,7 +51,7 @@
     <div class="page-head">
         <div>
             <h2>AVPL Products</h2>
-            <p>Create products once, receive real stock through Goods Receipt, then select the products you want to show to every active UFC Centre.</p>
+            <p>Create products, receive stock, then publish them to UFCs.</p>
         </div>
         <div class="head-actions">
             <a class="btn soft" href="{{ url_for('admin.current_stock') }}">Current Stock</a>
@@ -65,7 +65,7 @@
 
     <div class="flow-note">
         <div>✓</div>
-        <div><strong>AVPL Admin:</strong> Select one or more products below, then click <strong>Publish to UFC Marketplace</strong>. Only published products will appear in UFC Admin. Publishing never changes stock.</div>
+        <div>Select products and publish them when they are ready for UFCs.</div>
     </div>
 
     {% if can_publish %}
@@ -133,6 +133,7 @@
                     <span class="pill">{{ p.category or '-' }}</span>
                     <span class="pill blue">{{ role|title if role else '-' }}</span>
                     {% if active %}<span class="pill green">Active</span>{% else %}<span class="pill amber">Disabled</span>{% endif %}
+                    {% if mapping.get('status') == 'active' and mapping.get('is_accounting_eligible') is sameas true %}<span class="pill green">Accounting Ready</span>{% elif mapping %}<span class="pill amber">Accounting Attention</span>{% else %}<span class="pill red">Needs Mapping</span>{% endif %}
                     {% if p.unnatfarm_eligible is sameas false %}<span class="pill red">Not UFC Eligible</span>{% endif %}
                 </div>
 
@@ -148,9 +149,9 @@
                 </div>
 
                 {% if readiness.get('purchase_ready') %}
-                    <div class="note">✓ Purchase ready. Stock will come only from posted Goods Receipts or approved adjustments.</div>
+                    <div class="note">✓ Ready for purchase.</div>
                 {% else %}
-                    <div class="note"><strong>Purchase setup:</strong> {{ readiness.get('primary_issue') or 'Complete Product Accounting setup.' }}</div>
+                    <div class="note"><strong>Needs attention:</strong> {{ readiness.get('primary_issue') or 'Complete Product Accounting setup.' }}</div>
                 {% endif %}
 
                 {% if session.get('role') in ['avpl_admin','accounts'] %}

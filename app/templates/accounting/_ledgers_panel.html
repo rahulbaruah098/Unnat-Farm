@@ -170,10 +170,10 @@
 <section class="accounting-ledger-card" id="ledger-masters">
     <div class="accounting-section-heading">
         <div>
-            <p class="accounting-eyebrow">Stage 3 · Batch 2</p>
-            <h2>Default AVPL ledger masters</h2>
+            <p class="accounting-eyebrow">Accounting masters</p>
+            <h2>Default Ledgers</h2>
             <p class="accounting-section-description">
-                Permanent cash, trade, GST, inventory and settlement-control ledgers mapped to the protected AVPL account-group hierarchy. Live balances are not stored in these master records.
+                Core ledgers used by AVPL Accounting.
             </p>
         </div>
 
@@ -190,7 +190,7 @@
         <div class="accounting-notice danger">{{ ledger_setup_error }}</div>
     {% elif not accounting_entity %}
         <div class="accounting-notice info">
-            Initialize the active AVPL Accounting entity before creating default ledger masters.
+            Initialize the AVPL Accounting entity first.
         </div>
     {% else %}
         <div class="accounting-ledger-summary-grid">
@@ -218,7 +218,7 @@
 
         {% if ledger_overview.audit_recovery_count > 0 %}
             <div class="accounting-notice warning compact">
-                <strong>Audit recovery:</strong> {{ ledger_overview.audit_recovery_count }} ledger record(s) require audit-log synchronization.
+                <strong>Audit issues:</strong> {{ ledger_overview.audit_recovery_count }} ledger record(s) need attention.
             </div>
         {% endif %}
 
@@ -242,14 +242,14 @@
         {% if ledger_capabilities.can_bootstrap %}
             <div class="accounting-ledger-setup">
                 <div>
-                    <strong>Initialize or repair the default ledger catalog</strong>
+                    <strong>Check system ledgers</strong>
                     <p>
-                        The operation is idempotent. It creates only missing AVPL system ledgers and restores recognized protected ledgers to their approved names, group mappings and control metadata. Conflicting custom data is never overwritten automatically.
+                        Creates missing ledgers and repairs safe definition drift.
                     </p>
                 </div>
                 <form method="post" action="{{ url_for('accounting.ledgers_synchronize') }}">
                     <button type="submit" class="accounting-primary-button">
-                        {% if ledger_overview.health.is_complete %}Verify and repair ledgers{% else %}Initialize default ledgers{% endif %}
+                        {% if ledger_overview.health.is_complete %}Check & Repair Ledgers{% else %}Initialize Ledgers{% endif %}
                     </button>
                 </form>
             </div>
@@ -263,15 +263,15 @@
                             <h3>{{ section.label }}</h3>
                             <p>
                                 {% if section.key == 'cash_and_settlement' %}
-                                    Cash custody and funds-in-transit controls.
+                                    Cash and settlement ledgers.
                                 {% elif section.key == 'trade_operations' %}
-                                    Purchase, sales and return control ledgers.
+                                    Purchase, sales and return ledgers.
                                 {% elif section.key == 'gst_controls' %}
-                                    Input-credit and output-liability tax controls; tax calculation begins in a later stage.
+                                    GST input and output ledgers.
                                 {% elif section.key == 'inventory_control' %}
-                                    Accounting inventory valuation control; stock posting begins later.
+                                    Inventory valuation ledgers.
                                 {% else %}
-                                    Protected AVPL system ledgers.
+                                    System ledgers.
                                 {% endif %}
                             </p>
                         </div>
@@ -325,7 +325,7 @@
                                 </div>
 
                                 <p class="accounting-ledger-protection">
-                                    <b>Protected:</b> identity, account-group mapping and deletion controls are locked. Balances will come from future voucher lines, not this master.
+                                    <b>Protected:</b> ledger identity and group mapping are locked.
                                 </p>
                             </article>
                         {% endfor %}
@@ -335,7 +335,7 @@
         {% else %}
             <div class="accounting-empty-financial-years">
                 <strong>No default AVPL ledgers have been initialized.</strong>
-                <p>Super Admin must initialize the protected ledger catalog after confirming the Stage 3 Batch 1 account groups.</p>
+                <p>Initialize ledgers after Account Groups are ready.</p>
             </div>
         {% endif %}
     {% endif %}

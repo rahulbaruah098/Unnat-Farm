@@ -1,339 +1,64 @@
 {% if product_mapping_capabilities.can_view %}
 <style>
-.accounting-product-map-card{
-    padding:clamp(22px,2vw,32px);
-    border:1px solid rgba(79,154,106,.22);
-    border-radius:26px;
-    background:rgba(255,255,255,.92);
-    box-shadow:0 18px 42px rgba(23,37,42,.08);
-}
-.accounting-product-map-summary{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:14px;
-    margin-top:20px;
-}
-.accounting-product-map-summary>div{
-    padding:16px;
-    border:1px solid rgba(79,154,106,.16);
-    border-radius:17px;
-    background:#F8FCF9;
-}
-.accounting-product-map-summary span,
-.accounting-product-map-meta span{
-    display:block;
-    color:#60716F;
-    font-size:.76rem;
-    font-weight:800;
-    letter-spacing:.05em;
-    text-transform:uppercase;
-}
-.accounting-product-map-summary strong{
-    display:block;
-    margin-top:7px;
-    color:#17252A;
-    font-size:1.25rem;
-}
-.accounting-product-map-form,
-.accounting-product-map-row{
-    margin-top:18px;
-    padding:18px;
-    border:1px solid rgba(79,154,106,.17);
-    border-radius:20px;
-    background:#FBFEFC;
-}
-.accounting-product-map-form h3,
-.accounting-product-map-row h3{
-    margin:0;
-    color:#17252A;
-}
-.accounting-product-map-grid{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:13px;
-    margin-top:16px;
-}
-.accounting-product-map-grid label{
-    display:grid;
-    gap:7px;
-    min-width:0;
-}
-.accounting-product-map-grid label.wide{grid-column:span 2;}
-.accounting-product-map-grid label.full{grid-column:1/-1;}
-.accounting-product-map-grid label>span{
-    color:#40515A;
-    font-size:.8rem;
-    font-weight:800;
-}
-.accounting-product-map-grid input,
-.accounting-product-map-grid select,
-.accounting-product-map-grid textarea{
-    width:100%;
-    min-height:43px;
-    padding:10px 11px;
-    border:1px solid rgba(116,171,134,.4);
-    border-radius:11px;
-    background:#fff;
-    color:#23342F;
-    font:inherit;
-}
-.accounting-product-map-grid select[multiple]{min-height:122px;}
-.accounting-product-map-toggle-grid{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:10px;
-    margin-top:13px;
-}
-.accounting-product-map-toggle{
-    display:flex;
-    gap:9px;
-    align-items:flex-start;
-    padding:12px;
-    border:1px solid rgba(79,154,106,.18);
-    border-radius:13px;
-    background:#fff;
-}
-.accounting-product-map-toggle input{margin-top:3px;accent-color:#2F7548;}
-.accounting-product-map-toggle strong{display:block;color:#243B31;font-size:.88rem;}
-.accounting-product-map-toggle small{display:block;margin-top:3px;color:#6B7C78;line-height:1.4;}
-.accounting-product-map-form-footer,
-.accounting-product-map-actions{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    flex-wrap:wrap;
-    margin-top:15px;
-}
-.accounting-product-map-list{display:grid;gap:14px;margin-top:18px;}
-.accounting-product-map-row-header{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:14px;
-}
-.accounting-product-map-row-header p{margin:5px 0 0;color:#60716F;}
-.accounting-product-map-meta{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:10px;
-    margin-top:14px;
-}
-.accounting-product-map-meta>div{
-    padding:11px;
-    border-radius:13px;
-    background:#F3F9F5;
-    min-width:0;
-}
-.accounting-product-map-meta strong{
-    display:block;
-    margin-top:5px;
-    color:#243B31;
-    overflow-wrap:anywhere;
-}
-.accounting-product-map-action-form{
-    display:flex;
-    align-items:flex-end;
-    gap:8px;
-    flex-wrap:wrap;
-}
-.accounting-product-map-action-form label{display:grid;gap:5px;}
-.accounting-product-map-action-form label span{font-size:.74rem;font-weight:800;color:#60716F;}
-.accounting-product-map-action-form input{
-    min-height:39px;
-    min-width:210px;
-    padding:8px 10px;
-    border:1px solid rgba(116,171,134,.38);
-    border-radius:10px;
-}
-.accounting-secondary-button,
-.accounting-danger-button{
-    border:0;
-    cursor:pointer;
-    padding:10px 13px;
-    border-radius:11px;
-    font:inherit;
-    font-weight:800;
-}
-.accounting-secondary-button{color:#285D3C;background:#E8F4EC;}
-.accounting-danger-button{color:#991B1B;background:#FEE2E2;}
-.accounting-product-map-empty{
-    margin-top:16px;
-    padding:18px;
-    border:1px dashed rgba(79,154,106,.3);
-    border-radius:16px;
-    color:#60716F;
-    background:#FAFDFA;
-}
-@media(max-width:1050px){
-    .accounting-product-map-summary,
-    .accounting-product-map-meta{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .accounting-product-map-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .accounting-product-map-grid label.wide{grid-column:span 1;}
-}
-@media(max-width:680px){
-    .accounting-product-map-summary,
-    .accounting-product-map-meta,
-    .accounting-product-map-grid,
-    .accounting-product-map-toggle-grid{grid-template-columns:1fr;}
-    .accounting-product-map-grid label.full{grid-column:auto;}
-    .accounting-product-map-row-header,
-    .accounting-product-map-form-footer{align-items:stretch;flex-direction:column;}
-    .accounting-product-map-action-form{align-items:stretch;flex-direction:column;}
-    .accounting-product-map-action-form input,
-    .accounting-product-map-action-form button{width:100%;min-width:0;}
-}
+.accounting-product-map-card{padding:clamp(20px,2vw,28px);border:1px solid rgba(79,154,106,.18);border-radius:22px;background:#fff;box-shadow:0 14px 34px rgba(23,37,42,.06)}
+.accounting-product-map-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.accounting-product-map-summary>div{padding:14px;border:1px solid rgba(79,154,106,.13);border-radius:14px;background:#f8fcf9}.accounting-product-map-summary span,.accounting-product-map-meta span{display:block;color:#6c7c73;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.accounting-product-map-summary strong{display:block;margin-top:5px;color:#17251d;font-size:1.22rem}.accounting-product-map-list{display:grid;gap:12px;margin-top:16px}.accounting-product-map-row{padding:16px;border:1px solid rgba(79,154,106,.14);border-radius:16px;background:#fbfefc}.accounting-product-map-row-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.accounting-product-map-row-header h3{margin:0;color:#17251d;font-size:.96rem}.accounting-product-map-row-header p{margin:4px 0 0;color:#738077;font-size:.72rem}.accounting-maker-line{margin-top:7px;color:#7a877f;font-size:.7rem}.accounting-product-map-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px}.accounting-product-map-meta>div{padding:10px;border-radius:11px;background:#f3f8f4;min-width:0}.accounting-product-map-meta strong{display:block;margin-top:4px;color:#2c4034;font-size:.78rem;overflow-wrap:anywhere}.accounting-product-map-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.accounting-product-map-actions form{margin:0}.accounting-product-map-form{margin-top:14px;padding:15px;border:1px solid rgba(79,154,106,.15);border-radius:14px;background:#fff}.accounting-product-map-form h3{margin:0 0 12px;color:#22382b;font-size:.9rem}.accounting-product-map-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.accounting-product-map-grid label{display:grid;gap:6px;min-width:0}.accounting-product-map-grid label.wide{grid-column:span 2}.accounting-product-map-grid label.full{grid-column:1/-1}.accounting-product-map-grid label>span{font-size:.72rem;font-weight:800;color:#4d5f54}.accounting-product-map-grid input,.accounting-product-map-grid select,.accounting-product-map-grid textarea{width:100%;min-height:40px;padding:8px 10px;border:1px solid #d7e5da;border-radius:9px;background:#fff;color:#24372b;font:inherit;font-size:.78rem}.accounting-product-map-grid select[multiple]{min-height:100px}.accounting-product-map-toggle-grid{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}.accounting-product-map-toggle{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #e0ebe2;border-radius:9px;background:#fafcfb;font-size:.74rem}.accounting-product-map-toggle input{accent-color:#2f7548}.accounting-product-map-form-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;flex-wrap:wrap}.accounting-form-cancel{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border:1px solid #d5e2d8;border-radius:9px;background:#fff;color:#526158;font:inherit;font-size:.75rem;font-weight:800;cursor:pointer}.accounting-product-map-empty{margin-top:14px;padding:15px;border:1px dashed #cddfd1;border-radius:13px;background:#fafdfb;color:#6c7c73;font-size:.8rem}.accounting-exception-note{margin-top:12px;padding:11px 12px;border-radius:10px;background:#fff8e7;color:#755b15;font-size:.78rem}.accounting-product-map-advanced{margin-top:10px}.accounting-product-map-advanced summary{cursor:pointer;color:#5f7067;font-size:.75rem;font-weight:800}.accounting-product-map-advanced-body{padding-top:10px;display:flex;gap:8px;flex-wrap:wrap}.accounting-product-map-advanced input{min-height:38px;padding:7px 9px;border:1px solid #d7e5da;border-radius:9px;font:inherit;font-size:.76rem}.accounting-danger-button,.accounting-secondary-button{border:0;cursor:pointer;padding:9px 12px;border-radius:9px;font:inherit;font-size:.75rem;font-weight:800}.accounting-secondary-button{background:#eaf4ed;color:#285d3c}.accounting-danger-button{background:#feeceb;color:#a32620}@media(max-width:900px){.accounting-product-map-summary,.accounting-product-map-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.accounting-product-map-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.accounting-product-map-grid label.wide{grid-column:auto}}@media(max-width:620px){.accounting-product-map-summary,.accounting-product-map-meta,.accounting-product-map-grid{grid-template-columns:1fr}.accounting-product-map-grid label.full{grid-column:auto}.accounting-product-map-row-header{flex-direction:column}.accounting-product-map-actions,.accounting-product-map-actions form,.accounting-product-map-actions button,.accounting-product-map-form-footer,.accounting-product-map-form-footer button{width:100%}}
 </style>
 <section class="accounting-product-map-card" id="product-accounting-mapping">
     <div class="accounting-section-heading">
         <div>
-            <p class="accounting-eyebrow">Stage 4 · Batch 3</p>
-            <h2>Product Accounting mapping</h2>
-            <p class="accounting-section-description">
-                Maps existing AVPL products to approved HSN, units and trade/inventory ledgers.
-                The operational product collection remains unchanged and unmapped products continue
-                working in existing MIS screens; {% if streamlined_workflows_enabled %}new mappings validate and activate when saved.{% else %}only new Accounting transactions require approval here.{% endif %}
-            </p>
+            <p class="accounting-eyebrow">Products</p>
+            <h2>Product Accounting</h2>
+            <p class="accounting-section-description">New products save their accounting setup automatically. Use this page for review and exceptions.</p>
         </div>
-        {% if product_mapping_overview.active_mapped_product_count > 0 %}
-            <span class="accounting-state-pill active">{{ product_mapping_overview.active_mapped_product_count }} Accounting-ready</span>
+        {% if product_mapping_overview.needs_activation_count %}
+            <span class="accounting-state-pill review">{{ product_mapping_overview.needs_activation_count }} need attention</span>
+        {% elif product_mapping_overview.unmapped_active_product_count %}
+            <span class="accounting-state-pill pending">{{ product_mapping_overview.unmapped_active_product_count }} need mapping</span>
         {% else %}
-            <span class="accounting-state-pill pending">Mapping required</span>
+            <span class="accounting-state-pill active">Ready</span>
         {% endif %}
     </div>
 
     {% if product_mapping_setup_error %}
         <div class="accounting-notice danger">{{ product_mapping_setup_error }}</div>
     {% elif not accounting_entity %}
-        <div class="accounting-notice info">Initialize the AVPL Accounting entity first.</div>
+        <div class="accounting-notice info">Initialize AVPL Accounting first.</div>
     {% else %}
         <div class="accounting-product-map-summary">
-            <div><span>Active AVPL products</span><strong>{{ product_mapping_overview.active_operational_product_count }}</strong></div>
-            <div><span>Accounting-ready</span><strong>{{ product_mapping_overview.active_mapped_product_count }}</strong></div>
-            <div><span>Unmapped active</span><strong>{{ product_mapping_overview.unmapped_active_product_count }}</strong></div>
-            <div><span>Pending review</span><strong>{{ product_mapping_overview.counts.pending_approval or 0 }}</strong></div>
+            <div><span>Active products</span><strong>{{ product_mapping_overview.active_operational_product_count }}</strong></div>
+            <div><span>Accounting ready</span><strong>{{ product_mapping_overview.active_mapped_product_count }}</strong></div>
+            <div><span>Needs activation</span><strong>{{ product_mapping_overview.needs_activation_count or 0 }}</strong></div>
+            <div><span>Needs mapping</span><strong>{{ product_mapping_overview.unmapped_active_product_count }}</strong></div>
         </div>
-
-        <div class="accounting-notice info compact">
-            <strong>Isolation rule:</strong> this module stores mappings in
-            <code>accounting_product_mappings</code>. It does not add mandatory fields to
-            <code>products</code>, reduce stock, alter price, or block existing POS/order routes.
-        </div>
-
-        {% if product_mapping_overview.audit_recovery_count > 0 %}
-            <div class="accounting-notice warning compact">
-                {{ product_mapping_overview.audit_recovery_count }} mapping record(s) require audit-log recovery review.
-            </div>
-        {% endif %}
 
         {% if not product_mapping_overview.prerequisites.is_ready %}
-            <div class="accounting-notice warning">
-                <strong>Mapping prerequisites are incomplete.</strong>
-                {% if not product_mapping_overview.prerequisites.has_active_hsn %}{% if streamlined_workflows_enabled %}Activate at least one HSN master. {% else %}Approve at least one HSN master. {% endif %}{% endif %}
-                {% if not product_mapping_overview.prerequisites.has_active_units %}Initialize or approve units. {% endif %}
-                {% if not product_mapping_overview.prerequisites.has_purchase_ledger %}The Purchase ledger is unavailable. {% endif %}
-                {% if not product_mapping_overview.prerequisites.has_sales_ledger %}The Sales ledger is unavailable. {% endif %}
-                {% if not product_mapping_overview.prerequisites.has_inventory_ledger %}The Stock-in-Hand ledger is unavailable.{% endif %}
-            </div>
+            <div class="accounting-exception-note">Complete HSN, unit and ledger setup before activating product mappings.</div>
         {% endif %}
 
-        {% if product_mapping_capabilities.can_create and product_mapping_overview.prerequisites.is_ready %}
-            {% if product_mapping_overview.options.unmapped_products %}
-                <form method="post"
-                      action="{{ url_for('accounting.product_mapping_create') }}"
-                      class="accounting-product-map-form">
-                    <h3>{% if streamlined_workflows_enabled %}Create product mapping{% else %}Create mapping draft{% endif %}</h3>
-                    <div class="accounting-product-map-grid">
-                        <label class="wide">
-                            <span>Existing AVPL product</span>
-                            <select name="source_product_id" required>
-                                <option value="">Select product</option>
-                                {% for product in product_mapping_overview.options.unmapped_products %}
-                                    <option value="{{ product.id }}">
-                                        {{ product.name }}{% if product.category %} · {{ product.category }}{% endif %} · ₹{{ product.price }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label>
-                            <span>Approved HSN</span>
-                            <select name="hsn_master_id" required>
-                                <option value="">Select HSN</option>
-                                {% for hsn in product_mapping_overview.options.hsn_masters %}
-                                    <option value="{{ hsn.id }}">
-                                        {{ hsn.hsn_code }} · {{ hsn.taxability_name }}{% if hsn.gst_rate_code %} · {{ hsn.gst_rate_code }}{% endif %}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label>
-                            <span>Base unit</span>
-                            <select name="base_unit_id" required>
-                                <option value="">Select base unit</option>
-                                {% for unit in product_mapping_overview.options.units %}
-                                    <option value="{{ unit.id }}">{{ unit.unit_code }} · {{ unit.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label>
-                            <span>Alternate units (optional)</span>
-                            <select name="alternate_unit_ids" multiple>
-                                {% for unit in product_mapping_overview.options.units %}
-                                    <option value="{{ unit.id }}">{{ unit.unit_code }} · {{ unit.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label>
-                            <span>Purchase ledger</span>
-                            <select name="purchase_ledger_id" required>
-                                {% for ledger in product_mapping_overview.options.purchase_ledgers %}
-                                    <option value="{{ ledger.id }}">{{ ledger.ledger_code }} · {{ ledger.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label>
-                            <span>Sales ledger</span>
-                            <select name="sales_ledger_id" required>
-                                {% for ledger in product_mapping_overview.options.sales_ledgers %}
-                                    <option value="{{ ledger.id }}">{{ ledger.ledger_code }} · {{ ledger.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label>
-                            <span>Inventory ledger</span>
-                            <select name="inventory_ledger_id" required>
-                                {% for ledger in product_mapping_overview.options.inventory_ledgers %}
-                                    <option value="{{ ledger.id }}">{{ ledger.ledger_code }} · {{ ledger.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <label class="full">
-                            <span>Mapping note</span>
-                            <textarea name="mapping_note" rows="2" placeholder="Internal classification note or implementation reference"></textarea>
-                        </label>
+        {% if product_mapping_capabilities.can_create and product_mapping_overview.prerequisites.is_ready and product_mapping_overview.options.unmapped_products %}
+            <details class="accounting-product-map-form">
+                <summary><strong>Map legacy product</strong></summary>
+                <form method="post" action="{{ url_for('accounting.product_mapping_create') }}">
+                    <div class="accounting-product-map-grid" style="margin-top:12px;">
+                        <label class="wide"><span>Product</span><select name="source_product_id" required><option value="">Select product</option>{% for product in product_mapping_overview.options.unmapped_products %}<option value="{{ product.id }}">{{ product.name }}{% if product.category %} · {{ product.category }}{% endif %}</option>{% endfor %}</select></label>
+                        <label><span>HSN</span><select name="hsn_master_id" required><option value="">Select HSN</option>{% for hsn in product_mapping_overview.options.hsn_masters %}<option value="{{ hsn.id }}">{{ hsn.hsn_code }} · {{ hsn.taxability_name }}{% if hsn.gst_rate_code %} · {{ hsn.gst_rate_code }}{% endif %}</option>{% endfor %}</select></label>
+                        <label><span>Base unit</span><select name="base_unit_id" required><option value="">Select unit</option>{% for unit in product_mapping_overview.options.units %}<option value="{{ unit.id }}">{{ unit.unit_code }} · {{ unit.name }}</option>{% endfor %}</select></label>
+                        <label><span>Purchase ledger</span><select name="purchase_ledger_id" required>{% for ledger in product_mapping_overview.options.purchase_ledgers %}<option value="{{ ledger.id }}">{{ ledger.ledger_code }} · {{ ledger.name }}</option>{% endfor %}</select></label>
+                        <label><span>Sales ledger</span><select name="sales_ledger_id" required>{% for ledger in product_mapping_overview.options.sales_ledgers %}<option value="{{ ledger.id }}">{{ ledger.ledger_code }} · {{ ledger.name }}</option>{% endfor %}</select></label>
+                        <label><span>Inventory ledger</span><select name="inventory_ledger_id" required>{% for ledger in product_mapping_overview.options.inventory_ledgers %}<option value="{{ ledger.id }}">{{ ledger.ledger_code }} · {{ ledger.name }}</option>{% endfor %}</select></label>
+                        <label class="full"><span>Note (optional)</span><textarea name="mapping_note" rows="2"></textarea></label>
                     </div>
                     <div class="accounting-product-map-toggle-grid">
-                        <label class="accounting-product-map-toggle">
-                            <input type="checkbox" name="inventory_tracking_enabled" value="1" checked>
-                            <span><strong>Inventory tracked</strong><small>Future Accounting stock movements will require this mapping.</small></span>
-                        </label>
-                        <label class="accounting-product-map-toggle">
-                            <input type="checkbox" name="purchase_enabled" value="1" checked>
-                            <span><strong>Purchase enabled</strong><small>Eligible for future Accounting purchase documents.</small></span>
-                        </label>
-                        <label class="accounting-product-map-toggle">
-                            <input type="checkbox" name="sales_enabled" value="1" checked>
-                            <span><strong>Sales enabled</strong><small>Eligible for future Accounting sales documents.</small></span>
-                        </label>
+                        <label class="accounting-product-map-toggle"><input type="checkbox" name="inventory_tracking_enabled" value="1" checked> Inventory tracked</label>
+                        <label class="accounting-product-map-toggle"><input type="checkbox" name="purchase_enabled" value="1" checked> Purchase enabled</label>
+                        <label class="accounting-product-map-toggle"><input type="checkbox" name="sales_enabled" value="1" checked> Sales enabled</label>
                     </div>
                     <div class="accounting-product-map-form-footer">
-                        <small>Taxability and GST rate code are derived from the approved HSN to prevent inconsistent product tax setup.</small>
-                        <button type="submit" class="accounting-primary-button">{% if streamlined_workflows_enabled %}Save & Activate Mapping{% else %}Create mapping draft{% endif %}</button>
+                        <button type="button" class="accounting-form-cancel" onclick="this.form.reset();this.closest('details').removeAttribute('open')">Cancel</button>
+                        <button type="submit" class="accounting-primary-button">Save & Activate</button>
                     </div>
                 </form>
-            {% else %}
-                <div class="accounting-product-map-empty">Every active AVPL product already has a live mapping record.</div>
-            {% endif %}
+            </details>
         {% endif %}
 
         {% if product_mapping_overview.rows %}
@@ -345,151 +70,78 @@
                             <div>
                                 <h3>{{ mapping.source_product_name }}</h3>
                                 <p>{{ mapping.mapping_code }}{% if mapping.source_product_category %} · {{ mapping.source_product_category }}{% endif %}</p>
+                                <div class="accounting-maker-line">Maker: {{ mapping.created_by_name or '—' }}{% if mapping.updated_at %} · Updated {{ mapping.updated_at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}{% endif %}</div>
                             </div>
-                            <span class="accounting-status-badge status-{{ mapping.status }}">{{ mapping.status_display }}</span>
+                            <span class="accounting-status-badge status-{{ mapping.status }}">{% if mapping.status == 'active' %}Accounting Ready{% elif mapping.status in ['draft','pending_approval','returned_for_correction'] %}Needs Activation{% else %}{{ mapping.status_display }}{% endif %}</span>
                         </div>
 
                         <div class="accounting-product-map-meta">
-                            <div><span>HSN / taxability</span><strong>{{ mapping.hsn_code }} · {{ mapping.taxability_name }}{% if mapping.gst_rate_code %} · {{ mapping.gst_rate_code }}{% endif %}</strong></div>
-                            <div><span>Units</span><strong>{{ mapping.base_unit_code }}{% if mapping.alternate_unit_summary %} · Alt: {{ mapping.alternate_unit_summary }}{% endif %}</strong></div>
-                            <div><span>Trade ledgers</span><strong>{{ mapping.purchase_ledger_code }} / {{ mapping.sales_ledger_code }}</strong></div>
-                            <div><span>Inventory ledger</span><strong>{{ mapping.inventory_ledger_code }}</strong></div>
+                            <div><span>HSN / GST</span><strong>{{ mapping.hsn_code }} · {{ mapping.taxability_name }}{% if mapping.gst_rate_code %} · {{ mapping.gst_rate_code }}{% endif %}</strong></div>
+                            <div><span>Unit</span><strong>{{ mapping.base_unit_code }}</strong></div>
+                            <div><span>Purchase / Sales</span><strong>{{ mapping.purchase_ledger_code }} / {{ mapping.sales_ledger_code }}</strong></div>
+                            <div><span>Inventory</span><strong>{{ mapping.inventory_ledger_code }}</strong></div>
                         </div>
 
-                        {% if not mapping.source_product_is_active %}
-                            <div class="accounting-notice warning compact">
-                                The operational source product is currently {{ mapping.source_product_status or 'inactive' }}. New Accounting use will remain blocked until the source product is active.
+                        {% if mapping.return_reason %}<div class="accounting-exception-note">Needs correction: {{ mapping.return_reason }}</div>{% endif %}
+                        {% if not mapping.source_product_is_active %}<div class="accounting-exception-note">Product is inactive; new accounting use is blocked.</div>{% endif %}
+
+                        {% if streamlined_workflows_enabled and mapping.status in ['draft','pending_approval','returned_for_correction'] and (product_mapping_capabilities.can_submit or product_mapping_capabilities.can_approve) %}
+                            <div class="accounting-product-map-actions">
+                                <form method="post" action="{{ url_for('accounting.product_mapping_activate', mapping_id=mapping.id) }}">
+                                    <input type="hidden" name="version" value="{{ mapping.version }}">
+                                    <button class="accounting-primary-button" type="submit">Activate Mapping</button>
+                                </form>
                             </div>
                         {% endif %}
-                        {% if mapping.return_reason %}
-                            <div class="accounting-notice warning compact"><strong>Correction required:</strong> {{ mapping.return_reason }}</div>
-                        {% endif %}
 
-                        {% if mapping.status in ['draft', 'returned_for_correction'] and is_creator and product_mapping_capabilities.can_edit %}
-                            <details class="accounting-history">
-                                <summary>Edit mapping draft</summary>
-                                <form method="post"
-                                      action="{{ url_for('accounting.product_mapping_edit', mapping_id=mapping.id) }}"
-                                      class="accounting-product-map-form">
-                                    <input type="hidden" name="version" value="{{ mapping.version }}">
-                                    <input type="hidden" name="source_product_id" value="{{ mapping.source_product_id }}">
-                                    <div class="accounting-product-map-grid">
-                                        <label><span>Product</span><input value="{{ mapping.source_product_name }}" disabled></label>
-                                        <label>
-                                            <span>Approved HSN</span>
-                                            <select name="hsn_master_id" required>
-                                                {% for hsn in product_mapping_overview.options.hsn_masters %}
-                                                    <option value="{{ hsn.id }}" {% if hsn.id == mapping.hsn_master_id %}selected{% endif %}>{{ hsn.hsn_code }} · {{ hsn.taxability_name }}{% if hsn.gst_rate_code %} · {{ hsn.gst_rate_code }}{% endif %}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </label>
-                                        <label>
-                                            <span>Base unit</span>
-                                            <select name="base_unit_id" required>
-                                                {% for unit in product_mapping_overview.options.units %}
-                                                    <option value="{{ unit.id }}" {% if unit.id == mapping.base_unit_id %}selected{% endif %}>{{ unit.unit_code }} · {{ unit.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </label>
-                                        <label>
-                                            <span>Alternate units</span>
-                                            <select name="alternate_unit_ids" multiple>
-                                                {% for unit in product_mapping_overview.options.units %}
-                                                    <option value="{{ unit.id }}" {% if unit.id in mapping.alternate_unit_ids %}selected{% endif %}>{{ unit.unit_code }} · {{ unit.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </label>
+                        {% if mapping.status in ['draft','returned_for_correction'] and is_creator and product_mapping_capabilities.can_edit %}
+                            <details class="accounting-product-map-form">
+                                <summary><strong>Edit mapping</strong></summary>
+                                <form method="post" action="{{ url_for('accounting.product_mapping_edit', mapping_id=mapping.id) }}">
+                                    <input type="hidden" name="version" value="{{ mapping.version }}"><input type="hidden" name="source_product_id" value="{{ mapping.source_product_id }}">
+                                    <div class="accounting-product-map-grid" style="margin-top:12px;">
+                                        <label><span>HSN</span><select name="hsn_master_id" required>{% for hsn in product_mapping_overview.options.hsn_masters %}<option value="{{ hsn.id }}" {% if hsn.id == mapping.hsn_master_id %}selected{% endif %}>{{ hsn.hsn_code }} · {{ hsn.taxability_name }}</option>{% endfor %}</select></label>
+                                        <label><span>Base unit</span><select name="base_unit_id" required>{% for unit in product_mapping_overview.options.units %}<option value="{{ unit.id }}" {% if unit.id == mapping.base_unit_id %}selected{% endif %}>{{ unit.unit_code }} · {{ unit.name }}</option>{% endfor %}</select></label>
+                                        <label><span>Alternate units</span><select name="alternate_unit_ids" multiple>{% for unit in product_mapping_overview.options.units %}<option value="{{ unit.id }}" {% if unit.id in mapping.alternate_unit_ids %}selected{% endif %}>{{ unit.unit_code }} · {{ unit.name }}</option>{% endfor %}</select></label>
                                         <label><span>Purchase ledger</span><select name="purchase_ledger_id" required>{% for ledger in product_mapping_overview.options.purchase_ledgers %}<option value="{{ ledger.id }}" {% if ledger.id == mapping.purchase_ledger_id %}selected{% endif %}>{{ ledger.ledger_code }} · {{ ledger.name }}</option>{% endfor %}</select></label>
                                         <label><span>Sales ledger</span><select name="sales_ledger_id" required>{% for ledger in product_mapping_overview.options.sales_ledgers %}<option value="{{ ledger.id }}" {% if ledger.id == mapping.sales_ledger_id %}selected{% endif %}>{{ ledger.ledger_code }} · {{ ledger.name }}</option>{% endfor %}</select></label>
                                         <label><span>Inventory ledger</span><select name="inventory_ledger_id" required>{% for ledger in product_mapping_overview.options.inventory_ledgers %}<option value="{{ ledger.id }}" {% if ledger.id == mapping.inventory_ledger_id %}selected{% endif %}>{{ ledger.ledger_code }} · {{ ledger.name }}</option>{% endfor %}</select></label>
-                                        <label class="full"><span>Mapping note</span><textarea name="mapping_note" rows="2">{{ mapping.mapping_note }}</textarea></label>
+                                        <label class="full"><span>Note</span><textarea name="mapping_note" rows="2">{{ mapping.mapping_note }}</textarea></label>
                                     </div>
                                     <div class="accounting-product-map-toggle-grid">
-                                        <label class="accounting-product-map-toggle"><input type="checkbox" name="inventory_tracking_enabled" value="1" {% if mapping.inventory_tracking_enabled %}checked{% endif %}><span><strong>Inventory tracked</strong></span></label>
-                                        <label class="accounting-product-map-toggle"><input type="checkbox" name="purchase_enabled" value="1" {% if mapping.purchase_enabled %}checked{% endif %}><span><strong>Purchase enabled</strong></span></label>
-                                        <label class="accounting-product-map-toggle"><input type="checkbox" name="sales_enabled" value="1" {% if mapping.sales_enabled %}checked{% endif %}><span><strong>Sales enabled</strong></span></label>
+                                        <label class="accounting-product-map-toggle"><input type="checkbox" name="inventory_tracking_enabled" value="1" {% if mapping.inventory_tracking_enabled %}checked{% endif %}> Inventory tracked</label>
+                                        <label class="accounting-product-map-toggle"><input type="checkbox" name="purchase_enabled" value="1" {% if mapping.purchase_enabled %}checked{% endif %}> Purchase enabled</label>
+                                        <label class="accounting-product-map-toggle"><input type="checkbox" name="sales_enabled" value="1" {% if mapping.sales_enabled %}checked{% endif %}> Sales enabled</label>
                                     </div>
-                                    <div class="accounting-product-map-form-footer"><span>Version {{ mapping.version }}</span><button class="accounting-primary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save draft{% endif %}</button></div>
+                                    <div class="accounting-product-map-form-footer">
+                                        <button type="button" class="accounting-form-cancel" onclick="this.form.reset();this.closest('details').removeAttribute('open')">Cancel</button>
+                                        <button class="accounting-primary-button" type="submit">Save & Activate</button>
+                                    </div>
                                 </form>
                             </details>
                         {% endif %}
 
-                        <div class="accounting-product-map-actions">
-                            {% if mapping.status in ['draft', 'returned_for_correction'] and is_creator %}
-                                {% if product_mapping_capabilities.can_submit %}
-                                    <form method="post" action="{{ url_for('accounting.product_mapping_submit', mapping_id=mapping.id) }}" class="accounting-product-map-action-form">
-                                        <input type="hidden" name="version" value="{{ mapping.version }}">
-                                        <label><span>Submission note</span><input name="submission_note" placeholder="Optional review note"></label>
-                                        <button class="accounting-primary-button" type="submit">Submit</button>
-                                    </form>
-                                {% endif %}
-                                {% if product_mapping_capabilities.can_cancel %}
-                                    <form method="post" action="{{ url_for('accounting.product_mapping_cancel', mapping_id=mapping.id) }}" class="accounting-product-map-action-form">
-                                        <input type="hidden" name="version" value="{{ mapping.version }}">
-                                        <label><span>Cancellation reason</span><input name="reason" required></label>
-                                        <button class="accounting-danger-button" type="submit">Cancel draft</button>
-                                    </form>
-                                {% endif %}
-                            {% elif mapping.status == 'pending_approval' %}
-                                {% if is_creator and product_mapping_capabilities.can_withdraw %}
-                                    <form method="post" action="{{ url_for('accounting.product_mapping_withdraw', mapping_id=mapping.id) }}" class="accounting-product-map-action-form">
-                                        <input type="hidden" name="version" value="{{ mapping.version }}">
-                                        <label><span>Withdrawal reason</span><input name="reason" required></label>
-                                        <button class="accounting-secondary-button" type="submit">Withdraw</button>
-                                    </form>
-                                {% endif %}
-                                {% if product_mapping_capabilities.can_approve %}
-                                    <form method="post" action="{{ url_for('accounting.product_mapping_approve', mapping_id=mapping.id) }}" class="accounting-product-map-action-form">
-                                        <input type="hidden" name="version" value="{{ mapping.version }}">
-                                        <label><span>Approval note</span><input name="approval_note" placeholder="Optional approval note"></label>
-                                        <button class="accounting-primary-button" type="submit">Approve mapping</button>
-                                    </form>
-                                {% endif %}
-                                {% if product_mapping_capabilities.can_return %}
-                                    <form method="post" action="{{ url_for('accounting.product_mapping_return', mapping_id=mapping.id) }}" class="accounting-product-map-action-form">
-                                        <input type="hidden" name="version" value="{{ mapping.version }}">
-                                        <label><span>Correction reason</span><input name="return_reason" required></label>
-                                        <button class="accounting-secondary-button" type="submit">Return</button>
-                                    </form>
-                                {% endif %}
-                            {% elif mapping.status == 'active' and product_mapping_capabilities.can_deactivate %}
-                                <form method="post" action="{{ url_for('accounting.product_mapping_deactivate', mapping_id=mapping.id) }}" class="accounting-product-map-action-form">
-                                    <input type="hidden" name="version" value="{{ mapping.version }}">
-                                    <label><span>Deactivation reason</span><input name="reason" required></label>
-                                    <button class="accounting-danger-button" type="submit">Deactivate</button>
-                                </form>
-                            {% elif mapping.status == 'inactive' and product_mapping_capabilities.can_reactivate %}
-                                <form method="post" action="{{ url_for('accounting.product_mapping_reactivate', mapping_id=mapping.id) }}" class="accounting-product-map-action-form">
-                                    <input type="hidden" name="version" value="{{ mapping.version }}">
-                                    <label><span>Reactivation reason</span><input name="reason" required></label>
-                                    <button class="accounting-primary-button" type="submit">Revalidate and reactivate</button>
-                                </form>
-                            {% endif %}
-                        </div>
-
-                        {% if mapping.change_history %}
-                            <details class="accounting-history">
-                                <summary>Workflow history ({{ mapping.change_history|length }})</summary>
-                                <div class="accounting-history-list">
-                                    {% for event in mapping.change_history|reverse %}
-                                        <div>
-                                            <strong>{{ event.action.replace('_',' ').title() }}</strong>
-                                            <span>{{ event.actor_name or event.actor_role.replace('_',' ').title() }}</span>
-                                            {% if event.at %}<small>{{ event.at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}</small>{% endif %}
-                                            {% if event.reason %}<p>Reason: {{ event.reason }}</p>{% endif %}
-                                            {% if event.note %}<p>Note: {{ event.note }}</p>{% endif %}
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </details>
+                        {% if not streamlined_workflows_enabled %}
+                            <div class="accounting-product-map-actions">
+                                {% if mapping.status in ['draft','returned_for_correction'] and is_creator and product_mapping_capabilities.can_submit %}<form method="post" action="{{ url_for('accounting.product_mapping_submit', mapping_id=mapping.id) }}"><input type="hidden" name="version" value="{{ mapping.version }}"><button class="accounting-primary-button" type="submit">Submit</button></form>{% endif %}
+                                {% if mapping.status == 'pending_approval' and product_mapping_capabilities.can_approve %}<form method="post" action="{{ url_for('accounting.product_mapping_approve', mapping_id=mapping.id) }}"><input type="hidden" name="version" value="{{ mapping.version }}"><button class="accounting-primary-button" type="submit">Approve</button></form>{% endif %}
+                            </div>
                         {% endif %}
+
+                        {% if mapping.status in ['active','inactive'] %}
+                            <details class="accounting-product-map-advanced"><summary>More</summary><div class="accounting-product-map-advanced-body">
+                                {% if mapping.status == 'active' and product_mapping_capabilities.can_deactivate %}<form method="post" action="{{ url_for('accounting.product_mapping_deactivate', mapping_id=mapping.id) }}"><input type="hidden" name="version" value="{{ mapping.version }}"><input name="reason" required placeholder="Reason"><button class="accounting-danger-button" type="submit">Deactivate</button></form>{% endif %}
+                                {% if mapping.status == 'inactive' and product_mapping_capabilities.can_reactivate %}<form method="post" action="{{ url_for('accounting.product_mapping_reactivate', mapping_id=mapping.id) }}"><input type="hidden" name="version" value="{{ mapping.version }}"><input name="reason" required placeholder="Reason"><button class="accounting-secondary-button" type="submit">Reactivate</button></form>{% endif %}
+                            </div></details>
+                        {% endif %}
+
+                        {% if mapping.change_history %}<details class="accounting-history"><summary>History ({{ mapping.change_history|length }})</summary><div class="accounting-history-list">{% for event in mapping.change_history|reverse %}<div><strong>{{ event.action.replace('_',' ').title() }}</strong><span>{{ event.actor_name or event.actor_role.replace('_',' ').title() }}</span>{% if event.at %}<small>{{ event.at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}</small>{% endif %}{% if event.reason %}<p>{{ event.reason }}</p>{% endif %}</div>{% endfor %}</div></details>{% endif %}
                     </article>
                 {% endfor %}
             </div>
         {% else %}
-            <div class="accounting-product-map-empty">No product Accounting mappings have been created.</div>
+            <div class="accounting-product-map-empty">No mappings yet. New products will create them automatically.</div>
         {% endif %}
     {% endif %}
 </section>
 {% endif %}
-

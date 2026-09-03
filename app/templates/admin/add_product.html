@@ -2,6 +2,7 @@
 {% block content %}
 
 {% set is_edit = product is not none %}
+{% set current_mapping_status = accounting_mapping.get('status') or '' %}
 {% set values = form_data or {} %}
 {% set selected_role = values.get('product_role') or values.get('type') or '' %}
 {% set selected_source = values.get('metadata_source') or 'manual_entry' %}
@@ -62,7 +63,7 @@
 
     <div class="batch-note">
         <strong>Product Master:</strong>
-        Define the product once. HSN, GST, unit and Accounting mapping stay attached to the Product Master.
+        Product details and accounting setup are saved together.
         Stock comes from Goods Receipt, not from this form. Supplier pack/code/barcode details are intentionally not required here; keep this page focused on the core product.
     </div>
 
@@ -120,7 +121,7 @@
 
                 <label class="field-label">Base Unit <span class="required-mark">*</span>
                     <select name="base_unit_id" required>
-                        <option value="">Select approved Accounting unit</option>
+                        <option value="">Select Accounting unit</option>
                         {% for unit in units %}
                             <option value="{{ unit.id }}" {% if selected_unit_id|string == unit.id|string %}selected{% endif %}>
                                 {{ unit.unit_code }} — {{ unit.name }}{% if unit.symbol %} ({{ unit.symbol }}){% endif %}
@@ -154,10 +155,16 @@
         <section class="form-section">
             <div class="section-heading">
                 <div>
-                    <h3>Accounting and tax mapping</h3>
-                    <p>Select only approved Accounting masters. GST and taxability are inherited from the selected HSN and cannot be typed manually.</p>
+                    <h3>Accounting Setup</h3>
+                    <p>Choose HSN and ledgers. GST is resolved automatically.</p>
                 </div>
-                <span class="legacy-pill">Auto-approved by AVPL Admin</span>
+                {% if current_mapping_status == 'active' %}
+                    <span class="legacy-pill" style="border-color:#b9dfc4;background:#eff8f1;color:#2f6e46;">Accounting Ready</span>
+                {% elif current_mapping_status %}
+                    <span class="legacy-pill">Needs Activation</span>
+                {% else %}
+                    <span class="legacy-pill" style="border-color:#b9dfc4;background:#eff8f1;color:#2f6e46;">Activates on Save</span>
+                {% endif %}
             </div>
 
             {% if not accounting_entity %}
@@ -167,7 +174,7 @@
             <div class="form-grid">
                 <label class="field-label">HSN Classification <span class="required-mark">*</span>
                     <select name="hsn_master_id" id="hsnMasterSelect" required>
-                        <option value="">Select approved HSN</option>
+                        <option value="">Select HSN</option>
                         {% for hsn in hsn_masters %}
                             <option
                                 value="{{ hsn.id }}"
@@ -179,17 +186,17 @@
                             </option>
                         {% endfor %}
                     </select>
-                    {% if not hsn_masters %}<small class="field-help">No active HSN master is available. Create and approve it inside Accounting first.</small>{% endif %}
+                    {% if not hsn_masters %}<small class="field-help">No active HSN is available. Add it in Accounting first.</small>{% endif %}
                 </label>
 
                 <label class="field-label">Resolved Tax Treatment
                     <input type="text" id="resolvedTaxTreatment" value="Select an HSN to resolve GST" readonly>
-                    <small class="field-help">Taxable HSNs use their approved effective-dated GST rate. Exempt, Nil Rated and Non-GST HSNs do not post GST.</small>
+                    <small class="field-help">Resolved from the selected HSN.</small>
                 </label>
 
                 <label class="field-label">Purchase Ledger <span class="required-mark">*</span>
                     <select name="purchase_ledger_id" required>
-                        <option value="">Select approved purchase ledger</option>
+                        <option value="">Select purchase ledger</option>
                         {% for ledger in purchase_ledgers %}
                             <option value="{{ ledger.id }}" {% if selected_purchase_ledger_id|string == ledger.id|string %}selected{% endif %}>
                                 {{ ledger.ledger_code }} — {{ ledger.name }}
@@ -200,7 +207,7 @@
 
                 <label class="field-label">Sales Ledger <span class="required-mark">*</span>
                     <select name="sales_ledger_id" required>
-                        <option value="">Select approved sales ledger</option>
+                        <option value="">Select sales ledger</option>
                         {% for ledger in sales_ledgers %}
                             <option value="{{ ledger.id }}" {% if selected_sales_ledger_id|string == ledger.id|string %}selected{% endif %}>
                                 {{ ledger.ledger_code }} — {{ ledger.name }}
@@ -211,7 +218,7 @@
 
                 <label class="field-label">Inventory Ledger <span class="required-mark">*</span>
                     <select name="inventory_ledger_id" required>
-                        <option value="">Select approved inventory ledger</option>
+                        <option value="">Select inventory ledger</option>
                         {% for ledger in inventory_ledgers %}
                             <option value="{{ ledger.id }}" {% if selected_inventory_ledger_id|string == ledger.id|string %}selected{% endif %}>
                                 {{ ledger.ledger_code }} — {{ ledger.name }}
@@ -222,21 +229,21 @@
 
                 <label class="checkbox-card">
                     <input type="checkbox" name="inventory_tracking_enabled" {% if inventory_tracking_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
-                    <span>Inventory Tracking<small>Used by Goods Receipt, inventory batches and future sales posting.</small></span>
+                    <span>Inventory Tracking<small>Track stock and batches.</small></span>
                 </label>
 
                 <label class="checkbox-card">
                     <input type="checkbox" name="purchase_enabled" {% if purchase_enabled_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
-                    <span>Purchase Enabled<small>Allows this product in the AVPL supplier-purchase workflow.</small></span>
+                    <span>Purchase Enabled<small>Allow purchasing.</small></span>
                 </label>
 
                 <label class="checkbox-card">
                     <input type="checkbox" name="sales_enabled" {% if sales_enabled_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
-                    <span>Sales Enabled<small>Required before this product can be published to the UFC Marketplace.</small></span>
+                    <span>Sales Enabled<small>Allow selling.</small></span>
                 </label>
 
-                <label class="field-label full">Mapping Note
-                    <textarea name="mapping_note" maxlength="1500" placeholder="Reason, supplier reference or Accounting note for this mapping">{{ mapping_note_value }}</textarea>
+                <label class="field-label full">Accounting Note <span style="font-weight:500;color:#748279;">(optional)</span>
+                    <textarea name="mapping_note" maxlength="1500" placeholder="Optional internal note">{{ mapping_note_value }}</textarea>
                 </label>
             </div>
         </section>
@@ -269,20 +276,19 @@
         <section class="form-section">
             <div class="section-heading">
                 <div>
-                    <h3>Stock and marketplace are handled after product creation</h3>
-                    <p>This form never asks for stock quantity, selling quantity or Centre selection.</p>
+                    <h3>After Save</h3>
+                    <p>Receive stock, then publish the product to UFCs when ready.</p>
                 </div>
-                <span class="legacy-pill">Stage 3 simplified flow</span>
             </div>
 
             <div class="batch-note" style="margin:0;">
-                <strong>After saving:</strong> receive stock through Purchase → Goods Receipt. Then open View Products, multi-select the products you want, and click <strong>Publish to UFC Marketplace</strong>. Publishing changes visibility only; it does not move stock.
+                Receive stock through Goods Receipt. Publish to the UFC Marketplace only when you want UFCs to see it.
             </div>
         </section>
 
         <div class="form-actions">
             <a href="{{ url_for('admin.product_list') }}" class="cancel-btn">Cancel</a>
-            <button type="submit" class="submit-btn">{{ 'Update Product Master' if is_edit else 'Save Product Master' }}</button>
+            <button type="submit" class="submit-btn">{{ 'Save Changes' if is_edit else 'Save Product' }}</button>
         </div>
     </form>
 </div>

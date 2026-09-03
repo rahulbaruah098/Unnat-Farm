@@ -303,85 +303,126 @@ def _purchase_wac(entity_id, product_id):
     return (cost_total / quantity_total) if quantity_total > 0 else Decimal("0")
 
 
+def _order_lines(order):
+    raw = order.get("items") or []
+    if raw:
+        return [dict(x or {}) for x in raw if isinstance(x, dict) and _decimal((x or {}).get("approved_quantity")) > 0]
+    return [{
+        "line_id": "legacy", "source_product_id": order.get("source_product_id"), "product_name": order.get("product_name") or "Product",
+        "product_code": order.get("product_code") or "", "category": order.get("category") or "", "product_role": order.get("product_role") or "",
+        "unit_code": order.get("unit_code") or "Unit", "approved_quantity": order.get("approved_quantity") or 0,
+        "dispatched_quantity": order.get("dispatched_quantity") or 0, "unit_price": order.get("unit_price") or 0,
+    }]
+
+
+def _serialize_financial_item(item):
+    row = dict(item or {})
+    for field in ("unit_price", "taxable_value", "cgst_amount", "sgst_amount", "igst_amount", "gst_amount", "grand_total", "estimated_unit_cost", "estimated_cogs", "gross_margin_amount"):
+        row[f"{field}_display"] = _money(row.get(field))
+    row["quantity_display"] = _qty(row.get("quantity"))
+    row["gst_rate_display"] = _qty(row.get("gst_rate"))
+    return row
+
+
+def get_product_purchase_cost_preview(actor_user_id, product_id):
+    """Return the same supplier-cost basis used by AVPL sales accounting.
+
+    The value is a weighted average of posted GRN quantities using approved PO
+    net rates after line discount and before GST. It is display/reference data
+    only; approval does not force the selling price above this amount.
+    """
+    _get_actor(actor_user_id, allowed_roles={"super_admin", "avpl_admin", "accounts"})
+    entity = _active_avpl_entity()
+    product_oid = _to_object_id(product_id)
+    if not product_oid:
+        raise ValueError("Invalid AVPL product reference.")
+    product = mongo.db.products.find_one({"_id": product_oid, "is_deleted": {"$ne": True}})
+    if not product:
+        raise ValueError("The AVPL product was not found.")
+    unit_cost = _purchase_wac(entity["_id"], product_oid)
+    return {
+        "available": unit_cost > Decimal("0"),
+        "unit_cost": float(unit_cost),
+        "unit_cost_display": _money(unit_cost),
+        "unit_code": product.get("base_unit_code") or product.get("base_unit_name") or "Unit",
+        "basis_label": "Weighted average supplier purchase cost, before GST",
+    }
+
+
 def _financial_snapshot(order, entity, buyer):
     transaction_date = _date_iso(order.get("dispatched_at") or business_today())
-    mapping = get_product_accounting_mapping_for_posting(
-        entity["_id"],
-        order.get("source_product_id"),
-        transaction_date=transaction_date,
-        operation="sales",
-    )
+    seller_state_name, seller_state_code = _resolve_gst_state(entity.get("state") or "", entity.get("state_code") or "", entity.get("gstin") or "")
+    buyer_state_name, buyer_state_code = _resolve_gst_state(buyer.get("state") or "", buyer.get("state_code") or "", buyer.get("gstin") or "")
 
-    quantity = _decimal(order.get("dispatched_quantity") or order.get("approved_quantity"))
-    unit_price = _decimal(order.get("unit_price"))
-    taxable_value = (quantity * unit_price).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+    lines = []
+    total_taxable = total_cgst = total_sgst = total_igst = total_grand = total_cogs = Decimal("0")
+    sales_ledger_id = inventory_ledger_id = None
+    sales_ledger_name = "Sales"; inventory_ledger_name = "Stock-in-Hand"
+    for source in _order_lines(order):
+        product_id = source.get("source_product_id")
+        mapping = get_product_accounting_mapping_for_posting(entity["_id"], product_id, transaction_date=transaction_date, operation="sales")
+        quantity = _decimal(source.get("dispatched_quantity") or source.get("approved_quantity"))
+        unit_price = _decimal(source.get("unit_price"))
+        taxable_value = (quantity * unit_price).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+        taxability = str((mapping.get("hsn") or {}).get("taxability_code") or "").upper()
+        effective_rate = mapping.get("effective_gst_rate") or {}
+        gst_rate = _decimal(effective_rate.get("total_rate")) if taxability == "TAXABLE" else Decimal("0")
+        if gst_rate > 0 and not seller_state_code:
+            raise ValueError("AVPL Accounting entity State Code is required before issuing a GST sales invoice.")
+        if gst_rate > 0 and not buyer_state_code:
+            raise ValueError("The UFC Centre State is required before issuing a GST sales invoice.")
+        tax_amount = (taxable_value * gst_rate / Decimal("100")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+        cgst = sgst = igst = Decimal("0")
+        supply_type = "non_taxable"
+        if tax_amount > 0:
+            if seller_state_code == buyer_state_code:
+                cgst = (tax_amount / Decimal("2")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP); sgst = tax_amount - cgst; supply_type = "intra_state"
+            else:
+                igst = tax_amount; supply_type = "inter_state"
+        grand_total = taxable_value + cgst + sgst + igst
+        wac = _purchase_wac(entity["_id"], product_id)
+        estimated_cogs = (quantity * wac).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+        gross_margin = taxable_value - estimated_cogs
+        gross_margin_percent = gross_margin * Decimal("100") / taxable_value if taxable_value > 0 else Decimal("0")
+        ledgers = mapping.get("ledgers") or {}
+        line_sales_id = _to_object_id((ledgers.get("sales") or {}).get("_id") or (ledgers.get("sales") or {}).get("id"))
+        line_inventory_id = _to_object_id((ledgers.get("inventory") or {}).get("_id") or (ledgers.get("inventory") or {}).get("id"))
+        if sales_ledger_id is None: sales_ledger_id = line_sales_id
+        if inventory_ledger_id is None: inventory_ledger_id = line_inventory_id
+        sales_ledger_name = (ledgers.get("sales") or {}).get("name") or sales_ledger_name
+        inventory_ledger_name = (ledgers.get("inventory") or {}).get("name") or inventory_ledger_name
+        line = {
+            "line_id": source.get("line_id") or "legacy", "source_product_id": product_id, "source_product_id_str": str(product_id or ""),
+            "product_name": source.get("product_name") or "Product", "product_code": source.get("product_code") or "", "category": source.get("category") or "", "product_role": source.get("product_role") or "",
+            "quantity": float(quantity), "unit_code": (mapping.get("base_unit") or {}).get("unit_code") or source.get("unit_code") or "Unit", "unit_price": float(unit_price),
+            "taxable_value": float(taxable_value), "taxability_code": taxability or "NON_GST", "hsn_code": (mapping.get("hsn") or {}).get("hsn_code") or "", "gst_rate": float(gst_rate),
+            "cgst_amount": float(cgst), "sgst_amount": float(sgst), "igst_amount": float(igst), "gst_amount": float(cgst + sgst + igst), "grand_total": float(grand_total),
+            "supply_type": supply_type, "estimated_unit_cost": float(wac), "estimated_cogs": float(estimated_cogs), "gross_margin_amount": float(gross_margin), "gross_margin_percent": float(gross_margin_percent),
+            "sales_ledger_id": line_sales_id, "sales_ledger_name": (ledgers.get("sales") or {}).get("name") or "Sales", "inventory_ledger_id": line_inventory_id, "inventory_ledger_name": (ledgers.get("inventory") or {}).get("name") or "Stock-in-Hand",
+        }
+        lines.append(line)
+        total_taxable += taxable_value; total_cgst += cgst; total_sgst += sgst; total_igst += igst; total_grand += grand_total; total_cogs += estimated_cogs
 
-    taxability = str((mapping.get("hsn") or {}).get("taxability_code") or "").upper()
-    effective_rate = mapping.get("effective_gst_rate") or {}
-    gst_rate = _decimal(effective_rate.get("total_rate")) if taxability == "TAXABLE" else Decimal("0")
-
-    seller_state_name, seller_state_code = _resolve_gst_state(
-        entity.get("state") or "",
-        entity.get("state_code") or "",
-        entity.get("gstin") or "",
-    )
-    buyer_state_name, buyer_state_code = _resolve_gst_state(
-        buyer.get("state") or "",
-        buyer.get("state_code") or "",
-        buyer.get("gstin") or "",
-    )
-    if gst_rate > 0 and not seller_state_code:
-        raise ValueError("AVPL Accounting entity State Code is required before issuing a GST sales invoice.")
-    if gst_rate > 0 and not buyer_state_code:
-        raise ValueError("The UFC Centre State is required before issuing a GST sales invoice.")
-
-    tax_amount = (taxable_value * gst_rate / Decimal("100")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
-    cgst = sgst = igst = Decimal("0")
-    supply_type = "non_taxable"
-    if tax_amount > 0:
-        if seller_state_code == buyer_state_code:
-            cgst = (tax_amount / Decimal("2")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
-            sgst = tax_amount - cgst
-            supply_type = "intra_state"
-        else:
-            igst = tax_amount
-            supply_type = "inter_state"
-
-    grand_total = taxable_value + cgst + sgst + igst
-    wac = _purchase_wac(entity["_id"], order.get("source_product_id"))
-    estimated_cogs = (quantity * wac).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
-    gross_margin = taxable_value - estimated_cogs
-    gross_margin_percent = (
-        gross_margin * Decimal("100") / taxable_value
-        if taxable_value > 0
-        else Decimal("0")
-    )
-
-    ledgers = mapping.get("ledgers") or {}
+    if not lines:
+        raise ValueError("No approved product line exists for this order.")
+    total_margin = total_taxable - total_cogs
+    total_margin_percent = total_margin * Decimal("100") / total_taxable if total_taxable > 0 else Decimal("0")
+    primary = lines[0]
+    rates = {str(x.get("gst_rate")) for x in lines}
+    supply_types = {x.get("supply_type") for x in lines}
     return {
-        "transaction_date": transaction_date,
-        "quantity": quantity,
-        "unit_price": unit_price,
-        "taxable_value": taxable_value,
-        "taxability_code": taxability or "NON_GST",
-        "hsn_code": (mapping.get("hsn") or {}).get("hsn_code") or "",
-        "gst_rate": gst_rate,
-        "cgst": cgst,
-        "sgst": sgst,
-        "igst": igst,
-        "grand_total": grand_total,
-        "supply_type": supply_type,
+        "transaction_date": transaction_date, "items": lines, "item_count": len(lines),
+        "quantity": _decimal(primary.get("quantity")), "unit_price": _decimal(primary.get("unit_price")),
+        "taxable_value": total_taxable, "taxability_code": primary.get("taxability_code") or "NON_GST", "hsn_code": primary.get("hsn_code") or "",
+        "gst_rate": _decimal(primary.get("gst_rate")) if len(rates) == 1 else Decimal("0"),
+        "cgst": total_cgst, "sgst": total_sgst, "igst": total_igst, "grand_total": total_grand,
+        "supply_type": next(iter(supply_types)) if len(supply_types) == 1 else "mixed",
         "place_of_supply_state": buyer_state_name or seller_state_name or buyer.get("state") or entity.get("state") or "",
         "place_of_supply_state_code": buyer_state_code or seller_state_code,
-        "base_unit_code": (mapping.get("base_unit") or {}).get("unit_code") or order.get("unit_code") or "Unit",
-        "sales_ledger_id": _to_object_id((ledgers.get("sales") or {}).get("_id") or (ledgers.get("sales") or {}).get("id")),
-        "sales_ledger_name": (ledgers.get("sales") or {}).get("name") or "Sales",
-        "inventory_ledger_id": _to_object_id((ledgers.get("inventory") or {}).get("_id") or (ledgers.get("inventory") or {}).get("id")),
-        "inventory_ledger_name": (ledgers.get("inventory") or {}).get("name") or "Stock-in-Hand",
-        "estimated_unit_cost": wac,
-        "estimated_cogs": estimated_cogs,
-        "gross_margin": gross_margin,
-        "gross_margin_percent": gross_margin_percent,
+        "base_unit_code": primary.get("unit_code") or "Unit", "sales_ledger_id": sales_ledger_id, "sales_ledger_name": sales_ledger_name,
+        "inventory_ledger_id": inventory_ledger_id, "inventory_ledger_name": inventory_ledger_name,
+        "estimated_unit_cost": _decimal(primary.get("estimated_unit_cost")), "estimated_cogs": total_cogs,
+        "gross_margin": total_margin, "gross_margin_percent": total_margin_percent,
     }
 
 
@@ -399,7 +440,16 @@ def _serialize_invoice(row):
     result["quantity_display"] = _qty(row.get("quantity"))
     result["unit_price_display"] = _money(row.get("unit_price"))
     result["gst_rate_display"] = _qty(row.get("gst_rate"))
+    result["settlement_total_display"] = _money(row.get("settlement_total") if row.get("settlement_total") is not None else row.get("grand_total"))
+    result["accepted_goods_total_display"] = _money(row.get("accepted_goods_total") if row.get("accepted_goods_total") is not None else row.get("settlement_total"))
+    result["receipt_adjustment_amount_display"] = _money(row.get("receipt_adjustment_amount"))
+    result["receipt_finalized"] = bool(row.get("receipt_finalized") or row.get("receipt_status"))
+    result["receipt_status_label"] = str(row.get("receipt_status") or "").replace("_", " ").title()
     result["payment_status_label"] = PAYMENT_STATUS_LABELS.get(row.get("payment_status"), str(row.get("payment_status") or "").replace("_", " ").title())
+    result["items"] = [_serialize_financial_item(x) for x in (row.get("items") or []) if isinstance(x, dict)]
+    result["item_count"] = len(result["items"]) or int(row.get("item_count") or 1)
+    result["is_multi_item_order"] = result["item_count"] > 1
+    result["product_summary"] = result["items"][0].get("product_name") if len(result["items"]) == 1 else (f"{result['item_count']} products" if result["item_count"] > 1 else row.get("product_name") or "Product")
     return result
 
 
@@ -419,30 +469,42 @@ def _serialize_sale(row):
     result["gross_margin_percent_display"] = _qty(row.get("gross_margin_percent"))
     result["status_label"] = SALE_STATUS_LABELS.get(row.get("status"), str(row.get("status") or "").replace("_", " ").title())
     result["payment_status_label"] = PAYMENT_STATUS_LABELS.get(row.get("payment_status"), str(row.get("payment_status") or "").replace("_", " ").title())
+    result["items"] = [_serialize_financial_item(x) for x in (row.get("items") or []) if isinstance(x, dict)]
+    result["item_count"] = len(result["items"]) or int(row.get("item_count") or 1)
+    result["is_multi_item_order"] = result["item_count"] > 1
+    if result["items"]:
+        result["product_summary"] = result["items"][0].get("product_name") if result["item_count"] == 1 else f"{result['item_count']} products"
+    else:
+        result["product_summary"] = row.get("product_name") or "Product"
     return result
 
 
 def _upsert_sale(order, actor, financial):
+    """Create or repair the one AVPL sale attached to an UFC order.
+
+    Multi-item orders still create one commercial sale/invoice, but the sale keeps
+    a complete line snapshot. Re-running financial sync repairs stale first-line-
+    only records without creating duplicates or touching settled payment history.
+    """
     timestamp = now_utc()
     existing = mongo.db[SALE_COLLECTION].find_one({"avpl_ufc_order_id": order["_id"]})
-    if existing:
-        return existing
-    document = {
-        "document_uid": uuid4().hex,
-        "sale_number": _next_sale_number(),
+    primary = (financial.get("items") or [{}])[0] or {}
+    repair = {
         "accounting_entity_id": order.get("accounting_entity_id"),
         "accounting_entity_id_str": str(order.get("accounting_entity_id") or ""),
-        "avpl_ufc_order_id": order["_id"],
-        "avpl_ufc_order_id_str": str(order["_id"]),
         "avpl_order_number": order.get("order_number") or "",
         "centre_uid": order.get("centre_uid") or "",
         "centre_name": order.get("centre_name") or order.get("centre_uid") or "UFC",
-        "source_product_id": order.get("source_product_id"),
-        "source_product_id_str": str(order.get("source_product_id") or ""),
-        "product_name": order.get("product_name") or "Product",
-        "product_code": order.get("product_code") or "",
-        "category": order.get("category") or "",
-        "product_role": order.get("product_role") or "",
+        "commerce_version": 2 if order.get("items") else 1,
+        "items": financial.get("items") or [],
+        "item_count": int(financial.get("item_count") or 1),
+        # Legacy first-line fields remain only for backward compatibility.
+        "source_product_id": primary.get("source_product_id") or order.get("source_product_id"),
+        "source_product_id_str": str(primary.get("source_product_id") or order.get("source_product_id") or ""),
+        "product_name": primary.get("product_name") or order.get("product_name") or "Product",
+        "product_code": primary.get("product_code") or order.get("product_code") or "",
+        "category": primary.get("category") or order.get("category") or "",
+        "product_role": primary.get("product_role") or order.get("product_role") or "",
         "quantity": float(financial["quantity"]),
         "unit_code": financial["base_unit_code"],
         "unit_price": float(financial["unit_price"]),
@@ -459,15 +521,26 @@ def _upsert_sale(order, actor, financial):
         "sale_date": order.get("dispatched_at") or timestamp,
         "dispatch_date": order.get("dispatched_at") or timestamp,
         "status": "received" if order.get("status") == "received" else "invoiced",
+        "accounting_status": "ready_for_posting",
+        "updated_at": timestamp,
+    }
+    if existing:
+        mongo.db[SALE_COLLECTION].update_one({"_id": existing["_id"]}, {"$set": repair})
+        return mongo.db[SALE_COLLECTION].find_one({"_id": existing["_id"]}) or existing
+
+    document = {
+        "document_uid": uuid4().hex,
+        "sale_number": _next_sale_number(),
+        "avpl_ufc_order_id": order["_id"],
+        "avpl_ufc_order_id_str": str(order["_id"]),
+        **repair,
         "payment_status": "unpaid",
         "amount_paid": 0.0,
         "outstanding_amount": float(financial["grand_total"]),
-        "accounting_status": "ready_for_posting",
         "accounting_note": "Payment settlements create controlled Accounting handoff events; final voucher posting remains under the existing maker-checker controls. Stock already moved at physical dispatch.",
         "created_by": actor["_id"],
         "created_by_name": actor.get("resolved_name") or "",
         "created_at": timestamp,
-        "updated_at": timestamp,
         "history": [{
             "action": "create_avpl_sale_from_dispatch",
             "actor_user_id": actor["_id"],
@@ -483,13 +556,82 @@ def _upsert_sale(order, actor, financial):
     except Exception:
         existing = mongo.db[SALE_COLLECTION].find_one({"avpl_ufc_order_id": order["_id"]})
         if existing:
-            return existing
+            mongo.db[SALE_COLLECTION].update_one({"_id": existing["_id"]}, {"$set": repair})
+            return mongo.db[SALE_COLLECTION].find_one({"_id": existing["_id"]}) or existing
         raise
 
 
 def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_days=0):
     timestamp = now_utc()
     invoice = mongo.db[INVOICE_COLLECTION].find_one({"avpl_ufc_order_id": order["_id"]})
+    if invoice:
+        primary = (financial.get("items") or [{}])[0] or {}
+        # Repair the immutable commercial snapshot from the authoritative order.
+        # Payment identity/history and the official invoice number are preserved.
+        confirmed_paid = _decimal(invoice.get("amount_paid") if invoice.get("amount_paid") is not None else invoice.get("paid_amount"))
+        repaired_total = _decimal(financial["grand_total"])
+        settlement_total = _decimal(invoice.get("settlement_total"), str(repaired_total)) if invoice.get("receipt_finalized") is True else repaired_total
+        repaired_outstanding = max(settlement_total - confirmed_paid, Decimal("0"))
+        repaired_payment_status = "paid" if repaired_outstanding <= Decimal("0.004") else ("partially_paid" if confirmed_paid > Decimal("0.004") else "unpaid")
+        commercial_updates = {
+            "avpl_ufc_sale_id": sale.get("_id"),
+            "avpl_ufc_sale_id_str": str(sale.get("_id") or ""),
+            "sale_number": sale.get("sale_number") or invoice.get("sale_number") or "",
+            "avpl_order_number": order.get("order_number") or "",
+            "centre_uid": order.get("centre_uid") or buyer.get("centre_uid") or "",
+            "centre_name": order.get("centre_name") or buyer.get("legal_name") or order.get("centre_uid") or "UFC",
+            "seller": invoice.get("seller") or _seller_snapshot(entity),
+            "buyer": buyer,
+            "place_of_supply_state": financial["place_of_supply_state"],
+            "place_of_supply_state_code": financial["place_of_supply_state_code"],
+            "supply_type": financial["supply_type"],
+            "commerce_version": 2 if order.get("items") else 1,
+            "items": financial.get("items") or [],
+            "item_count": int(financial.get("item_count") or 1),
+            "source_product_id": primary.get("source_product_id") or order.get("source_product_id"),
+            "source_product_id_str": str(primary.get("source_product_id") or order.get("source_product_id") or ""),
+            "product_name": primary.get("product_name") or order.get("product_name") or "Product",
+            "product_code": primary.get("product_code") or order.get("product_code") or "",
+            "category": primary.get("category") or order.get("category") or "",
+            "product_role": primary.get("product_role") or order.get("product_role") or "",
+            "hsn_code": financial["hsn_code"],
+            "taxability_code": financial["taxability_code"],
+            "quantity": float(financial["quantity"]),
+            "unit_code": financial["base_unit_code"],
+            "unit_price": float(financial["unit_price"]),
+            "subtotal": float(financial["taxable_value"]),
+            "taxable_value": float(financial["taxable_value"]),
+            "gst_rate": float(financial["gst_rate"]),
+            "cgst_amount": float(financial["cgst"]),
+            "sgst_amount": float(financial["sgst"]),
+            "igst_amount": float(financial["igst"]),
+            "gst_amount": float(financial["cgst"] + financial["sgst"] + financial["igst"]),
+            "grand_total": float(repaired_total),
+            "amount_paid": float(confirmed_paid),
+            "outstanding_amount": float(repaired_outstanding),
+            "payment_status": repaired_payment_status,
+            "sales_ledger_id": financial["sales_ledger_id"],
+            "sales_ledger_name": financial["sales_ledger_name"],
+            "inventory_ledger_id": financial["inventory_ledger_id"],
+            "inventory_ledger_name": financial["inventory_ledger_name"],
+            "estimated_unit_cost": float(financial["estimated_unit_cost"]),
+            "estimated_cogs": float(financial["estimated_cogs"]),
+            "gross_margin_amount": float(financial["gross_margin"]),
+            "gross_margin_percent": float(financial["gross_margin_percent"]),
+            "dispatch": {
+                "quantity": float(financial["quantity"]),
+                "item_count": int(financial.get("item_count") or 1),
+                "transporter_name": order.get("transporter_name") or "",
+                "vehicle_number": order.get("vehicle_number") or "",
+                "dispatch_note": order.get("dispatch_note") or "",
+                "dispatched_at": order.get("dispatched_at"),
+                "allocations": order.get("dispatch_allocations") or [],
+            },
+            "updated_at": timestamp,
+        }
+        mongo.db[INVOICE_COLLECTION].update_one({"_id": invoice["_id"]}, {"$set": commercial_updates})
+        invoice = mongo.db[INVOICE_COLLECTION].find_one({"_id": invoice["_id"]}) or invoice
+
     if not invoice:
         invoice_date = financial["transaction_date"]
         due_date = (
@@ -509,6 +651,8 @@ def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_
             "avpl_ufc_order_id": order["_id"],
             "avpl_ufc_order_id_str": str(order["_id"]),
             "avpl_order_number": order.get("order_number") or "",
+            "centre_uid": order.get("centre_uid") or buyer.get("centre_uid") or "",
+            "centre_name": order.get("centre_name") or buyer.get("legal_name") or order.get("centre_uid") or "UFC",
             "invoice_date": invoice_date,
             "due_date": due_date,
             "credit_period_days": max(int(credit_period_days or 0), 0),
@@ -523,6 +667,9 @@ def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_
             "place_of_supply_state": financial["place_of_supply_state"],
             "place_of_supply_state_code": financial["place_of_supply_state_code"],
             "supply_type": financial["supply_type"],
+            "commerce_version": 2 if order.get("items") else 1,
+            "items": financial.get("items") or [],
+            "item_count": int(financial.get("item_count") or 1),
             "source_product_id": order.get("source_product_id"),
             "source_product_id_str": str(order.get("source_product_id") or ""),
             "product_name": order.get("product_name") or "Product",
@@ -646,7 +793,7 @@ def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_
 
 def _upsert_receivable(order, sale, invoice):
     timestamp = now_utc()
-    total = float(_decimal(invoice.get("grand_total")))
+    total = float(_decimal(invoice.get("settlement_total"), str(invoice.get("grand_total") or 0)))
     document = {
         "accounting_entity_id": order.get("accounting_entity_id"),
         "accounting_entity_id_str": str(order.get("accounting_entity_id") or ""),
@@ -680,7 +827,9 @@ def _upsert_receivable(order, sale, invoice):
 
 def _upsert_ufc_payable(order, sale, invoice):
     timestamp = now_utc()
-    total = float(_decimal(invoice.get("grand_total")))
+    # After buyer-side goods receipt, settlement_total is the authoritative
+    # payable. grand_total remains the original dispatch invoice for audit.
+    total = float(_decimal(invoice.get("settlement_total"), str(invoice.get("grand_total") or 0)))
     received = order.get("status") == "received" or order.get("ufc_stock_posted") is True
     document = {
         "centre_uid": order.get("centre_uid") or "",
@@ -728,7 +877,8 @@ def link_ufc_purchase_financials(order_id):
         return None
 
     payable = _upsert_ufc_payable(order, sale, invoice)
-    total = float(_decimal(invoice.get("grand_total")))
+    original_total = float(_decimal(invoice.get("grand_total")))
+    total = float(_decimal(invoice.get("settlement_total"), str(original_total)))
     update = {
         "avpl_sale_id": sale["_id"],
         "avpl_sale_id_str": str(sale["_id"]),
@@ -746,8 +896,11 @@ def link_ufc_purchase_financials(order_id):
         "sgst_amount": float(_decimal(invoice.get("sgst_amount"))),
         "igst_amount": float(_decimal(invoice.get("igst_amount"))),
         "gst_amount": float(_decimal(invoice.get("gst_amount"))),
+        "original_invoice_total": original_total,
         "total_amount": total,
         "total_amount_display": _money(total),
+        "receipt_adjustment_amount": float(_decimal(invoice.get("receipt_adjustment_amount"))),
+        "receipt_status": invoice.get("receipt_status") or "",
         "payment_status": invoice.get("payment_status") or "unpaid",
         "amount_paid": float(_decimal(invoice.get("amount_paid"))),
         "outstanding_amount": float(_decimal(invoice.get("outstanding_amount"), str(total))),
@@ -773,7 +926,10 @@ def link_ufc_purchase_financials(order_id):
         "avpl_sale_number": sale.get("sale_number") or "",
         "avpl_sales_invoice_id": invoice["_id"],
         "avpl_sales_invoice_number": invoice.get("invoice_number") or "",
-        "invoice_grand_total": total,
+        "invoice_grand_total": original_total,
+        "settlement_total": total,
+        "accepted_goods_total": total,
+        "receipt_adjustment_amount": float(_decimal(invoice.get("receipt_adjustment_amount"))),
         "financial_sync_status": "complete",
         "updated_at": now_utc(),
     }})
@@ -814,6 +970,10 @@ def ensure_sales_documents_for_order(actor_user_id, order_id):
         "invoice_date": invoice.get("invoice_date"),
         "due_date": invoice.get("due_date"),
         "grand_total": float(_decimal(invoice.get("grand_total"))),
+        "settlement_total": float(_decimal(invoice.get("settlement_total"), str(invoice.get("grand_total") or 0))),
+        "receipt_adjustment_amount": float(_decimal(invoice.get("receipt_adjustment_amount"))),
+        "payment_status": invoice.get("payment_status") or "unpaid",
+        "amount_paid": float(_decimal(invoice.get("amount_paid"))),
         "outstanding_amount": float(_decimal(invoice.get("outstanding_amount"))),
         "receivable_id": receivable.get("_id") if receivable else None,
         "receivable_id_str": str((receivable or {}).get("_id") or ""),
@@ -864,8 +1024,11 @@ def bulk_sync_existing_orders(actor_user_id, limit=100):
             {"avpl_sales_invoice_id": {"$exists": False}},
             {"avpl_sales_invoice_id": None},
             {"financial_sync_status": {"$ne": "complete"}},
+            {"commerce_version": 2},
+            {"is_multi_item_order": True},
+            {"items.1": {"$exists": True}},
         ],
-    }).sort("dispatched_at", ASCENDING).limit(limit))
+    }).sort("dispatched_at", DESCENDING).limit(limit))
     result = {"checked": len(rows), "synced": 0, "failed": 0, "errors": []}
     for order in rows:
         try:
@@ -897,6 +1060,7 @@ def get_avpl_sales_overview(actor_user_id, *, search="", payment_status="all", p
             {"centre_uid": {"$regex": escaped, "$options": "i"}},
             {"centre_name": {"$regex": escaped, "$options": "i"}},
             {"product_name": {"$regex": escaped, "$options": "i"}},
+            {"items.product_name": {"$regex": escaped, "$options": "i"}},
         ]
     page = max(int(page or 1), 1)
     per_page = min(max(int(per_page or 30), 10), 100)

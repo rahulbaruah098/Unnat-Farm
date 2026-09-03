@@ -523,7 +523,10 @@ def post_voucher_draft(
     )
     voucher = _get_voucher(voucher_id)
     entity = _assert_active_avpl_entity(voucher.get("accounting_entity_id"))
-    posting_permission = required_permission or POST_PERMISSION
+    # ``None`` means use the normal voucher-post permission.  An explicit
+    # empty permission is allowed only for a caller that has already enforced
+    # a narrower domain authorization before entering this service.
+    posting_permission = POST_PERMISSION if required_permission is None else required_permission
     _require_permission(actor, entity["_id"], posting_permission)
     ensure_voucher_posting_indexes()
 

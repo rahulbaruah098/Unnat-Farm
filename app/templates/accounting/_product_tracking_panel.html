@@ -184,12 +184,10 @@
 <section class="accounting-tracking-card" id="product-tracking-controls">
     <div class="accounting-section-heading">
         <div>
-            <p class="accounting-eyebrow">Stage 4 · Batch 5</p>
-            <h2>Barcode, batch and expiry controls</h2>
+            <p class="accounting-eyebrow">Product controls</p>
+            <h2>Product Tracking</h2>
             <p class="accounting-section-description">
-                Defines optional product-level controls for future Accounting purchases, sales,
-                stock receipts, issues and adjustments. This setup stores policy only; it does not
-                create stock lots, alter operational stock or post any voucher.
+                Optional barcode, batch and expiry rules by product.
             </p>
         </div>
         {% if product_tracking_overview.active_profile_count > 0 %}
@@ -212,11 +210,7 @@
             <div><span>Without profile</span><strong>{{ product_tracking_overview.unconfigured_mapping_count }}</strong></div>
         </div>
 
-        <div class="accounting-notice info compact">
-            <strong>Permanent separation:</strong> profiles are stored in
-            <code>accounting_product_tracking_profiles</code>. Actual batch quantities and expiry lots
-            will be created later by Accounting stock documents and <code>stock_movements</code>.
-        </div>
+        
 
         {% if product_tracking_overview.audit_recovery_count > 0 %}
             <div class="accounting-notice warning compact">
@@ -226,7 +220,7 @@
 
         {% if not product_tracking_overview.prerequisites.has_accounting_ready_products %}
             <div class="accounting-notice warning">
-                {% if streamlined_workflows_enabled %}Activate at least one Product Accounting mapping before configuring barcode, batch or expiry controls.{% else %}Approve at least one Product Accounting mapping before configuring barcode, batch or expiry controls.{% endif %}
+                Make at least one product Accounting Ready first.
             </div>
         {% endif %}
 
@@ -234,8 +228,8 @@
             <form method="post"
                   action="{{ url_for('accounting.product_tracking_create') }}"
                   class="accounting-tracking-form">
-                <h3>Create product tracking profile</h3>
-                <p>Configure only the controls required by the selected product. A product needing no control does not require a profile.</p>
+                <h3>Add Tracking Profile</h3>
+                <p>Enable only the controls the product needs.</p>
 
                 <div class="accounting-tracking-grid">
                     <label class="wide">
@@ -278,11 +272,11 @@
                 <div class="accounting-tracking-toggle-grid">
                     <label class="accounting-tracking-toggle">
                         <input type="checkbox" name="barcode_required_on_transaction" value="1">
-                        <span><strong>Barcode required</strong><small>Future Accounting documents must scan or provide the approved barcode.</small></span>
+                        <span><strong>Barcode required</strong><small>Barcode required for future Accounting documents.</small></span>
                     </label>
                     <label class="accounting-tracking-toggle">
                         <input type="checkbox" name="batch_tracking_enabled" value="1">
-                        <span><strong>Enable batch tracking</strong><small>Future stock lots will remain identifiable by batch or lot.</small></span>
+                        <span><strong>Enable batch tracking</strong><small>Track future stock by batch or lot.</small></span>
                     </label>
                     <label class="accounting-tracking-toggle">
                         <input type="checkbox" name="batch_number_required" value="1">
@@ -290,11 +284,11 @@
                     </label>
                     <label class="accounting-tracking-toggle">
                         <input type="checkbox" name="manufacturing_date_required" value="1">
-                        <span><strong>Manufacturing date required</strong><small>Useful for food, seed, fertilizer and other dated products.</small></span>
+                        <span><strong>Manufacturing date required</strong><small>Use for products with expiry dates.</small></span>
                     </label>
                     <label class="accounting-tracking-toggle">
                         <input type="checkbox" name="expiry_tracking_enabled" value="1">
-                        <span><strong>Enable expiry tracking</strong><small>Automatically enables batch tracking and blocks expired stock.</small></span>
+                        <span><strong>Enable expiry tracking</strong><small>Enables batch tracking and blocks expired stock.</small></span>
                     </label>
                     <label class="accounting-tracking-toggle">
                         <input type="checkbox" name="expiry_date_required" value="1">
@@ -303,13 +297,13 @@
                 </div>
 
                 <div class="accounting-tracking-footer">
-                    <small>EAN/UPC/GTIN values are check-digit validated. Live barcodes must be unique inside AVPL Accounting.</small>
-                    <button type="submit" class="accounting-primary-button">{% if streamlined_workflows_enabled %}Save & Activate Tracking{% else %}Create tracking draft{% endif %}</button>
+                    <button type="button" class="accounting-secondary-button" onclick="this.form.reset()">Cancel</button>
+                    <button type="submit" class="accounting-primary-button">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Create tracking draft{% endif %}</button>
                 </div>
             </form>
         {% elif product_tracking_capabilities.can_create and product_tracking_overview.prerequisites.has_accounting_ready_products %}
             <div class="accounting-tracking-empty">
-                Every Accounting-ready product already has a live tracking profile. Products that need no tracking control may remain without one.
+                All products that need tracking are configured.
             </div>
         {% endif %}
 
@@ -321,6 +315,7 @@
                             <div>
                                 <h3>{{ profile.source_product_name }}</h3>
                                 <p>{{ profile.profile_code }} · {{ profile.mapping_code }} · {{ profile.base_unit_code or profile.base_unit_name }}</p>
+                                <small>Maker: {{ profile.created_by_name or 'Accounts' }}</small>
                             </div>
                             <span class="accounting-state-pill {% if profile.status == 'active' %}active{% elif profile.status == 'pending_approval' %}review{% else %}pending{% endif %}">
                                 {{ profile.status_display }}
@@ -353,7 +348,7 @@
 
                         {% if product_tracking_capabilities.can_edit and profile.status in ['draft','returned_for_correction'] and profile.created_by == current_user_id %}
                             <details class="accounting-history">
-                                <summary>Edit tracking draft</summary>
+                                <summary>Edit tracking</summary>
                                 <form method="post" action="{{ url_for('accounting.product_tracking_edit', profile_id=profile.id) }}" class="accounting-tracking-form">
                                     <input type="hidden" name="version" value="{{ profile.version }}">
                                     <input type="hidden" name="product_mapping_id" value="{{ profile.product_mapping_id }}">
@@ -379,12 +374,13 @@
                                         <label class="accounting-tracking-toggle"><input type="checkbox" name="expiry_tracking_enabled" value="1" {% if profile.expiry_tracking_enabled %}checked{% endif %}><span><strong>Expiry tracking</strong></span></label>
                                         <label class="accounting-tracking-toggle"><input type="checkbox" name="expiry_date_required" value="1" {% if profile.expiry_date_required %}checked{% endif %}><span><strong>Expiry date required</strong></span></label>
                                     </div>
-                                    <div class="accounting-tracking-footer"><span></span><button type="submit" class="accounting-primary-button">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save draft{% endif %}</button></div>
+                                    <div class="accounting-tracking-footer"><button type="button" class="accounting-secondary-button" onclick="this.form.reset();this.closest('details').removeAttribute('open')">Cancel</button><button type="submit" class="accounting-primary-button">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save draft{% endif %}</button></div>
                                 </form>
                             </details>
                         {% endif %}
 
                         <div class="accounting-tracking-actions">
+                            {% if not streamlined_workflows_enabled %}
                             {% if product_tracking_capabilities.can_submit and profile.status in ['draft','returned_for_correction'] and profile.created_by == current_user_id %}
                                 <form method="post" action="{{ url_for('accounting.product_tracking_submit', profile_id=profile.id) }}" class="accounting-tracking-action-form">
                                     <input type="hidden" name="version" value="{{ profile.version }}">
@@ -425,6 +421,8 @@
                                 </form>
                             {% endif %}
 
+                            {% endif %}
+
                             {% if product_tracking_capabilities.can_deactivate and profile.status == 'active' %}
                                 <form method="post" action="{{ url_for('accounting.product_tracking_deactivate', profile_id=profile.id) }}" class="accounting-tracking-action-form">
                                     <input type="hidden" name="version" value="{{ profile.version }}">
@@ -443,7 +441,7 @@
                         </div>
 
                         <details class="accounting-history">
-                            <summary>Workflow history ({{ profile.change_history|length }})</summary>
+                            <summary>History ({{ profile.change_history|length }})</summary>
                             <div class="accounting-history-list">
                                 {% for event in profile.change_history|reverse %}
                                     <div>
@@ -465,8 +463,8 @@
 
         {% if product_tracking_capabilities.can_validate and product_tracking_overview.active_rows %}
             <div class="accounting-tracking-preview">
-                <h3>Validate future lot controls</h3>
-                <p>This preview uses the same posting-ready validation helper future purchase, sale and stock screens will call. It does not save a batch or change stock.</p>
+                <h3>Test Lot Rules</h3>
+                <p>Check batch / expiry rules without changing stock.</p>
                 <form method="post" action="{{ url_for('accounting.product_tracking_validate') }}">
                     <div class="accounting-tracking-grid">
                         <label class="wide">
@@ -492,7 +490,7 @@
                         <label><span>Manufacturing date</span><input type="date" name="manufacturing_date"></label>
                         <label><span>Expiry date</span><input type="date" name="expiry_date"></label>
                     </div>
-                    <div class="accounting-tracking-footer"><small>Expired stock is always blocked. Minimum remaining shelf life applies to receipts.</small><button type="submit" class="accounting-primary-button">Validate controls</button></div>
+                    <div class="accounting-tracking-footer"><small>Expired stock is blocked.</small><button type="submit" class="accounting-primary-button">Validate controls</button></div>
                 </form>
 
                 {% if product_tracking_preview %}

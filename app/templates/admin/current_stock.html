@@ -1,73 +1,568 @@
 {% extends 'base.html' %}
-{% block title %}AVPL Current Stock{% endblock %}
+
+{% block title %}AVPL Stock{% endblock %}
+
 {% block content %}
 <style>
-.stock-page{width:100%;padding:24px;border:1px solid #DCEEE2;border-radius:24px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.08);font-family:"Times New Roman",Georgia,serif}.stock-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}.stock-head h2{margin:0;color:#17252A}.stock-head p{margin:5px 0 0;color:#64748B;max-width:760px;line-height:1.45}.head-actions{display:flex;gap:8px;flex-wrap:wrap}.btn-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:999px;text-decoration:none;font-weight:900;border:1px solid #CFE6D8;background:#F3FBF6;color:#2F7A4C}.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-bottom:15px}.summary-card{padding:13px;border:1px solid #E2EFE6;border-radius:15px;background:#FCFEFC}.summary-card small{display:block;color:#64748B}.summary-card strong{display:block;margin-top:3px;font-size:1.2rem;color:#17252A}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin-bottom:14px}.toolbar input,.toolbar select{height:42px;border:1px solid #D6E5DA;border-radius:999px;padding:0 13px;background:#fff;font:inherit}.toolbar button{height:42px;border:0;border-radius:999px;padding:0 17px;background:#5FA878;color:#fff;font:inherit;font-weight:900;cursor:pointer}.note{margin-bottom:14px;padding:11px 13px;border:1px solid #B9DCCA;border-radius:14px;background:#F3FBF6;color:#3E6850;line-height:1.45}.table-wrap{overflow:auto;border:1px solid #E2EFE6;border-radius:16px}.stock-table{width:100%;border-collapse:collapse;min-width:1430px}.stock-table th{background:#EFF7F1;color:#4B6255;text-align:left;font-size:.8rem;padding:10px;white-space:nowrap}.stock-table td{padding:11px 10px;border-top:1px solid #EDF3EF;color:#334155;vertical-align:middle}.product strong{display:block;color:#17252A}.product small{display:block;color:#64748B;margin-top:2px}.qty{font-weight:900;color:#263B31}.saleable{color:#237A43}.warn{color:#B45309}.danger{color:#B91C1C}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:900;border:1px solid #DCECE1;background:#F8FCF9;color:#3F5F4B}.badge.low{background:#FFF7E6;border-color:#F4D38A;color:#8A5B00}.badge.published{background:#ECFDF5;border-color:#A7F3D0;color:#047857}.badge.private{background:#F1F5F9;border-color:#CBD5E1;color:#475569}.empty{padding:30px;text-align:center;color:#64748B}.mobile-hint{display:none;color:#64748B;font-size:.84rem;margin-bottom:8px}
-@media(max-width:1000px){.summary{grid-template-columns:repeat(2,1fr)}.mobile-hint{display:block}.toolbar{grid-template-columns:1fr}}@media(max-width:650px){.stock-page{padding:15px;border-radius:18px}.summary{grid-template-columns:1fr 1fr}.head-actions,.head-actions a{width:100%}}
+*{
+    box-sizing:border-box;
+}
+
+.stock-page{
+    width:100%;
+    max-width:1600px;
+    margin:0 auto;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#33443a;
+}
+
+.page-header,
+.stock-content{
+    background:#fff;
+    border:1px solid #e2eae4;
+    border-radius:16px;
+    box-shadow:0 10px 28px rgba(31,75,48,.05);
+}
+
+.page-header{
+    padding:20px;
+}
+
+.page-header-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
+}
+
+.page-header h1{
+    margin:0;
+    color:#17251d;
+    font-size:1.55rem;
+    font-weight:800;
+}
+
+.page-description{
+    margin:6px 0 0;
+    color:#748279;
+    font-size:.76rem;
+    line-height:1.5;
+    max-width:720px;
+}
+
+.header-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:8px 13px;
+    border:1px solid #d6e1d9;
+    border-radius:8px;
+    background:#fff;
+    color:#2f6e46;
+    text-decoration:none;
+    font-size:.7rem;
+    font-weight:800;
+    transition:background .15s ease,border-color .15s ease;
+}
+
+.btn:hover{
+    background:#f5faf7;
+    border-color:#c7d9cd;
+}
+
+.summary-grid{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:10px;
+    margin:14px 0;
+}
+
+.summary-card{
+    padding:14px;
+    border:1px solid #e2eae4;
+    border-radius:11px;
+    background:#fbfdfb;
+}
+
+.summary-card span{
+    display:block;
+    color:#748279;
+    font-size:.65rem;
+    font-weight:700;
+}
+
+.summary-card strong{
+    display:block;
+    margin-top:5px;
+    color:#203529;
+    font-size:1.1rem;
+    font-weight:850;
+}
+
+.filters{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto auto;
+    gap:8px;
+    margin-bottom:14px;
+}
+
+.filters input,
+.filters select{
+    height:40px;
+    border:1px solid #d8e1da;
+    border-radius:8px;
+    padding:0 11px;
+    background:#fff;
+    color:#34483b;
+    font:inherit;
+    font-size:.72rem;
+    outline:none;
+}
+
+.filters input:focus,
+.filters select:focus{
+    border-color:#82ad90;
+    box-shadow:0 0 0 3px rgba(47,110,70,.06);
+}
+
+.filters button{
+    height:40px;
+    padding:0 16px;
+    border:1px solid #397e51;
+    border-radius:8px;
+    background:#397e51;
+    color:#fff;
+    font:inherit;
+    font-size:.7rem;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.stock-content{
+    padding:18px;
+}
+
+.section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+}
+
+.section-head h2{
+    margin:0;
+    color:#263b2f;
+    font-size:1rem;
+    font-weight:800;
+}
+
+.section-head p{
+    margin:5px 0 0;
+    color:#748279;
+    font-size:.71rem;
+    line-height:1.5;
+}
+
+.info-note{
+    margin-bottom:12px;
+    padding:10px 12px;
+    border:1px solid #d7e4da;
+    border-radius:8px;
+    background:#f8fbf9;
+    color:#526158;
+    font-size:.69rem;
+    line-height:1.5;
+}
+
+.mobile-hint{
+    display:none;
+    margin-bottom:8px;
+    color:#748279;
+    font-size:.68rem;
+}
+
+.table-wrap{
+    width:100%;
+    overflow-x:auto;
+    border:1px solid #e1e9e3;
+    border-radius:10px;
+    background:#fff;
+}
+
+.stock-table{
+    width:100%;
+    min-width:1350px;
+    border-collapse:collapse;
+}
+
+.stock-table th,
+.stock-table td{
+    padding:10px 11px;
+    border-bottom:1px solid #edf2ee;
+    text-align:left;
+    vertical-align:middle;
+    color:#435349;
+    font-size:.69rem;
+    line-height:1.4;
+}
+
+.stock-table th{
+    background:#f5f8f6;
+    color:#68776e;
+    font-size:.6rem;
+    font-weight:850;
+    text-transform:uppercase;
+    white-space:nowrap;
+}
+
+.stock-table tr:last-child td{
+    border-bottom:0;
+}
+
+.product-name{
+    display:block;
+    color:#263b2f;
+    font-weight:800;
+}
+
+.product-meta,
+.warehouse-name{
+    display:block;
+    margin-top:2px;
+    color:#7c8981;
+    font-size:.62rem;
+}
+
+.quantity{
+    font-weight:800;
+}
+
+.available{
+    color:#237a43;
+}
+
+.warning{
+    color:#a86408;
+}
+
+.danger{
+    color:#b42318;
+}
+
+.badge{
+    display:inline-flex;
+    align-items:center;
+    min-height:23px;
+    padding:4px 7px;
+    border:1px solid #dce6df;
+    border-radius:7px;
+    background:#f8fbf9;
+    color:#526158;
+    font-size:.59rem;
+    font-weight:800;
+}
+
+.badge.low{
+    background:#fff7e6;
+    border-color:#efd496;
+    color:#8a5b00;
+}
+
+.badge.published{
+    background:#edf9f1;
+    border-color:#bee2c9;
+    color:#237a43;
+}
+
+.badge.private{
+    background:#f4f6f5;
+    border-color:#dce2de;
+    color:#66736c;
+}
+
+.empty{
+    padding:28px!important;
+    text-align:center!important;
+    color:#87938b!important;
+}
+
+@media(max-width:1100px){
+    .summary-grid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+    }
+
+    .mobile-hint{
+        display:block;
+    }
+}
+
+@media(max-width:760px){
+    .page-header,
+    .stock-content{
+        padding:14px;
+        border-radius:14px;
+    }
+
+    .summary-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .filters{
+        grid-template-columns:1fr;
+    }
+
+    .header-actions,
+    .header-actions .btn{
+        width:100%;
+    }
+
+    .filters button{
+        width:100%;
+    }
+}
+
+@media(max-width:480px){
+    .summary-grid{
+        grid-template-columns:1fr;
+    }
+}
 </style>
+
 <div class="stock-page">
-    <div class="stock-head">
-        <div>
-            <h2>Current AVPL Stock</h2>
-            <p>One simple source of truth: accepted Goods Receipts and approved stock adjustments. Manual Product Master quantities are not used for this page.</p>
+
+    <section class="page-header">
+        <div class="page-header-row">
+
+            <div>
+                <h1>AVPL Stock</h1>
+                <p class="page-description">
+                    View available AVPL stock, warehouse quantities, costs and UFC publishing status.
+                </p>
+            </div>
+
+            <div class="header-actions">
+                <a class="btn" href="{{ url_for('admin.batch_expiry') }}">
+                    Batches & Expiry
+                </a>
+
+                <a class="btn" href="{{ url_for('admin.stock_movements') }}">
+                    Stock History
+                </a>
+
+                <a class="btn" href="{{ url_for('admin.stock_adjustments') }}">
+                    Adjust Stock
+                </a>
+
+                <a class="btn" href="{{ url_for('admin.product_list') }}">
+                    Products
+                </a>
+
+                <a class="btn" href="{{ url_for('admin.ufc_order_requests') }}">
+                    UFC Orders
+                </a>
+            </div>
+
         </div>
-        <div class="head-actions">
-            <a class="btn-link" href="{{ url_for('admin.batch_expiry') }}">Batch & Expiry</a>
-            <a class="btn-link" href="{{ url_for('admin.stock_movements') }}">Movements</a>
-            <a class="btn-link" href="{{ url_for('admin.stock_adjustments') }}">Adjust Stock</a>
-            <a class="btn-link" href="{{ url_for('admin.product_list') }}">Publish Products</a>
-            <a class="btn-link" href="{{ url_for('admin.ufc_order_requests') }}">UFC Order Requests</a>
+    </section>
+
+    <div class="summary-grid">
+
+        <div class="summary-card">
+            <span>Products in Stock</span>
+            <strong>{{ overview.get('summary', {}).get('product_rows', 0) }}</strong>
         </div>
+
+        <div class="summary-card">
+            <span>Warehouses</span>
+            <strong>{{ overview.get('summary', {}).get('warehouse_count', 0) }}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Low Stock Items</span>
+            <strong>{{ overview.get('summary', {}).get('low_stock_count', 0) }}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Expired Lots</span>
+            <strong>{{ overview.get('summary', {}).get('expired_lot_count', 0) }}</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Total Stock Value</span>
+            <strong>₹{{ overview.get('summary', {}).get('stock_value', '0.00') }}</strong>
+        </div>
+
     </div>
 
-    <div class="summary">
-        <div class="summary-card"><small>Stock Rows</small><strong>{{ overview.get('summary', {}).get('product_rows', 0) }}</strong></div>
-        <div class="summary-card"><small>Warehouses</small><strong>{{ overview.get('summary', {}).get('warehouse_count', 0) }}</strong></div>
-        <div class="summary-card"><small>Low Stock</small><strong>{{ overview.get('summary', {}).get('low_stock_count', 0) }}</strong></div>
-        <div class="summary-card"><small>Expired Lots</small><strong>{{ overview.get('summary', {}).get('expired_lot_count', 0) }}</strong></div>
-        <div class="summary-card"><small>Stock Value</small><strong>₹{{ overview.get('summary', {}).get('stock_value', '0.00') }}</strong></div>
-    </div>
+    <form class="filters" method="get">
 
-    <form class="toolbar" method="get">
-        <input name="q" value="{{ overview.get('query', '') }}" placeholder="Search product, SKU, category or warehouse">
-        <div style="display:flex;gap:7px;flex-wrap:wrap">
-            <select name="warehouse">
-                <option value="">All warehouses</option>
-                {% for code in overview.get('warehouses', []) %}<option value="{{ code }}" {% if overview.get('selected_warehouse') == code %}selected{% endif %}>{{ code }}</option>{% endfor %}
-            </select>
-            <button type="submit">Filter</button>
-        </div>
+        <input
+            type="text"
+            name="q"
+            value="{{ overview.get('query', '') }}"
+            placeholder="Search product, SKU, category or warehouse"
+        >
+
+        <select name="warehouse">
+            <option value="">All Warehouses</option>
+
+            {% for code in overview.get('warehouses', []) %}
+            <option
+                value="{{ code }}"
+                {% if overview.get('selected_warehouse') == code %}selected{% endif %}
+            >
+                {{ code }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Filter</button>
+
     </form>
 
-    <div class="note"><strong>Saleable = Physical − Reserved − Damaged − Expired/Blocked.</strong> Publishing a product to UFC never changes these quantities. {{ overview.get('cost_basis_note', '') }}</div>
-    <div class="mobile-hint">Swipe horizontally to view all stock columns.</div>
+    <section class="stock-content">
 
-    <div class="table-wrap">
-        <table class="stock-table">
-            <thead><tr><th>Product</th><th>Category</th><th>Role</th><th>Unit</th><th>Physical</th><th>Reserved</th><th>Saleable</th><th>Damaged</th><th>Expired</th><th>Warehouse</th><th>Avg Cost</th><th>Stock Value</th><th>Reorder</th><th>UFC Marketplace</th></tr></thead>
-            <tbody>
-            {% for row in overview.get('rows', []) %}
-                <tr>
-                    <td class="product"><strong>{{ row.product_name }}</strong><small>{{ row.sku }} · {{ row.batch_count }} batch{{ '' if row.batch_count == 1 else 'es' }}</small></td>
-                    <td>{{ row.category }}</td>
-                    <td><span class="badge">{{ row.product_role }}</span></td>
-                    <td>{{ row.unit }}</td>
-                    <td class="qty">{{ row.total_quantity }}</td>
-                    <td class="qty">{{ row.reserved_quantity }}</td>
-                    <td class="qty saleable">{{ row.saleable_quantity }}</td>
-                    <td class="qty {% if row.damaged_quantity != '0' %}warn{% endif %}">{{ row.damaged_quantity }}</td>
-                    <td class="qty {% if row.expired_quantity != '0' %}danger{% endif %}">{{ row.expired_quantity }}</td>
-                    <td><strong>{{ row.warehouse_code }}</strong><br><small>{{ row.warehouse_name }}</small></td>
-                    <td>₹{{ row.weighted_average_cost }}</td>
-                    <td><strong>₹{{ row.stock_value }}</strong></td>
-                    <td>{% if row.is_low_stock %}<span class="badge low">{{ row.reorder_level }} · Low</span>{% else %}{{ row.reorder_level }}{% endif %}</td>
-                    <td><span class="badge {{ 'published' if row.marketplace_published else 'private' }}">{{ 'Published' if row.marketplace_published else 'Private' }}</span></td>
-                </tr>
-            {% else %}
-                <tr><td colspan="14" class="empty">No posted AVPL stock is available. Receive and post an approved Goods Receipt first.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        <div class="section-head">
+            <div>
+                <h2>Current Stock</h2>
+                <p>
+                    Available stock across AVPL warehouses.
+                </p>
+            </div>
+        </div>
+
+        <div class="info-note">
+            <strong>Available Stock</strong> = Total Stock − Reserved − Damaged − Expired/Blocked.
+            Publishing a product to UFC does not change its stock quantity.
+            {{ overview.get('cost_basis_note', '') }}
+        </div>
+
+        <div class="mobile-hint">
+            Swipe horizontally to view all stock details.
+        </div>
+
+        <div class="table-wrap">
+
+            <table class="stock-table">
+
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Type</th>
+                        <th>Unit</th>
+                        <th>Total Stock</th>
+                        <th>Reserved</th>
+                        <th>Available</th>
+                        <th>Damaged</th>
+                        <th>Expired</th>
+                        <th>Warehouse</th>
+                        <th>Avg. Cost</th>
+                        <th>Stock Value</th>
+                        <th>Reorder Level</th>
+                        <th>UFC Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in overview.get('rows', []) %}
+                    <tr>
+
+                        <td>
+                            <span class="product-name">{{ row.product_name }}</span>
+                            <span class="product-meta">
+                                {{ row.sku }} · {{ row.batch_count }} batch{{ '' if row.batch_count == 1 else 'es' }}
+                            </span>
+                        </td>
+
+                        <td>{{ row.category }}</td>
+
+                        <td>
+                            <span class="badge">{{ row.product_role }}</span>
+                        </td>
+
+                        <td>{{ row.unit }}</td>
+
+                        <td class="quantity">
+                            {{ row.total_quantity }}
+                        </td>
+
+                        <td class="quantity">
+                            {{ row.reserved_quantity }}
+                        </td>
+
+                        <td class="quantity available">
+                            {{ row.saleable_quantity }}
+                        </td>
+
+                        <td class="quantity {% if row.damaged_quantity != '0' %}warning{% endif %}">
+                            {{ row.damaged_quantity }}
+                        </td>
+
+                        <td class="quantity {% if row.expired_quantity != '0' %}danger{% endif %}">
+                            {{ row.expired_quantity }}
+                        </td>
+
+                        <td>
+                            <strong>{{ row.warehouse_code }}</strong>
+                            <span class="warehouse-name">{{ row.warehouse_name }}</span>
+                        </td>
+
+                        <td>
+                            ₹{{ row.weighted_average_cost }}
+                        </td>
+
+                        <td>
+                            <strong>₹{{ row.stock_value }}</strong>
+                        </td>
+
+                        <td>
+                            {% if row.is_low_stock %}
+                                <span class="badge low">
+                                    {{ row.reorder_level }} · Low
+                                </span>
+                            {% else %}
+                                {{ row.reorder_level }}
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <span class="badge {{ 'published' if row.marketplace_published else 'private' }}">
+                                {{ 'Published' if row.marketplace_published else 'Not Published' }}
+                            </span>
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+                        <td colspan="14" class="empty">
+                            No AVPL stock available. Receive and post an approved Goods Receipt first.
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
 </div>
+
 {% endblock %}

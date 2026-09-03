@@ -5,11 +5,10 @@
     <section class="accounting-fy-lifecycle" aria-label="Financial Year lifecycle controls">
         <div class="accounting-fy-lifecycle-heading">
             <div>
-                <p class="accounting-eyebrow">Stage 2 · Batch 7</p>
-                <h4>Close, lock, unlock and reopen</h4>
+                <p class="accounting-eyebrow">Financial Year</p>
+                <h4>Financial Year Status</h4>
                 <p>
-                    AVPL Admin raises a controlled request. Super Admin either
-                    approves the transition or sends it back for correction.
+                    Open, close or lock the Financial Year.
                 </p>
             </div>
             <span class="accounting-status-badge status-{{ fy.lifecycle_status }}">
@@ -44,9 +43,9 @@
 
         {% if fy.last_control_reason %}
             <div class="accounting-notice info compact">
-                <strong>Last approved reason:</strong> {{ fy.last_control_reason }}
+                <strong>Last reason:</strong> {{ fy.last_control_reason }}
                 {% if fy.last_control_approval_note %}
-                    <br><strong>Approval note:</strong> {{ fy.last_control_approval_note }}
+                    <br><strong>Note:</strong> {{ fy.last_control_approval_note }}
                 {% endif %}
             </div>
         {% endif %}
@@ -75,7 +74,7 @@
                         <strong>{{ active_request.created_by_name or 'AVPL Admin' }}</strong>
                     </div>
                     <div>
-                        <span>Revision</span>
+                        <span>Request</span>
                         <strong>{{ active_request.revision_number }}</strong>
                     </div>
                     <div>
@@ -96,8 +95,7 @@
 
                 {% if active_request.apply_recovery_required %}
                     <div class="accounting-notice danger compact">
-                        The Financial Year transition needs request-finalization recovery.
-                        Super Admin should approve this same request again after refreshing.
+                        Refresh and approve this request again to finish recovery.
                     </div>
                 {% endif %}
 
@@ -108,7 +106,7 @@
                                   action="{{ url_for('accounting.financial_year_control_edit', control_request_id=active_request.id) }}"
                                   class="accounting-action-form">
                                 <input type="hidden" name="version" value="{{ active_request.version }}">
-                                <strong>Edit request</strong>
+                                <strong>Edit</strong>
                                 <label>
                                     <span>Business reason</span>
                                     <textarea name="reason" rows="3" required>{{ active_request.reason }}</textarea>
@@ -119,7 +117,7 @@
                                         <textarea name="correction_response" rows="3" required placeholder="Explain how the correction was completed">{{ active_request.correction_response }}</textarea>
                                     </label>
                                 {% endif %}
-                                <button type="submit" class="accounting-secondary-button">Save request</button>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="accounting-secondary-button" onclick="this.form.reset()">Cancel</button><button type="submit" class="accounting-secondary-button">Save</button></div>
                             </form>
                         {% endif %}
 
@@ -130,17 +128,17 @@
                                 <input type="hidden" name="version" value="{{ active_request.version }}">
                                 <strong>
                                     {% if active_request.status == 'returned_for_correction' %}
-                                        Resubmit corrected request
+                                        Send changes for review
                                     {% else %}
-                                        Submit to Super Admin
+                                        Send for review
                                     {% endif %}
                                 </strong>
                                 <label>
-                                    <span>Submission note</span>
+                                    <span>Note</span>
                                     <textarea name="submission_note" rows="3" placeholder="Optional review note"></textarea>
                                 </label>
                                 <button type="submit" class="accounting-primary-button">
-                                    {% if active_request.status == 'returned_for_correction' %}Resubmit{% else %}Submit request{% endif %}
+                                    {% if active_request.status == 'returned_for_correction' %}Send Again{% else %}Send for Review{% endif %}
                                 </button>
                             </form>
                         {% endif %}
@@ -151,9 +149,9 @@
                               action="{{ url_for('accounting.financial_year_control_cancel', control_request_id=active_request.id) }}"
                               class="accounting-action-form single danger-zone">
                             <input type="hidden" name="version" value="{{ active_request.version }}">
-                            <strong>Cancel this request without deleting history</strong>
+                            <strong>Cancel request</strong>
                             <label>
-                                <span>Mandatory cancellation reason</span>
+                                <span>Reason</span>
                                 <textarea name="reason" rows="2" required placeholder="Why is this lifecycle request no longer required?"></textarea>
                             </label>
                             <button type="submit" class="accounting-danger-button">Cancel request</button>
@@ -166,12 +164,12 @@
                           action="{{ url_for('accounting.financial_year_control_withdraw', control_request_id=active_request.id) }}"
                           class="accounting-action-form single">
                         <input type="hidden" name="version" value="{{ active_request.version }}">
-                        <strong>Withdraw for maker correction</strong>
+                        <strong>Edit Again</strong>
                         <label>
-                            <span>Mandatory withdrawal reason</span>
+                            <span>Reason</span>
                             <textarea name="reason" rows="2" required placeholder="Why must this request be corrected before review?"></textarea>
                         </label>
-                        <button type="submit" class="accounting-secondary-button">Withdraw to draft</button>
+                        <button type="submit" class="accounting-secondary-button">Withdraw</button>
                     </form>
                 {% endif %}
 
@@ -182,18 +180,16 @@
                                   action="{{ url_for('accounting.financial_year_control_approve', control_request_id=active_request.id) }}"
                                   class="accounting-action-form highlighted">
                                 <input type="hidden" name="version" value="{{ active_request.version }}">
-                                <strong>Approve {{ active_request.request_short_label|lower }}</strong>
+                                <strong>Apply {{ active_request.request_short_label|lower }}</strong>
                                 <p>
                                     This will change {{ fy.display_name }} from
                                     {{ active_request.source_status }} to {{ active_request.target_status }}.
                                 </p>
                                 <label>
-                                    <span>Approval note</span>
+                                    <span>Note</span>
                                     <textarea name="approval_note" rows="2" placeholder="Optional checker note"></textarea>
                                 </label>
-                                <button type="submit" class="accounting-primary-button">
-                                    Approve and apply
-                                </button>
+                                <button type="submit" class="accounting-primary-button">Apply</button>
                             </form>
                         {% endif %}
 
@@ -202,12 +198,12 @@
                                   action="{{ url_for('accounting.financial_year_control_return', control_request_id=active_request.id) }}"
                                   class="accounting-action-form danger-zone">
                                 <input type="hidden" name="version" value="{{ active_request.version }}">
-                                <strong>Send back for correction</strong>
+                                <strong>Request Changes</strong>
                                 <label>
-                                    <span>Mandatory correction reason</span>
+                                    <span>Reason</span>
                                     <textarea name="reason" rows="3" required placeholder="Clearly explain what AVPL Admin must correct"></textarea>
                                 </label>
-                                <button type="submit" class="accounting-danger-button">Send back</button>
+                                <button type="submit" class="accounting-danger-button">Request Changes</button>
                             </form>
                         {% endif %}
                     </div>
@@ -233,18 +229,18 @@
                         {% endfor %}
 
                         <label>
-                            <span>Mandatory business reason</span>
+                            <span>Reason</span>
                             <textarea name="reason" rows="3" required minlength="8" placeholder="Explain why this Financial Year action is required"></textarea>
                         </label>
                         <button type="submit" class="accounting-secondary-button">
-                            Create {{ option.short_label|lower }} request draft
+                            Start {{ option.short_label|lower }} request
                         </button>
                     </form>
                 {% endfor %}
             </div>
         {% elif not active_request %}
             <div class="accounting-notice info compact">
-                No lifecycle request is currently active for this Financial Year.
+                No active status request.
             </div>
         {% endif %}
 

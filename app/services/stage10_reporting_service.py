@@ -305,6 +305,7 @@ def _financial_sources_for_scope(scope):
     if scope["is_management"]:
         return [
             ("Supplier Payable", "payable", "avpl_supplier_invoices", {}, "supplier_name"),
+            ("Farmer Produce Payable", "payable", "farmer_marketplace_payables", {"buyer_type": "avpl"}, "seller_farmer_name"),
             ("AVPL → UFC Receivable", "receivable", "avpl_receivables", {}, "centre_name"),
             ("UFC → Farmer Receivable", "receivable", "ufc_farmer_receivables", {}, "farmer_name"),
             ("Farmer Produce Receivable", "receivable", "farmer_marketplace_receivables", {}, "buyer_name"),
@@ -632,6 +633,24 @@ def _stock_reconciliation(scope):
     return issues
 
 
+
+def _reconciliation_guidance(issue_type):
+    issue_type = str(issue_type or "")
+    mapping = {
+        "Negative stock": ("Stock quantity fell below zero, usually because an issue/sale/adjustment was recorded without enough accepted stock.", "Review the lot movements and the source order/receipt. Correct through a controlled stock adjustment only after the source document is verified.", "Inventory and margin reports may be wrong until resolved."),
+        "Over-reserved stock": ("Open orders reserve more quantity than the lot currently holds.", "Review approved/open orders for the lot. Cancel/release stale reservations or correct the affected order before new dispatches.", "The system may promise stock that cannot actually be delivered."),
+        "Invalid stock classification": ("A damaged or blocked stock bucket contains an invalid negative value.", "Review the latest stock adjustment and movement history for this lot, then post a controlled correction.", "Saleable stock may be overstated or understated."),
+        "Lot balance mismatch": ("The stored lot balance does not agree with receipt, issue and adjustment movements.", "Compare GRN/receipt, dispatch and stock-adjustment history. Use the authoritative movements to determine the correct balance.", "Stock valuation and availability may be inconsistent."),
+        "Produce lot balance mismatch": ("Farmer produce stock does not reconcile with production less sale/loss movements.", "Review production, manual stock adjustments, marketplace reservations and completed sales for this produce lot.", "Farmer stock/listing availability may be inaccurate."),
+        "Financial mismatch": ("Invoice total, confirmed paid amount and stored outstanding do not reconcile.", "Compare the invoice with completed payment records. Recalculate outstanding from confirmed payments and correct only the stale financial snapshot.", "Receivable/payable and dashboard totals can be incorrect."),
+        "Payment status mismatch": ("The invoice payment status conflicts with its confirmed paid/outstanding amounts.", "Verify completed/reversed payments first, then synchronize payment status from the confirmed settlement balance.", "Users may see Paid and Outstanding at the same time."),
+        "Broken transaction chain": ("A completed business step is missing a linked stock, invoice, sale, purchase or payment-side record.", "Open the source transaction and identify the missing linked step. Rebuild only from the authoritative order/receipt; do not create a duplicate transaction manually.", "Audit history, stock or accounting may be incomplete."),
+        "Product line mismatch": ("A multi-item order was synchronized into a sale/invoice using only part of its active product lines, usually through a legacy single-line path.", "Open the authoritative order and rebuild/synchronize the linked sale from its item lines before further settlement.", "Sales, stock, invoice totals and product-wise reports can be incomplete or understated."),
+        "Orphan payment": ("A payment has no valid source invoice reference.", "Verify the payment reference and original transaction. Link it to the correct invoice only when ownership and amount are proven; otherwise keep it flagged for manual review.", "Payment totals can be counted without a valid receivable/payable source."),
+    }
+    return mapping.get(issue_type, ("A linked system record does not match the expected business state.", "Open the affected source transaction and compare its order, receipt, stock, invoice and payment history before making a correction.", "Related operational or financial reports may be affected."))
+
+
 def build_reconciliation_report(scope, filters=None):
     filters = filters or {}
     issues = _stock_reconciliation(scope)
@@ -677,6 +696,43 @@ def build_reconciliation_report(scope, filters=None):
         if not mongo.db[collection].find_one({"_id": invoice_id}, {"_id": 1}):
             orphan_payments += 1
             issues.append({"severity": "critical", "type": "Orphan payment", "reference": payment.get("payment_number") or str(payment.get("_id") or ""), "message": f"Linked invoice was not found in {collection}."})
+
+    # Multi-item commerce consistency. Detect legacy one-line financial records
+    # created from a multi-line order before they distort stock or reports.
+    if scope.get("is_management"):
+        line_checks = (
+            ("AVPL → UFC", "avpl_ufc_orders", "avpl_ufc_sales", "avpl_ufc_order_id", "dispatched"),
+            ("UFC → Farmer", "ufc_farmer_orders", "ufc_farmer_sales", "ufc_farmer_order_id", "accepted"),
+            ("Farmer Produce", "farmer_produce_marketplace_orders", "farmer_marketplace_sales", "farmer_marketplace_order_id", "accepted"),
+        )
+        for flow_label, order_collection, sale_collection, link_field, basis in line_checks:
+            order_rows = _collection_rows(order_collection, {"status": {"$in": ["dispatched", "received", "completed"]}}, limit=MAX_REPORT_ROWS)
+            for order in order_rows:
+                source_items = list(order.get("items") or [])
+                if not source_items:
+                    continue
+                if basis == "dispatched":
+                    expected = sum(1 for item in source_items if _dec(item.get("dispatched_quantity") if item.get("dispatched_quantity") is not None else item.get("approved_quantity")) > 0)
+                else:
+                    expected = sum(1 for item in source_items if _dec(item.get("accepted_quantity") if item.get("accepted_quantity") is not None else item.get("received_quantity") or item.get("delivered_quantity") or item.get("approved_quantity")) > 0)
+                if expected <= 0:
+                    continue
+                sale = mongo.db[sale_collection].find_one({link_field: order.get("_id")})
+                order_ref = _first(order, "order_number", default=str(order.get("_id") or ""))
+                if not sale:
+                    if str(order.get("status") or "").lower() in {"received", "completed"}:
+                        issues.append({"severity": "critical", "type": "Broken transaction chain", "reference": f"{flow_label} {order_ref}", "message": "Buyer receipt is complete but the linked sale record is missing."})
+                    continue
+                actual = len(sale.get("items") or []) or int(sale.get("item_count") or (1 if sale.get("product_name") else 0))
+                if actual != expected:
+                    issues.append({"severity": "critical", "type": "Product line mismatch", "reference": f"{flow_label} {order_ref}", "message": f"Order has {expected} active product line(s) but the linked sale has {actual}."})
+
+    for issue in issues:
+        cause, action, impact = _reconciliation_guidance(issue.get("type"))
+        issue.setdefault("cause", cause)
+        issue.setdefault("recommended_action", action)
+        issue.setdefault("impact", impact)
+        issue.setdefault("repair_mode", "Review")
 
     severity_rank = {"critical": 0, "warning": 1, "info": 2}
     issues.sort(key=lambda x: (severity_rank.get(x.get("severity"), 9), x.get("type") or "", x.get("reference") or ""))
@@ -844,29 +900,29 @@ def build_system_health(scope, filters=None):
     db = mongo.db
     checks = []
 
-    def add(name, ok, detail, severity="warning"):
-        checks.append({"name": name, "ok": bool(ok), "detail": detail, "severity": "ok" if ok else severity})
+    def add(name, ok, detail, severity="warning", category="System", action="Review the related setup or transaction and resolve the underlying issue before continuing."):
+        checks.append({"name": name, "ok": bool(ok), "detail": detail, "severity": "ok" if ok else severity, "category": category, "recommended_action": "No action required." if ok else action})
 
     # Master data / setup readiness.
     active_entity = db.accounting_entities.find_one({"entity_type": "avpl", "status": "active", "is_deleted": {"$ne": True}})
-    add("Active AVPL accounting entity", bool(active_entity), "Required for procurement, invoicing and accounting mapping.", "critical")
+    add("Active AVPL accounting entity", bool(active_entity), "Required for procurement, invoicing and accounting mapping.", "critical", "Accounting", "Open Accounting Setup and activate the AVPL accounting entity.")
     fy_query = {"status": "open", "is_open": True, "is_locked": {"$ne": True}, "is_deleted": {"$ne": True}}
     if active_entity and active_entity.get("_id"):
         fy_query["accounting_entity_id"] = active_entity["_id"]
     open_fy = db.financial_years.find_one(fy_query)
-    add("Open financial year", bool(open_fy), "Official invoice numbering requires an open, unlocked Financial Year for the active AVPL entity.", "critical")
+    add("Open financial year", bool(open_fy), "Official invoice numbering requires an open, unlocked Financial Year for the active AVPL entity.", "critical", "Accounting", "Open or create the correct financial year before posting new financial documents.")
     mapping_count = db.accounting_product_mappings.count_documents({"status": {"$in": ["active", "approved"]}, "is_deleted": {"$ne": True}}) + db.product_accounting_mappings.count_documents({"status": {"$in": ["active", "approved"]}, "is_deleted": {"$ne": True}})
-    add("Product accounting mappings", mapping_count > 0 or db.products.count_documents({}) == 0, f"{mapping_count} active/approved mapping record(s) found.")
-    add("No critical reconciliation errors", reconciliation["summary"]["critical"] == 0, f"{reconciliation['summary']['critical']} critical reconciliation issue(s).", "critical")
-    add("No orphan payments", reconciliation["summary"]["orphan_payments"] == 0, f"{reconciliation['summary']['orphan_payments']} orphan payment(s).", "critical")
+    add("Product accounting mappings", mapping_count > 0 or db.products.count_documents({}) == 0, f"{mapping_count} active/approved mapping record(s) found.", "warning", "GST / Accounting", "Review Product Accounting Mapping and complete missing HSN/ledger mappings.")
+    add("No critical reconciliation errors", reconciliation["summary"]["critical"] == 0, f"{reconciliation['summary']['critical']} critical reconciliation issue(s).", "critical", "Reconciliation", "Open Reconciliation, start with Critical issues, and repair the authoritative source chain before posting further changes.")
+    add("No orphan payments", reconciliation["summary"]["orphan_payments"] == 0, f"{reconciliation['summary']['orphan_payments']} orphan payment(s).", "critical", "Payments", "Open Reconciliation and link each payment to its verified source invoice, or keep it under manual review.")
     posting_failures = db.posting_failures.count_documents({"status": {"$nin": ["resolved", "closed"]}})
-    add("No unresolved posting failures", posting_failures == 0, f"{posting_failures} unresolved posting failure(s).", "critical")
+    add("No unresolved posting failures", posting_failures == 0, f"{posting_failures} unresolved posting failure(s).", "critical", "Accounting", "Review the posting failure record and fix the source validation/mapping before retrying the posting.")
     pending_validations = db.validations.count_documents({"status": "pending"})
-    add("Validation queue reviewed", pending_validations == 0, f"{pending_validations} pending profile/user validation(s).")
+    add("Validation queue reviewed", pending_validations == 0, f"{pending_validations} pending profile/user validation(s).", "warning", "Users", "Review the pending validation queue.")
     pending_stock_adjustments = db.avpl_stock_adjustments.count_documents({"status": "submitted"})
-    add("Stock adjustment queue reviewed", pending_stock_adjustments == 0, f"{pending_stock_adjustments} submitted stock adjustment(s) await controlled approval.")
+    add("Stock adjustment queue reviewed", pending_stock_adjustments == 0, f"{pending_stock_adjustments} submitted stock adjustment(s) await controlled approval.", "warning", "Inventory", "Review submitted stock adjustments and approve/reject them with supporting evidence.")
     failed_payments = db.payments.count_documents({"status": "failed"})
-    add("No failed payment records requiring review", failed_payments == 0, f"{failed_payments} failed payment attempt(s) retained for audit.")
+    add("No failed payment records requiring review", failed_payments == 0, f"{failed_payments} failed payment attempt(s) retained for audit.", "warning", "Payments", "Review failed payment attempts and confirm whether the payer should retry or the record should remain audit-only.")
 
     return {
         "checks": checks,

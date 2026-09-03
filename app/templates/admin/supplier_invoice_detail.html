@@ -589,48 +589,44 @@
     </div>
 
     <section class="section">
-        <div class="section-head"><h3>Purchase Completion</h3><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></div>
+        <div class="section-head"><h3>Complete Purchase</h3><span class="status {{ invoice.posting_status }}">{{ invoice.posting_status_display }}</span></div>
+
         <div class="posting-flow">
-            <div class="posting-step {{ 'done' if invoice.status in ['matched','matched_with_warnings'] else 'blocked' }}"><span>1. Three-Way Match</span><strong>{{ invoice.status_display }}</strong></div>
-            {% if streamlined_workflows_enabled %}
-            <div class="posting-step {{ 'done' if invoice.posting_status == 'posted' else 'current' }}"><span>2. Purchase Finalization</span><strong>{{ 'Completed' if invoice.posting_status == 'posted' else ('Ready' if invoice.blocking_mismatch_count == 0 else 'Blocked') }}</strong></div>
-            <div class="posting-step {{ 'done' if invoice.payable_posted else '' }}"><span>3. Supplier Payable</span><strong>{{ ('Settled' if invoice.payment_status == 'paid' or invoice.outstanding_amount|float <= 0 else 'Open · ₹' ~ invoice.outstanding_amount) if invoice.payable_posted else 'Created during finalization' }}</strong></div>
-            {% else %}
-            <div class="posting-step {{ 'done' if invoice.posting_status in ['prepared','posting','posted','recovery_required'] else 'current' }}"><span>2. Prepare Purchase</span><strong>{{ 'Completed' if invoice.posting_status in ['prepared','posting','posted','recovery_required'] else 'Pending' }}</strong></div>
-            <div class="posting-step {{ 'done' if invoice.posting_status == 'posted' else ('current' if invoice.posting_status in ['prepared','recovery_required'] else '') }}"><span>3. Final Approval</span><strong>{{ 'Completed' if invoice.posting_status == 'posted' else 'Pending' }}</strong></div>
-            <div class="posting-step {{ 'done' if invoice.payable_posted else '' }}"><span>4. Supplier Payable</span><strong>{{ ('Settled' if invoice.payment_status == 'paid' or invoice.outstanding_amount|float <= 0 else 'Open · ₹' ~ invoice.outstanding_amount) if invoice.payable_posted else 'Not Posted' }}</strong></div>
-            {% endif %}
+            <div class="posting-step {{ 'done' if invoice.status in ['matched','matched_with_warnings'] else 'blocked' }}"><span>1. Bill Checked</span><strong>{{ 'Matched' if invoice.status in ['matched','matched_with_warnings'] else invoice.status_display }}</strong></div>
+            <div class="posting-step done"><span>2. Goods Received</span><strong>{{ invoice.source_grn_number or 'GRN confirmed' }}</strong></div>
+            <div class="posting-step {{ 'done' if invoice.posting_status == 'posted' else 'current' }}"><span>3. Finalize Purchase</span><strong>{{ 'Completed' if invoice.posting_status == 'posted' else ('Ready' if invoice.blocking_mismatch_count == 0 else 'Blocked') }}</strong></div>
         </div>
 
-        <div class="posting-meta">
-            <div><small>Official Purchase Invoice</small><strong>{{ invoice.official_purchase_invoice_number or 'Generated only on final posting' }}</strong></div>
-            <div><small>Accounting Voucher</small><strong>{{ invoice.accounting_voucher_number or invoice.accounting_voucher_reference or 'Not prepared' }}</strong></div>
-            <div><small>Financial Year</small><strong>{{ invoice.financial_year_code or 'Resolved during preparation' }}</strong></div>
-            <div><small>Stock Effect</small><strong>No second stock increase</strong></div>
-        </div>
-
-        {% if invoice.status in ['matched','matched_with_warnings'] and invoice.blocking_mismatch_count == 0 %}
+        {% if invoice.posting_status == 'posted' %}
+            <div class="notice" style="margin-top:14px;margin-bottom:0"><strong>Done.</strong> Purchase invoice created and supplier payable recorded. {% if invoice.outstanding_amount|float > 0 %}<strong>₹{{ invoice.outstanding_amount }}</strong> is still payable to the supplier.{% else %}Supplier payment is settled.{% endif %}</div>
+        {% elif invoice.status in ['matched','matched_with_warnings'] and invoice.blocking_mismatch_count == 0 and invoice.posting_status != 'posting' %}
             <div class="workflow" style="margin-top:15px">
-                {% if streamlined_workflows_enabled %}
-                    {% if invoice.posting_status == 'posted' %}
-                        <a class="btn dark" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print Official Purchase Invoice</a>
-                    {% elif invoice.posting_status != 'posting' %}
-                        <form method="post" action="{{ url_for('admin.post_supplier_invoice_purchase_view', invoice_id=invoice.id) }}" onsubmit="return confirm('Finalize this matched purchase and create the official invoice, accounting voucher and supplier payable?');">
-                            <input type="hidden" name="expected_version" value="{{ invoice.version }}">
-                            <button class="btn dark" type="submit">{{ 'Retry Finalization' if invoice.posting_status == 'recovery_required' else 'Finalize Purchase' }}</button>
-                        </form>
-                    {% endif %}
+                {% if session.get('role') in ['avpl_admin','super_admin'] or streamlined_workflows_enabled %}
+                    <form method="post" action="{{ url_for('admin.post_supplier_invoice_purchase_view', invoice_id=invoice.id) }}">
+                        <input type="hidden" name="expected_version" value="{{ invoice.version }}">
+                        <button class="btn dark" type="submit">{{ 'Retry Finalization' if invoice.posting_status == 'recovery_required' else 'Finalize Purchase' }}</button>
+                    </form>
+                    <div class="notice info" style="margin:0">This creates the official purchase invoice and supplier payable. Stock is <strong>not</strong> added again.</div>
+                {% elif session.get('role') == 'accounts' and invoice.posting_status == 'not_posted' %}
+                    <form method="post" action="{{ url_for('admin.prepare_supplier_invoice_posting_view', invoice_id=invoice.id) }}">
+                        <input type="hidden" name="expected_version" value="{{ invoice.version }}">
+                        <button class="btn primary" type="submit">Prepare Purchase</button>
+                    </form>
                 {% else %}
-                    {% if invoice.posting_status == 'not_posted' %}
-                        {% if session.get('role') in ['accounts','super_admin'] %}
-                            <form method="post" action="{{ url_for('admin.prepare_supplier_invoice_posting_view', invoice_id=invoice.id) }}"><input type="hidden" name="expected_version" value="{{ invoice.version }}"><button class="btn primary" type="submit">Prepare Purchase</button></form>
-                        {% else %}<div class="notice info" style="margin:0"><strong>Next action:</strong> Accounts must prepare the purchase first.</div>{% endif %}
-                    {% elif invoice.posting_status in ['prepared','recovery_required'] %}
-                        {% if session.get('role') in ['avpl_admin','super_admin'] %}<form method="post" action="{{ url_for('admin.post_supplier_invoice_purchase_view', invoice_id=invoice.id) }}"><input type="hidden" name="expected_version" value="{{ invoice.version }}"><button class="btn dark" type="submit">Finalize Purchase & Payable</button></form>{% else %}<div class="notice info" style="margin:0"><strong>Next action:</strong> AVPL Admin must complete posting.</div>{% endif %}
-                    {% elif invoice.posting_status == 'posted' %}<a class="btn dark" target="_blank" href="{{ url_for('admin.print_supplier_invoice_view', invoice_id=invoice.id) }}">Print Official Purchase Invoice</a>{% endif %}
+                    <div class="notice info" style="margin:0">Ready for AVPL Admin to finalize.</div>
                 {% endif %}
             </div>
         {% endif %}
+
+        <details class="notice info" style="margin-top:14px;margin-bottom:0">
+            <summary style="cursor:pointer;font-weight:900">Accounting details</summary>
+            <div class="posting-meta" style="margin-top:12px">
+                <div><small>Official Purchase Invoice</small><strong>{{ invoice.official_purchase_invoice_number or 'Created on finalization' }}</strong></div>
+                <div><small>Accounting Voucher</small><strong>{{ invoice.accounting_voucher_number or invoice.accounting_voucher_reference or 'Created on finalization' }}</strong></div>
+                <div><small>Financial Year</small><strong>{{ invoice.financial_year_code or 'Checked during finalization' }}</strong></div>
+                <div><small>Stock</small><strong>Already added through GRN</strong></div>
+            </div>
+        </details>
     </section>
 
     <section class="section">

@@ -1,574 +1,129 @@
 {% extends 'base.html' %}
 {% block content %}
-
 <style>
-.ufc-admin-dashboard {
-    width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 28px;
-    border: 1px solid rgba(47, 122, 76, 0.11);
-    border-radius: 22px;
-    background: #ffffff;
-    box-shadow: 0 16px 40px rgba(28, 72, 43, 0.07);
-    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #435349;
-}
-
-.admin-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
-    margin-bottom: 22px;
-    flex-wrap: wrap;
-}
-
-.admin-head h2 {
-    margin: 0;
-    color: #17251d;
-    font-size: clamp(1.55rem, 2vw, 2rem);
-    font-weight: 800;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-}
-
-.admin-subtitle {
-    margin: 7px 0 0;
-    color: #748279;
-    font-size: 0.86rem;
-    font-weight: 500;
-    line-height: 1.5;
-}
-
-.uid-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 22px;
-    padding: 16px 18px;
-    border: 1px solid rgba(47, 122, 76, 0.12);
-    border-radius: 15px;
-    background: #f7fbf8;
-}
-
-.uid-card span {
-    color: #66776d;
-    font-size: 0.76rem;
-    font-weight: 750;
-}
-
-.uid-card strong {
-    color: #22372a;
-    font-size: 1rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    word-break: break-word;
-}
-
-.btn-soft {
-    width: 38px;
-    height: 38px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(47, 122, 76, 0.13);
-    border-radius: 10px;
-    background: #ffffff;
-    color: #2f7a4c;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
-
-.btn-soft:hover {
-    background: #2f7a4c;
-    border-color: #2f7a4c;
-    color: #ffffff;
-}
-
-.stat-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 28px;
-}
-
-.stat {
-    min-height: 104px;
-    padding: 16px;
-    border: 1px solid rgba(47, 122, 76, 0.10);
-    border-radius: 14px;
-    background: #fbfdfb;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-}
-
-.stat:hover {
-    transform: translateY(-1px);
-    border-color: rgba(47, 122, 76, 0.20);
-    box-shadow: 0 9px 22px rgba(28, 72, 43, 0.055);
-}
-
-.stat span {
-    display: block;
-    margin-bottom: 12px;
-    color: #7b8a80;
-    font-size: 0.70rem;
-    font-weight: 750;
-    line-height: 1.4;
-}
-
-.stat strong {
-    display: block;
-    color: #22372a;
-    font-size: clamp(1.25rem, 1.7vw, 1.65rem);
-    font-weight: 850;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    overflow-wrap: anywhere;
-}
-
-.section-title {
-    margin: 26px 0 12px;
-    color: #17251d;
-    font-size: 1.05rem;
-    font-weight: 800;
-    line-height: 1.3;
-}
-
-.table-shell {
-    width: 100%;
-    overflow-x: auto;
-    margin-bottom: 22px;
-    border: 1px solid rgba(47, 122, 76, 0.10);
-    border-radius: 14px;
-    background: #ffffff;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(47, 122, 76, 0.38) #eef5f0;
-}
-
-.table-shell::-webkit-scrollbar {
-    height: 8px;
-}
-
-.table-shell::-webkit-scrollbar-track {
-    background: #eef5f0;
-}
-
-.table-shell::-webkit-scrollbar-thumb {
-    background: rgba(47, 122, 76, 0.38);
-    border-radius: 999px;
-}
-
-.admin-table {
-    width: 100%;
-    min-width: 760px;
-    border-collapse: collapse;
-    background: #ffffff;
-}
-
-.admin-table th,
-.admin-table td {
-    padding: 12px 14px;
-    border-right: 1px solid rgba(47, 122, 76, 0.06);
-    border-bottom: 1px solid rgba(47, 122, 76, 0.07);
-    text-align: left;
-    vertical-align: middle;
-    color: #425247;
-    font-size: 0.78rem;
-    line-height: 1.4;
-}
-
-.admin-table th {
-    background: #f2f7f3;
-    color: #5d6d63;
-    font-size: 0.67rem;
-    font-weight: 850;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.admin-table th:last-child,
-.admin-table td:last-child {
-    border-right: none;
-}
-
-.admin-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.admin-table tbody tr:hover td {
-    background: #fafdfa;
-}
-
-.amount-text {
-    color: #267347;
-    font-weight: 800;
-}
-
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 28px;
-    padding: 5px 9px;
-    border: 1px solid #b7e4c7;
-    border-radius: 999px;
-    background: #ecfdf3;
-    color: #237a43;
-    font-size: 0.68rem;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-.mobile-card-list {
-    display: none;
-}
-
-.mobile-info-card {
-    width: 280px;
-    min-width: 280px;
-    flex: 0 0 280px;
-    padding: 14px;
-    border: 1px solid rgba(47, 122, 76, 0.10);
-    border-radius: 14px;
-    background: #ffffff;
-}
-
-.mobile-info-row {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(47, 122, 76, 0.07);
-}
-
-.mobile-info-row:last-child {
-    border-bottom: none;
-}
-
-.mobile-info-label {
-    color: #7d8b82;
-    font-size: 0.67rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.mobile-info-value {
-    color: #31463a;
-    font-size: 0.82rem;
-    font-weight: 700;
-    line-height: 1.4;
-    word-break: break-word;
-}
-
-.mobile-empty-card {
-    width: 280px;
-    min-width: 280px;
-    flex: 0 0 280px;
-    padding: 20px;
-    border: 1px solid rgba(47, 122, 76, 0.10);
-    border-radius: 14px;
-    background: #ffffff;
-    color: #7b8a80;
-    font-size: 0.78rem;
-    font-weight: 650;
-    text-align: center;
-}
-
-@media (max-width: 1180px) {
-    .stat-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 860px) {
-    .ufc-admin-dashboard {
-        padding: 20px;
-        border-radius: 18px;
-    }
-
-    .stat-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .uid-card {
-        grid-template-columns: 1fr auto;
-    }
-
-    .uid-card span {
-        grid-column: 1 / -1;
-    }
-
-    .desktop-table-shell {
-        display: none;
-    }
-
-    .mobile-card-list {
-        display: flex;
-        gap: 12px;
-        overflow-x: auto;
-        padding: 2px 1px 8px;
-        margin-bottom: 22px;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(47, 122, 76, 0.38) #eef5f0;
-    }
-
-    .mobile-card-list::-webkit-scrollbar {
-        height: 8px;
-    }
-
-    .mobile-card-list::-webkit-scrollbar-track {
-        background: #eef5f0;
-    }
-
-    .mobile-card-list::-webkit-scrollbar-thumb {
-        background: rgba(47, 122, 76, 0.38);
-        border-radius: 999px;
-    }
-}
-
-@media (max-width: 560px) {
-    .stat-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .stat {
-        min-height: auto;
-    }
-}
-
-@media (max-width: 460px) {
-    .ufc-admin-dashboard {
-        padding: 15px;
-        border-radius: 16px;
-    }
-
-    .admin-head h2 {
-        font-size: 1.3rem;
-    }
-
-    .uid-card {
-        padding: 14px;
-    }
-
-    .mobile-info-card,
-    .mobile-empty-card {
-        width: 265px;
-        min-width: 265px;
-        flex-basis: 265px;
-    }
-}
+.ufc-dash{max-width:1500px;margin:0 auto;display:grid;gap:18px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f3127}
+.ud-card{background:#fff;border:1px solid #dbe9df;border-radius:20px;box-shadow:0 12px 32px rgba(26,72,43,.055)}
+.ud-hero{padding:24px 26px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.ud-kicker{font-size:.72rem;font-weight:800;color:#52705d;margin-bottom:5px}.ud-hero h1{margin:0;font-size:clamp(1.55rem,2.2vw,2.15rem);line-height:1.08;color:#16251c;letter-spacing:-.035em}.ud-hero p{margin:7px 0 0;color:#6e7f74;font-size:.83rem;font-weight:600}.ud-centre{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.ud-chip{display:inline-flex;align-items:center;min-height:34px;padding:7px 11px;border:1px solid #cfe2d4;border-radius:10px;background:#f6fbf7;color:#2c6742;font-size:.72rem;font-weight:800;text-decoration:none}.ud-chip:hover{background:#edf7ef}
+.ud-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.ud-kpi{display:flex;flex-direction:column;min-height:132px;padding:17px;border:1px solid #dbe9df;border-radius:16px;background:#fff;text-decoration:none;color:inherit;transition:.18s ease}.ud-kpi:hover{transform:translateY(-2px);border-color:#a9cfb5;box-shadow:0 10px 24px rgba(31,102,59,.08)}.ud-kpi-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.ud-icon{width:34px;height:34px;border-radius:10px;background:#eff8f1;color:#287346;display:grid;place-items:center;font-size:.9rem;font-weight:900}.ud-arrow{color:#9aaba0;font-weight:900}.ud-kpi strong{margin-top:16px;font-size:clamp(1.35rem,2vw,1.9rem);line-height:1;color:#17291e;font-weight:900;letter-spacing:-.03em}.ud-kpi span{margin-top:8px;color:#63736a;font-size:.72rem;font-weight:750;line-height:1.25}.ud-kpi small{margin-top:4px;color:#8a9890;font-size:.63rem;font-weight:650;line-height:1.3}
+.ud-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);gap:18px}.ud-section{padding:21px}.ud-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.ud-section-head h2{margin:0;font-size:1rem;color:#203328;font-weight:850}.ud-section-head a{color:#2b7346;text-decoration:none;font-size:.7rem;font-weight:800}.ud-section-head a:hover{text-decoration:underline}
+.ud-attention{display:grid;gap:9px}.ud-attn{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:58px;padding:11px 12px;border:1px solid #e0ebe3;border-radius:12px;background:#fbfdfb;text-decoration:none;color:inherit}.ud-attn:hover{border-color:#bdd8c5;background:#f7fbf8}.ud-attn-left{display:flex;align-items:center;gap:11px;min-width:0}.ud-dot{width:9px;height:9px;border-radius:50%;background:#e5a92f;box-shadow:0 0 0 5px #fff7e6;flex:0 0 auto}.ud-attn b{font-size:.76rem;color:#31463a}.ud-attn-value{white-space:nowrap;color:#1f6e3f;font-size:.78rem;font-weight:900}.ud-all-good{padding:20px;border:1px solid #d8eadc;border-radius:13px;background:#f4fbf6;color:#2f6f45;font-size:.8rem;font-weight:800;text-align:center}
+.ud-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ud-action{min-height:72px;display:flex;align-items:center;gap:11px;padding:12px;border:1px solid #dce9df;border-radius:13px;background:#fff;text-decoration:none;color:#263b2f;font-size:.75rem;font-weight:850}.ud-action:hover{background:#f6fbf7;border-color:#b8d7c1}.ud-action-icon{width:34px;height:34px;border-radius:10px;background:#eff8f1;color:#2b7447;display:grid;place-items:center;font-size:.9rem;flex:0 0 auto}
+.ud-snapshot{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}.ud-snap{padding:16px;border:1px solid #e0ebe3;border-radius:13px;background:#fbfdfb}.ud-snap span{display:block;color:#75857b;font-size:.66rem;font-weight:750}.ud-snap strong{display:block;margin-top:8px;color:#1d3426;font-size:1.2rem;font-weight:900;letter-spacing:-.02em}.ud-snap small{display:block;margin-top:4px;color:#95a198;font-size:.61rem;font-weight:650}
+.ud-activity{display:grid}.ud-activity-row{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:start;gap:11px;padding:11px 0;border-bottom:1px solid #edf2ee}.ud-activity-row:last-child{border-bottom:none}.ud-activity-mark{width:8px;height:8px;margin-top:5px;border-radius:50%;background:#69a77d}.ud-activity-title{font-size:.74rem;font-weight:820;color:#31463a}.ud-activity-detail{margin-top:2px;color:#7b8980;font-size:.66rem;font-weight:620;line-height:1.35}.ud-activity-time{color:#8b9990;font-size:.62rem;font-weight:700;white-space:nowrap}.ud-empty{padding:16px;color:#849188;font-size:.74rem;text-align:center}
+@media(max-width:1250px){.ud-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.ufc-dash{gap:14px}.ud-grid{grid-template-columns:1fr}.ud-snapshot{grid-template-columns:repeat(2,minmax(0,1fr))}.ud-hero{padding:20px}}
+@media(max-width:640px){.ud-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.ud-kpi{min-height:118px;padding:14px}.ud-kpi strong{font-size:1.4rem}.ud-section{padding:16px}.ud-actions{grid-template-columns:1fr}.ud-snapshot{grid-template-columns:repeat(2,minmax(0,1fr))}.ud-activity-row{grid-template-columns:8px minmax(0,1fr)}.ud-activity-time{grid-column:2;margin-top:2px}.ud-centre{width:100%}.ud-chip{flex:1;justify-content:center}}
 </style>
 
-<div class="ufc-admin-dashboard">
-    <div class="admin-head">
+<div class="ufc-dash">
+    <section class="ud-card ud-hero">
         <div>
-          <h2>Welcome, {{ current_display_name }}</h2>
-<p class="admin-subtitle">UFC Admin Dashboard</p>
-           
+            <div class="ud-kicker">UFC ADMIN DASHBOARD</div>
+            <h1>{{ data.centre_name or 'My UFC Centre' }}</h1>
+            <p>Today’s work, money and centre activity — in one view.</p>
         </div>
-    </div>
-
-    <div class="uid-card">
-        <span>Your Centre UID</span>
-        <strong class="masked-uid" data-real-uid="{{ session.get('centre_uid') or '' }}">********</strong>
-        <button type="button" class="btn-soft uid-toggle">👁</button>
-    </div>
-
-    <div class="stat-grid">
-        <div class="stat">
-            <span>Mapped UFC Mitras</span>
-            <strong>{{ data.mitra_count }}</strong>
+        <div class="ud-centre">
+            <span class="ud-chip">{{ data.centre_uid or session.get('centre_uid') or 'UFC' }}</span>
+            <a class="ud-chip" href="{{ url_for('reports.overview') }}">View Reports</a>
         </div>
+    </section>
 
-        <div class="stat">
-            <span>Mapped Farmers</span>
-            <strong>{{ data.farmer_count }}</strong>
-        </div>
+    <section class="ud-kpis" aria-label="UFC dashboard summary">
+        <a class="ud-kpi" href="{{ url_for('modules.centre_orders') }}">
+            <div class="ud-kpi-top"><span class="ud-icon">O</span><span class="ud-arrow">→</span></div>
+            <strong>{{ data.kpis.farmer_orders_to_review or 0 }}</strong>
+            <span>Farmer Orders to Review</span>
+            <small>Requests waiting for your decision</small>
+        </a>
+        <a class="ud-kpi" href="{{ url_for('modules.ufc_avpl_orders') }}">
+            <div class="ud-kpi-top"><span class="ud-icon">A</span><span class="ud-arrow">→</span></div>
+            <strong>{{ data.kpis.avpl_to_receive or 0 }}</strong>
+            <span>AVPL Deliveries to Receive</span>
+            <small>Dispatched stock waiting for receipt</small>
+        </a>
+        <a class="ud-kpi" href="{{ url_for('modules.farmer_produce_market_my_orders') }}">
+            <div class="ud-kpi-top"><span class="ud-icon">F</span><span class="ud-arrow">→</span></div>
+            <strong>{{ data.kpis.produce_to_receive or 0 }}</strong>
+            <span>Farmer Produce to Receive</span>
+            <small>Delivered produce waiting for confirmation</small>
+        </a>
+        <a class="ud-kpi" href="{{ url_for('modules.ufc_payments') }}">
+            <div class="ud-kpi-top"><span class="ud-icon">₹</span><span class="ud-arrow">→</span></div>
+            <strong>₹{{ "%.2f"|format(data.kpis.money_to_pay|float) }}</strong>
+            <span>Money to Pay</span>
+            <small>AVPL + Farmer produce</small>
+        </a>
+        <a class="ud-kpi" href="{{ url_for('modules.ufc_payments') }}">
+            <div class="ud-kpi-top"><span class="ud-icon">₹</span><span class="ud-arrow">→</span></div>
+            <strong>₹{{ "%.2f"|format(data.kpis.money_to_collect|float) }}</strong>
+            <span>Money to Collect</span>
+            <small>Farmer invoices tracked in Payments</small>
+        </a>
+        <a class="ud-kpi" href="{{ url_for('reports.overview') }}">
+            <div class="ud-kpi-top"><span class="ud-icon">S</span><span class="ud-arrow">→</span></div>
+            <strong>₹{{ "%.2f"|format(data.kpis.sales_this_month|float) }}</strong>
+            <span>Sales This Month</span>
+            <small>Farmer orders + UFC POS</small>
+        </a>
+    </section>
 
-        <div class="stat"><span>Physical Input Stock</span><strong>{{ data.stock_physical }}</strong></div>
-        <div class="stat"><span>Reserved Input Stock</span><strong>{{ data.stock_reserved }}</strong></div>
-        <div class="stat"><span>Saleable Input Stock</span><strong>{{ data.stock_saleable }}</strong></div>
-        <div class="stat"><span>AVPL Orders In Progress</span><strong>{{ data.avpl_orders_pending }}</strong></div>
-        <div class="stat"><span>Farmer Orders Pending</span><strong>{{ data.farmer_orders_pending }}</strong></div>
-        <div class="stat"><span>Sales to Farmers</span><strong>₹{{ "%.2f"|format(data.farmer_sales_value|float) }}</strong></div>
-        <div class="stat"><span>Money to Receive</span><strong>₹{{ "%.2f"|format(data.farmer_receivable|float) }}</strong></div>
-        <div class="stat"><span>Money to Pay AVPL</span><strong>₹{{ "%.2f"|format(data.avpl_payable|float) }}</strong></div>
-        <div class="stat"><span>Produce Orders In Progress</span><strong>{{ data.produce_orders_pending }}</strong></div>
-    </div>
-
-    <h3 class="section-title">Mitra-wise Sales</h3>
-
-<div class="table-shell desktop-table-shell">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Mitra UID</th>
-                    <th>Total Orders</th>
-                    <th>Total Sales</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for row in data.mitra_sales %}
-                <tr>
-                    <td>{{ row.mitra_uid }}</td>
-                    <td>{{ row.total_orders }}</td>
-                    <td><span class="amount-text">₹{{ "%.2f"|format(row.total_sales) }}</span></td>
-                </tr>
+    <div class="ud-grid">
+        <section class="ud-card ud-section">
+            <div class="ud-section-head">
+                <h2>Needs Attention</h2>
+                <a href="{{ url_for('modules.ufc_payments') }}">Payments</a>
+            </div>
+            {% if data.needs_attention %}
+            <div class="ud-attention">
+                {% for item in data.needs_attention %}
+                <a class="ud-attn" href="{{ url_for(item.endpoint) }}">
+                    <div class="ud-attn-left"><span class="ud-dot"></span><b>{{ item.label }}</b></div>
+                    <span class="ud-attn-value">{% if item.amount is defined %}₹{{ "%.2f"|format(item.amount|float) }}{% else %}{{ item.count }}{% endif %} →</span>
+                </a>
+                {% endfor %}
+            </div>
             {% else %}
-                <tr>
-                    <td colspan="3">No Mitra sales found.</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+            <div class="ud-all-good">✓ No pending actions right now</div>
+            {% endif %}
+        </section>
+
+        <section class="ud-card ud-section">
+            <div class="ud-section-head"><h2>Quick Actions</h2></div>
+            <div class="ud-actions">
+                <a class="ud-action" href="{{ url_for('modules.buy') }}"><span class="ud-action-icon">A</span>Buy from AVPL</a>
+                <a class="ud-action" href="{{ url_for('modules.farmer_produce_market') }}"><span class="ud-action-icon">F</span>Buy from Farmers</a>
+                <a class="ud-action" href="{{ url_for('modules.ufc_farmer_marketplace') }}"><span class="ud-action-icon">S</span>Sell to Farmers</a>
+                <a class="ud-action" href="{{ url_for('modules.pos') }}"><span class="ud-action-icon">P</span>POS Sale</a>
+            </div>
+        </section>
     </div>
 
-    <div class="mobile-card-list">
-    {% for row in data.mitra_sales %}
-        <div class="mobile-info-card">
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Mitra UID</span>
-                <span class="mobile-info-value">{{ row.mitra_uid }}</span>
-            </div>
-
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Total Orders</span>
-                <span class="mobile-info-value">{{ row.total_orders }}</span>
-            </div>
-
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Total Sales</span>
-                <span class="mobile-info-value amount-text">₹{{ "%.2f"|format(row.total_sales) }}</span>
-            </div>
+    <section class="ud-card ud-section">
+        <div class="ud-section-head"><h2>Centre Snapshot</h2><a href="{{ url_for('reports.overview') }}">Detailed Reports →</a></div>
+        <div class="ud-snapshot">
+            <div class="ud-snap"><span>Mapped Farmers</span><strong>{{ data.snapshot.mapped_farmers or 0 }}</strong><small>Farmers linked to this UFC</small></div>
+            <div class="ud-snap"><span>Active Farmers This Month</span><strong>{{ data.snapshot.active_farmers_this_month or 0 }}</strong><small>Farmers with centre activity</small></div>
+            <div class="ud-snap"><span>Products in Stock</span><strong>{{ data.snapshot.stock_product_count or 0 }}</strong><small>Sellable product types</small></div>
+            <div class="ud-snap"><span>Produce Bought This Month</span><strong>₹{{ "%.2f"|format(data.snapshot.produce_bought_this_month|float) }}</strong><small>Confirmed Farmer produce receipts</small></div>
         </div>
-    {% else %}
-        <div class="mobile-empty-card">No Mitra sales found.</div>
-    {% endfor %}
-</div>
+    </section>
 
-    <h3 class="section-title">Farmer-wise Sales</h3>
-
-<div class="table-shell desktop-table-shell">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Farmer Name</th>
-                    <th>Phone</th>
-                    <th>Total Orders</th>
-                    <th>Total Sales</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for row in data.farmer_sales %}
-                <tr>
-                    <td>{{ row.farmer_name }}</td>
-                    <td>{{ row.farmer_phone }}</td>
-                    <td>{{ row.total_orders }}</td>
-                    <td><span class="amount-text">₹{{ "%.2f"|format(row.total_sales) }}</span></td>
-                </tr>
-            {% else %}
-                <tr>
-                    <td colspan="4">No Farmer sales found.</td>
-                </tr>
+    <section class="ud-card ud-section">
+        <div class="ud-section-head"><h2>Recent Activity</h2></div>
+        {% if data.recent_activity %}
+        <div class="ud-activity">
+            {% for item in data.recent_activity %}
+            <div class="ud-activity-row">
+                <span class="ud-activity-mark"></span>
+                <div><div class="ud-activity-title">{{ item.title }}</div><div class="ud-activity-detail">{{ item.detail }}</div></div>
+                <div class="ud-activity-time">{{ item.at|ist_datetime('%d %b, %I:%M %p') }}</div>
+            </div>
             {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-
-<div class="mobile-card-list">
-    {% for row in data.farmer_sales %}
-        <div class="mobile-info-card">
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Farmer Name</span>
-                <span class="mobile-info-value">{{ row.farmer_name }}</span>
-            </div>
-
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Phone</span>
-                <span class="mobile-info-value">{{ row.farmer_phone }}</span>
-            </div>
-
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Total Orders</span>
-                <span class="mobile-info-value">{{ row.total_orders }}</span>
-            </div>
-
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Total Sales</span>
-                <span class="mobile-info-value amount-text">₹{{ "%.2f"|format(row.total_sales) }}</span>
-            </div>
         </div>
-    {% else %}
-        <div class="mobile-empty-card">No Farmer sales found.</div>
-    {% endfor %}
+        {% else %}
+        <div class="ud-empty">No recent centre activity yet.</div>
+        {% endif %}
+    </section>
 </div>
-
-    <h3 class="section-title">Recent Orders</h3>
-
-    <div class="table-shell desktop-table-shell">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Status</th>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Farmer / Source</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for o in data.orders %}
-                <tr>
-                    <td><span class="status-pill">{{ o.status }}</span></td>
-                    <td>{{ o.product_name }}</td>
-                    <td>{{ o.quantity }}</td>
-                    <td>{{ o.farmer_contact or o.source }}</td>
-                </tr>
-            {% else %}
-                <tr>
-                    <td colspan="4">No orders yet.</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <div class="mobile-card-list">
-    {% for o in data.orders %}
-        <div class="mobile-info-card">
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Status</span>
-                <span class="mobile-info-value">
-                    <span class="status-pill">{{ o.status }}</span>
-                </span>
-            </div>
-
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Product</span>
-                <span class="mobile-info-value">{{ o.product_name }}</span>
-            </div>
-
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Quantity</span>
-                <span class="mobile-info-value">{{ o.quantity }}</span>
-            </div>
-
-            <div class="mobile-info-row">
-                <span class="mobile-info-label">Farmer / Source</span>
-                <span class="mobile-info-value">{{ o.farmer_contact or o.source }}</span>
-            </div>
-        </div>
-    {% else %}
-        <div class="mobile-empty-card">No orders yet.</div>
-    {% endfor %}
-</div>
-
-</div>
-
 {% endblock %}

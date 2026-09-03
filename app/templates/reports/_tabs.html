@@ -1,9 +1,19 @@
 <div class="s10-tabs s10-no-print">
-  <a class="{% if stage10_page=='overview' %}active{% endif %}" href="{{ url_for('reports.overview') }}">Overview</a>
-  <a class="{% if stage10_page=='transactions' %}active{% endif %}" href="{{ url_for('reports.transactions') }}">Transaction Chains</a>
-  <a class="{% if stage10_page=='inventory' %}active{% endif %}" href="{{ url_for('reports.inventory') }}">Inventory</a>
-  <a class="{% if stage10_page=='financial' %}active{% endif %}" href="{{ url_for('reports.financial') }}">Receivable / Payable</a>
-  <a class="{% if stage10_page=='gst' %}active{% endif %}" href="{{ url_for('reports.gst') }}">GST / HSN</a>
+  <a class="{% if stage10_page=='overview' %}active{% endif %}" href="{{ url_for('reports.overview') }}">Reports Hub</a>
+  {% if scope.role == 'avpl_admin' %}
+    <a class="{% if stage10_page=='transactions' %}active{% endif %}" href="{{ url_for('reports.transactions') }}">Transaction Chains</a>
+    <a class="{% if stage10_page=='inventory' %}active{% endif %}" href="{{ url_for('reports.inventory') }}">Inventory</a>
+    <a class="{% if stage10_page=='gst' %}active{% endif %}" href="{{ url_for('reports.gst') }}">GST / HSN</a>
+  {% elif scope.role == 'accounts' %}
+    <a class="{% if stage10_page=='financial' %}active{% endif %}" href="{{ url_for('reports.financial') }}">Receivable / Payable</a>
+    <a class="{% if stage10_page=='transactions' %}active{% endif %}" href="{{ url_for('reports.transactions') }}">Transaction Chains</a>
+    <a class="{% if stage10_page=='gst' %}active{% endif %}" href="{{ url_for('reports.gst') }}">GST / HSN</a>
+  {% else %}
+    <a class="{% if stage10_page=='transactions' %}active{% endif %}" href="{{ url_for('reports.transactions') }}">Transaction Chains</a>
+    <a class="{% if stage10_page=='inventory' %}active{% endif %}" href="{{ url_for('reports.inventory') }}">Inventory</a>
+    <a class="{% if stage10_page=='financial' %}active{% endif %}" href="{{ url_for('reports.financial') }}">Receivable / Payable</a>
+    <a class="{% if stage10_page=='gst' %}active{% endif %}" href="{{ url_for('reports.gst') }}">GST / HSN</a>
+  {% endif %}
   <a class="{% if stage10_page=='reconciliation' %}active{% endif %}" href="{{ url_for('reports.reconciliation') }}">Reconciliation</a>
   {% if scope.is_management %}<a class="{% if stage10_page=='system_health' %}active{% endif %}" href="{{ url_for('reports.system_health') }}">System Health</a>{% endif %}
   {% if scope.role in ['super_admin','avpl_admin'] %}<a class="{% if stage10_page=='uat' %}active{% endif %}" href="{{ url_for('reports.uat') }}">Final UAT</a>{% endif %}

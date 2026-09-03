@@ -104,7 +104,7 @@
         {% if ticket.get('can_reopen') %}
         <form method="post" action="{{ url_for('modules.support_ticket_action', ticket_id=ticket.get('id')) }}"><input type="hidden" name="action" value="reopen"><button class="btn warning" type="submit">Reopen Ticket</button></form>
         {% elif ticket.get('can_close') %}
-        <form method="post" action="{{ url_for('modules.support_ticket_action', ticket_id=ticket.get('id')) }}" onsubmit="return confirm('Close this support ticket?');"><input type="hidden" name="action" value="close"><button class="btn secondary" type="submit">Close Ticket</button></form>
+        <form method="post" action="{{ url_for('modules.support_ticket_action', ticket_id=ticket.get('id')) }}" onsubmit="return ufConfirmSubmit(this,'Close this support ticket?','The ticket will be marked closed. You can reopen it later if the issue returns.','Close Ticket','default')"><input type="hidden" name="action" value="close"><button class="btn secondary" type="submit">Close Ticket</button></form>
         {% endif %}
       </div>
       {% endif %}
@@ -116,4 +116,90 @@
     </aside>
   </div>
 </div>
+
+
+<!-- UnnatFarm centered action confirmation modal -->
+<style id="uf-action-confirm-style">
+.uf-confirm-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(18,34,24,.48);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease}.uf-confirm-overlay.is-open{opacity:1;visibility:visible}.uf-confirm-card{width:min(100%,460px);background:#fff;border:1px solid #dbe9df;border-radius:18px;box-shadow:0 24px 70px rgba(17,49,30,.20);padding:24px;transform:translateY(5px) scale(.975);transition:transform .2s ease;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f3127}.uf-confirm-overlay.is-open .uf-confirm-card{transform:translateY(0) scale(1)}.uf-confirm-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;background:#eff8f1;border:1px solid #cfe3d5;color:#2b7346;font-size:1.35rem}.uf-confirm-card.is-danger .uf-confirm-icon{background:#fff4f3;border-color:#f2ceca;color:#b42318}.uf-confirm-card h3{margin:0;text-align:center;color:#17251d;font-size:1.08rem;font-weight:900;letter-spacing:-.015em}.uf-confirm-card p{margin:9px auto 0;max-width:390px;text-align:center;color:#6e7f74;font-size:.78rem;line-height:1.55}.uf-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px}.uf-confirm-btn{min-height:40px;border-radius:9px;padding:9px 13px;font:inherit;font-size:.76rem;font-weight:850;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease}.uf-confirm-btn:hover{transform:translateY(-1px)}.uf-confirm-btn.back{background:#fff;border:1px solid #d6e3d9;color:#2f6e46}.uf-confirm-btn.back:hover{border-color:#b8d2c0;background:#f8fbf9}.uf-confirm-btn.confirm{background:#2b7346;border:1px solid #2b7346;color:#fff;box-shadow:0 7px 16px rgba(43,115,70,.14)}.uf-confirm-btn.confirm:hover{background:#1f5f39;border-color:#1f5f39}.uf-confirm-card.is-danger .uf-confirm-btn.confirm{background:#b42318;border-color:#b42318;box-shadow:0 7px 16px rgba(180,35,24,.12)}.uf-confirm-card.is-danger .uf-confirm-btn.confirm:hover{background:#922018;border-color:#922018}@media(max-width:520px){.uf-confirm-overlay{padding:14px}.uf-confirm-card{padding:20px 16px;border-radius:16px}.uf-confirm-actions{grid-template-columns:1fr}.uf-confirm-btn.confirm{order:-1}}@media(prefers-reduced-motion:reduce){.uf-confirm-overlay,.uf-confirm-card,.uf-confirm-btn{transition:none!important}.uf-confirm-btn:hover{transform:none}}
+</style>
+<div class="uf-confirm-overlay" id="ufActionConfirm" aria-hidden="true">
+  <div class="uf-confirm-card" id="ufActionConfirmCard" role="dialog" aria-modal="true" aria-labelledby="ufActionConfirmTitle" aria-describedby="ufActionConfirmMessage">
+    <div class="uf-confirm-icon" id="ufActionConfirmIcon" aria-hidden="true">✓</div>
+    <h3 id="ufActionConfirmTitle">Confirm action</h3>
+    <p id="ufActionConfirmMessage">Please confirm before continuing.</p>
+    <div class="uf-confirm-actions">
+      <button class="uf-confirm-btn back" id="ufActionConfirmBack" type="button">Go Back</button>
+      <button class="uf-confirm-btn confirm" id="ufActionConfirmProceed" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+<script id="uf-action-confirm-script">
+(function(){
+  const overlay=document.getElementById('ufActionConfirm');
+  const card=document.getElementById('ufActionConfirmCard');
+  const title=document.getElementById('ufActionConfirmTitle');
+  const message=document.getElementById('ufActionConfirmMessage');
+  const icon=document.getElementById('ufActionConfirmIcon');
+  const back=document.getElementById('ufActionConfirmBack');
+  const proceed=document.getElementById('ufActionConfirmProceed');
+  if(!overlay||!card||!title||!message||!back||!proceed)return;
+  let pendingAction=null;
+  let lastFocused=null;
+  function closeConfirm(){
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden','true');
+    pendingAction=null;
+    if(lastFocused&&typeof lastFocused.focus==='function')lastFocused.focus();
+  }
+  window.ufOpenConfirm=function(options){
+    const o=options||{};
+    lastFocused=document.activeElement;
+    pendingAction=typeof o.onConfirm==='function'?o.onConfirm:null;
+    title.textContent=o.title||'Confirm action';
+    message.textContent=o.message||'Please confirm before continuing.';
+    proceed.textContent=o.confirmText||'Confirm';
+    back.textContent=o.cancelText||'Go Back';
+    const danger=o.tone==='danger';
+    card.classList.toggle('is-danger',danger);
+    icon.textContent=o.icon||(danger?'!':'✓');
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden','false');
+    window.setTimeout(()=>back.focus(),0);
+    return false;
+  };
+  window.ufConfirmSubmit=function(form,titleText,messageText,confirmText,tone,submitter){
+    return window.ufOpenConfirm({
+      title:titleText,
+      message:messageText,
+      confirmText:confirmText||'Confirm',
+      tone:tone||'default',
+      icon:tone==='danger'?'!':'✓',
+      onConfirm:function(){
+        if(!form)return;
+        if(submitter&&typeof form.requestSubmit==='function'){
+          form.requestSubmit(submitter);
+        }else if(submitter&&submitter.name){
+          const hidden=document.createElement('input');
+          hidden.type='hidden';hidden.name=submitter.name;hidden.value=submitter.value;
+          form.appendChild(hidden);
+          HTMLFormElement.prototype.submit.call(form);
+        }else{
+          HTMLFormElement.prototype.submit.call(form);
+        }
+      }
+    });
+  };
+  back.addEventListener('click',closeConfirm);
+  proceed.addEventListener('click',function(){
+    const action=pendingAction;
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden','true');
+    pendingAction=null;
+    if(action)action();
+  });
+  overlay.addEventListener('click',function(e){if(e.target===overlay)closeConfirm();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay.classList.contains('is-open'))closeConfirm();});
+})();
+</script>
+
 {% endblock %}

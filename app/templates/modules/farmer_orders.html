@@ -2,38 +2,259 @@
 {% block title %}My Orders{% endblock %}
 {% block content %}
 <style>
-.wrap{width:100%;padding:28px;background:#fff;border:1px solid #e3ebe5;border-radius:20px;box-shadow:0 12px 34px rgba(24,63,42,.06);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#435349}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid #e8eeea}
-.top h2{margin:0;color:#17251d;font-size:1.65rem;font-weight:850;letter-spacing:-.025em}
-.top p{margin:6px 0 0;color:#7b8880;font-size:.74rem;line-height:1.45}
-.search{display:flex;gap:7px;flex-wrap:wrap}
-.search input{min-width:240px;height:38px;border:1px solid #d8e1da;border-radius:8px;padding:0 10px;background:#fff;color:#34483b;font:inherit;font-size:.7rem;outline:none}
-.search input:focus{border-color:#82ad90;box-shadow:0 0 0 3px rgba(47,110,70,.06)}
-.search button{height:38px;border:1px solid #397e51;border-radius:8px;padding:0 14px;background:#397e51;color:#fff;font:inherit;font-size:.68rem;font-weight:850;cursor:pointer}
-.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
-.sum{padding:14px;border:1px solid #e2eae4;border-radius:11px;background:#fbfdfb}
-.sum small{display:block;color:#78867d;font-size:.65rem;font-weight:750}
-.sum strong{display:block;margin-top:5px;color:#203529;font-size:1.08rem;font-weight:850}
-.table{width:100%;overflow:auto;border:1px solid #e1e9e3;border-radius:11px;background:#fff}
-.table table{width:100%;min-width:900px;border-collapse:collapse}
-.table th,.table td{padding:10px 11px;border-bottom:1px solid #edf2ee;text-align:left;vertical-align:middle}
-.table th{background:#f5f8f6;color:#68776e;font-size:.62rem;font-weight:850;letter-spacing:.025em;text-transform:uppercase;white-space:nowrap}
-.table td{color:#435349;font-size:.69rem;font-weight:650;line-height:1.4}
-.table tr:last-child td{border-bottom:0}
-.table strong{color:#263b2f}
-.pill{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:4px 8px;border:1px solid #d7e4da;border-radius:7px;background:#f7faf8;color:#2f6e46;font-size:.61rem;font-weight:850;white-space:nowrap}
-.link{display:inline-flex;align-items:center;min-height:30px;padding:5px 9px;border:1px solid #cfdcd3;border-radius:7px;background:#fff;color:#2f6e46;font-size:.64rem;font-weight:850;text-decoration:none}
-.link:hover{background:#f6faf7}
-.cancel{border:0;background:none;color:#a93a35;font:inherit;font-size:.65rem;font-weight:850;cursor:pointer;padding:0}
-.cancel:hover{text-decoration:underline}
-.empty{text-align:center!important;padding:28px!important;color:#87938b!important}
-@media(max-width:650px){.wrap{padding:16px;border-radius:16px}.summary{grid-template-columns:1fr}.search,.search input,.search button{width:100%}.search input{min-width:0}}
+.wrap{width:100%;padding:24px;background:#fff;border:1px solid #e3ebe5;border-radius:18px;box-shadow:0 12px 34px rgba(24,63,42,.06);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#435349;box-sizing:border-box}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}.top h2{margin:0;color:#17251d;font-size:1.55rem}.top p{margin:4px 0 0;color:#7b8880;font-size:.75rem}.search{display:flex;gap:7px}.search input{min-width:220px;height:38px;border:1px solid #d8e1da;border-radius:8px;padding:0 10px;font:inherit;font-size:.72rem}.search button{height:38px;border:0;border-radius:8px;padding:0 14px;background:#397e51;color:#fff;font:inherit;font-size:.7rem;font-weight:850}.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}.sum{padding:13px;border:1px solid #e2eae4;border-radius:11px;background:#fbfdfb}.sum small{display:block;color:#78867d;font-size:.65rem}.sum strong{display:block;margin-top:4px;color:#203529;font-size:1.05rem}.table{width:100%;overflow:auto;border:1px solid #e1e9e3;border-radius:11px}.table table{width:100%;min-width:860px;border-collapse:collapse}.table th,.table td{padding:10px;border-bottom:1px solid #edf2ee;text-align:left;vertical-align:middle;font-size:.7rem}.table th{background:#f5f8f6;color:#68776e;font-size:.61rem;text-transform:uppercase}.table tr:last-child td{border-bottom:0}.pill{display:inline-flex;padding:4px 8px;border:1px solid #d7e4da;border-radius:7px;background:#f7faf8;color:#2f6e46;font-size:.61rem;font-weight:850}.view{display:inline-flex;align-items:center;justify-content:center;min-height:31px;padding:5px 10px;border-radius:8px;background:#397e51;color:#fff;text-decoration:none;font-size:.65rem;font-weight:850}.small{color:#748279;font-size:.65rem}.empty{text-align:center!important;padding:28px!important;color:#87938b!important}@media(max-width:650px){.wrap{padding:15px}.summary{grid-template-columns:1fr}.search,.search input,.search button{width:100%}.search input{min-width:0}}
 </style>
 <div class="wrap">
-  <div class="top"><div><h2>My Orders</h2><p>{{ overview.get('centre_name') }} · Track requests, approval and delivery.</p></div><form class="search" method="get"><input name="q" value="{{ overview.get('query','') }}" placeholder="Search order or product"><button type="submit">Search</button></form></div>
-  <div class="summary"><div class="sum"><small>Total Orders</small><strong>{{ overview.get('summary',{}).get('count',0) }}</strong></div><div class="sum"><small>Total Order Value</small><strong>₹{{ overview.get('summary',{}).get('total_value','0.00') }}</strong></div></div>
-  <div class="table"><table><thead><tr><th>Order</th><th>Product</th><th>Qty</th><th>Rate</th><th>Total</th><th>Status</th><th>Payment</th><th>Invoice / Receipt</th><th>Action</th></tr></thead><tbody>
-    {% for o in overview.get('rows',[]) %}<tr><td><strong>{{ o.order_number }}</strong></td><td>{{ o.product_name }}</td><td>{{ o.requested_quantity_display }} {{ o.unit_code }}{% if o.status in ['approved','delivered'] and o.approved_quantity != o.requested_quantity %}<div style="color:#64748b;font-size:.85rem;">Approved {{ o.approved_quantity_display }}</div>{% endif %}</td><td>₹{{ o.unit_price_display }}</td><td>₹{{ o.grand_total_display }}</td><td><span class="pill">{{ o.status_label }}</span></td><td>{% if o.status == 'delivered' %}<span class="pill">{{ o.payment_status_label }}</span><div style="color:#64748b;font-size:.85rem;margin-top:3px">Paid ₹{{ o.amount_paid_display }} · Due ₹{{ o.outstanding_amount_display }}</div>{% else %}<span style="color:#64748b">{{ o.payment_term_label }}</span>{% endif %}</td><td>{% if o.invoice_id_str %}<a class="link" href="{{ url_for('modules.farmer_sales_invoice_print', invoice_id=o.invoice_id_str) }}" target="_blank">Print</a>{% else %}—{% endif %}</td><td>{% if o.status in ['requested','approved'] %}<form method="post" action="{{ url_for('modules.farmer_cancel_order', order_id=o.id) }}" onsubmit="return confirm('Cancel this order?');"><button class="cancel" type="submit">Cancel</button></form>{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="9" class="empty">You have not placed any UFC orders yet.</td></tr>{% endfor %}
+  <div class="top"><div><h2>My Orders</h2><p>{{ overview.get('centre_name') }} · open any order to see the full status.</p></div><form class="search" method="get"><input name="q" value="{{ overview.get('query','') }}" placeholder="Search order or product"><button type="submit">Search</button></form></div>
+  <div class="summary"><div class="sum"><small>Total Orders</small><strong>{{ overview.get('summary',{}).get('count',0) }}</strong></div><div class="sum"><small>Total Value</small><strong>₹{{ overview.get('summary',{}).get('total_value','0.00') }}</strong></div></div>
+  <div class="table"><table><thead><tr><th>Order</th><th>Product</th><th>Quantity</th><th>Total</th><th>Status</th><th>Payment</th><th></th></tr></thead><tbody>
+    {% for o in overview.get('rows',[]) %}
+    <tr>
+      <td><strong>{{ o.order_number }}</strong></td>
+      <td><strong>{{ o.product_summary or o.product_name }}</strong>{% if o.is_multi_item_order %}<div class="small">{{ o.item_count }} products in this order</div>{% endif %}</td>
+      <td>{% if o.is_multi_item_order %}{{ o.item_count }} product lines{% else %}{{ o.requested_quantity_display }} {{ o.unit_code }}{% if o.approved_quantity and o.approved_quantity != o.requested_quantity %}<div class="small">Approved {{ o.approved_quantity_display }}</div>{% endif %}{% endif %}</td>
+      <td>₹{{ o.grand_total_display }}</td>
+      <td><span class="pill">{{ o.status_label }}</span></td>
+      <td>{% if o.status == 'delivered' %}<strong>{{ o.payment_status_label }}</strong><div class="small">Paid ₹{{ o.amount_paid_display }} · Due ₹{{ o.outstanding_amount_display }}</div>{% else %}<span class="small">{{ o.payment_term_label }}</span>{% endif %}</td>
+      <td><a class="view" href="{{ url_for('modules.farmer_order_detail', order_id=o.id) }}">View Order</a></td>
+    </tr>
+    {% else %}<tr><td colspan="7" class="empty">No orders yet.</td></tr>{% endfor %}
   </tbody></table></div>
 </div>
+
+
+<style id="sds-commerce-redesign">
+:root{
+    --uc-green:#2b7346;
+    --uc-green-dark:#1f5f39;
+    --uc-green-soft:#eff8f1;
+    --uc-green-softer:#f7fbf8;
+    --uc-text:#1f3127;
+    --uc-muted:#6e7f74;
+    --uc-border:#dbe9df;
+    --uc-border-strong:#c8ddce;
+    --uc-bg:#f7faf8;
+    --uc-white:#fff;
+    --uc-warn:#9a6500;
+    --uc-danger:#a73535;
+    --uc-shadow:0 12px 32px rgba(26,72,43,.055);
+    --uc-shadow-hover:0 16px 34px rgba(31,102,59,.10);
+}
+
+@keyframes ucFadeUp{
+    from{opacity:0;transform:translateY(7px)}
+    to{opacity:1;transform:translateY(0)}
+}
+@keyframes ucPop{
+    from{opacity:0;transform:scale(.975) translateY(5px)}
+    to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page,.orders-page{
+    max-width:1500px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    color:var(--uc-text) !important;
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page{
+    background:#fff !important;
+    border:1px solid var(--uc-border) !important;
+    border-radius:20px !important;
+    box-shadow:var(--uc-shadow) !important;
+}
+
+h1,h2,h3{
+    color:#16251c;
+    letter-spacing:-.02em;
+}
+
+.muted,.small,.soft-note,.marketplace-help{
+    color:var(--uc-muted) !important;
+}
+
+button,a,input,select,textarea{
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+button,.btn,.link,.view,.head-btn,.filter-button,.back,.invoice-link,
+.primary,.secondary,.add,.addbtn,.paybtn,.pay-submit,.receive,
+.cart-primary,.cart-secondary,.clear-btn,.clear-link,.view-order-btn{
+    border-radius:10px !important;
+    transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease !important;
+}
+
+button:hover,.btn:hover,.link:hover,.view:hover,.head-btn:hover,.filter-button:hover,
+.primary:hover,.add:hover,.addbtn:hover,.paybtn:hover,.pay-submit:hover,.receive:hover,
+.cart-primary:hover,.view-order-btn:hover{
+    transform:translateY(-1px);
+}
+
+input,select,textarea,.filter-input,.filter-select{
+    border:1px solid #d6e3d9 !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#31463a !important;
+    outline:none !important;
+    box-shadow:none !important;
+}
+
+input:focus,select:focus,textarea:focus,.filter-input:focus,.filter-select:focus{
+    border-color:#8eb69a !important;
+    box-shadow:0 0 0 3px rgba(43,115,70,.07) !important;
+}
+
+.pill,.badge,.status-badge,.type-pill,.status-pill,.published-badge,.stage4-chip{
+    border-radius:8px !important;
+    font-weight:800 !important;
+}
+
+.table,.table-wrap,.table-shell,.earnings-table-wrap,.items-table{
+    border:1px solid var(--uc-border) !important;
+    border-radius:13px !important;
+    overflow:auto;
+    box-shadow:none !important;
+    background:#fff !important;
+}
+
+table th{
+    background:#f4f8f5 !important;
+    color:#607066 !important;
+    font-size:.63rem !important;
+    font-weight:850 !important;
+    text-transform:uppercase;
+    letter-spacing:.025em;
+}
+
+table td{
+    color:#3e5145 !important;
+}
+
+table tr{
+    transition:background .14s ease;
+}
+
+table tbody tr:hover td{
+    background:#fbfdfb !important;
+}
+
+.summary,.stats,.stat-grid,.status-grid,.facts,.grid{
+    gap:11px !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact,.box,.section,.action-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:14px !important;
+    background:#fff !important;
+    box-shadow:none !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact{
+    transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease;
+}
+
+.sum:hover,.stat:hover,.stat-card:hover,.status-card:hover,.fact:hover{
+    transform:translateY(-2px);
+    border-color:#b7d5c0 !important;
+    box-shadow:0 9px 22px rgba(31,102,59,.07) !important;
+}
+
+.notice,.info,.soft-note,.warn-note,.next-step,.table-info{
+    border-radius:11px !important;
+}
+
+.empty,.orders-empty{
+    color:#809087 !important;
+}
+
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+        animation:none !important;
+        transition:none !important;
+        scroll-behavior:auto !important;
+    }
+}
+</style>
+
+
+
+<style id="sds-orders-redesign">
+.orders-head,.top,.head,.fh{
+    margin-bottom:14px !important;
+}
+
+.orders-grid{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fill,minmax(285px,1fr)) !important;
+    gap:13px !important;
+}
+
+.order-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:16px !important;
+    background:#fff !important;
+    box-shadow:0 7px 20px rgba(26,72,43,.04) !important;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease !important;
+    animation:ucFadeUp .25s ease both;
+}
+
+.order-card:hover{
+    transform:translateY(-2px);
+    border-color:#aed0b7 !important;
+    box-shadow:var(--uc-shadow-hover) !important;
+}
+
+.order-number{
+    color:#1d3928 !important;
+    font-weight:900 !important;
+}
+
+.order-meta,.meta-row{
+    border-color:#edf2ee !important;
+}
+
+.view-order-btn,.head-btn,.btn,.view,.link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:37px;
+    padding:7px 11px;
+    border:1px solid #d2e1d6 !important;
+    background:#fff !important;
+    color:#2b7346 !important;
+    text-decoration:none !important;
+    font-size:.67rem !important;
+    font-weight:850 !important;
+}
+
+.view-order-btn.primary,.head-btn.primary,.btn.primary{
+    border-color:#2b7346 !important;
+    background:#2b7346 !important;
+    color:#fff !important;
+}
+
+.timeline,.history{
+    position:relative;
+}
+
+.event,.history-item,.step{
+    border-color:#e1ebe4 !important;
+    background:#fbfdfb !important;
+    border-radius:11px !important;
+}
+
+.action-card,.receive,.pay-form{
+    border:1px solid #d9e7dd !important;
+    border-radius:14px !important;
+    background:#fbfdfb !important;
+}
+
+@media(max-width:700px){
+    .orders-grid{
+        grid-template-columns:1fr !important;
+    }
+}
+</style>
+
 {% endblock %}

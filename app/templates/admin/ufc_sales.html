@@ -355,7 +355,7 @@
 
       {% if session.get('role') in ['super_admin','avpl_admin'] %}
 
-      <form method="post" action="{{ url_for('admin.sync_existing_ufc_sales') }}" onsubmit="return confirm('Create/repair Sales documents for dispatched Stage 4 orders that are missing them?');"><button class="btn primary" type="submit">Sync Existing Orders</button></form>
+      <form method="post" action="{{ url_for('admin.sync_existing_ufc_sales') }}" onsubmit="return confirm('Sync and repair AVPL sale/invoice lines from the source UFC orders? Existing payment history and document numbers are preserved.');"><button class="btn primary" type="submit">Sync / Repair Orders</button></form>
 
       {% endif %}
 
@@ -403,9 +403,9 @@
 
         <td><strong>{{ r.centre_name }}</strong><br><small>{{ r.centre_uid }}</small></td>
 
-        <td><strong>{{ r.product_name }}</strong><br><small>{{ r.product_code or '-' }}</small></td>
+        <td><strong>{{ r.product_summary or r.product_name }}</strong>{% if r.is_multi_item_order %}<br><small>{{ r.item_count }} products</small>{% else %}<br><small>{{ r.product_code or '-' }}</small>{% endif %}</td>
 
-        <td>{{ r.quantity_display }} {{ r.unit_code }}</td>
+        <td>{% if r.is_multi_item_order %}Multiple units{% else %}{{ r.quantity_display }} {{ r.unit_code }}{% endif %}</td>
 
         <td>₹{{ r.taxable_value_display }}</td>
 

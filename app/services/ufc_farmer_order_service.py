@@ -12,6 +12,8 @@ from pymongo import ASCENDING, DESCENDING, ReturnDocument
 from app.extensions import mongo
 from app.services.accounting_product_mapping_service import get_product_accounting_mapping_for_posting
 from app.services.avpl_ufc_sales_service import _resolve_gst_state
+from app.services.ufc_farmer_marketplace_service import is_farmer_delivery_enabled
+from app.services.commerce_receipt_service import normalize_receipt_lines, summarize_receipt, receipt_label
 from app.utils.helpers import now_utc
 
 
@@ -34,7 +36,9 @@ ORDER_STATUS_LABELS = {
     "approved": "Approved",
     "rejected": "Rejected",
     "cancelled": "Cancelled",
-    "delivered": "Delivered",
+    "dispatched": "Dispatched",
+    "received": "Received",
+    "delivered": "Delivered",  # historical compatibility
 }
 PAYMENT_STATUS_LABELS = {
     "unpaid": "Unpaid",
@@ -281,6 +285,60 @@ def _product_saleable(centre_uid, product_id):
     return total
 
 
+def _line_id():
+    return uuid4().hex[:12]
+
+
+def _order_items(order):
+    raw = order.get("items") or []
+    if raw:
+        return [dict(x or {}) for x in raw if isinstance(x, dict)]
+    return [{
+        "line_id": "legacy", "source_product_id": order.get("source_product_id"), "source_product_id_str": str(order.get("source_product_id") or ""),
+        "marketplace_listing_id": order.get("marketplace_listing_id"), "product_name": order.get("product_name") or "Product", "product_code": order.get("product_code") or "",
+        "category": order.get("category") or "", "product_role": order.get("product_role") or "", "unit_code": order.get("unit_code") or "Unit",
+        "requested_quantity": order.get("requested_quantity") or 0, "approved_quantity": order.get("approved_quantity") or 0,
+        "reserved_quantity": order.get("reserved_quantity") or 0, "delivered_quantity": order.get("delivered_quantity") or 0,
+        "unit_price": order.get("unit_price") or 0, "line_total": order.get("total_amount") or 0, "status": order.get("status") or "requested",
+        "reservation_allocations": order.get("reservation_allocations") or [],
+    }]
+
+
+def _serialize_item(item):
+    row = dict(item or {})
+    row["source_product_id_str"] = str(row.get("source_product_id") or "")
+    row["requested_quantity_display"] = _qty(row.get("requested_quantity"))
+    row["approved_quantity_display"] = _qty(row.get("approved_quantity"))
+    row["dispatched_quantity_display"] = _qty(row.get("dispatched_quantity") if row.get("dispatched_quantity") is not None else row.get("delivered_quantity"))
+    row["delivered_quantity_display"] = _qty(row.get("delivered_quantity"))
+    row["physically_received_quantity_display"] = _qty(row.get("physically_received_quantity"))
+    row["accepted_quantity_display"] = _qty(row.get("accepted_quantity"))
+    row["damaged_quantity_display"] = _qty(row.get("damaged_quantity"))
+    row["rejected_quantity_display"] = _qty(row.get("rejected_quantity"))
+    row["missing_quantity_display"] = _qty(row.get("missing_quantity"))
+    row["unit_price_display"] = _money(row.get("unit_price"))
+    row["line_total_display"] = _money(row.get("line_total"))
+    status = str(row.get("status") or "requested")
+    row["status_label"] = {
+        "requested":"Requested","approved":"Approved","partially_approved":"Partially Approved",
+        "rejected":"Not Approved","dispatched":"Dispatched","received":"Received",
+        "received_with_discrepancy":"Receipt Issue","delivered":"Delivered",
+    }.get(status,status.replace("_"," ").title())
+    return row
+
+
+def _copy_line_to_legacy_fields(document, item):
+    item = item or {}
+    document.update({
+        "source_product_id": item.get("source_product_id"), "source_product_id_str": str(item.get("source_product_id") or ""),
+        "marketplace_listing_id": item.get("marketplace_listing_id"), "marketplace_listing_id_str": str(item.get("marketplace_listing_id") or ""),
+        "product_name": item.get("product_name") or "Multiple products", "product_code": item.get("product_code") or "", "category": item.get("category") or "", "product_role": item.get("product_role") or "", "unit_code": item.get("unit_code") or "Unit",
+        "requested_quantity": float(_decimal(item.get("requested_quantity"))), "approved_quantity": float(_decimal(item.get("approved_quantity"))), "reserved_quantity": float(_decimal(item.get("reserved_quantity"))), "delivered_quantity": float(_decimal(item.get("delivered_quantity"))),
+        "unit_price": float(_decimal(item.get("unit_price"))),
+    })
+    return document
+
+
 def _candidate_ufc_lots(centre_uid, product_id):
     product_oid = _to_object_id(product_id)
     rows = list(mongo.db[UFC_LOT_COLLECTION].find({
@@ -432,7 +490,8 @@ def _serialize_order(order):
     row["sale_id_str"] = str(row.get("ufc_farmer_sale_id") or "")
     row["invoice_id_str"] = str(row.get("ufc_farmer_invoice_id") or "")
     row["purchase_entry_id_str"] = str(row.get("farmer_purchase_entry_id") or "")
-    row["status_label"] = ORDER_STATUS_LABELS.get(str(row.get("status") or "requested"), str(row.get("status") or "").replace("_", " ").title())
+    status = str(row.get("status") or "requested")
+    row["status_label"] = "Partially Approved" if status == "approved" and row.get("approval_scope") == "partial" else ORDER_STATUS_LABELS.get(status, status.replace("_", " ").title())
     row["requested_quantity_display"] = _qty(row.get("requested_quantity"))
     row["approved_quantity_display"] = _qty(row.get("approved_quantity"))
     row["delivered_quantity_display"] = _qty(row.get("delivered_quantity"))
@@ -444,12 +503,26 @@ def _serialize_order(order):
     row["outstanding_amount_display"] = _money(row.get("outstanding_amount") if row.get("outstanding_amount") is not None else row.get("grand_total") or row.get("total_amount"))
     row["payment_status_label"] = PAYMENT_STATUS_LABELS.get(str(row.get("payment_status") or "not_recorded"), str(row.get("payment_status") or "").replace("_", " ").title())
     row["payment_term_label"] = PAYMENT_TERM_LABELS.get(str(row.get("payment_term") or "cod"), str(row.get("payment_term") or "cod").replace("_", " ").title())
+    row["items"] = [_serialize_item(x) for x in _order_items(row)]
+    row["item_count"] = len(row["items"])
+    row["is_multi_item_order"] = row.get("is_multi_item_order") is True or row["item_count"] > 1
+    row["product_summary"] = (row["items"][0].get("product_name") or "Product") if row["item_count"] == 1 else f"{row['item_count']} products"
+    row["approved_item_count"] = sum(1 for x in row["items"] if _decimal(x.get("approved_quantity")) > 0)
+    row["dispatched_item_count"] = sum(1 for x in row["items"] if _decimal(x.get("dispatched_quantity") if x.get("dispatched_quantity") is not None else x.get("delivered_quantity")) > 0)
+    row["received_item_count"] = sum(1 for x in row["items"] if _decimal(x.get("physically_received_quantity")) > 0)
+    row["accepted_item_count"] = sum(1 for x in row["items"] if _decimal(x.get("accepted_quantity")) > 0)
+    row["discrepancy_item_count"] = sum(1 for x in row["items"] if _decimal(x.get("discrepancy_quantity")) > 0)
+    row["receipt_status_label"] = receipt_label(row.get("receipt_status")) if row.get("receipt_status") else ""
+    row["accepted_goods_value_display"] = _money(row.get("accepted_goods_value") if row.get("accepted_goods_value") is not None else row.get("grand_total"))
+    row["receipt_adjustment_amount_display"] = _money(row.get("receipt_adjustment_amount"))
     return row
 
 
 def create_farmer_order(actor_user_id, product_id, quantity, *, request_token="", note="", payment_term="cod"):
     _ensure_indexes()
     actor, farmer, centre_uid, centre_name, farmer_name = _resolve_farmer(actor_user_id)
+    if not is_farmer_delivery_enabled(centre_uid):
+        raise ValueError(f"{centre_name} is not delivering right now. You can still view products and prices.")
     product_oid = _to_object_id(product_id)
     if not product_oid:
         raise ValueError("Invalid Marketplace product.")
@@ -554,111 +627,109 @@ def create_farmer_order(actor_user_id, product_id, quantity, *, request_token=""
     return {"order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": document["_id"]})), "message": "Order placed successfully. Your UFC will review it."}
 
 
-def _reserve_stock(order, approved_quantity, actor):
-    needed = _decimal(approved_quantity)
-    allocations = []
-    reserved_updates = []
-    today_iso = business_today().isoformat()
+def create_farmer_cart_order(actor_user_id, items, *, request_token="", note="", payment_term="cod"):
+    _ensure_indexes()
+    actor, farmer, centre_uid, centre_name, farmer_name = _resolve_farmer(actor_user_id)
+    if not is_farmer_delivery_enabled(centre_uid):
+        raise ValueError(f"{centre_name} is not delivering right now. You can still view products and prices.")
+    if not isinstance(items, list) or not items:
+        raise ValueError("Your cart is empty.")
+    if len(items) > 40:
+        raise ValueError("A single order can contain at most 40 products.")
+    payment_term = _clean(payment_term, 40).lower() or "cod"
+    if payment_term == "prepaid_online":
+        raise ValueError("Online prepaid payment is coming soon. Choose Pay on Delivery or Credit / Pay Later for now.")
+    if payment_term not in {"cod", "credit"}:
+        raise ValueError("Select Pay on Delivery or Credit / Pay Later.")
 
-    for lot in _candidate_ufc_lots(order.get("centre_uid"), order.get("source_product_id")):
-        if needed <= 0:
-            break
-        saleable = _lot_saleable(lot)
-        if saleable <= 0:
-            continue
-        take = min(needed, saleable)
-        take_float = float(take)
-        result = mongo.db[UFC_LOT_COLLECTION].update_one(
-            {
-                "_id": lot["_id"],
-                "centre_uid": order.get("centre_uid"),
-                "status": {"$nin": ["cancelled", "expired"]},
-                "$and": [
-                    {"$or": [
-                        {"expiry_date": {"$exists": False}},
-                        {"expiry_date": None},
-                        {"expiry_date": ""},
-                        {"expiry_date": {"$gte": today_iso}},
-                    ]},
-                    {"$expr": {"$gte": [
-                        {"$subtract": [
-                            {"$ifNull": ["$available_quantity", 0]},
-                            {"$add": [
-                                {"$ifNull": ["$reserved_quantity", 0]},
-                                {"$ifNull": ["$damaged_quantity", 0]},
-                                {"$ifNull": ["$blocked_quantity", 0]},
-                            ]},
-                        ]},
-                        take_float,
-                    ]}},
-                ],
-            },
-            {"$inc": {"reserved_quantity": take_float}, "$set": {"updated_at": now_utc(), "last_farmer_order_reservation_id": order["_id"]}},
-        )
-        if result.modified_count != 1:
-            continue
-        reserved_updates.append((lot["_id"], take_float))
-        allocations.append({
-            "inventory_lot_id": lot["_id"],
-            "inventory_lot_id_str": str(lot["_id"]),
-            "quantity": take_float,
-            "quantity_display": _qty(take),
-            "warehouse_code": lot.get("warehouse_code") or f"{order.get('centre_uid')}-MAIN",
-            "warehouse_name": lot.get("warehouse_name") or f"{order.get('centre_name') or order.get('centre_uid')} Main Stock",
-            "batch_number": lot.get("batch_number") or "",
-            "barcode": lot.get("barcode") or "",
-            "manufacturing_date": lot.get("manufacturing_date") or "",
-            "expiry_date": lot.get("expiry_date") or "",
-            "unit_code": lot.get("unit_code") or order.get("unit_code") or "Unit",
+    merged = {}
+    for raw in items:
+        if not isinstance(raw, dict):
+            raise ValueError("One cart line is invalid.")
+        oid = _to_object_id(raw.get("product_id") or raw.get("source_product_id")); qty = _decimal(raw.get("quantity"))
+        if not oid or qty <= 0:
+            raise ValueError("Every cart product must have a valid quantity greater than zero.")
+        key = str(oid); merged.setdefault(key, {"product_id": oid, "quantity": Decimal("0")}); merged[key]["quantity"] += qty
+
+    lines=[]; cart_total=Decimal("0")
+    for merged_row in merged.values():
+        product_oid=merged_row["product_id"]; requested=merged_row["quantity"]
+        listing=mongo.db[LISTING_COLLECTION].find_one({"centre_uid":centre_uid,"source_product_id":product_oid,"status":"published"})
+        if not listing: raise ValueError("One product in your cart is no longer published by your UFC.")
+        minimum=max(_decimal(listing.get("min_order_quantity"),"1"),Decimal("0")); maximum=max(_decimal(listing.get("max_order_quantity")),Decimal("0")); price=_decimal(listing.get("selling_price"))
+        if minimum>0 and requested<minimum: raise ValueError(f"Minimum order for {listing.get('product_name') or 'a product'} is {_qty(minimum)} {listing.get('unit_code') or 'units'}.")
+        if maximum>0 and requested>maximum: raise ValueError(f"Maximum order for {listing.get('product_name') or 'a product'} is {_qty(maximum)} {listing.get('unit_code') or 'units'}.")
+        if price<=0: raise ValueError(f"{listing.get('product_name') or 'A product'} does not have a valid selling price.")
+        saleable=_product_saleable(centre_uid,product_oid)
+        if requested>saleable: raise ValueError(f"Only {_qty(saleable)} {listing.get('unit_code') or 'units'} of {listing.get('product_name') or 'this product'} is currently available.")
+        product=mongo.db.products.find_one({"_id":product_oid}) or {}
+        line_total=requested*price; cart_total+=line_total
+        lines.append({
+            "line_id":_line_id(),"source_product_id":product_oid,"source_product_id_str":str(product_oid),"marketplace_listing_id":listing.get("_id"),"marketplace_listing_id_str":str(listing.get("_id") or ""),
+            "product_name":listing.get("product_name") or product.get("name") or product.get("product_name") or "Product","product_code":listing.get("product_code") or product.get("sku") or product.get("product_code") or "",
+            "category":listing.get("category") or product.get("category") or "","product_role":listing.get("product_role") or product.get("product_role") or "","unit_code":listing.get("unit_code") or product.get("unit") or "Unit",
+            "requested_quantity":float(requested),"approved_quantity":0.0,"reserved_quantity":0.0,"delivered_quantity":0.0,"unit_price":float(price),"line_total":float(line_total),"status":"requested","reservation_allocations":[],
         })
-        needed -= take
 
-    if needed > 0:
-        for lot_id, quantity_value in reserved_updates:
-            mongo.db[UFC_LOT_COLLECTION].update_one(
-                {"_id": lot_id, "reserved_quantity": {"$gte": quantity_value}},
-                {"$inc": {"reserved_quantity": -quantity_value}, "$set": {"updated_at": now_utc()}},
-            )
+    token=_clean(request_token,120) or f"F-CART-{uuid4().hex.upper()}"
+    existing=mongo.db[ORDER_COLLECTION].find_one({"request_token":token})
+    if existing:
+        if str(existing.get("farmer_user_id") or "")!=str(actor.get("_id") or ""): raise PermissionError("Invalid order request token.")
+        return {"order":_serialize_order(existing),"message":"This cart order was already placed."}
+    farmer_snapshot=_farmer_snapshot(actor,farmer,farmer_name); timestamp=now_utc(); order_number=_next_centre_number("ufc_farmer_order",centre_uid,"F-ORD")
+    doc={
+        "order_number":order_number,"request_token":token,"commerce_version":2,"is_multi_item_order":len(lines)>1,"item_count":len(lines),"items":lines,
+        "centre_uid":centre_uid,"centre_name":centre_name,"farmer_user_id":actor["_id"],"farmer_user_id_str":str(actor["_id"]),"farmer_master_id":farmer.get("_id"),"farmer_master_id_str":str(farmer.get("_id") or ""),
+        "farmer_name":farmer_name,"farmer_contact":farmer_snapshot.get("contact_no") or "","farmer_snapshot":farmer_snapshot,
+        "total_amount":float(cart_total),"order_note":_clean(note,1000),"status":"requested","approval_scope":"pending","stock_reserved":False,"stock_delivered":False,"financial_sync_status":"not_started",
+        "payment_term":payment_term,"payment_term_label":PAYMENT_TERM_LABELS.get(payment_term,payment_term.replace("_"," ").title()),"payment_status":"not_recorded","amount_paid":0.0,"outstanding_amount":0.0,
+        "history":[],"created_at":timestamp,"updated_at":timestamp,
+    }
+    _copy_line_to_legacy_fields(doc,lines[0])
+    try:
+        result=mongo.db[ORDER_COLLECTION].insert_one(doc); doc["_id"]=result.inserted_id
+    except Exception:
+        existing=mongo.db[ORDER_COLLECTION].find_one({"request_token":token})
+        if existing:return {"order":_serialize_order(existing),"message":"This cart order was already placed."}
+        raise
+    _append_history(doc["_id"],action="place_cart_order",actor=actor,note=note or f"Requested {len(lines)} products from the UFC.",from_status=None,to_status="requested")
+    _notify_centre_admins(centre_uid,"New Farmer Cart Order",f"{farmer_name} placed order {order_number} with {len(lines)} product line(s).")
+    return {"order":_serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id":doc["_id"]})),"message":f"Order placed with {len(lines)} products. Your UFC will review it."}
+
+
+def _reserve_stock(order, approved_quantity, actor, item=None):
+    effective=dict(order)
+    if item: effective.update(item)
+    needed=_decimal(approved_quantity); allocations=[]; reserved_updates=[]; today_iso=business_today().isoformat(); product_id=effective.get("source_product_id"); line_id=(item or {}).get("line_id") or "legacy"
+    for lot in _candidate_ufc_lots(order.get("centre_uid"),product_id):
+        if needed<=0:break
+        saleable=_lot_saleable(lot)
+        if saleable<=0:continue
+        take=min(needed,saleable); take_float=float(take)
+        result=mongo.db[UFC_LOT_COLLECTION].update_one({
+            "_id":lot["_id"],"centre_uid":order.get("centre_uid"),"status":{"$nin":["cancelled","expired"]},
+            "$and":[{"$or":[{"expiry_date":{"$exists":False}},{"expiry_date":None},{"expiry_date":""},{"expiry_date":{"$gte":today_iso}}]},
+                     {"$expr":{"$gte":[{"$subtract":[{"$ifNull":["$available_quantity",0]},{"$add":[{"$ifNull":["$reserved_quantity",0]},{"$ifNull":["$damaged_quantity",0]},{"$ifNull":["$blocked_quantity",0]}]}]},take_float]}}]},
+            {"$inc":{"reserved_quantity":take_float},"$set":{"updated_at":now_utc(),"last_farmer_order_reservation_id":order["_id"]}})
+        if result.modified_count!=1:continue
+        reserved_updates.append((lot["_id"],take_float))
+        allocations.append({"line_id":line_id,"inventory_lot_id":lot["_id"],"inventory_lot_id_str":str(lot["_id"]),"source_product_id":product_id,"source_product_id_str":str(product_id or ""),
+            "product_name":effective.get("product_name") or "Product","product_code":effective.get("product_code") or "","category":effective.get("category") or "","product_role":effective.get("product_role") or "","unit_price":float(_decimal(effective.get("unit_price"))),
+            "quantity":take_float,"quantity_display":_qty(take),"warehouse_code":lot.get("warehouse_code") or f"{order.get('centre_uid')}-MAIN","warehouse_name":lot.get("warehouse_name") or f"{order.get('centre_name') or order.get('centre_uid')} Main Stock",
+            "batch_number":lot.get("batch_number") or "","barcode":lot.get("barcode") or "","manufacturing_date":lot.get("manufacturing_date") or "","expiry_date":lot.get("expiry_date") or "","unit_code":lot.get("unit_code") or effective.get("unit_code") or "Unit"})
+        needed-=take
+    if needed>0:
+        for lot_id,quantity_value in reserved_updates:
+            mongo.db[UFC_LOT_COLLECTION].update_one({"_id":lot_id,"reserved_quantity":{"$gte":quantity_value}},{"$inc":{"reserved_quantity":-quantity_value},"$set":{"updated_at":now_utc()}})
         raise RuntimeError("UFC stock changed while this order was being approved. Refresh and try again.")
-
-    timestamp = now_utc()
+    timestamp=now_utc()
     for allocation in allocations:
-        key = f"FARMER-RESERVE:{order['_id']}:{allocation['inventory_lot_id']}"
-        mongo.db[UFC_MOVEMENT_COLLECTION].update_one(
-            {"source_posting_key": key},
-            {"$setOnInsert": {
-                "source_posting_key": key,
-                "movement_uid": uuid4().hex,
-                "centre_uid": order.get("centre_uid"),
-                "centre_name": order.get("centre_name") or order.get("centre_uid"),
-                "source_document_type": "farmer_order",
-                "source_document_id": order["_id"],
-                "source_document_id_str": str(order["_id"]),
-                "source_document_number": order.get("order_number") or "",
-                "source_product_id": order.get("source_product_id"),
-                "source_product_id_str": str(order.get("source_product_id") or ""),
-                "product_code": order.get("product_code") or "",
-                "product_name": order.get("product_name") or "Product",
-                "movement_type": "reservation",
-                "direction": "reserve",
-                "quantity": allocation["quantity"],
-                "quantity_display": allocation["quantity_display"],
-                "unit_code": allocation.get("unit_code") or order.get("unit_code") or "Unit",
-                "warehouse_code": allocation.get("warehouse_code") or "",
-                "warehouse_name": allocation.get("warehouse_name") or "",
-                "batch_number": allocation.get("batch_number") or "",
-                "barcode": allocation.get("barcode") or "",
-                "manufacturing_date": allocation.get("manufacturing_date") or "",
-                "expiry_date": allocation.get("expiry_date") or "",
-                "movement_date": business_today().isoformat(),
-                "reason": f"Reserved for Farmer order {order.get('order_number') or ''} ({order.get('farmer_name') or 'Farmer'}).",
-                "posted_by": actor.get("_id"),
-                "posted_by_name": actor.get("resolved_name") or "",
-                "posted_at": timestamp,
-                "created_at": timestamp,
-            }},
-            upsert=True,
-        )
+        key=f"FARMER-RESERVE:{order['_id']}:{line_id}:{allocation['inventory_lot_id']}"
+        mongo.db[UFC_MOVEMENT_COLLECTION].update_one({"source_posting_key":key},{"$setOnInsert":{
+            "source_posting_key":key,"movement_uid":uuid4().hex,"centre_uid":order.get("centre_uid"),"centre_name":order.get("centre_name") or order.get("centre_uid"),"source_document_type":"farmer_order","source_document_id":order["_id"],"source_document_id_str":str(order["_id"]),"source_document_number":order.get("order_number") or "","line_id":line_id,
+            "source_product_id":product_id,"source_product_id_str":str(product_id or ""),"product_code":effective.get("product_code") or "","product_name":effective.get("product_name") or "Product","movement_type":"reservation","direction":"reserve","quantity":allocation["quantity"],"quantity_display":allocation["quantity_display"],"unit_code":allocation.get("unit_code") or effective.get("unit_code") or "Unit",
+            "warehouse_code":allocation.get("warehouse_code") or "","warehouse_name":allocation.get("warehouse_name") or "","batch_number":allocation.get("batch_number") or "","barcode":allocation.get("barcode") or "","manufacturing_date":allocation.get("manufacturing_date") or "","expiry_date":allocation.get("expiry_date") or "","movement_date":business_today().isoformat(),
+            "reason":f"Reserved for Farmer order {order.get('order_number') or ''} ({order.get('farmer_name') or 'Farmer'}).","posted_by":actor.get("_id"),"posted_by_name":actor.get("resolved_name") or "","posted_at":timestamp,"created_at":timestamp}},upsert=True)
     return allocations
 
 
@@ -731,6 +802,60 @@ def approve_farmer_order(actor_user_id, centre_uid_hint, order_id, approved_quan
     _append_history(oid, action="approve_order", actor=actor, note=note or f"Approved {_qty(approved)} {order.get('unit_code') or 'units'}.", from_status="requested", to_status="approved")
     _notify_user(order.get("farmer_user_id"), "Farmer Order Approved", f"Your order {order.get('order_number')} was approved for {_qty(approved)} {order.get('unit_code') or 'units'}. Your UFC has reserved the stock.", "farmer")
     return {"order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": oid})), "message": "Order approved and UFC stock reserved."}
+
+
+def approve_farmer_cart_order(actor_user_id, centre_uid_hint, order_id, approvals, note="", payment_due_days=None):
+    _ensure_indexes(); actor,_centre,centre_uid,_centre_name=_resolve_ufc_admin(actor_user_id,centre_uid_hint); oid=_to_object_id(order_id)
+    if not oid: raise ValueError("Invalid Farmer order.")
+    order=mongo.db[ORDER_COLLECTION].find_one({"_id":oid,"centre_uid":centre_uid})
+    if not order: raise ValueError("Farmer order was not found for your UFC Centre.")
+    if not order.get("items"): raise ValueError("This is a single-product historical order. Use the normal approval form.")
+    if order.get("status")!="requested": raise ValueError("Only a requested Farmer order can be approved.")
+    if not isinstance(approvals,list): raise ValueError("Approval lines are invalid.")
+    amap={str(x.get("line_id") or ""):x for x in approvals if isinstance(x,dict)}
+    due_days=0
+    if str(order.get("payment_term") or "cod")=="credit":
+        raw=str(payment_due_days if payment_due_days is not None else "").strip()
+        if raw:
+            try:due_days=int(raw)
+            except Exception as exc:raise ValueError("Credit days must be a whole number.") from exc
+            if due_days<0 or due_days>365:raise ValueError("Credit days must be between 0 and 365.")
+    prepared=[]; all_alloc=[]
+    try:
+        for item in _order_items(order):
+            line=dict(item); req=_decimal(line.get("requested_quantity")); row=amap.get(str(line.get("line_id") or ""),{}); approved=_decimal(row.get("approved_quantity"))
+            if approved<0 or approved>req:raise ValueError(f"Approved quantity for {line.get('product_name') or 'a product'} must be between 0 and {_qty(req)} {line.get('unit_code') or 'units'}.")
+            listing=mongo.db[LISTING_COLLECTION].find_one({"centre_uid":centre_uid,"source_product_id":line.get("source_product_id"),"status":"published"})
+            if approved>0 and not listing:raise ValueError(f"{line.get('product_name') or 'A product'} is no longer published to Farmers.")
+            line["approved_quantity"]=float(approved);line["reserved_quantity"]=float(approved);line["line_total"]=float((approved*_decimal(line.get("unit_price"))).quantize(MONEY_QUANTUM)) if approved>0 else 0.0
+            line["status"]="rejected" if approved<=0 else ("approved" if approved==req else "partially_approved")
+            if approved>0:
+                alloc=_reserve_stock(order,approved,actor,item=line);line["reservation_allocations"]=alloc;all_alloc.extend(alloc)
+            else:line["reservation_allocations"]=[]
+            prepared.append(line)
+    except Exception:
+        for a in all_alloc:
+            lid=_to_object_id(a.get("inventory_lot_id"));q=float(_decimal(a.get("quantity")))
+            if lid and q>0:mongo.db[UFC_LOT_COLLECTION].update_one({"_id":lid,"reserved_quantity":{"$gte":q}},{"$inc":{"reserved_quantity":-q},"$set":{"updated_at":now_utc()}})
+        raise
+    approved_lines=[x for x in prepared if _decimal(x.get("approved_quantity"))>0]
+    if not approved_lines:
+        timestamp=now_utc();mongo.db[ORDER_COLLECTION].update_one({"_id":oid,"status":"requested"},{"$set":{"items":prepared,"status":"rejected","approval_scope":"none","rejection_reason":_clean(note,1000) or "No order line was approved.","rejected_by":actor["_id"],"rejected_at":timestamp,"updated_at":timestamp}})
+        _append_history(oid,action="reject_cart_order",actor=actor,note=note or "No cart line was approved.",from_status="requested",to_status="rejected")
+        _notify_user(order.get("farmer_user_id"),"Farmer Order Not Approved",f"No product line in order {order.get('order_number')} was approved.","farmer")
+        return {"order":_serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id":oid})),"message":"No order line was approved."}
+    total=sum((_decimal(x.get("line_total")) for x in prepared),Decimal("0"));partial=len(approved_lines)!=len(prepared) or any(x.get("status")=="partially_approved" for x in prepared);primary=approved_lines[0];timestamp=now_utc()
+    update={"items":prepared,"item_count":len(prepared),"approved_item_count":len(approved_lines),"approval_scope":"partial" if partial else "full","total_amount":float(total),"reservation_allocations":all_alloc,"stock_reserved":True,"status":"approved","approval_note":_clean(note,1000),"payment_due_days":due_days,"approved_by":actor["_id"],"approved_by_name":actor.get("resolved_name") or "","approved_at":timestamp,"updated_at":timestamp}
+    _copy_line_to_legacy_fields(update,primary)
+    result=mongo.db[ORDER_COLLECTION].update_one({"_id":oid,"centre_uid":centre_uid,"status":"requested","stock_reserved":{"$ne":True}},{"$set":update})
+    if result.modified_count!=1:
+        for a in all_alloc:
+            lid=_to_object_id(a.get("inventory_lot_id"));q=float(_decimal(a.get("quantity")))
+            if lid and q>0:mongo.db[UFC_LOT_COLLECTION].update_one({"_id":lid,"reserved_quantity":{"$gte":q}},{"$inc":{"reserved_quantity":-q},"$set":{"updated_at":now_utc()}})
+        raise RuntimeError("The order changed while approval was being saved. Refresh and try again.")
+    _append_history(oid,action="approve_cart_order",actor=actor,note=note or f"Approved {len(approved_lines)} of {len(prepared)} product line(s).",from_status="requested",to_status="approved")
+    _notify_user(order.get("farmer_user_id"),"Farmer Cart Order Approved",f"Your order {order.get('order_number')} has {len(approved_lines)} approved product line(s).","farmer")
+    return {"order":_serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id":oid})),"message":"Order approved and UFC stock reserved line by line."}
 
 
 def reject_farmer_order(actor_user_id, centre_uid_hint, order_id, reason=""):
@@ -833,7 +958,13 @@ def cancel_farmer_order(actor_user_id, order_id, *, centre_uid_hint=None, reason
 def _apply_delivery_stock(order, actor):
     allocations = order.get("reservation_allocations") or []
     if not allocations:
+        # Multi-line approvals keep reservations both flattened on the order and
+        # on each item. Rebuild the flat view defensively for older UAT records.
+        for line in _order_items(order):
+            allocations.extend(line.get("reservation_allocations") or [])
+    if not allocations:
         raise RuntimeError("No reserved UFC stock allocation exists for this order.")
+
     moved = []
     today_iso = business_today().isoformat()
     try:
@@ -850,59 +981,49 @@ def _apply_delivery_stock(order, actor):
                     "available_quantity": {"$gte": quantity_value},
                     "reserved_quantity": {"$gte": quantity_value},
                     "$or": [
-                        {"expiry_date": {"$exists": False}},
-                        {"expiry_date": None},
-                        {"expiry_date": ""},
-                        {"expiry_date": {"$gte": today_iso}},
+                        {"expiry_date": {"$exists": False}}, {"expiry_date": None},
+                        {"expiry_date": ""}, {"expiry_date": {"$gte": today_iso}},
                     ],
                 },
-                {"$inc": {"available_quantity": -quantity_value, "reserved_quantity": -quantity_value, "issued_quantity": quantity_value}, "$set": {"updated_at": now_utc(), "last_farmer_delivery_order_id": order["_id"]}},
+                {"$inc": {"available_quantity": -quantity_value, "reserved_quantity": -quantity_value, "issued_quantity": quantity_value},
+                 "$set": {"updated_at": now_utc(), "last_farmer_delivery_order_id": order["_id"]}},
             )
             if result.modified_count != 1:
                 raise RuntimeError("A reserved UFC batch is no longer deliverable. Cancel the order to release reservation and place/approve it again.")
             moved.append((lot_id, quantity_value))
     except Exception:
         for lot_id, quantity_value in reversed(moved):
-            mongo.db[UFC_LOT_COLLECTION].update_one({"_id": lot_id}, {"$inc": {"available_quantity": quantity_value, "reserved_quantity": quantity_value, "issued_quantity": -quantity_value}, "$set": {"updated_at": now_utc()}})
+            mongo.db[UFC_LOT_COLLECTION].update_one(
+                {"_id": lot_id},
+                {"$inc": {"available_quantity": quantity_value, "reserved_quantity": quantity_value, "issued_quantity": -quantity_value}, "$set": {"updated_at": now_utc()}},
+            )
         raise
 
     timestamp = now_utc()
     for allocation in allocations:
-        key = f"FARMER-DELIVERY:{order['_id']}:{allocation.get('inventory_lot_id')}"
+        line_id = allocation.get("line_id") or "legacy"
+        product_id = allocation.get("source_product_id") or order.get("source_product_id")
+        product_name = allocation.get("product_name") or order.get("product_name") or "Product"
+        product_code = allocation.get("product_code") or order.get("product_code") or ""
+        key = f"FARMER-DELIVERY:{order['_id']}:{line_id}:{allocation.get('inventory_lot_id')}"
         mongo.db[UFC_MOVEMENT_COLLECTION].update_one(
             {"source_posting_key": key},
             {"$setOnInsert": {
-                "source_posting_key": key,
-                "movement_uid": uuid4().hex,
-                "centre_uid": order.get("centre_uid"),
-                "centre_name": order.get("centre_name") or order.get("centre_uid"),
-                "source_document_type": "farmer_order_delivery",
-                "source_document_id": order["_id"],
-                "source_document_id_str": str(order["_id"]),
-                "source_document_number": order.get("order_number") or "",
-                "source_product_id": order.get("source_product_id"),
-                "source_product_id_str": str(order.get("source_product_id") or ""),
-                "product_code": order.get("product_code") or "",
-                "product_name": order.get("product_name") or "Product",
-                "movement_type": "sale",
-                "direction": "out",
-                "quantity": float(_decimal(allocation.get("quantity"))),
-                "quantity_display": _qty(allocation.get("quantity")),
+                "source_posting_key": key, "movement_uid": uuid4().hex,
+                "centre_uid": order.get("centre_uid"), "centre_name": order.get("centre_name") or order.get("centre_uid"),
+                "source_document_type": "farmer_order_delivery", "source_document_id": order["_id"], "source_document_id_str": str(order["_id"]),
+                "source_document_number": order.get("order_number") or "", "line_id": line_id,
+                "source_product_id": product_id, "source_product_id_str": str(product_id or ""),
+                "product_code": product_code, "product_name": product_name,
+                "movement_type": "sale", "direction": "out", "quantity": float(_decimal(allocation.get("quantity"))), "quantity_display": _qty(allocation.get("quantity")),
                 "unit_code": allocation.get("unit_code") or order.get("unit_code") or "Unit",
-                "warehouse_code": allocation.get("warehouse_code") or "",
-                "warehouse_name": allocation.get("warehouse_name") or "",
-                "batch_number": allocation.get("batch_number") or "",
-                "barcode": allocation.get("barcode") or "",
-                "manufacturing_date": allocation.get("manufacturing_date") or "",
-                "expiry_date": allocation.get("expiry_date") or "",
+                "warehouse_code": allocation.get("warehouse_code") or "", "warehouse_name": allocation.get("warehouse_name") or "",
+                "batch_number": allocation.get("batch_number") or "", "barcode": allocation.get("barcode") or "",
+                "manufacturing_date": allocation.get("manufacturing_date") or "", "expiry_date": allocation.get("expiry_date") or "",
                 "movement_date": business_today().isoformat(),
                 "reason": f"Delivered to {order.get('farmer_name') or 'Farmer'} against order {order.get('order_number') or ''}.",
-                "posted_by": actor.get("_id"),
-                "posted_by_name": actor.get("resolved_name") or "",
-                "posted_at": timestamp,
-                "created_at": timestamp,
-            }},
-            upsert=True,
+                "posted_by": actor.get("_id"), "posted_by_name": actor.get("resolved_name") or "", "posted_at": timestamp, "created_at": timestamp,
+            }}, upsert=True,
         )
 
 
@@ -917,126 +1038,182 @@ def _active_avpl_entity_for_mapping():
 
 
 def _financial_snapshot(order, centre):
-    quantity = _decimal(order.get("delivered_quantity") or order.get("approved_quantity"))
-    unit_price = _decimal(order.get("unit_price"))
-    taxable_value = (quantity * unit_price).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
     seller = _centre_snapshot(centre, order.get("centre_uid"), order.get("centre_name") or order.get("centre_uid"))
     buyer = dict(order.get("farmer_snapshot") or {})
-
-    gst_rate = Decimal("0")
-    taxability_code = "NON_GST"
-    hsn_code = ""
-    mapping_status = "unavailable"
-    mapped_gst_rate = Decimal("0")
     entity = _active_avpl_entity_for_mapping()
-    if entity:
-        try:
-            mapping = get_product_accounting_mapping_for_posting(
-                entity["_id"],
-                order.get("source_product_id"),
-                transaction_date=_date_iso(order.get("delivered_at") or business_today()),
-                operation="sales",
-            )
-            hsn = mapping.get("hsn") or {}
-            taxability_code = str(hsn.get("taxability_code") or "").upper() or "NON_GST"
-            hsn_code = hsn.get("hsn_code") or ""
-            if taxability_code == "TAXABLE":
-                mapped_gst_rate = _decimal((mapping.get("effective_gst_rate") or {}).get("total_rate"))
-            mapping_status = "resolved"
-        except Exception:
-            # A non-GST UFC may still issue a Sales Receipt. Keep the sale usable
-            # while exposing missing product mapping as a document warning.
-            if seller.get("gst_registered"):
-                raise
-    elif seller.get("gst_registered"):
-        raise RuntimeError("Product GST mapping cannot be resolved because the AVPL Accounting entity is unavailable.")
-
-    # Product classification (HSN) is independent from whether this particular
-    # UFC is legally allowed to collect GST. GST is charged only by a UFC with
-    # a valid GST registration.
-    if seller.get("gst_registered") and taxability_code == "TAXABLE":
-        gst_rate = mapped_gst_rate
 
     seller_state_name, seller_state_code = _resolve_gst_state(seller.get("state") or "", seller.get("state_code") or "", seller.get("gstin") or "")
     buyer_state_name, buyer_state_code = _resolve_gst_state(buyer.get("state") or "", buyer.get("state_code") or "", buyer.get("gstin") or "")
-    if seller.get("gst_registered") and gst_rate > 0:
-        if not seller_state_code:
-            raise RuntimeError("UFC Centre State is required before issuing a GST invoice.")
-        if not buyer_state_code:
-            raise RuntimeError("Farmer State is required before issuing a GST invoice.")
+    if seller.get("gst_registered") and not seller_state_code:
+        raise RuntimeError("UFC Centre State is required before issuing a GST invoice.")
 
-    tax_amount = (taxable_value * gst_rate / Decimal("100")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
-    cgst = sgst = igst = Decimal("0")
-    supply_type = "non_taxable"
-    if tax_amount > 0:
-        if seller_state_code == buyer_state_code:
-            cgst = (tax_amount / Decimal("2")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
-            sgst = tax_amount - cgst
-            supply_type = "intra_state"
-        else:
-            igst = tax_amount
-            supply_type = "inter_state"
+    item_rows = []
+    taxable_total = cgst_total = sgst_total = igst_total = Decimal("0")
+    warnings = []
+    rate_set = set()
+    hsn_set = set()
+    any_taxable = False
+    any_mapping = False
+    lines = [x for x in _order_items(order) if _decimal(x.get("accepted_quantity") if x.get("accepted_quantity") is not None else x.get("delivered_quantity") or x.get("approved_quantity")) > 0]
+    if not lines:
+        raise RuntimeError("No delivered product lines are available for invoicing.")
 
-    grand_total = taxable_value + cgst + sgst + igst
+    for line in lines:
+        quantity = _decimal(line.get("accepted_quantity") if line.get("accepted_quantity") is not None else line.get("delivered_quantity") or line.get("approved_quantity"))
+        unit_price = _decimal(line.get("unit_price"))
+        taxable_value = (quantity * unit_price).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+        gst_rate = Decimal("0"); mapped_gst_rate = Decimal("0"); taxability_code = "NON_GST"; hsn_code = ""; mapping_status = "unavailable"
+        if entity:
+            try:
+                mapping = get_product_accounting_mapping_for_posting(entity["_id"], line.get("source_product_id"), transaction_date=_date_iso(order.get("received_at") or order.get("delivered_at") or business_today()), operation="sales")
+                hsn = mapping.get("hsn") or {}; taxability_code = str(hsn.get("taxability_code") or "").upper() or "NON_GST"; hsn_code = hsn.get("hsn_code") or ""
+                if taxability_code == "TAXABLE": mapped_gst_rate = _decimal((mapping.get("effective_gst_rate") or {}).get("total_rate"))
+                mapping_status = "resolved"; any_mapping = True
+            except Exception as exc:
+                if seller.get("gst_registered"): raise
+                warnings.append(f"{line.get('product_name') or 'Product'}: GST mapping unavailable")
+        elif seller.get("gst_registered"):
+            raise RuntimeError("Product GST mapping cannot be resolved because the AVPL Accounting entity is unavailable.")
+
+        if seller.get("gst_registered") and taxability_code == "TAXABLE":
+            if not buyer_state_code: raise RuntimeError("Farmer State is required before issuing a GST invoice.")
+            gst_rate = mapped_gst_rate; any_taxable = gst_rate > 0
+        tax_amount = (taxable_value * gst_rate / Decimal("100")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+        cgst = sgst = igst = Decimal("0"); supply_type = "non_taxable"
+        if tax_amount > 0:
+            if seller_state_code == buyer_state_code:
+                cgst = (tax_amount / Decimal("2")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP); sgst = tax_amount - cgst; supply_type = "intra_state"
+            else:
+                igst = tax_amount; supply_type = "inter_state"
+        line_total = taxable_value + cgst + sgst + igst
+        taxable_total += taxable_value; cgst_total += cgst; sgst_total += sgst; igst_total += igst
+        rate_set.add(str(gst_rate));
+        if hsn_code: hsn_set.add(hsn_code)
+        item_rows.append({
+            "line_id": line.get("line_id") or "legacy", "source_product_id": line.get("source_product_id"), "source_product_id_str": str(line.get("source_product_id") or ""),
+            "product_name": line.get("product_name") or "Product", "product_code": line.get("product_code") or "", "unit_code": line.get("unit_code") or "Unit",
+            "quantity": float(quantity), "unit_price": float(unit_price), "taxable_value": float(taxable_value), "hsn_code": hsn_code,
+            "taxability_code": taxability_code, "mapping_status": mapping_status, "mapped_gst_rate": float(mapped_gst_rate), "gst_rate": float(gst_rate),
+            "cgst_amount": float(cgst), "sgst_amount": float(sgst), "igst_amount": float(igst), "gst_amount": float(cgst+sgst+igst),
+            "line_total": float(line_total), "supply_type": supply_type,
+        })
+
+    gst_total = cgst_total + sgst_total + igst_total; grand_total = taxable_total + gst_total
+    mixed_rates = len(rate_set) > 1; first = item_rows[0]
+    warning = seller.get("gst_configuration_warning") or ("; ".join(warnings[:3]) if warnings else "")
     return {
-        "seller": seller,
-        "buyer": buyer,
-        "quantity": quantity,
-        "unit_price": unit_price,
-        "taxable_value": taxable_value,
-        "taxability_code": taxability_code,
-        "hsn_code": hsn_code,
-        "gst_rate": gst_rate,
-        "cgst": cgst,
-        "sgst": sgst,
-        "igst": igst,
-        "gst_amount": cgst + sgst + igst,
-        "grand_total": grand_total,
-        "supply_type": supply_type,
-        "place_of_supply_state": buyer_state_name or seller_state_name or buyer.get("state") or seller.get("state") or "",
-        "place_of_supply_state_code": buyer_state_code or seller_state_code,
-        "mapping_status": mapping_status,
-        "mapped_gst_rate": mapped_gst_rate,
-        "gst_configuration_warning": seller.get("gst_configuration_warning") or "",
-        "document_warning": (
-            seller.get("gst_configuration_warning")
-            or ("Product HSN/GST mapping is not available." if mapping_status != "resolved" else "")
-        ),
+        "seller": seller, "buyer": buyer, "items": item_rows, "item_count": len(item_rows),
+        "quantity": _decimal(first.get("quantity")) if len(item_rows) == 1 else Decimal("0"), "unit_price": _decimal(first.get("unit_price")) if len(item_rows) == 1 else Decimal("0"),
+        "taxable_value": taxable_total, "taxability_code": first.get("taxability_code") if len({x.get('taxability_code') for x in item_rows}) == 1 else "MIXED",
+        "hsn_code": first.get("hsn_code") if len(hsn_set) <= 1 else "MULTIPLE", "gst_rate": _decimal(first.get("gst_rate")) if not mixed_rates else Decimal("0"),
+        "cgst": cgst_total, "sgst": sgst_total, "igst": igst_total, "gst_amount": gst_total, "grand_total": grand_total,
+        "supply_type": "mixed" if len({x.get('supply_type') for x in item_rows}) > 1 else item_rows[0].get("supply_type"),
+        "place_of_supply_state": buyer_state_name or seller_state_name or buyer.get("state") or "", "place_of_supply_state_code": buyer_state_code or seller_state_code,
+        "mapping_status": "resolved" if any_mapping and not warnings else ("partial" if any_mapping else "unavailable"),
+        "mapped_gst_rate": _decimal(first.get("mapped_gst_rate")) if not mixed_rates else Decimal("0"),
+        "gst_configuration_warning": seller.get("gst_configuration_warning") or "", "document_warning": warning,
         "document_type": "tax_invoice" if seller.get("gst_registered") else "sales_receipt",
     }
 
 
 def _upsert_sale(order, actor):
+    """Create/repair the UFC seller-side sale from buyer-accepted quantities.
+
+    Historical Fix-18 records may already exist from dispatch. If no money has
+    been settled yet, repair those records to the receipt quantities instead of
+    creating a duplicate financial document. Confirmed legacy settlements are
+    never silently rewritten.
+    """
+    lines = []
+    total = Decimal("0")
+    for line in _order_items(order):
+        qty = _decimal(
+            line.get("accepted_quantity")
+            if line.get("accepted_quantity") is not None
+            else line.get("delivered_quantity") or line.get("approved_quantity")
+        )
+        price = _decimal(line.get("unit_price"))
+        if qty <= 0:
+            continue
+        line_total = qty * price
+        total += line_total
+        lines.append({
+            "line_id": line.get("line_id") or "legacy",
+            "source_product_id": line.get("source_product_id"),
+            "source_product_id_str": str(line.get("source_product_id") or ""),
+            "product_name": line.get("product_name") or "Product",
+            "product_code": line.get("product_code") or "",
+            "quantity": float(qty),
+            "accepted_quantity": float(qty),
+            "unit_code": line.get("unit_code") or "Unit",
+            "unit_price": float(price),
+            "line_total": float(line_total),
+            "accepted_commercial_total": float(line_total),
+        })
+    if not lines:
+        raise RuntimeError("No accepted goods are available for the UFC sale.")
+
+    first = lines[0]
+    timestamp = now_utc()
     existing = mongo.db[SALE_COLLECTION].find_one({"ufc_farmer_order_id": order["_id"]})
     if existing:
-        return existing
-    quantity = _decimal(order.get("delivered_quantity") or order.get("approved_quantity"))
-    unit_price = _decimal(order.get("unit_price"))
-    timestamp = now_utc()
+        paid = _decimal(existing.get("amount_paid") if existing.get("amount_paid") is not None else existing.get("paid_amount"))
+        updates = {
+            "commerce_version": 2 if order.get("items") else 1,
+            "items": lines,
+            "item_count": len(lines),
+            "source_product_id": first.get("source_product_id"),
+            "source_product_id_str": first.get("source_product_id_str"),
+            "product_name": first.get("product_name"),
+            "product_code": first.get("product_code"),
+            "quantity": first.get("quantity") if len(lines) == 1 else 0.0,
+            "unit_code": first.get("unit_code") if len(lines) == 1 else "MULTI",
+            "unit_price": first.get("unit_price") if len(lines) == 1 else 0.0,
+            "receipt_status": order.get("receipt_status") or "",
+            "accepted_goods_total": float(total),
+            "updated_at": timestamp,
+        }
+        if paid <= Decimal("0.004"):
+            updates.update({
+                "base_amount": float(total),
+                "grand_total": float(total),
+                "amount_paid": 0.0,
+                "outstanding_amount": float(total),
+                "payment_status": "unpaid",
+                "status": "received",
+            })
+        mongo.db[SALE_COLLECTION].update_one({"_id": existing["_id"]}, {"$set": updates})
+        return mongo.db[SALE_COLLECTION].find_one({"_id": existing["_id"]}) or existing
+
     document = {
         "sale_number": _next_centre_number("ufc_farmer_sale", order.get("centre_uid"), "SALE", digits=6),
         "ufc_farmer_order_id": order["_id"],
         "ufc_farmer_order_id_str": str(order["_id"]),
         "order_number": order.get("order_number") or "",
+        "commerce_version": 2 if order.get("items") else 1,
+        "items": lines,
+        "item_count": len(lines),
         "centre_uid": order.get("centre_uid"),
         "centre_name": order.get("centre_name") or order.get("centre_uid"),
         "farmer_user_id": order.get("farmer_user_id"),
         "farmer_user_id_str": str(order.get("farmer_user_id") or ""),
         "farmer_name": order.get("farmer_name") or "Farmer",
-        "source_product_id": order.get("source_product_id"),
-        "source_product_id_str": str(order.get("source_product_id") or ""),
-        "product_name": order.get("product_name") or "Product",
-        "product_code": order.get("product_code") or "",
-        "quantity": float(quantity),
-        "unit_code": order.get("unit_code") or "Unit",
-        "unit_price": float(unit_price),
-        "base_amount": float(quantity * unit_price),
-        "grand_total": float(quantity * unit_price),
+        "source_product_id": first.get("source_product_id"),
+        "source_product_id_str": first.get("source_product_id_str"),
+        "product_name": first.get("product_name"),
+        "product_code": first.get("product_code"),
+        "quantity": first.get("quantity") if len(lines) == 1 else 0.0,
+        "unit_code": first.get("unit_code") if len(lines) == 1 else "MULTI",
+        "unit_price": first.get("unit_price") if len(lines) == 1 else 0.0,
+        "base_amount": float(total),
+        "grand_total": float(total),
+        "accepted_goods_total": float(total),
+        "receipt_status": order.get("receipt_status") or "",
         "payment_status": "unpaid",
         "amount_paid": 0.0,
-        "outstanding_amount": float(quantity * unit_price),
-        "status": "delivered",
-        "sale_date": order.get("delivered_at") or timestamp,
+        "outstanding_amount": float(total),
+        "status": "received",
+        "sale_date": order.get("received_at") or order.get("delivered_at") or timestamp,
         "created_by": actor.get("_id"),
         "created_by_name": actor.get("resolved_name") or "",
         "created_at": timestamp,
@@ -1052,20 +1229,76 @@ def _upsert_sale(order, actor):
             return existing
         raise
 
-
 def _upsert_purchase(order, actor):
+    """Create/repair the Farmer buyer-side purchase from accepted receipt lines."""
+    lines = []
+    total = Decimal("0")
+    for line in _order_items(order):
+        qty = _decimal(
+            line.get("accepted_quantity")
+            if line.get("accepted_quantity") is not None
+            else line.get("delivered_quantity") or line.get("approved_quantity")
+        )
+        price = _decimal(line.get("unit_price"))
+        if qty <= 0:
+            continue
+        line_total = qty * price
+        total += line_total
+        lines.append({
+            "line_id": line.get("line_id") or "legacy",
+            "source_product_id": line.get("source_product_id"),
+            "source_product_id_str": str(line.get("source_product_id") or ""),
+            "product_name": line.get("product_name") or "Product",
+            "product_code": line.get("product_code") or "",
+            "quantity": float(qty),
+            "accepted_quantity": float(qty),
+            "unit_code": line.get("unit_code") or "Unit",
+            "unit_price": float(price),
+            "line_total": float(line_total),
+            "accepted_commercial_total": float(line_total),
+        })
+    if not lines:
+        raise RuntimeError("No accepted goods are available for the Farmer purchase.")
+
+    first = lines[0]
+    timestamp = now_utc()
     existing = mongo.db[FARMER_PURCHASE_COLLECTION].find_one({"ufc_farmer_order_id": order["_id"]})
     if existing:
-        return existing
-    quantity = _decimal(order.get("delivered_quantity") or order.get("approved_quantity"))
-    unit_price = _decimal(order.get("unit_price"))
-    total = quantity * unit_price
-    timestamp = now_utc()
+        paid = _decimal(existing.get("amount_paid") if existing.get("amount_paid") is not None else existing.get("paid_amount"))
+        updates = {
+            "commerce_version": 2 if order.get("items") else 1,
+            "items": lines,
+            "item_count": len(lines),
+            "source_product_id": first.get("source_product_id"),
+            "source_product_id_str": first.get("source_product_id_str"),
+            "product_name": first.get("product_name"),
+            "product_code": first.get("product_code"),
+            "quantity": first.get("quantity") if len(lines) == 1 else 0.0,
+            "unit_code": first.get("unit_code") if len(lines) == 1 else "MULTI",
+            "unit_price": first.get("unit_price") if len(lines) == 1 else 0.0,
+            "receipt_status": order.get("receipt_status") or "",
+            "accepted_goods_total": float(total),
+            "updated_at": timestamp,
+        }
+        if paid <= Decimal("0.004"):
+            updates.update({
+                "total_amount": float(total),
+                "amount_paid": 0.0,
+                "outstanding_amount": float(total),
+                "payment_status": "unpaid",
+                "status": "received",
+            })
+        mongo.db[FARMER_PURCHASE_COLLECTION].update_one({"_id": existing["_id"]}, {"$set": updates})
+        return mongo.db[FARMER_PURCHASE_COLLECTION].find_one({"_id": existing["_id"]}) or existing
+
     document = {
         "purchase_number": _next_centre_number("farmer_purchase", order.get("centre_uid"), "F-PUR", digits=6),
         "ufc_farmer_order_id": order["_id"],
         "ufc_farmer_order_id_str": str(order["_id"]),
         "order_number": order.get("order_number") or "",
+        "commerce_version": 2 if order.get("items") else 1,
+        "items": lines,
+        "item_count": len(lines),
         "farmer_user_id": order.get("farmer_user_id"),
         "farmer_user_id_str": str(order.get("farmer_user_id") or ""),
         "farmer_master_id": order.get("farmer_master_id"),
@@ -1073,20 +1306,22 @@ def _upsert_purchase(order, actor):
         "seller_type": "ufc",
         "seller_centre_uid": order.get("centre_uid"),
         "seller_name": order.get("centre_name") or order.get("centre_uid"),
-        "source_product_id": order.get("source_product_id"),
-        "source_product_id_str": str(order.get("source_product_id") or ""),
-        "product_name": order.get("product_name") or "Product",
-        "product_code": order.get("product_code") or "",
-        "quantity": float(quantity),
-        "unit_code": order.get("unit_code") or "Unit",
-        "unit_price": float(unit_price),
+        "source_product_id": first.get("source_product_id"),
+        "source_product_id_str": first.get("source_product_id_str"),
+        "product_name": first.get("product_name"),
+        "product_code": first.get("product_code"),
+        "quantity": first.get("quantity") if len(lines) == 1 else 0.0,
+        "unit_code": first.get("unit_code") if len(lines) == 1 else "MULTI",
+        "unit_price": first.get("unit_price") if len(lines) == 1 else 0.0,
         "total_amount": float(total),
+        "accepted_goods_total": float(total),
+        "receipt_status": order.get("receipt_status") or "",
         "payment_status": "unpaid",
         "amount_paid": 0.0,
         "outstanding_amount": float(total),
         "accounting_status": "not_posted",
         "financial_link_status": "awaiting_invoice",
-        "purchase_date": order.get("delivered_at") or timestamp,
+        "purchase_date": order.get("received_at") or order.get("delivered_at") or timestamp,
         "status": "received",
         "received_by": order.get("farmer_user_id"),
         "created_at": timestamp,
@@ -1101,7 +1336,6 @@ def _upsert_purchase(order, actor):
         if existing:
             return existing
         raise
-
 
 def _upsert_invoice(order, sale, purchase, actor, centre, financial):
     existing = mongo.db[INVOICE_COLLECTION].find_one({"ufc_farmer_order_id": order["_id"]})
@@ -1126,6 +1360,9 @@ def _upsert_invoice(order, sale, purchase, actor, centre, financial):
             "payment_term": order.get("payment_term") or existing.get("payment_term") or "cod",
             "payment_term_label": PAYMENT_TERM_LABELS.get(order.get("payment_term") or existing.get("payment_term") or "cod", "Pay on Delivery"),
             "payment_due_days": max(int(order.get("payment_due_days") or existing.get("payment_due_days") or 0), 0),
+            "items": financial.get("items") or existing.get("items") or [],
+            "item_count": len(financial.get("items") or existing.get("items") or []),
+            "commerce_version": 2 if (financial.get("items") or order.get("items")) else existing.get("commerce_version", 1),
             "updated_at": now_utc(),
         }
         if not has_payments:
@@ -1190,6 +1427,9 @@ def _upsert_invoice(order, sale, purchase, actor, centre, financial):
         "source_product_id_str": str(order.get("source_product_id") or ""),
         "product_name": order.get("product_name") or "Product",
         "product_code": order.get("product_code") or "",
+        "commerce_version": 2 if order.get("items") else 1,
+        "items": financial.get("items") or [],
+        "item_count": len(financial.get("items") or []),
         "hsn_code": financial.get("hsn_code") or "",
         "taxability_code": financial.get("taxability_code") or "NON_GST",
         "quantity": float(financial.get("quantity") or 0),
@@ -1304,12 +1544,16 @@ def ensure_delivery_documents(actor_user_id, order_id):
     order = mongo.db[ORDER_COLLECTION].find_one({"_id": oid})
     if not order:
         raise ValueError("Farmer order was not found.")
-    if order.get("status") != "delivered" or order.get("stock_delivered") is not True:
-        raise ValueError("Sales documents can only be generated after physical delivery.")
+    if order.get("status") not in {"received", "delivered"}:
+        raise ValueError("Sales documents can only be generated after the buyer confirms receipt.")
     if actor.get("resolved_role") == "ufc_admin":
         _actor, centre, centre_uid, _centre_name = _resolve_ufc_admin(actor_user_id, order.get("centre_uid"))
         if centre_uid != order.get("centre_uid"):
             raise PermissionError("This Farmer order does not belong to your UFC Centre.")
+    elif actor.get("resolved_role") == "farmer":
+        if str(order.get("farmer_user_id") or "") != str(actor.get("_id") or ""):
+            raise PermissionError("This purchase does not belong to you.")
+        centre = mongo.db.ufc_admin_master.find_one({"centre_uid": order.get("centre_uid")}) or {}
     elif actor.get("resolved_role") in {"super_admin", "avpl_admin", "accounts"}:
         centre = mongo.db.ufc_admin_master.find_one({"centre_uid": order.get("centre_uid")}) or {}
     else:
@@ -1394,7 +1638,7 @@ def refresh_ufc_farmer_tax_documents(actor_user_id, centre_uid_hint=None):
     actor, _centre, centre_uid, _centre_name = _resolve_ufc_admin(actor_user_id, centre_uid_hint)
     delivered = list(mongo.db[ORDER_COLLECTION].find({
         "centre_uid": centre_uid,
-        "status": "delivered",
+        "status": {"$in": ["received", "delivered"]},
         "stock_delivered": True,
     }).sort("delivered_at", DESCENDING).limit(500))
     refreshed = 0
@@ -1416,7 +1660,7 @@ def refresh_ufc_farmer_tax_documents(actor_user_id, centre_uid_hint=None):
         "refreshed": refreshed,
         "warnings": warnings,
         "errors": errors,
-        "message": f"Refreshed {refreshed} delivered invoice/receipt document(s)." + (f" {len(errors)} need attention." if errors else ""),
+        "message": f"Refreshed {refreshed} received invoice/receipt document(s)." + (f" {len(errors)} need attention." if errors else ""),
     }
 
 
@@ -1428,63 +1672,75 @@ def mark_financial_sync_error(order_id, error_message):
 
 
 def deliver_farmer_order(actor_user_id, centre_uid_hint, order_id, delivery_note=""):
-    _ensure_indexes()
-    actor, _centre, centre_uid, _centre_name = _resolve_ufc_admin(actor_user_id, centre_uid_hint)
-    oid = _to_object_id(order_id)
-    if not oid:
-        raise ValueError("Invalid Farmer order.")
-    order = mongo.db[ORDER_COLLECTION].find_one({"_id": oid, "centre_uid": centre_uid})
-    if not order:
-        raise ValueError("Farmer order was not found for your UFC Centre.")
-    if order.get("status") == "delivered" and order.get("stock_delivered") is True:
-        return {"order": _serialize_order(order), "message": "This order was already delivered. UFC stock was not deducted again."}
-    if order.get("status") != "approved" or order.get("stock_reserved") is not True:
-        raise ValueError("Only an approved order with reserved UFC stock can be delivered.")
+    """Dispatch an approved UFC->Farmer order.
 
-    _apply_delivery_stock(order, actor)
-    quantity = _decimal(order.get("approved_quantity"))
-    timestamp = now_utc()
-    update_result = mongo.db[ORDER_COLLECTION].update_one(
-        {"_id": oid, "centre_uid": centre_uid, "status": "approved", "stock_delivered": {"$ne": True}},
-        {"$set": {
-            "status": "delivered",
-            "stock_reserved": False,
-            "stock_delivered": True,
-            "reserved_quantity": 0.0,
-            "delivered_quantity": float(quantity),
-            "delivery_allocations": order.get("reservation_allocations") or [],
-            "delivery_note": _clean(delivery_note, 1000),
-            "delivered_by": actor["_id"],
-            "delivered_by_name": actor.get("resolved_name") or "",
-            "delivered_at": timestamp,
-            "financial_sync_status": "pending",
-            "updated_at": timestamp,
-        }},
-    )
-    if update_result.modified_count != 1:
-        # Another worker changed the state after physical lot updates. Restore lot state.
-        for allocation in order.get("reservation_allocations") or []:
-            lot_id = _to_object_id(allocation.get("inventory_lot_id"))
-            quantity_value = float(_decimal(allocation.get("quantity")))
-            if lot_id and quantity_value > 0:
-                mongo.db[UFC_LOT_COLLECTION].update_one({"_id": lot_id}, {"$inc": {"available_quantity": quantity_value, "reserved_quantity": quantity_value, "issued_quantity": -quantity_value}, "$set": {"updated_at": now_utc()}})
-        raise RuntimeError("The order changed while delivery was being saved. UFC stock was restored; refresh and try again.")
+    Historical endpoint/function name is kept for compatibility, but new orders
+    stop at Dispatched. Financial documents are created only after the Farmer
+    confirms what physically arrived.
+    """
+    _ensure_indexes(); actor,_centre,centre_uid,_centre_name=_resolve_ufc_admin(actor_user_id,centre_uid_hint); oid=_to_object_id(order_id)
+    if not oid: raise ValueError("Invalid Farmer order.")
+    order=mongo.db[ORDER_COLLECTION].find_one({"_id":oid,"centre_uid":centre_uid})
+    if not order: raise ValueError("Farmer order was not found for your UFC Centre.")
+    if order.get("status") in {"dispatched", "received"} and order.get("stock_delivered") is True:
+        return {"order":_serialize_order(order),"message":"This order was already dispatched. UFC stock was not deducted again."}
+    if order.get("status")!="approved" or order.get("stock_reserved") is not True:
+        raise ValueError("Only an approved order with reserved UFC stock can be dispatched.")
+    _apply_delivery_stock(order,actor)
+    items=_order_items(order); updated_items=[]
+    for line in items:
+        line=dict(line); approved=_decimal(line.get("approved_quantity")); line["dispatched_quantity"]=float(approved); line["delivered_quantity"]=float(approved); line["reserved_quantity"]=0.0
+        if approved>0: line["status"]="dispatched"
+        updated_items.append(line)
+    flattened=[]
+    for line in updated_items: flattened.extend(line.get("reservation_allocations") or [])
+    if not flattened: flattened=order.get("reservation_allocations") or []
+    timestamp=now_utc(); first=next((x for x in updated_items if _decimal(x.get("dispatched_quantity"))>0),updated_items[0] if updated_items else {})
+    patch={"status":"dispatched","stock_reserved":False,"stock_delivered":True,"stock_dispatched":True,"reserved_quantity":0.0,"items":updated_items,"item_count":len(updated_items),"delivery_allocations":flattened,"delivery_note":_clean(delivery_note,1000),"dispatched_by":actor["_id"],"dispatched_by_name":actor.get("resolved_name") or "","dispatched_at":timestamp,"delivered_by":actor["_id"],"delivered_at":timestamp,"financial_sync_status":"awaiting_buyer_receipt","updated_at":timestamp}
+    _copy_line_to_legacy_fields(patch,first); patch["delivered_quantity"]=float(_decimal(first.get("dispatched_quantity")))
+    update_result=mongo.db[ORDER_COLLECTION].update_one({"_id":oid,"centre_uid":centre_uid,"status":"approved","stock_delivered":{"$ne":True}},{"$set":patch})
+    if update_result.modified_count!=1:
+        for allocation in flattened:
+            lot_id=_to_object_id(allocation.get("inventory_lot_id")); q=float(_decimal(allocation.get("quantity")))
+            if lot_id and q>0:mongo.db[UFC_LOT_COLLECTION].update_one({"_id":lot_id},{"$inc":{"available_quantity":q,"reserved_quantity":q,"issued_quantity":-q},"$set":{"updated_at":now_utc()}})
+        raise RuntimeError("The order changed while dispatch was being saved. UFC stock was restored; refresh and try again.")
+    _append_history(oid,action="dispatch_order",actor=actor,note=delivery_note or f"UFC dispatched {sum(1 for x in updated_items if _decimal(x.get('dispatched_quantity'))>0)} product line(s) to the Farmer.",from_status="approved",to_status="dispatched")
+    _notify_user(order.get("farmer_user_id"),"Order Dispatched",f"Your UFC dispatched order {order.get('order_number')}. Open the order after it arrives and confirm the quantities you actually received.","farmer")
+    return {"order":_serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id":oid})),"financial_warning":None,"message":"Order dispatched. The Farmer must confirm received and accepted quantities before payment becomes due."}
 
-    _append_history(oid, action="deliver_order", actor=actor, note=delivery_note or "UFC physically delivered the reserved goods to the Farmer.", from_status="approved", to_status="delivered")
 
-    financial_warning = None
+def receive_farmer_order(actor_user_id, order_id, receipt_note="", receipt_lines=None):
+    """Farmer confirms actual receipt of products dispatched by the UFC."""
+    _ensure_indexes(); actor=_get_user(actor_user_id); oid=_to_object_id(order_id)
+    if not oid: raise ValueError("Invalid Farmer order.")
+    order=mongo.db[ORDER_COLLECTION].find_one({"_id":oid})
+    if not order: raise ValueError("Farmer order was not found.")
+    if actor.get("resolved_role") != "farmer" or str(order.get("farmer_user_id") or "") != str(actor.get("_id") or ""):
+        raise PermissionError("You cannot receive another Farmer's order.")
+    if order.get("status") == "received":
+        return {"order":_serialize_order(order),"message":"This order is already received."}
+    if order.get("status") not in {"dispatched", "delivered"}:
+        raise ValueError("The UFC must dispatch this order before you can confirm receipt.")
+    receipt_rows=normalize_receipt_lines(_order_items(order),receipt_lines,dispatched_fields=("dispatched_quantity","delivered_quantity","approved_quantity"),allow_legacy_full_receipt=receipt_lines is None)
+    summary=summarize_receipt(receipt_rows); timestamp=now_utc()
+    first=next((x for x in receipt_rows if x.get("receipt_applicable")),receipt_rows[0])
+    original_value=sum((_decimal(x.get("line_total")) for x in _order_items(order) if _decimal(x.get("approved_quantity"))>0),Decimal("0"))
+    accepted_value=_decimal(summary.get("accepted_value"))
+    # Actual invoice total (incl. GST) is calculated after receipt by the existing financial snapshot.
+    patch={"status":"received","items":receipt_rows,"receipt_status":summary.get("receipt_status"),"receipt_note":_clean(receipt_note,1000),"received_at":timestamp,"received_by":actor.get("_id"),"received_by_name":actor.get("resolved_name") or "","received_item_count":summary.get("received_item_count"),"accepted_item_count":summary.get("accepted_item_count"),"discrepancy_item_count":summary.get("discrepancy_item_count"),"accepted_goods_value":float(accepted_value),"receipt_adjustment_amount":float(max(original_value-accepted_value,Decimal("0"))),"financial_sync_status":"pending","updated_at":timestamp}
+    _copy_line_to_legacy_fields(patch,first)
+    result=mongo.db[ORDER_COLLECTION].update_one({"_id":oid,"status":{"$in":["dispatched","delivered"]}},{"$set":patch})
+    if result.modified_count!=1: raise RuntimeError("The order changed while receipt was being saved. Refresh and try again.")
+    _append_history(oid,action="receive_order",actor=actor,note=receipt_note or f"Farmer confirmed receipt: {summary.get('accepted_item_count',0)} accepted line(s), {summary.get('discrepancy_item_count',0)} line(s) with discrepancy.",from_status=order.get("status"),to_status="received")
+    financial_warning=None
     try:
-        ensure_delivery_documents(actor_user_id, oid)
+        financial=ensure_delivery_documents(actor_user_id,oid)
     except Exception as exc:
-        financial_warning = str(exc)
-        mark_financial_sync_error(oid, financial_warning)
-
-    _notify_user(order.get("farmer_user_id"), "Order Delivered", f"Your UFC marked order {order.get('order_number')} as delivered. Your purchase entry has been created automatically.", "farmer")
-    return {
-        "order": _serialize_order(mongo.db[ORDER_COLLECTION].find_one({"_id": oid})),
-        "financial_warning": financial_warning,
-        "message": "Order delivered. UFC physical stock was reduced and the Farmer purchase was created automatically.",
-    }
+        financial_warning=str(exc); mark_financial_sync_error(oid,financial_warning)
+    _notify_centre_admins(order.get("centre_uid"),"Farmer Confirmed Receipt",f"{order.get('farmer_name') or 'Farmer'} confirmed receipt of {order.get('order_number')}. {summary.get('accepted_item_count',0)} line(s) accepted.")
+    final=mongo.db[ORDER_COLLECTION].find_one({"_id":oid}) or order
+    message="Receipt confirmed. Payment is now based only on accepted goods." if not financial_warning else "Receipt confirmed. Financial documents need attention, but receipt was saved safely."
+    return {"order":_serialize_order(final),"financial_warning":financial_warning,"message":message}
 
 
 def get_order(order_id, *, actor_user_id=None, centre_uid=None):
@@ -1523,7 +1779,9 @@ def get_ufc_order_overview(actor_user_id, centre_uid_hint=None, *, search="", st
             {"order_number": {"$regex": escaped, "$options": "i"}},
             {"farmer_name": {"$regex": escaped, "$options": "i"}},
             {"product_name": {"$regex": escaped, "$options": "i"}},
+            {"items.product_name": {"$regex": escaped, "$options": "i"}},
             {"product_code": {"$regex": escaped, "$options": "i"}},
+            {"items.product_code": {"$regex": escaped, "$options": "i"}},
             {"status": {"$regex": escaped, "$options": "i"}},
         ]
     rows = [_serialize_order(row) for row in mongo.db[ORDER_COLLECTION].find(query).sort("created_at", DESCENDING)]
@@ -1542,6 +1800,7 @@ def get_farmer_order_overview(actor_user_id, *, search=""):
         query["$or"] = [
             {"order_number": {"$regex": escaped, "$options": "i"}},
             {"product_name": {"$regex": escaped, "$options": "i"}},
+            {"items.product_name": {"$regex": escaped, "$options": "i"}},
             {"status": {"$regex": escaped, "$options": "i"}},
         ]
     rows = [_serialize_order(row) for row in mongo.db[ORDER_COLLECTION].find(query).sort("created_at", DESCENDING)]
@@ -1562,6 +1821,7 @@ def get_farmer_purchase_overview(actor_user_id, *, search=""):
             {"order_number": {"$regex": escaped, "$options": "i"}},
             {"invoice_number": {"$regex": escaped, "$options": "i"}},
             {"product_name": {"$regex": escaped, "$options": "i"}},
+            {"items.product_name": {"$regex": escaped, "$options": "i"}},
         ]
     rows = []
     total = Decimal("0")
@@ -1577,6 +1837,19 @@ def get_farmer_purchase_overview(actor_user_id, *, search=""):
         row["amount_paid_display"] = _money(row.get("amount_paid"))
         row["outstanding_amount_display"] = _money(row.get("outstanding_amount"))
         row["payment_status_label"] = PAYMENT_STATUS_LABELS.get(str(row.get("payment_status") or "not_recorded"), str(row.get("payment_status") or "").replace("_", " ").title())
+        serialized_items = []
+        for source in row.get("items") or []:
+            if not isinstance(source, dict):
+                continue
+            line = dict(source)
+            line["quantity_display"] = _qty(line.get("quantity"))
+            line["unit_price_display"] = _money(line.get("unit_price"))
+            line["line_total_display"] = _money(line.get("line_total"))
+            serialized_items.append(line)
+        row["items"] = serialized_items
+        row["item_count"] = len(serialized_items) or int(row.get("item_count") or 1)
+        row["is_multi_item_order"] = row["item_count"] > 1
+        row["product_summary"] = serialized_items[0].get("product_name") if len(serialized_items) == 1 else (f"{row['item_count']} products" if row["item_count"] > 1 else row.get("product_name") or "Product")
         row["source_type"] = "ufc_automatic"
         rows.append(row)
         total += _decimal(row.get("total_amount"))
@@ -1622,6 +1895,10 @@ def get_farmer_purchase_overview(actor_user_id, *, search=""):
             "payment_status_label": PAYMENT_STATUS_LABELS.get(str(item.get("payment_status") or "not_recorded"), "Not Recorded Yet"),
             "source_type": "legacy",
             "purchase_date": item.get("created_at"),
+            "items": [],
+            "item_count": 1,
+            "is_multi_item_order": False,
+            "product_summary": item.get("product_name") or "Product",
         }
         rows.append(legacy)
         total += amount
@@ -1647,6 +1924,7 @@ def get_ufc_sales_overview(actor_user_id, centre_uid_hint=None, *, search="", pa
             {"order_number": {"$regex": escaped, "$options": "i"}},
             {"farmer_name": {"$regex": escaped, "$options": "i"}},
             {"product_name": {"$regex": escaped, "$options": "i"}},
+            {"items.product_name": {"$regex": escaped, "$options": "i"}},
         ]
     rows = []
     total = Decimal("0")
@@ -1660,6 +1938,19 @@ def get_ufc_sales_overview(actor_user_id, centre_uid_hint=None, *, search="", pa
         row["grand_total_display"] = _money(row.get("grand_total"))
         row["outstanding_amount_display"] = _money(row.get("outstanding_amount"))
         row["payment_status_label"] = PAYMENT_STATUS_LABELS.get(str(row.get("payment_status") or "unpaid"), str(row.get("payment_status") or "").replace("_", " ").title())
+        serialized_items = []
+        for source in row.get("items") or []:
+            if not isinstance(source, dict):
+                continue
+            line = dict(source)
+            line["quantity_display"] = _qty(line.get("quantity"))
+            line["unit_price_display"] = _money(line.get("unit_price"))
+            line["line_total_display"] = _money(line.get("line_total"))
+            serialized_items.append(line)
+        row["items"] = serialized_items
+        row["item_count"] = len(serialized_items) or int(row.get("item_count") or 1)
+        row["is_multi_item_order"] = row["item_count"] > 1
+        row["product_summary"] = serialized_items[0].get("product_name") if len(serialized_items) == 1 else (f"{row['item_count']} products" if row["item_count"] > 1 else row.get("product_name") or "Product")
         total += _decimal(row.get("grand_total"))
         outstanding += _decimal(row.get("outstanding_amount"))
         rows.append(row)
@@ -1688,6 +1979,19 @@ def get_invoice(invoice_id, *, actor_user_id):
     row["id"] = str(row.get("_id") or "")
     for key in ["quantity", "unit_price", "taxable_value", "gst_rate", "cgst_amount", "sgst_amount", "igst_amount", "gst_amount", "grand_total", "amount_paid", "outstanding_amount"]:
         row[f"{key}_display"] = _qty(row.get(key)) if key == "quantity" else _money(row.get(key))
+    serialized_items = []
+    for source in row.get("items") or []:
+        if not isinstance(source, dict):
+            continue
+        item = dict(source)
+        item["quantity_display"] = _qty(item.get("quantity"))
+        for key in ["unit_price", "taxable_value", "cgst_amount", "sgst_amount", "igst_amount", "gst_amount", "line_total"]:
+            item[f"{key}_display"] = _money(item.get(key))
+        item["gst_rate_display"] = _qty(item.get("gst_rate"))
+        serialized_items.append(item)
+    row["items"] = serialized_items
+    row["item_count"] = len(serialized_items) or int(row.get("item_count") or 1)
+    row["is_multi_item_invoice"] = row["item_count"] > 1
     row["payment_status_label"] = PAYMENT_STATUS_LABELS.get(str(row.get("payment_status") or "unpaid"), str(row.get("payment_status") or "").replace("_", " ").title())
     return row
 

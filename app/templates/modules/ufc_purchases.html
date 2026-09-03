@@ -96,9 +96,9 @@
         </td>
         <td>{{ r.avpl_order_number }}</td>
         <td>{{ r.purchase_date|ist_date('%d %b %Y', '-') }}</td>
-        <td><strong>{{ r.product_name }}</strong><br><small>{{ r.product_code or '-' }}</small></td>
-        <td>{{ r.quantity_display }} {{ r.unit_code }}</td>
-        <td>₹{{ r.unit_price_display }}</td>
+        <td><strong>{{ r.product_summary or r.product_name }}</strong>{% if r.is_multi_item_order %}<br><small>{{ r.item_count }} products · see invoice for lines</small>{% else %}<br><small>{{ r.product_code or '-' }}</small>{% endif %}</td>
+        <td>{% if r.is_multi_item_order %}Multiple units{% else %}{{ r.quantity_display }} {{ r.unit_code }}{% endif %}</td>
+        <td>{% if r.is_multi_item_order %}Line-wise{% else %}₹{{ r.unit_price_display }}{% endif %}</td>
         <td>₹{{ r.taxable_value_display }}</td>
         <td>₹{{ r.gst_amount_display }}{% if r.gst_rate %}<br><small>{{ r.gst_rate }}%</small>{% endif %}</td>
         <td><strong>₹{{ r.total_amount_display }}</strong></td>
@@ -116,4 +116,240 @@
     </tbody>
   </table></div>
 </div>
+
+
+<style id="sds-commerce-redesign">
+:root{
+    --uc-green:#2b7346;
+    --uc-green-dark:#1f5f39;
+    --uc-green-soft:#eff8f1;
+    --uc-green-softer:#f7fbf8;
+    --uc-text:#1f3127;
+    --uc-muted:#6e7f74;
+    --uc-border:#dbe9df;
+    --uc-border-strong:#c8ddce;
+    --uc-bg:#f7faf8;
+    --uc-white:#fff;
+    --uc-warn:#9a6500;
+    --uc-danger:#a73535;
+    --uc-shadow:0 12px 32px rgba(26,72,43,.055);
+    --uc-shadow-hover:0 16px 34px rgba(31,102,59,.10);
+}
+
+@keyframes ucFadeUp{
+    from{opacity:0;transform:translateY(7px)}
+    to{opacity:1;transform:translateY(0)}
+}
+@keyframes ucPop{
+    from{opacity:0;transform:scale(.975) translateY(5px)}
+    to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page,.orders-page{
+    max-width:1500px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    color:var(--uc-text) !important;
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page{
+    background:#fff !important;
+    border:1px solid var(--uc-border) !important;
+    border-radius:20px !important;
+    box-shadow:var(--uc-shadow) !important;
+}
+
+h1,h2,h3{
+    color:#16251c;
+    letter-spacing:-.02em;
+}
+
+.muted,.small,.soft-note,.marketplace-help{
+    color:var(--uc-muted) !important;
+}
+
+button,a,input,select,textarea{
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+button,.btn,.link,.view,.head-btn,.filter-button,.back,.invoice-link,
+.primary,.secondary,.add,.addbtn,.paybtn,.pay-submit,.receive,
+.cart-primary,.cart-secondary,.clear-btn,.clear-link,.view-order-btn{
+    border-radius:10px !important;
+    transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease !important;
+}
+
+button:hover,.btn:hover,.link:hover,.view:hover,.head-btn:hover,.filter-button:hover,
+.primary:hover,.add:hover,.addbtn:hover,.paybtn:hover,.pay-submit:hover,.receive:hover,
+.cart-primary:hover,.view-order-btn:hover{
+    transform:translateY(-1px);
+}
+
+input,select,textarea,.filter-input,.filter-select{
+    border:1px solid #d6e3d9 !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#31463a !important;
+    outline:none !important;
+    box-shadow:none !important;
+}
+
+input:focus,select:focus,textarea:focus,.filter-input:focus,.filter-select:focus{
+    border-color:#8eb69a !important;
+    box-shadow:0 0 0 3px rgba(43,115,70,.07) !important;
+}
+
+.pill,.badge,.status-badge,.type-pill,.status-pill,.published-badge,.stage4-chip{
+    border-radius:8px !important;
+    font-weight:800 !important;
+}
+
+.table,.table-wrap,.table-shell,.earnings-table-wrap,.items-table{
+    border:1px solid var(--uc-border) !important;
+    border-radius:13px !important;
+    overflow:auto;
+    box-shadow:none !important;
+    background:#fff !important;
+}
+
+table th{
+    background:#f4f8f5 !important;
+    color:#607066 !important;
+    font-size:.63rem !important;
+    font-weight:850 !important;
+    text-transform:uppercase;
+    letter-spacing:.025em;
+}
+
+table td{
+    color:#3e5145 !important;
+}
+
+table tr{
+    transition:background .14s ease;
+}
+
+table tbody tr:hover td{
+    background:#fbfdfb !important;
+}
+
+.summary,.stats,.stat-grid,.status-grid,.facts,.grid{
+    gap:11px !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact,.box,.section,.action-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:14px !important;
+    background:#fff !important;
+    box-shadow:none !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact{
+    transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease;
+}
+
+.sum:hover,.stat:hover,.stat-card:hover,.status-card:hover,.fact:hover{
+    transform:translateY(-2px);
+    border-color:#b7d5c0 !important;
+    box-shadow:0 9px 22px rgba(31,102,59,.07) !important;
+}
+
+.notice,.info,.soft-note,.warn-note,.next-step,.table-info{
+    border-radius:11px !important;
+}
+
+.empty,.orders-empty{
+    color:#809087 !important;
+}
+
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+        animation:none !important;
+        transition:none !important;
+        scroll-behavior:auto !important;
+    }
+}
+</style>
+
+
+
+<style id="sds-orders-redesign">
+.orders-head,.top,.head,.fh{
+    margin-bottom:14px !important;
+}
+
+.orders-grid{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fill,minmax(285px,1fr)) !important;
+    gap:13px !important;
+}
+
+.order-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:16px !important;
+    background:#fff !important;
+    box-shadow:0 7px 20px rgba(26,72,43,.04) !important;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease !important;
+    animation:ucFadeUp .25s ease both;
+}
+
+.order-card:hover{
+    transform:translateY(-2px);
+    border-color:#aed0b7 !important;
+    box-shadow:var(--uc-shadow-hover) !important;
+}
+
+.order-number{
+    color:#1d3928 !important;
+    font-weight:900 !important;
+}
+
+.order-meta,.meta-row{
+    border-color:#edf2ee !important;
+}
+
+.view-order-btn,.head-btn,.btn,.view,.link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:37px;
+    padding:7px 11px;
+    border:1px solid #d2e1d6 !important;
+    background:#fff !important;
+    color:#2b7346 !important;
+    text-decoration:none !important;
+    font-size:.67rem !important;
+    font-weight:850 !important;
+}
+
+.view-order-btn.primary,.head-btn.primary,.btn.primary{
+    border-color:#2b7346 !important;
+    background:#2b7346 !important;
+    color:#fff !important;
+}
+
+.timeline,.history{
+    position:relative;
+}
+
+.event,.history-item,.step{
+    border-color:#e1ebe4 !important;
+    background:#fbfdfb !important;
+    border-radius:11px !important;
+}
+
+.action-card,.receive,.pay-form{
+    border:1px solid #d9e7dd !important;
+    border-radius:14px !important;
+    background:#fbfdfb !important;
+}
+
+@media(max-width:700px){
+    .orders-grid{
+        grid-template-columns:1fr !important;
+    }
+}
+</style>
+
 {% endblock %}

@@ -314,6 +314,84 @@ def _image_value(product):
     )
 
 
+def is_farmer_delivery_enabled(centre_uid):
+    """Return the UFC's Farmer-order delivery switch.
+
+    Missing legacy values default to ON so existing UFCs continue operating
+    exactly as before until an admin explicitly turns delivery off.
+    """
+    centre_uid = _clean_text(centre_uid, 80)
+    if not centre_uid:
+        return True
+    centre = (
+        mongo.db.ufc_admin_master.find_one(
+            {"centre_uid": centre_uid},
+            {"farmer_delivery_enabled": 1},
+        )
+        or mongo.db.ufc_centre_master.find_one(
+            {"centre_uid": centre_uid},
+            {"farmer_delivery_enabled": 1},
+        )
+        or mongo.db.users.find_one(
+            {
+                "role": "ufc_admin",
+                "$or": [
+                    {"centre_uid": centre_uid},
+                    {"mapped_centre_uid": centre_uid},
+                ],
+            },
+            {"farmer_delivery_enabled": 1},
+        )
+        or {}
+    )
+    if "farmer_delivery_enabled" not in centre:
+        return True
+    return centre.get("farmer_delivery_enabled") is not False
+
+
+def set_farmer_delivery_enabled(actor_user_id, centre_uid_hint, enabled):
+    """Enable/disable new Farmer orders for this UFC without hiding products."""
+    actor, centre_uid, centre_name = _resolve_ufc_admin(actor_user_id, centre_uid_hint)
+    master = (
+        mongo.db.ufc_admin_master.find_one({"linked_user_id": str(actor["_id"])})
+        or mongo.db.ufc_admin_master.find_one({"linked_user_id": actor["_id"]})
+        or mongo.db.ufc_admin_master.find_one({"centre_uid": centre_uid})
+    )
+
+    enabled = bool(enabled)
+    timestamp = now_utc()
+    setting = {
+        "farmer_delivery_enabled": enabled,
+        "farmer_delivery_updated_at": timestamp,
+        "farmer_delivery_updated_by": actor["_id"],
+        "farmer_delivery_updated_by_name": actor.get("resolved_name") or "UFC Admin",
+    }
+    if master:
+        mongo.db.ufc_admin_master.update_one({"_id": master["_id"]}, {"$set": setting})
+    else:
+        # Very old UFC accounts can exist without a ufc_admin_master row.
+        # Persist on the authenticated UFC Admin rather than creating a second
+        # centre-master document that could conflict with existing data.
+        mongo.db.users.update_one({"_id": actor["_id"]}, {"$set": setting})
+    _audit(
+        centre_uid,
+        actor,
+        "farmer_delivery_enabled" if enabled else "farmer_delivery_disabled",
+        None,
+        {"enabled": enabled},
+    )
+    return {
+        "enabled": enabled,
+        "centre_uid": centre_uid,
+        "centre_name": centre_name,
+        "message": (
+            "Delivery is ON. Farmers can place orders."
+            if enabled
+            else "Delivery is OFF. Farmers can view products but cannot place orders."
+        ),
+    }
+
+
 # ---------------------------------------------------------------------------
 # UFC setup and publication actions
 # ---------------------------------------------------------------------------
@@ -568,12 +646,15 @@ def get_ufc_marketplace_setup(actor_user_id, centre_uid_hint, *, search="", stat
     )
     out_of_stock = sum(1 for stock in stock_rows if stock.get("saleable", Decimal("0")) <= 0)
 
+    delivery_enabled = is_farmer_delivery_enabled(centre_uid)
     return {
         "rows": rows,
         "centre_uid": centre_uid,
         "centre_name": centre_name,
         "query": search or "",
         "selected_status": status_filter or "all",
+        "delivery_enabled": delivery_enabled,
+        "delivery_label": "Delivery ON" if delivery_enabled else "Delivery OFF",
         "summary": {
             "stock_products": len(stock_rows),
             "published": published_count,
@@ -591,6 +672,7 @@ def get_ufc_marketplace_setup(actor_user_id, centre_uid_hint, *, search="", stat
 def get_farmer_marketplace(actor_user_id, *, search=""):
     _ensure_indexes()
     actor, farmer, centre_uid, centre_name, farmer_name = _resolve_farmer(actor_user_id)
+    delivery_enabled = is_farmer_delivery_enabled(centre_uid)
     listings = list(
         mongo.db[LISTING_COLLECTION].find({
             "centre_uid": centre_uid,
@@ -653,7 +735,8 @@ def get_farmer_marketplace(actor_user_id, *, search=""):
             # Stage 7 enables transaction-controlled ordering. The token is
             # unique to this rendered form so a double-click/retry cannot
             # accidentally create two identical orders.
-            "ordering_enabled": saleable > 0,
+            "stock_ordering_enabled": saleable > 0,
+            "ordering_enabled": delivery_enabled and saleable > 0,
             "request_token": uuid4().hex,
         })
 
@@ -673,6 +756,12 @@ def get_farmer_marketplace(actor_user_id, *, search=""):
         "farmer_name": farmer_name,
         "farmer_id": str(farmer.get("_id") or ""),
         "query": search or "",
+        "delivery_enabled": delivery_enabled,
+        "delivery_message": (
+            ""
+            if delivery_enabled
+            else f"{centre_name} is not delivering right now. You can still view products and prices."
+        ),
         "summary": {
             "published": len(rows),
             "in_stock": sum(1 for row in rows if row.get("availability_status") == "in_stock"),

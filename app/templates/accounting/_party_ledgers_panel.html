@@ -297,10 +297,10 @@
 <section class="accounting-party-card" id="party-ledgers">
     <div class="accounting-section-heading">
         <div>
-            <p class="accounting-eyebrow">Stage 3 · Batch 3</p>
-            <h2>Supplier and party ledger masters</h2>
+            <p class="accounting-eyebrow">Parties</p>
+            <h2>Suppliers & Customers</h2>
             <p class="accounting-section-description">
-                {% if streamlined_workflows_enabled %}Create or update supplier/customer ledgers once; validation and activation happen on Save. Audit history is still retained.{% else %}Accounts prepares supplier and customer ledgers. AVPL Admin reviews and activates them through a maker-checker workflow before future vouchers can use them.{% endif %}
+                Add or update suppliers and customers.
             </p>
         </div>
         {% if party_ledger_overview.counts.pending_approval %}
@@ -320,8 +320,8 @@
         <div class="accounting-party-summary">
             <div><span>Suppliers</span><strong>{{ party_ledger_overview.role_counts.supplier }}</strong><small>Sundry Creditors</small></div>
             <div><span>Customers / parties</span><strong>{{ party_ledger_overview.role_counts.customer }}</strong><small>Sundry Debtors</small></div>
-            <div><span>Pending approval</span><strong>{{ party_ledger_overview.counts.pending_approval }}</strong><small>AVPL Admin review queue</small></div>
-            <div><span>Active ledgers</span><strong>{{ party_ledger_overview.counts.active }}</strong><small>Available to future posting services</small></div>
+            <div><span>Needs attention</span><strong>{{ party_ledger_overview.counts.pending_approval }}</strong><small>Only exceptions</small></div>
+            <div><span>Active</span><strong>{{ party_ledger_overview.counts.active }}</strong><small>Ready to use</small></div>
             <div><span>Inactive</span><strong>{{ party_ledger_overview.counts.inactive }}</strong><small>Historical identity preserved</small></div>
         </div>
 
@@ -335,14 +335,15 @@
             <details class="accounting-party-form-wrap" {% if not party_ledger_overview.rows %}open{% endif %}>
                 <summary class="accounting-party-form-heading">
                     <div>
-                        <h3>Create supplier or customer ledger</h3>
-                        <p>{% if streamlined_workflows_enabled %}Save once to validate and activate the ledger. No opening balance is stored in this master.{% else %}The ledger remains a draft until submitted and approved. No opening balance is stored in this master.{% endif %}</p>
+                        <h3>Add Supplier / Customer</h3>
+                        <p>Save once. The ledger is validated and activated automatically.</p>
                     </div>
-                    <span class="accounting-state-pill pending">{% if streamlined_workflows_enabled %}Accounts setup{% else %}Accounts maker{% endif %}</span>
+                    <span class="accounting-state-pill pending">Accounts</span>
                 </summary>
                 <form method="post" action="{{ url_for('accounting.party_ledger_create') }}">
                     {{ party_fields(party_ledger_overview.form_defaults, 'new_party_') }}
                     <div class="accounting-party-form-actions">
+                        <button class="accounting-secondary-button" type="button" onclick="this.form.reset();this.closest('details').removeAttribute('open')">Cancel</button>
                         <button class="accounting-primary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Create draft{% endif %}</button>
                     </div>
                 </form>
@@ -381,7 +382,7 @@
                         {% endif %}
 
                         <details>
-                            <summary>View details and available actions</summary>
+                            <summary>Details</summary>
                             <div class="accounting-party-detail-body">
                                 <div class="accounting-party-meta" style="padding:0;">
                                     <div><span>Address</span><strong>{{ ledger.address_line_1 }}{% if ledger.address_line_2 %}, {{ ledger.address_line_2 }}{% endif %}</strong></div>
@@ -393,19 +394,20 @@
 
                                 {% if party_ledger_capabilities.can_edit and is_maker and ledger.status in ['draft', 'returned_for_correction'] %}
                                     <div class="accounting-party-form-wrap">
-                                        <div class="accounting-party-form-heading"><div><h3>Edit working draft</h3><p>Only the original maker can edit this version.</p></div></div>
+                                        <div class="accounting-party-form-heading"><div><h3>Edit</h3><p>Maker: {{ ledger.created_by_name or 'Accounts' }}</p></div></div>
                                         <form method="post" action="{{ url_for('accounting.party_ledger_edit', ledger_id=ledger.id) }}">
                                             <input type="hidden" name="version" value="{{ ledger.version }}">
                                             {{ party_fields(ledger, 'edit_' ~ ledger.id ~ '_', true) }}
-                                            <div class="accounting-party-form-actions"><button class="accounting-primary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save draft{% endif %}</button></div>
+                                            <div class="accounting-party-form-actions"><button class="accounting-secondary-button" type="button" onclick="this.form.reset()">Cancel</button><button class="accounting-primary-button" type="submit">{% if streamlined_workflows_enabled %}Save & Activate{% else %}Save draft{% endif %}</button></div>
                                         </form>
                                     </div>
                                 {% endif %}
 
                                 <div class="accounting-party-action-grid">
+                                    {% if not streamlined_workflows_enabled %}
                                     {% if party_ledger_capabilities.can_submit and is_maker and ledger.status in ['draft', 'returned_for_correction'] %}
                                         <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_submit', ledger_id=ledger.id) }}">
-                                            <h4>Submit for approval</h4>
+                                            <h4>Submit</h4>
                                             <input type="hidden" name="version" value="{{ ledger.version }}">
                                             <textarea name="submission_note" maxlength="1000" placeholder="Optional note for AVPL Admin"></textarea>
                                             <button class="accounting-primary-button" type="submit">Submit ledger</button>
@@ -416,7 +418,7 @@
                                         <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_cancel', ledger_id=ledger.id) }}">
                                             <h4>Cancel draft</h4>
                                             <input type="hidden" name="version" value="{{ ledger.version }}">
-                                            <textarea name="reason" maxlength="1000" required placeholder="Mandatory cancellation reason"></textarea>
+                                            <textarea name="reason" maxlength="1000" required placeholder="Reason"></textarea>
                                             <button class="accounting-secondary-button" type="submit">Cancel without deleting history</button>
                                         </form>
                                     {% endif %}
@@ -425,14 +427,14 @@
                                         <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_withdraw', ledger_id=ledger.id) }}">
                                             <h4>Withdraw for correction</h4>
                                             <input type="hidden" name="version" value="{{ ledger.version }}">
-                                            <textarea name="reason" maxlength="1000" required placeholder="Mandatory withdrawal reason"></textarea>
+                                            <textarea name="reason" maxlength="1000" required placeholder="Reason"></textarea>
                                             <button class="accounting-secondary-button" type="submit">Withdraw to draft</button>
                                         </form>
                                     {% endif %}
 
                                     {% if party_ledger_capabilities.can_approve and ledger.status == 'pending_approval' and not is_maker %}
                                         <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_approve', ledger_id=ledger.id) }}">
-                                            <h4>Approve and activate</h4>
+                                            <h4>Approve</h4>
                                             <input type="hidden" name="version" value="{{ ledger.version }}">
                                             <textarea name="approval_note" maxlength="1000" placeholder="Optional approval note"></textarea>
                                             <button class="accounting-primary-button" type="submit">Approve ledger</button>
@@ -441,27 +443,29 @@
 
                                     {% if party_ledger_capabilities.can_return and ledger.status == 'pending_approval' and not is_maker %}
                                         <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_return', ledger_id=ledger.id) }}">
-                                            <h4>Return for correction</h4>
+                                            <h4>Send back</h4>
                                             <input type="hidden" name="version" value="{{ ledger.version }}">
-                                            <textarea name="return_reason" maxlength="1000" required placeholder="Mandatory correction reason"></textarea>
+                                            <textarea name="return_reason" maxlength="1000" required placeholder="Reason"></textarea>
                                             <button class="accounting-secondary-button" type="submit">Return to Accounts</button>
                                         </form>
                                     {% endif %}
 
+                                    {% endif %}
+
                                     {% if party_ledger_capabilities.can_deactivate and ledger.status == 'active' %}
                                         <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_deactivate', ledger_id=ledger.id) }}">
-                                            <h4>Deactivate ledger</h4>
+                                            <h4>Deactivate</h4>
                                             <input type="hidden" name="version" value="{{ ledger.version }}">
-                                            <textarea name="reason" maxlength="1000" required placeholder="Mandatory deactivation reason"></textarea>
+                                            <textarea name="reason" maxlength="1000" required placeholder="Reason"></textarea>
                                             <button class="accounting-secondary-button" type="submit">Deactivate</button>
                                         </form>
                                     {% endif %}
 
                                     {% if party_ledger_capabilities.can_reactivate and ledger.status == 'inactive' %}
                                         <form class="accounting-party-action-box" method="post" action="{{ url_for('accounting.party_ledger_reactivate', ledger_id=ledger.id) }}">
-                                            <h4>Reactivate ledger</h4>
+                                            <h4>Reactivate</h4>
                                             <input type="hidden" name="version" value="{{ ledger.version }}">
-                                            <textarea name="reason" maxlength="1000" required placeholder="Mandatory reactivation reason"></textarea>
+                                            <textarea name="reason" maxlength="1000" required placeholder="Reason"></textarea>
                                             <button class="accounting-primary-button" type="submit">Reactivate</button>
                                         </form>
                                     {% endif %}
@@ -473,12 +477,12 @@
             </div>
         {% else %}
             <div class="accounting-party-empty">
-                No supplier or customer party ledger has been created yet.
+                No suppliers or customers yet.
             </div>
         {% endif %}
 
         <div class="accounting-party-protection">
-            <strong>Permanent accounting rule:</strong> party-ledger records are never hard deleted, live balances are never stored in the master, and approved ledgers can only be deactivated or reactivated with an audited reason. Future balances will come from voucher lines.
+            <strong>Protected:</strong> party history is retained; balances come from vouchers.
         </div>
     {% endif %}
 </section>

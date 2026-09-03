@@ -344,6 +344,39 @@ def _record_audit(document, actor, action, previous_status=None, remarks="", cha
         )
 
 
+def _sync_product_master_mapping_state(document, actor=None):
+    """Keep a small read-only accounting status snapshot on Product Master.
+
+    ``accounting_product_mappings`` stays authoritative.  These product fields
+    only keep Product Master and Accounting screens consistent for users.
+    """
+    product_id = document.get("source_product_id")
+    if not product_id:
+        return
+
+    status = document.get("status") or STATUS_DRAFT
+    ready = (
+        status == STATUS_ACTIVE
+        and document.get("is_active") is True
+        and document.get("is_accounting_eligible") is True
+    )
+    update = {
+        "accounting_mapping_id": document.get("_id"),
+        "accounting_mapping_code": document.get("mapping_code") or "",
+        "accounting_mapping_status": status,
+        "accounting_ready": ready,
+        "accounting_mapping_updated_at": now_utc(),
+    }
+    if actor:
+        update["accounting_mapping_updated_by"] = actor.get("_id")
+        update["accounting_mapping_updated_by_name"] = actor.get("resolved_name") or ""
+
+    mongo.db[SOURCE_PRODUCT_COLLECTION].update_one(
+        {"_id": product_id, "is_deleted": {"$ne": True}},
+        {"$set": update},
+    )
+
+
 # ---------------------------------------------------------------------------
 # Existing AVPL product adapter
 # ---------------------------------------------------------------------------
@@ -873,16 +906,29 @@ def get_product_mapping_overview(accounting_entity_id, actor_user_id):
         status = row.get("status") or STATUS_DRAFT
         counts[status] = counts.get(status, 0) + 1
 
-    active_product_count = mongo.db[SOURCE_PRODUCT_COLLECTION].count_documents(
-        _source_product_query(include_inactive=False)
+    active_products = list(
+        mongo.db[SOURCE_PRODUCT_COLLECTION].find(
+            _source_product_query(include_inactive=False), {"_id": 1}
+        )
     )
+    active_product_ids = {str(row.get("_id")) for row in active_products}
+    active_product_count = len(active_product_ids)
     active_mapped_product_ids = {
         str(row.get("source_product_id") or "")
         for row in rows
         if row.get("status") == STATUS_ACTIVE
         and row.get("is_active") is True
         and row.get("is_accounting_eligible") is True
+        and str(row.get("source_product_id") or "") in active_product_ids
     }
+    live_mapped_product_ids = {
+        str(row.get("source_product_id") or "")
+        for row in rows
+        if row.get("status") != STATUS_CANCELLED
+        and str(row.get("source_product_id") or "") in active_product_ids
+    }
+    needs_activation_product_ids = live_mapped_product_ids - active_mapped_product_ids
+    truly_unmapped_product_ids = active_product_ids - live_mapped_product_ids
 
     options = get_product_mapping_option_catalog(entity["_id"])
     return {
@@ -899,9 +945,8 @@ def get_product_mapping_overview(accounting_entity_id, actor_user_id):
         "total_mapping_count": len(rows),
         "active_operational_product_count": active_product_count,
         "active_mapped_product_count": len(active_mapped_product_ids),
-        "unmapped_active_product_count": max(
-            active_product_count - len(active_mapped_product_ids), 0
-        ),
+        "needs_activation_count": len(needs_activation_product_ids),
+        "unmapped_active_product_count": len(truly_unmapped_product_ids),
         "audit_recovery_count": sum(
             1 for row in rows if row.get("audit_sync_required") is True
         ),
@@ -988,6 +1033,7 @@ def create_product_mapping(accounting_entity_id, actor_user_id, form):
 
     document["_id"] = result.inserted_id
     _record_audit(document, actor, "create_product_mapping", remarks=payload.get("mapping_note"))
+    _sync_product_master_mapping_state(document, actor)
     return {
         "mapping": serialize_product_mapping(document),
         "message": f"Product Accounting mapping {mapping_code} created as Draft.",
@@ -1054,6 +1100,7 @@ def update_product_mapping(mapping_id, actor_user_id, expected_version, form):
         remarks=payload.get("mapping_note"),
         changed_fields=changed_fields,
     )
+    _sync_product_master_mapping_state(updated, actor)
     return {
         "mapping": serialize_product_mapping(updated),
         "message": "Product Accounting mapping draft updated.",
@@ -1222,9 +1269,97 @@ def _transition(
         previous_status=current_status,
         remarks=clean_reason or clean_note,
     )
+    _sync_product_master_mapping_state(updated, actor)
     return {
         "mapping": serialize_product_mapping(updated),
         "message": f"Product Accounting mapping {action} completed successfully.",
+    }
+
+
+def activate_product_mapping(mapping_id, actor_user_id, expected_version, note=""):
+    """Validate and activate an older Draft/Pending mapping in one action."""
+    if not workflow_is_streamlined("accounting.product_mapping"):
+        raise ValueError("Use the normal review workflow while streamlined mode is disabled.")
+
+    actor = _get_actor(actor_user_id, allowed_roles={"accounts", "avpl_admin", "super_admin"})
+    document = _get_mapping(mapping_id)
+    entity = _assert_active_avpl_entity(document.get("accounting_entity_id"))
+    role = actor.get("resolved_role") or ""
+    _require_permission(
+        actor, entity["_id"],
+        SUBMIT_PERMISSION if role == "accounts" else APPROVE_PERMISSION,
+    )
+
+    current_status = document.get("status") or STATUS_DRAFT
+    if current_status == STATUS_ACTIVE and document.get("is_accounting_eligible") is True:
+        _sync_product_master_mapping_state(document, actor)
+        return {"mapping": serialize_product_mapping(document), "message": "Product is already Accounting Ready."}
+    if current_status == STATUS_INACTIVE:
+        raise ValueError("Use Reactivate for an intentionally inactive mapping.")
+    if current_status == STATUS_CANCELLED:
+        raise ValueError("A cancelled mapping cannot be activated. Create a new mapping instead.")
+    if current_status not in {STATUS_DRAFT, STATUS_RETURNED, STATUS_PENDING_APPROVAL}:
+        raise ValueError("This mapping cannot be activated from its current status.")
+
+    current_form = {
+        "source_product_id": document.get("source_product_id_str"),
+        "hsn_master_id": document.get("hsn_master_id_str"),
+        "base_unit_id": document.get("base_unit_id_str"),
+        "alternate_unit_ids": document.get("alternate_unit_id_strs") or [],
+        "purchase_ledger_id": document.get("purchase_ledger_id_str"),
+        "sales_ledger_id": document.get("sales_ledger_id_str"),
+        "inventory_ledger_id": document.get("inventory_ledger_id_str"),
+        "inventory_tracking_enabled": document.get("inventory_tracking_enabled", True),
+        "purchase_enabled": document.get("purchase_enabled", True),
+        "sales_enabled": document.get("sales_enabled", True),
+        "mapping_note": document.get("mapping_note") or "",
+    }
+    _mapping_payload(entity["_id"], current_form)
+
+    current_version = int(document.get("version") or 1)
+    if _expected_version(expected_version) != current_version:
+        raise RuntimeError("This mapping changed in another session. Refresh and try again.")
+
+    timestamp = now_utc()
+    clean_note = _clean_text(note, 1000)
+    event = _workflow_event(
+        "mapping_activated_streamlined", actor,
+        previous_status=current_status, new_status=STATUS_ACTIVE,
+        note=clean_note or "Validated and activated from Accounting.",
+    )
+    result = mongo.db[MAPPING_COLLECTION].update_one(
+        {"_id": document["_id"], "version": current_version},
+        {
+            "$set": {
+                "status": STATUS_ACTIVE,
+                "is_active": True,
+                "is_accounting_eligible": True,
+                "approved_by": actor["_id"],
+                "approved_by_str": str(actor["_id"]),
+                "approved_by_name": actor.get("resolved_name") or "",
+                "approved_at": timestamp,
+                "approval_note": clean_note or "Validated and activated from Accounting.",
+                "return_reason": "",
+                "updated_by": actor["_id"],
+                "updated_by_str": str(actor["_id"]),
+                "updated_at": timestamp,
+                "version": current_version + 1,
+            },
+            "$push": {"change_history": event},
+        },
+    )
+    if result.modified_count != 1:
+        raise RuntimeError("This mapping changed in another session. Refresh and try again.")
+
+    updated = _get_mapping(document["_id"])
+    _record_audit(
+        updated, actor, "activate_product_mapping_streamlined",
+        previous_status=current_status, remarks=clean_note,
+    )
+    _sync_product_master_mapping_state(updated, actor)
+    return {
+        "mapping": serialize_product_mapping(updated),
+        "message": "Product Accounting mapping validated and activated.",
     }
 
 
@@ -1726,13 +1861,11 @@ def upsert_product_mapping_request_from_product_master(
     source_product_id,
     form,
 ):
-    """Create or refresh a product Accounting mapping from the AVPL product form.
+    """Create or refresh Accounting setup directly from Product Master.
 
-    An AVPL Admin is the authorised product-master approver, so mappings saved
-    from this form are activated immediately. An Accounts user may prepare the
-    same mapping, but it remains Draft for AVPL Admin review. This keeps the
-    product-entry flow fast without allowing an Accounts maker to approve their
-    own Accounting master.
+    In streamlined mode, Save is the one routine action: HSN, unit and ledger
+    references are revalidated and the mapping becomes Accounting Ready. Maker
+    identity and every change remain fully audited.
     """
     actor = _get_actor(actor_user_id, allowed_roles={"accounts", "avpl_admin"})
     entity = _assert_active_avpl_entity(accounting_entity_id)
@@ -1745,22 +1878,28 @@ def upsert_product_mapping_request_from_product_master(
     existing = mongo.db[MAPPING_COLLECTION].find_one({"live_mapping_key": live_mapping_key})
     timestamp = now_utc()
 
-    auto_approve = actor.get("resolved_role") == "avpl_admin"
+    streamlined = workflow_is_streamlined("accounting.product_mapping")
+    auto_approve = actor.get("resolved_role") == "avpl_admin" or streamlined
     target_status = STATUS_ACTIVE if auto_approve else STATUS_DRAFT
     active_state = bool(auto_approve)
 
-    # Pending mappings must still complete their existing workflow. Inactive
-    # mappings must be reactivated through the controlled Accounting action.
-    if existing and existing.get("status") in {STATUS_PENDING_APPROVAL, STATUS_INACTIVE}:
+    # Intentionally inactive mappings remain an explicit control decision.
+    if existing and existing.get("status") == STATUS_INACTIVE:
         raise ValueError(
-            "The product already has a pending or inactive Accounting mapping. "
-            "Complete that action from Accounting Product Mapping first."
+            "This product Accounting mapping is inactive. Reactivate it from Accounting first."
         )
 
-    # An Accounts user cannot overwrite an already approved mapping.
+    # Old Pending records can be recovered by the next valid Product Master
+    # save in streamlined mode. Legacy maker-checker remains available when
+    # streamlined workflows are explicitly disabled.
+    if existing and existing.get("status") == STATUS_PENDING_APPROVAL and not streamlined:
+        raise ValueError(
+            "This product Accounting mapping is waiting for review. Complete that review from Accounting first."
+        )
+
     if existing and existing.get("status") == STATUS_ACTIVE and not auto_approve:
         raise PermissionError(
-            "Only AVPL Admin can update and automatically approve an active product Accounting mapping."
+            "Only AVPL Admin can update an active product Accounting mapping while maker-checker mode is enabled."
         )
 
     approval_fields = {}
@@ -1770,7 +1909,7 @@ def upsert_product_mapping_request_from_product_master(
             "approved_by_str": str(actor["_id"]),
             "approved_by_name": actor.get("resolved_name") or "",
             "approved_at": timestamp,
-            "approval_note": payload.get("mapping_note") or "Auto-approved from AVPL Product Master.",
+            "approval_note": payload.get("mapping_note") or "Validated and activated automatically from Product Master.",
             "return_reason": "",
         }
 
@@ -1778,7 +1917,7 @@ def upsert_product_mapping_request_from_product_master(
         current_version = int(existing.get("version") or 1)
         changed_fields = _changed_fields(existing, payload)
         event_name = (
-            "mapping_auto_approved_from_product_master"
+            "mapping_auto_activated_from_product_master"
             if auto_approve
             else "mapping_request_refreshed_from_product_master"
         )
@@ -1821,17 +1960,18 @@ def upsert_product_mapping_request_from_product_master(
         _record_audit(
             updated,
             actor,
-            "auto_approve_product_mapping" if auto_approve else "refresh_product_mapping_request",
+            "auto_activate_product_mapping" if auto_approve else "refresh_product_mapping_request",
             previous_status=existing.get("status"),
             remarks=payload.get("mapping_note"),
             changed_fields=changed_fields,
         )
+        _sync_product_master_mapping_state(updated, actor)
         return {
             "mapping": serialize_product_mapping(updated),
             "message": (
-                "Product Accounting mapping updated and activated automatically."
+                "Product saved and Accounting Ready."
                 if auto_approve
-                else "Product Accounting mapping request refreshed as Draft for AVPL Admin approval."
+                else "Product Accounting mapping saved as Draft."
             ),
         }
 
@@ -1865,7 +2005,7 @@ def upsert_product_mapping_request_from_product_master(
         "audit_sync_required": False,
         "change_history": [
             _workflow_event(
-                "mapping_auto_approved_from_product_master"
+                "mapping_auto_activated_from_product_master"
                 if auto_approve
                 else "mapping_request_created_from_product_master",
                 actor,
@@ -1886,15 +2026,16 @@ def upsert_product_mapping_request_from_product_master(
     _record_audit(
         document,
         actor,
-        "auto_approve_product_mapping" if auto_approve else "create_product_mapping_request",
+        "auto_activate_product_mapping" if auto_approve else "create_product_mapping_request",
         remarks=payload.get("mapping_note"),
     )
+    _sync_product_master_mapping_state(document, actor)
     return {
         "mapping": serialize_product_mapping(document),
         "message": (
-            f"Product Accounting mapping {mapping_code} created and activated automatically."
+            f"Product Accounting mapping {mapping_code} created and Accounting Ready."
             if auto_approve
-            else f"Product Accounting mapping {mapping_code} created as Draft for AVPL Admin approval."
+            else f"Product Accounting mapping {mapping_code} created as Draft."
         ),
     }
 

@@ -4,84 +4,77 @@
 <style>
     .pending-access-wrap{
         width:100%;
-        border:1px solid rgba(220,238,226,.95);
-        border-radius:26px;
-        padding:28px;
-        background:rgba(255,255,255,.94);
-        box-shadow:0 22px 55px rgba(23,37,42,.10);
-        backdrop-filter:blur(14px);
-        font-family:"Times New Roman", Georgia, serif;
-        overflow:hidden;
+        max-width:1500px;
+        margin:0 auto;
+        padding:22px;
+        border:1px solid #dbe9df;
+        border-radius:18px;
+        background:#fff;
+        box-shadow:0 12px 32px rgba(26,72,43,.055);
+        font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        color:#1f3127;
     }
 
     .pending-head{
         display:flex;
         align-items:flex-start;
         justify-content:space-between;
-        gap:18px;
+        gap:14px;
         flex-wrap:wrap;
-        margin-bottom:22px;
+        margin-bottom:16px;
     }
 
-    .pending-title-wrap{
-        min-width:0;
-    }
+    .pending-title-wrap{min-width:0;}
 
     .page-kicker{
         display:inline-flex;
         align-items:center;
-        justify-content:center;
-        min-height:30px;
-        padding:6px 14px;
-        margin-bottom:10px;
-        border-radius:999px;
-        background:rgba(228,247,234,.72);
-        color:#3B7D55;
-        border:1px solid rgba(95,168,120,.22);
-        font-size:.82rem;
-        font-weight:800;
-        letter-spacing:.08em;
+        min-height:24px;
+        padding:4px 8px;
+        margin-bottom:7px;
+        border-radius:7px;
+        background:#eff8f1;
+        color:#2b7346;
+        border:1px solid #dbe9df;
+        font-size:.68rem;
+        font-weight:850;
+        letter-spacing:.055em;
         text-transform:uppercase;
     }
 
     .pending-head h2{
         margin:0;
-        color:#17252A;
-        font-size:clamp(1.45rem, 2.4vw, 2.1rem);
-        font-weight:800;
+        color:#17251d;
+        font-size:clamp(1.25rem,2vw,1.7rem);
+        font-weight:850;
         line-height:1.2;
-        letter-spacing:.2px;
-        white-space:normal;
-        overflow-wrap:anywhere;
-        word-break:break-word;
     }
 
     .pending-subtitle{
-        margin:10px 0 0;
-        color:#64748B;
-        font-size:1rem;
-        font-weight:600;
-        line-height:1.6;
-        max-width:760px;
+        margin:6px 0 0;
+        color:#6e7f74;
+        font-size:.88rem;
+        font-weight:500;
+        line-height:1.45;
+        max-width:680px;
     }
 
     .status-overview{
         display:flex;
         align-items:center;
         justify-content:space-between;
-        gap:16px;
-        margin:0 0 22px;
-        padding:18px 20px;
-        border:1px solid rgba(95,168,120,.18);
-        border-radius:22px;
-        background:rgba(228,247,234,.36);
-        box-shadow:0 12px 28px rgba(95,168,120,.08);
+        gap:12px;
+        margin:0 0 16px;
+        padding:12px 14px;
+        border:1px solid #dbe9df;
+        border-radius:12px;
+        background:#f6fbf7;
         flex-wrap:wrap;
     }
 
-    .status-overview span{
-        color:#475569;
-        font-size:1rem;
+    .status-overview > span{
+        color:#435349;
+        font-size:.78rem;
         font-weight:800;
     }
 
@@ -89,237 +82,197 @@
         display:inline-flex;
         align-items:center;
         justify-content:center;
-        min-height:38px;
-        padding:8px 16px;
-        border-radius:999px;
-        font-weight:900;
-        font-size:.98rem;
-        letter-spacing:.2px;
+        min-height:27px;
+        padding:4px 9px;
+        border-radius:7px;
+        font-weight:800;
+        font-size:.72rem;
+        line-height:1;
         text-transform:capitalize;
         border:1px solid transparent;
         white-space:nowrap;
     }
 
     .status-badge.rejected{
-        background:#FEE2E2;
-        color:#B91C1C;
-        border-color:#FECACA;
+        background:#fff0ee;
+        color:#b42318;
+        border-color:#f3c4bf;
     }
 
     .status-badge.pending_profile{
-        background:#FFFBEB;
-        color:#D97706;
-        border-color:#FDE68A;
+        background:#fff8e7;
+        color:#8a5b00;
+        border-color:#ead8a7;
     }
 
     .status-badge.pending{
-        background:#E0F2FE;
-        color:#0284C7;
-        border-color:#BAE6FD;
+        background:#eef6f1;
+        color:#2f6e46;
+        border-color:#c8ddce;
     }
 
     .access-card{
-        position:relative;
-        overflow:hidden;
-        border-radius:24px;
-        padding:26px;
-        border:1px solid rgba(220,238,226,.95);
+        border:1px solid #dbe9df;
+        border-radius:14px;
+        padding:18px;
         background:#fff;
-        box-shadow:0 14px 34px rgba(15,23,42,.08);
+        box-shadow:0 8px 22px rgba(26,72,43,.045);
+        transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
     }
 
+    .access-card:hover{
+        transform:translateY(-2px);
+        border-color:#a9cfb5;
+        box-shadow:0 12px 26px rgba(26,72,43,.07);
+    }
 
     .access-card h3{
-        margin:0 0 12px;
-        font-size:clamp(1.22rem, 2vw, 1.45rem);
-        line-height:1.2;
-        font-weight:900;
-        color:#17252A;
+        margin:0 0 7px;
+        font-size:1rem;
+        line-height:1.3;
+        font-weight:850;
+        color:#17251d;
     }
 
     .access-card p{
-        margin:0 0 12px;
-        color:#475569;
-        font-size:1rem;
-        line-height:1.6;
-        font-weight:600;
+        margin:0 0 8px;
+        color:#435349;
+        font-size:.84rem;
+        line-height:1.5;
+        font-weight:500;
     }
 
-    .access-card p strong{
-        color:#17252A;
-    }
+    .access-card p:last-child{margin-bottom:0;}
+    .access-card p strong{color:#1f3127;}
 
     .access-card.rejected{
-        background:linear-gradient(135deg,#FFFFFF 0%,#FFF7F7 100%);
-        border-color:#FECACA;
+        border-color:#efc7c2;
+        background:#fffafa;
     }
 
-    .access-card.rejected h3{
-        color:#B91C1C;
-    }
+    .access-card.rejected h3{color:#b42318;}
 
     .access-card.pending-profile{
-        background:linear-gradient(135deg,#FFFFFF 0%,#FFFDF2 100%);
-        border-color:#FDE68A;
+        border-color:#ead9ad;
+        background:#fffdf7;
     }
 
-    .access-card.pending-profile h3{
-        color:#B45309;
-    }
+    .access-card.pending-profile h3{color:#8a5b00;}
 
     .access-card.pending{
-        background:linear-gradient(135deg,#FFFFFF 0%,#F5FBFF 100%);
-        border-color:#BAE6FD;
+        border-color:#cfe2d4;
+        background:#fbfefc;
     }
 
-    .access-card.pending h3{
-        color:#0369A1;
-    }
+    .access-card.pending h3{color:#2f6e46;}
 
     .action-row{
         display:flex;
         align-items:center;
-        gap:12px;
+        gap:10px;
         flex-wrap:wrap;
-        margin-top:16px;
+        margin-top:13px;
     }
 
     .button-link{
         display:inline-flex;
         align-items:center;
         justify-content:center;
-        min-height:44px;
-        padding:0 20px;
-        border-radius:999px;
+        min-height:39px;
+        padding:0 15px;
+        border-radius:9px;
         text-decoration:none;
-        font-size:1rem;
+        font-size:.8rem;
         font-weight:800;
-        transition:all .2s ease;
-        box-shadow:0 10px 24px rgba(15,23,42,.10);
+        transition:transform .18s ease,background .18s ease,box-shadow .18s ease;
+        box-shadow:0 6px 16px rgba(26,72,43,.08);
     }
 
     .access-card.rejected .button-link{
-        background:#B91C1C;
+        background:#b42318;
         color:#fff;
     }
 
     .access-card.rejected .button-link:hover{
-        background:#991B1B;
+        background:#941c13;
         color:#fff;
         transform:translateY(-1px);
     }
 
     .access-card.pending-profile .button-link{
-        background:#D97706;
+        background:#2b7346;
         color:#fff;
     }
 
     .access-card.pending-profile .button-link:hover{
-        background:#B45309;
+        background:#1f5f39;
         color:#fff;
         transform:translateY(-1px);
     }
 
     .info-note{
-        margin-top:10px;
-        color:#64748B;
-        font-size:.96rem;
-        font-weight:700;
+        margin-top:3px !important;
+        color:#748279 !important;
+        font-size:.79rem !important;
     }
 
     .text-danger{
-        color:#B91C1C;
-        font-weight:800;
-        margin-top:8px !important;
-        padding:12px 14px;
-        border:1px solid #FECACA;
-        border-radius:16px;
-        background:#FEE2E2;
+        color:#b42318 !important;
+        font-weight:700 !important;
+        margin-top:10px !important;
+        padding:9px 11px;
+        border:1px solid #efc7c2;
+        border-radius:9px;
+        background:#fff3f1;
+        font-size:.78rem !important;
     }
 
-    @media(max-width:860px){
+    @media(max-width:760px){
         .pending-access-wrap{
-            padding:22px;
-            border-radius:22px;
+            padding:17px;
+            border-radius:15px;
         }
 
-        .pending-head{
-            margin-bottom:18px;
+        .status-overview{
+            padding:11px 12px;
         }
 
-        .pending-head h2{
-            font-size:clamp(1.25rem, 5vw, 1.7rem);
+        .access-card{
+            padding:15px;
+        }
+    }
+
+    @media(max-width:480px){
+        .pending-access-wrap{
+            padding:14px;
+            border-radius:13px;
         }
 
-        .pending-subtitle{
-            font-size:.95rem;
-        }
+        .pending-head h2{font-size:1.18rem;}
+
+        .pending-subtitle,
+        .access-card p{font-size:.8rem;}
 
         .status-overview{
             align-items:flex-start;
             flex-direction:column;
-            padding:16px;
-            border-radius:20px;
         }
 
-        .access-card{
-            padding:20px;
-            border-radius:20px;
-        }
-
-        .button-link{
-            min-height:44px;
-        }
+        .button-link{width:100%;}
     }
 
-    @media(max-width:460px){
-        .pending-access-wrap{
-            padding:16px;
-            border-radius:18px;
-        }
-
-        .page-kicker{
-            font-size:.72rem;
-            padding:5px 11px;
-        }
-
-        .pending-head h2{
-            font-size:1.22rem;
-            line-height:1.25;
-        }
-
-        .pending-subtitle,
-        .access-card p{
-            font-size:.9rem;
-        }
-
-        .status-overview{
-            padding:14px;
-            border-radius:18px;
-        }
-
-        .status-badge{
-            width:100%;
-            min-height:36px;
-        }
-
-        .access-card{
-            padding:16px;
-            border-radius:18px;
-        }
-
-        .button-link{
-            width:100%;
-        }
+    @media(prefers-reduced-motion:reduce){
+        .access-card,.button-link{transition:none;}
+        .access-card:hover,.button-link:hover{transform:none;}
     }
 </style>
 
 <div class="pending-access-wrap">
     <div class="pending-head">
         <div class="pending-title-wrap">
-            <span class="page-kicker">Account Access</span>
+            <span class="page-kicker">Account Status</span>
             <h2>Access Restricted</h2>
-            <p class="pending-subtitle">Your account access depends on profile completion and AVPL validation status.</p>
+            <p class="pending-subtitle">Complete the required step below to continue.</p>
         </div>
     </div>
 
@@ -332,52 +285,38 @@
 
     {% if session.get('approval_status') == 'rejected' %}
         <div class="access-card rejected">
-            <h3>Application Rejected</h3>
+            <h3>Correction Required</h3>
 
-            <p>Your application has been rejected by AVPL Admin.</p>
-
-            <p>
-                <strong>Reason / Rectification Required:</strong>
-                {{ rejection_reason or session.get('rejection_reason') or 'Please check remarks and resubmit your application.' }}
-            </p>
+            <p><strong>Reason:</strong> {{ rejection_reason or session.get('rejection_reason') or 'Please check the remarks and resubmit.' }}</p>
 
             {% if correction_url %}
                 <div class="action-row">
-                    <a class="button-link" href="{{ correction_url }}">
-                        Continue
-                    </a>
+                    <a class="button-link" href="{{ correction_url }}">Fix & Resubmit</a>
                 </div>
             {% else %}
-                <p class="text-danger">
-                    Correction form link is missing. Please contact Super Admin.
-                </p>
+                <p class="text-danger">Correction link unavailable. Please contact Super Admin.</p>
             {% endif %}
         </div>
 
     {% elif session.get('approval_status') == 'pending_profile' %}
         <div class="access-card pending-profile">
-            <h3>Profile Completion Required</h3>
-
-            <p>You must complete your profile before validation can be done.</p>
+            <h3>Complete Your Profile</h3>
+            <p>Finish your Centre profile before validation.</p>
 
             {% if correction_url %}
                 <div class="action-row">
-                    <a class="button-link" href="{{ correction_url }}">
-                        Complete Registration
-                    </a>
+                    <a class="button-link" href="{{ correction_url }}">Complete Profile</a>
                 </div>
             {% else %}
-                <p class="text-danger">
-                    Registration form link is missing. Please contact Super Admin.
-                </p>
+                <p class="text-danger">Profile link unavailable. Please contact Super Admin.</p>
             {% endif %}
         </div>
 
     {% else %}
         <div class="access-card pending">
             <h3>Approval Pending</h3>
-            <p>Your account is submitted and waiting for approval.</p>
-            <p class="info-note">Please wait while AVPL Admin reviews your profile and validation details.</p>
+            <p>Your profile has been submitted.</p>
+            <p class="info-note">AVPL Admin will review it shortly.</p>
         </div>
     {% endif %}
 </div>

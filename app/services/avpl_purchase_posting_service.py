@@ -66,7 +66,7 @@ PAYMENT_STATUS_PARTIALLY_PAID = "partially_paid"
 PAYMENT_STATUS_PAID = "paid"
 
 ALLOWED_ROLES = {"accounts", "avpl_admin", "super_admin"}
-PREPARER_ROLES = {"accounts", "super_admin"}
+PREPARER_ROLES = {"accounts", "avpl_admin", "super_admin"}
 POSTER_ROLES = {"avpl_admin", "super_admin"}
 
 MONEY_QUANTUM = Decimal("0.01")
@@ -420,6 +420,11 @@ def prepare_supplier_invoice_posting(
         else PREPARER_ROLES
     )
     actor = _get_actor(actor_user_id, preparer_roles)
+    # AVPL Admin may complete a matched supplier purchase without having to
+    # enter the general Accounting voucher workspace.  The exception is scoped
+    # to this purchase service; ordinary voucher creation/editing permissions
+    # remain unchanged everywhere else.
+    purchase_permission = "" if actor.get("resolved_role") == "avpl_admin" else None
     invoice = _get_invoice(invoice_id)
     _assert_invoice_match_ready(invoice)
     ensure_purchase_posting_indexes()
@@ -485,6 +490,8 @@ def prepare_supplier_invoice_posting(
             "voucher_role": "purchase_primary",
             "idempotency_key": f"avpl-purchase-voucher:{event_id}",
         },
+        allowed_roles=preparer_roles,
+        required_permission=purchase_permission,
     )
     voucher = voucher_result["voucher"]
 
@@ -495,6 +502,8 @@ def prepare_supplier_invoice_posting(
                 actor["_id"],
                 line,
                 voucher["version"],
+                allowed_roles=preparer_roles,
+                required_permission=purchase_permission,
             )
             voucher = add_result["voucher"]
     else:
@@ -513,6 +522,8 @@ def prepare_supplier_invoice_posting(
         voucher["id"],
         actor["_id"],
         voucher["version"],
+        allowed_roles=preparer_roles,
+        required_permission=purchase_permission,
     )
     voucher = validation_result["voucher"]
     validation = validation_result.get("validation") or {}
@@ -586,7 +597,7 @@ def prepare_supplier_invoice_posting(
     )
     return {
         "invoice": serialize_supplier_invoice(updated),
-        "message": "Purchase posting prepared successfully. AVPL Admin can now post the official Purchase Invoice and supplier payable.",
+        "message": "Purchase is ready for finalization.",
     }
 
 
@@ -637,17 +648,22 @@ def post_supplier_invoice_purchase(
     )
     actor = _get_actor(actor_user_id, poster_roles)
     streamlined = workflow_is_streamlined("avpl.supplier_invoice_posting")
-    posting_permission = (
-        "accounting.voucher.validate"
-        if streamlined and actor.get("resolved_role") == "accounts"
-        else POST_PERMISSION
-    )
+    single_step_finalizer = actor.get("resolved_role") in {"avpl_admin", "super_admin"}
+    if actor.get("resolved_role") == "avpl_admin":
+        # This narrow purchase-finalization path still checks AVPL entity access,
+        # three-way match, open FY, idempotency, posting locks and validation.
+        # It does not grant AVPL Admin general voucher-post permission.
+        posting_permission = ""
+    elif streamlined and actor.get("resolved_role") == "accounts":
+        posting_permission = "accounting.voucher.validate"
+    else:
+        posting_permission = POST_PERMISSION
     invoice = _get_invoice(invoice_id)
     _assert_invoice_match_ready(invoice)
     ensure_purchase_posting_indexes()
 
     if (
-        streamlined
+        (streamlined or single_step_finalizer)
         and invoice.get("posting_status") in {None, "", POSTING_STATUS_NOT_POSTED}
     ):
         prepared = prepare_supplier_invoice_posting(
@@ -673,13 +689,13 @@ def post_supplier_invoice_purchase(
         POSTING_STATUS_RECOVERY_REQUIRED,
     }:
         raise ValueError(
-            "Accounts must prepare and validate the purchase posting before AVPL Admin can post it."
+            "Prepare the matched purchase before finalizing it."
         )
     if not invoice.get("accounting_voucher_id"):
         raise ValueError("The prepared Accounting voucher link is unavailable.")
     if (
         str(invoice.get("posting_prepared_by") or "") == str(actor["_id"])
-        and not workflow_is_streamlined("avpl.supplier_invoice_posting")
+        and not (streamlined or single_step_finalizer)
     ):
         raise PermissionError(
             "Maker-checker control: the user who prepared the posting cannot perform the final posting."
@@ -762,7 +778,7 @@ def post_supplier_invoice_purchase(
             voucher["_id"],
             actor["_id"],
             voucher.get("version"),
-            allow_creator_post=streamlined,
+            allow_creator_post=(streamlined or single_step_finalizer),
             allowed_roles=poster_roles,
             required_permission=posting_permission,
         )

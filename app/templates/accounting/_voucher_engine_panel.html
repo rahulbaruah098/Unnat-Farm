@@ -274,10 +274,10 @@
 <section class="accounting-voucher-card" id="voucher-engine">
     <div class="accounting-section-heading">
         <div>
-            <p class="accounting-eyebrow">Stage 5 · Batch 4</p>
-            <h2>Core voucher engine — cancellation and reversal</h2>
+            <p class="accounting-eyebrow">Vouchers</p>
+            <h2>Vouchers</h2>
             <p class="accounting-section-description">
-                Cancels unposted drafts safely and reverses posted vouchers through a new opposite, officially numbered voucher without editing financial history.
+                Create, validate, post and reverse vouchers.
             </p>
         </div>
         {% if voucher_overview.prerequisites.is_ready_for_line_entry %}
@@ -302,9 +302,7 @@
         </div>
 
         <div class="accounting-notice info compact">
-            <strong>Stage 5 final rule:</strong> only a currently validated and balanced draft can post.
-            The maker cannot post the same voucher. Official numbers and <code>voucher_lines</code> are idempotent, linked business events cannot post twice, and interrupted postings can be resumed safely by Super Admin.
-
+            Validate and balance the voucher before posting.
         </div>
 
         {% if not voucher_overview.index_health.is_complete %}
@@ -334,7 +332,7 @@
                 <form method="post"
                       action="{{ url_for('accounting.voucher_recover', voucher_id=recovery_voucher.id) }}"
                       class="accounting-voucher-form"
-                      onsubmit="return confirm('Resume this interrupted posting? The same number and official lines will be reused safely.');">
+                      data-confirm-title="Resume posting?" data-confirm-message="Continue this interrupted voucher posting?" data-confirm-action="Resume posting">
                     <div class="accounting-voucher-card-head">
                         <div>
                             <strong>{{ recovery_voucher.voucher_id }}</strong>
@@ -344,7 +342,7 @@
                                 {{ recovery_voucher.official_line_count_live }} official line(s) currently stored
                             </small>
                         </div>
-                        <button type="submit" class="btn btn-warning">Resume posting safely</button>
+                        <button type="submit" class="btn btn-warning">Resume posting</button>
                     </div>
                     {% if recovery_voucher.posting_error %}
                         <p class="accounting-muted">Last error: {{ recovery_voucher.posting_error }}</p>
@@ -354,18 +352,18 @@
         {% endif %}
 
         {% if not voucher_overview.prerequisites.has_open_financial_year %}
-            <div class="accounting-notice warning">An approved, open and unlocked Financial Year is required.</div>
+            <div class="accounting-notice warning">Open a Financial Year first.</div>
         {% endif %}
         {% if not voucher_overview.prerequisites.has_active_ledgers %}
-            <div class="accounting-notice warning">Synchronize and activate Accounting ledgers before entering voucher lines.</div>
+            <div class="accounting-notice warning">Activate Accounting ledgers first.</div>
         {% endif %}
 
         {% if voucher_capabilities.can_create and voucher_overview.prerequisites.has_open_financial_year %}
             <form method="post"
                   action="{{ url_for('accounting.voucher_create') }}"
                   class="accounting-voucher-form accounting-voucher-header-form">
-                <h3>Create voucher-header draft</h3>
-                <p>Create the controlled identity first, then add debit and credit lines below.</p>
+                <h3>Create Voucher</h3>
+                <p>Add the header first, then debit and credit lines.</p>
 
                 <div class="accounting-voucher-grid">
                     <label class="span-2">
@@ -408,14 +406,11 @@
                         <span>Voucher narration</span>
                         <textarea name="narration" rows="3" maxlength="2000" required placeholder="Describe the accounting purpose clearly"></textarea>
                     </label>
-                    <label class="full">
-                        <span>Stable idempotency key</span>
-                        <input type="text" name="idempotency_key" value="{{ voucher_overview.form_defaults.idempotency_key }}" minlength="8" maxlength="160" readonly required>
-                    </label>
+                    <input type="hidden" name="idempotency_key" value="{{ voucher_overview.form_defaults.idempotency_key }}">
                 </div>
 
                 <details class="accounting-voucher-event">
-                    <summary>Optional linked business-event details</summary>
+                    <summary>Linked business details (optional)</summary>
                     <div class="accounting-voucher-event-body">
                         <div class="accounting-voucher-grid">
                             <label><span>Business event type</span><input type="text" name="business_event_type" maxlength="80" placeholder="Example: purchase_invoice"></label>
@@ -429,8 +424,11 @@
                 </details>
 
                 <div class="accounting-voucher-footer">
-                    <div class="accounting-voucher-idempotency">The same idempotency key always returns the same draft.</div>
-                    <button type="submit" class="accounting-primary-button">Create draft header</button>
+                    <div></div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button type="button" class="accounting-secondary-button" onclick="this.form.reset()">Cancel</button>
+                        <button type="submit" class="accounting-primary-button">Create Voucher</button>
+                    </div>
                 </div>
             </form>
         {% endif %}
@@ -491,7 +489,7 @@
                         {% if voucher.status == 'draft' and is_voucher_maker and voucher_capabilities.can_edit and voucher_overview.prerequisites.has_open_financial_year %}
                             <form method="post" action="{{ url_for('accounting.voucher_edit', voucher_id=voucher.id) }}" class="accounting-voucher-form accounting-voucher-header-form">
                                 <input type="hidden" name="version" value="{{ voucher.version }}">
-                                <h3>Edit draft header</h3>
+                                <h3>Edit voucher</h3>
                                 <div class="accounting-voucher-grid">
                                     <label class="span-2">
                                         <span>Voucher type</span>
@@ -519,7 +517,7 @@
                                     <label class="full"><span>Voucher narration</span><textarea name="narration" rows="3" maxlength="2000" required>{{ voucher.narration }}</textarea></label>
                                 </div>
                                 <details class="accounting-voucher-event" {% if voucher.has_business_event %}open{% endif %}>
-                                    <summary>Optional linked business-event details</summary>
+                                    <summary>Linked business details (optional)</summary>
                                     <div class="accounting-voucher-event-body">
                                         <div class="accounting-voucher-grid">
                                             <label><span>Business event type</span><input type="text" name="business_event_type" maxlength="80" value="{{ voucher.business_event_type }}"></label>
@@ -532,16 +530,19 @@
                                     </div>
                                 </details>
                                 <div class="accounting-voucher-footer">
-                                    <div class="accounting-voucher-idempotency">Immutable creation key: {{ voucher.idempotency_key }}</div>
-                                    <button type="submit" class="accounting-secondary-button">Save header changes</button>
+                                    <div></div>
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                        <button type="button" class="accounting-secondary-button" onclick="this.form.reset()">Cancel</button>
+                                        <button type="submit" class="accounting-primary-button">Save Changes</button>
+                                    </div>
                                 </div>
                             </form>
                         {% endif %}
 
                         {% if voucher.status == 'draft' %}
                             <section class="accounting-voucher-lines-panel">
-                                <h4>Debit and credit lines</h4>
-                                <p>Every line must use one active entity-owned ledger and exactly one positive debit or credit amount.</p>
+                                <h4>Voucher Lines</h4>
+                                <p>Enter debit or credit for each line.</p>
 
                                 {% if voucher.draft_lines %}
                                     <div class="accounting-voucher-lines-list">
@@ -577,11 +578,14 @@
                                                                 <label class="full"><span>Line narration</span><textarea name="line_narration" rows="2" maxlength="500">{{ line.line_narration }}</textarea></label>
                                                             </div>
                                                             <div class="accounting-voucher-line-actions">
-                                                                <span class="accounting-voucher-idempotency">Saving any line change resets the voucher validation status.</span>
-                                                                <button type="submit" class="accounting-secondary-button">Save line changes</button>
+                                                                <span></span>
+                                                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                                                    <button type="button" class="accounting-secondary-button" onclick="this.form.reset();this.closest('details').removeAttribute('open')">Cancel</button>
+                                                                    <button type="submit" class="accounting-primary-button">Save Line</button>
+                                                                </div>
                                                             </div>
                                                         </form>
-                                                        <form method="post" action="{{ url_for('accounting.voucher_line_remove', voucher_id=voucher.id, line_id=line.line_id) }}" onsubmit="return confirm('Remove this draft voucher line?');">
+                                                        <form method="post" action="{{ url_for('accounting.voucher_line_remove', voucher_id=voucher.id, line_id=line.line_id) }}" data-confirm-title="Remove line?" data-confirm-message="Remove this draft voucher line?" data-confirm-action="Remove line" data-confirm-tone="danger">
                                                             <input type="hidden" name="version" value="{{ voucher.version }}">
                                                             <div class="accounting-voucher-line-actions">
                                                                 <span></span>
@@ -600,7 +604,7 @@
                                 {% if is_voucher_maker and voucher_capabilities.can_edit and voucher_overview.prerequisites.has_active_ledgers %}
                                     <form method="post" action="{{ url_for('accounting.voucher_line_add', voucher_id=voucher.id) }}" class="accounting-voucher-form accounting-voucher-line-form">
                                         <input type="hidden" name="version" value="{{ voucher.version }}">
-                                        <h3>Add voucher line</h3>
+                                        <h3>Add Line</h3>
                                         <div class="accounting-voucher-grid">
                                             <label class="span-2">
                                                 <span>Active ledger</span>
@@ -616,8 +620,11 @@
                                             <label class="full"><span>Line narration (optional)</span><textarea name="line_narration" rows="2" maxlength="500"></textarea></label>
                                         </div>
                                         <div class="accounting-voucher-footer">
-                                            <div class="accounting-voucher-idempotency">Use only one side. A line with both debit and credit, or both zero, is rejected.</div>
-                                            <button type="submit" class="accounting-primary-button">Add voucher line</button>
+                                            <div class="accounting-voucher-idempotency">Debit or Credit, not both.</div>
+                                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                                <button type="button" class="accounting-secondary-button" onclick="this.form.reset()">Cancel</button>
+                                                <button type="submit" class="accounting-primary-button">Add Line</button>
+                                            </div>
                                         </div>
                                     </form>
                                 {% endif %}
@@ -647,7 +654,6 @@
                                         <small>
                                             Checked by {{ voucher.last_validation_result.validated_by_name or voucher.last_validated_by_name or 'Accounting user' }}
                                             {% if voucher.last_validation_result.validated_at %} on {{ voucher.last_validation_result.validated_at|ist_datetime('%d %b %Y, %I:%M %p', '-') }}{% endif %}.
-                                            No official posting was created.
                                         </small>
                                     </div>
                                 {% endif %}
@@ -657,9 +663,9 @@
                                         <input type="hidden" name="version" value="{{ voucher.version }}">
                                         <div class="accounting-voucher-validation-actions">
                                             <div class="accounting-voucher-idempotency">
-                                                Required: at least two valid lines and Total Debit = Total Credit. Validation rechecks the Financial Year and every ledger.
+                                                Debit and Credit totals must match.
                                             </div>
-                                            <button type="submit" class="accounting-primary-button">Validate double entry</button>
+                                            <button type="submit" class="accounting-primary-button">Validate</button>
                                         </div>
                                     </form>
                                 {% endif %}
@@ -667,23 +673,23 @@
                                 {% if voucher_capabilities.can_post %}
                                     {% if is_voucher_maker %}
                                         <div class="accounting-notice warning compact">
-                                            Maker-checker control: the user who created this voucher cannot post it. Log in as another authorized AVPL Admin or Super Admin.
+                                            The voucher maker cannot post it.
                                         </div>
                                     {% elif voucher.validation_status != 'valid' or not voucher.is_validation_current %}
                                         <div class="accounting-notice warning compact">
-                                            Run double-entry validation successfully before posting this voucher.
+                                            Validate the voucher before posting.
                                         </div>
                                     {% else %}
                                         <form method="post"
                                               action="{{ url_for('accounting.voucher_post', voucher_id=voucher.id) }}"
-                                              onsubmit="return confirm('Post this voucher officially? The voucher number and official lines cannot be edited afterward.');">
+                                              data-confirm-title="Post voucher?" data-confirm-message="Post this voucher as an official entry?" data-confirm-action="Post voucher">
                                             <input type="hidden" name="version" value="{{ voucher.version }}">
                                             <div class="accounting-voucher-validation-actions">
                                                 <div class="accounting-voucher-idempotency">
-                                                    Posting will reserve the approved {{ voucher.voucher_type_short_code }} number and create {{ voucher.draft_line_count }} immutable official line(s). Retrying the same voucher is safe.
+                                                    {{ voucher.draft_line_count }} balanced line(s) ready.
                                                 </div>
                                                 <button type="submit" class="accounting-primary-button">
-                                                    {% if voucher.posting_state == 'recovery_required' %}Retry posting safely{% else %}Post official voucher{% endif %}
+                                                    {% if voucher.posting_state == 'recovery_required' %}Retry posting{% else %}Post voucher{% endif %}
                                                 </button>
                                             </div>
                                         </form>
@@ -694,7 +700,7 @@
 
                         {% if voucher.status == 'posted' %}
                             <div class="accounting-notice success compact">
-                                <strong>Official posting completed:</strong> {{ voucher.voucher_number }} ·
+                                <strong>Posted:</strong> {{ voucher.voucher_number }} ·
                                 {{ voucher.posted_line_count }} immutable line(s) ·
                                 Total Debit ₹{{ voucher.draft_debit_total }} = Total Credit ₹{{ voucher.draft_credit_total }}.
                             </div>
@@ -706,11 +712,11 @@
                                 </div>
                             {% elif voucher_capabilities.can_reverse and voucher_overview.open_financial_years %}
                                 <details class="accounting-voucher-event">
-                                    <summary>Reverse this posted voucher</summary>
+                                    <summary>Reverse voucher</summary>
                                     <div class="accounting-voucher-event-body">
                                         <form method="post"
                                               action="{{ url_for('accounting.voucher_reverse', voucher_id=voucher.id) }}"
-                                              onsubmit="return confirm('Create and post an opposite reversal voucher? The original lines will remain immutable.');">
+                                              data-confirm-title="Reverse voucher?" data-confirm-message="Create and post a reversal voucher?" data-confirm-action="Reverse voucher" data-confirm-tone="danger">
                                             <input type="hidden" name="version" value="{{ voucher.version }}">
                                             <div class="accounting-voucher-grid">
                                                 <label class="span-2">
@@ -726,15 +732,16 @@
                                                     <input type="date" name="reversal_date" value="{{ voucher_overview.form_defaults.transaction_date }}" required>
                                                 </label>
                                                 <label class="full">
-                                                    <span>Mandatory reversal reason</span>
-                                                    <textarea name="reason" rows="3" maxlength="1000" required placeholder="Explain why this posted voucher must be reversed"></textarea>
+                                                    <span>Reason</span>
+                                                    <textarea name="reason" rows="3" maxlength="1000" required placeholder="Reason for reversal"></textarea>
                                                 </label>
                                             </div>
                                             <div class="accounting-voucher-validation-actions">
-                                                <div class="accounting-voucher-idempotency">
-                                                    A new {{ voucher.voucher_type_short_code }} number and opposite official lines will be created. The original voucher and original <code>voucher_lines</code> are never edited or deleted.
+                                                <div class="accounting-voucher-idempotency">Original voucher remains in history.</div>
+                                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                                    <button type="button" class="accounting-secondary-button" onclick="this.form.reset();this.closest('details').removeAttribute('open')">Cancel</button>
+                                                    <button type="submit" class="accounting-voucher-danger-button">Reverse Voucher</button>
                                                 </div>
-                                                <button type="submit" class="accounting-voucher-danger-button">Post reversal voucher</button>
                                             </div>
                                         </form>
                                     </div>
@@ -759,23 +766,24 @@
 
                         {% if voucher.status == 'draft' and is_voucher_maker and voucher_capabilities.can_cancel %}
                             <details class="accounting-voucher-event">
-                                <summary>Cancel this unposted draft</summary>
+                                <summary>Cancel draft</summary>
                                 <div class="accounting-voucher-event-body">
                                     <form method="post"
                                           action="{{ url_for('accounting.voucher_cancel', voucher_id=voucher.id) }}"
-                                          onsubmit="return confirm('Cancel this draft permanently? It cannot be edited or posted afterward.');">
+                                          data-confirm-title="Cancel draft?" data-confirm-message="Cancel this unposted voucher draft?" data-confirm-action="Cancel draft" data-confirm-tone="danger">
                                         <input type="hidden" name="version" value="{{ voucher.version }}">
                                         <div class="accounting-voucher-grid">
                                             <label class="full">
-                                                <span>Mandatory cancellation reason</span>
-                                                <textarea name="reason" rows="3" maxlength="1000" required placeholder="Explain why this unposted draft is being cancelled"></textarea>
+                                                <span>Reason</span>
+                                                <textarea name="reason" rows="3" maxlength="1000" required placeholder="Reason for cancellation"></textarea>
                                             </label>
                                         </div>
                                         <div class="accounting-voucher-validation-actions">
-                                            <div class="accounting-voucher-idempotency">
-                                                Cancellation creates no official number and no financial entry. The draft and its audit history remain preserved.
+                                            <div class="accounting-voucher-idempotency">Draft history is retained.</div>
+                                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                                <button type="button" class="accounting-secondary-button" onclick="this.closest('details').removeAttribute('open')">Go Back</button>
+                                                <button type="submit" class="accounting-voucher-danger-button">Cancel Draft</button>
                                             </div>
-                                            <button type="submit" class="accounting-voucher-danger-button">Cancel draft</button>
                                         </div>
                                     </form>
                                 </div>
@@ -784,7 +792,7 @@
 
                         {% if voucher_capabilities.can_audit_view %}
                             <details class="accounting-voucher-history">
-                                <summary>Voucher audit history ({{ voucher.change_history|length }})</summary>
+                                <summary>Voucher history ({{ voucher.change_history|length }})</summary>
                                 <div class="accounting-voucher-history-list">
                                     {% for event in voucher.change_history|reverse %}
                                         <div>
@@ -804,7 +812,7 @@
         {% else %}
             <div class="accounting-voucher-empty">
                 <strong>No voucher draft exists.</strong>
-                <p>Create a header, add debit and credit lines, then run Batch 2 validation.</p>
+                <p>Create a voucher and add balanced lines.</p>
             </div>
         {% endif %}
     {% endif %}

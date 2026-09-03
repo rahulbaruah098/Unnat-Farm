@@ -2181,7 +2181,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
         <div class="sidebar-section">
 
             <div class="sidebar-section-title">
-                General
+                Main
             </div>
 
             <a
@@ -2252,7 +2252,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
         <div class="sidebar-section">
 
             <div class="sidebar-section-title">
-                AVPL Operations
+                AVPL
             </div>
 
 
@@ -2285,17 +2285,27 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                 </span>
 
                 <span class="nav-label">
-                    Accounting
+                    Accounts
                 </span>
 
             </a>
 
             <a
                 href="{{ url_for('reports.overview') }}"
-                class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"
+                class="sidebar-link {% if request.endpoint in ['reports.overview','reports.management','reports.management_export'] %}active{% endif %}"
             >
                 <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
-                <span class="nav-label">Reports & System Health</span>
+                <span class="nav-label">Reports</span>
+            </a>
+
+            <a href="{{ url_for('reports.reconciliation') }}" class="sidebar-link {% if request.endpoint == 'reports.reconciliation' %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h11M5 12h8M5 17h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m15 15 2 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="nav-label">Reconciliation</span>
+            </a>
+
+            <a href="{{ url_for('reports.system_health') }}" class="sidebar-link {% if request.endpoint == 'reports.system_health' %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12h4l2-5 4 10 2-5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" stroke="currentColor" stroke-width="1.5"/></svg></span>
+                <span class="nav-label">System Health</span>
             </a>
 
             <a
@@ -2305,7 +2315,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16v10H4V7Z" stroke="currentColor" stroke-width="1.8"/><path d="M7 12h4M16 10.5v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
                 </span>
-                <span class="nav-label">Payments & Settlement</span>
+                <span class="nav-label">Payments</span>
             </a>
 
 
@@ -2344,7 +2354,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Procurement
+                        Purchases
                     </span>
 
                     <span class="nav-chevron">
@@ -2371,7 +2381,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.procurement_home') }}"
                             class="nav-sub-link {% if request.endpoint == 'admin.procurement_home' %}active{% endif %}"
                         >
-                            Purchase Overview
+                            Purchase Summary
                         </a>
 
                         <a
@@ -2392,14 +2402,14 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.goods_receipts') }}"
                             class="nav-sub-link {% if request.endpoint and (request.endpoint.startswith('admin.goods_receipt') or request.endpoint in ['admin.create_goods_receipt_view','admin.edit_goods_receipt_view']) %}active{% endif %}"
                         >
-                            Receive Goods
+                            Receive Stock
                         </a>
 
                         <a
                             href="{{ url_for('admin.supplier_invoices') }}"
                             class="nav-sub-link {% if request.endpoint and (request.endpoint.startswith('admin.supplier_invoice') or request.endpoint in ['admin.create_supplier_invoice_view','admin.edit_supplier_invoice_view']) %}active{% endif %}"
                         >
-                            Purchase Invoices
+                            Supplier Invoices
                         </a>
 
                     </div>
@@ -2446,7 +2456,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Inventory
+                        Stock
                     </span>
 
                     <span class="nav-chevron">
@@ -2473,28 +2483,28 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.current_stock') }}"
                             class="nav-sub-link {% if request.endpoint == 'admin.current_stock' %}active{% endif %}"
                         >
-                            Current Stock
+                            Stock
                         </a>
 
                         <a
                             href="{{ url_for('admin.batch_expiry') }}"
                             class="nav-sub-link {% if request.endpoint == 'admin.batch_expiry' %}active{% endif %}"
                         >
-                            Batch & Expiry
+                            Batches & Expiry
                         </a>
 
                         <a
                             href="{{ url_for('admin.stock_movements') }}"
                             class="nav-sub-link {% if request.endpoint == 'admin.stock_movements' %}active{% endif %}"
                         >
-                            Stock Movements
+                            Stock History
                         </a>
 
                         <a
                             href="{{ url_for('admin.stock_adjustments') }}"
                             class="nav-sub-link {% if (request.endpoint and request.endpoint.startswith('admin.stock_adjustment')) or request.endpoint in ['admin.approve_stock_adjustment_view','admin.reject_stock_adjustment_view'] %}active{% endif %}"
                         >
-                            Stock Adjustments
+                            Adjust Stock
                         </a>
 
                     </div>
@@ -2517,7 +2527,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
         <div class="sidebar-section">
 
             <div class="sidebar-section-title">
-                Marketplace & Management
+                AVPL Operations
             </div>
 
 
@@ -2556,7 +2566,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Products & Marketplace
+                        Products
                     </span>
 
                     <span class="nav-chevron">
@@ -2583,14 +2593,14 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.product_list') }}"
                             class="nav-sub-link {% if request.endpoint in ['admin.product_list','admin.add_product','admin.edit_product','admin.update_ufc_marketplace_publication'] %}active{% endif %}"
                         >
-                            All Products
+                            Products
                         </a>
 
                         <a
                             href="{{ url_for('admin.product_categories') }}"
                             class="nav-sub-link {% if request.endpoint == 'admin.product_categories' %}active{% endif %}"
                         >
-                            Product Categories
+                            Categories
                         </a>
 
                     </div>
@@ -2620,7 +2630,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        UFC Sales & Distribution
+                        UFC Sales
                     </span>
 
                     <span class="nav-chevron">
@@ -2641,14 +2651,14 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.ufc_order_requests') }}"
                             class="nav-sub-link {% if request.endpoint in ['admin.ufc_order_requests','admin.ufc_order_request_detail'] %}active{% endif %}"
                         >
-                            UFC Order Requests
+                            UFC Orders
                         </a>
 
                         <a
                             href="{{ url_for('admin.ufc_sales') }}"
                             class="nav-sub-link {% if request.endpoint in ['admin.ufc_sales','admin.ufc_sale_detail','admin.ufc_sales_invoice_print'] %}active{% endif %}"
                         >
-                            Sales to UFC
+                            UFC Sales
                         </a>
 
                     </div>
@@ -2662,12 +2672,12 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
             <div class="nav-group" data-group="avpl_farmer_procurement">
                 <button type="button" class="nav-group-toggle" onclick="toggleNavGroup(this)">
                     <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 18c4-8 8-10 16-12-1 8-4 12-11 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 20c3-5 6-8 11-11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
-                    <span class="nav-group-title">Farmer Procurement</span>
+                    <span class="nav-group-title">Buy from Farmers</span>
                     <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2"/></svg></span>
                 </button>
                 <div class="nav-group-content"><div class="nav-group-inner">
-                    <a href="{{ url_for('modules.farmer_produce_market') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market' %}active{% endif %}">Farmer Produce Market</a>
-                    <a href="{{ url_for('modules.farmer_produce_market_my_orders') }}" class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_market_my_orders','modules.farmer_produce_market_order_detail'] %}active{% endif %}">My Produce Orders</a>
+                    <a href="{{ url_for('modules.farmer_produce_market') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market' %}active{% endif %}">Farmer Produce</a>
+                    <a href="{{ url_for('modules.farmer_produce_market_my_orders') }}" class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_market_my_orders','modules.farmer_produce_market_order_detail'] %}active{% endif %}">Produce Orders</a>
                     <a href="{{ url_for('modules.farmer_produce_market_purchases') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market_purchases' %}active{% endif %}">Produce Purchases</a>
                 </div></div>
             </div>
@@ -2717,7 +2727,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        People & Validation
+                        Users & Approvals
                     </span>
 
                     <span class="nav-chevron">
@@ -2744,21 +2754,21 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.users') }}"
                             class="nav-sub-link {% if request.endpoint == 'admin.users' %}active{% endif %}"
                         >
-                            Users / IDs
+                            Users
                         </a>
 
                         <a
                             href="{{ url_for('validation.queue') }}"
                             class="nav-sub-link {% if request.blueprint == 'validation' %}active{% endif %}"
                         >
-                            Validations
+                            Approvals
                         </a>
 
                         <a
                             href="{{ url_for('master.farmers') }}"
                             class="nav-sub-link {% if request.endpoint == 'master.farmers' %}active{% endif %}"
                         >
-                            Farmer Master
+                            Farmers
                         </a>
 
                     </div>
@@ -2800,7 +2810,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Other Operations
+                        More
                     </span>
 
                     <span class="nav-chevron">
@@ -2827,49 +2837,49 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.lms_upload') }}"
                             class="nav-sub-link {% if request.endpoint and request.endpoint.startswith('admin.lms_') %}active{% endif %}"
                         >
-                            LMS Management
+                            Training
                         </a>
 
                         <a
                             href="{{ url_for('admin.mitra_bonus_settings') }}"
                             class="nav-sub-link"
                         >
-                            Mitra Bonus Settings
+                            Mitra Bonus
                         </a>
 
                         <a
                             href="{{ url_for('admin.ufc_mitra_earnings') }}"
                             class="nav-sub-link"
                         >
-                            UFC Mitra Earnings
+                            Mitra Earnings
                         </a>
 
                         <a
                             href="{{ url_for('modules.finance_leads') }}"
                             class="nav-sub-link"
                         >
-                            Finance Leads
+                            Finance Requests
                         </a>
 
                         <a
                             href="{{ url_for('modules.all_orders') }}"
                             class="nav-sub-link"
                         >
-                            All Orders
+                            Orders
                         </a>
 
                         <a
                             href="{{ url_for('modules.sales_details') }}"
                             class="nav-sub-link"
                         >
-                            Sales Details
+                            Sales
                         </a>
 
                         <a
                             href="{{ url_for('modules.support') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
-                            Support
+                            Help & Support
                         </a>
 
                     </div>
@@ -2892,7 +2902,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
         <div class="sidebar-section">
 
             <div class="sidebar-section-title">
-                Administration
+                Admin
             </div>
 
             <div
@@ -2927,7 +2937,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        User Management
+                        Users
                     </span>
 
                     <span class="nav-chevron">
@@ -2952,42 +2962,42 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.users') }}"
                             class="nav-sub-link"
                         >
-                            Users / IDs
+                            Users
                         </a>
 
                         <a
                             href="{{ url_for('validation.queue') }}"
                             class="nav-sub-link"
                         >
-                            Validations
+                            Approvals
                         </a>
 
                         <a
                             href="{{ url_for('master.farmers') }}"
                             class="nav-sub-link"
                         >
-                            Farmer Master
+                            Farmers
                         </a>
 
                         <a
                             href="{{ url_for('master.ufc_admins') }}"
                             class="nav-sub-link"
                         >
-                            UFC Admin Master
+                            UFC Admins
                         </a>
 
                         <a
                             href="{{ url_for('master.ufc_mitras') }}"
                             class="nav-sub-link"
                         >
-                            UFC Mitra Master
+                            UFC Mitras
                         </a>
 
                         <a
                             href="{{ url_for('modules.support') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
-                            Support Desk
+                            Support Tickets
                         </a>
 
                     </div>
@@ -3010,7 +3020,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
         <div class="sidebar-section">
 
             <div class="sidebar-section-title">
-                Accounts Operations
+                Finance Operations
             </div>
 
             <div
@@ -3040,7 +3050,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Transactions & Sales
+                        Payments & Sales
                     </span>
 
                     <span class="nav-chevron">
@@ -3079,42 +3089,42 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.orders') }}"
                             class="nav-sub-link"
                         >
-                            Procurements / Orders
+                            Purchases & Orders
                         </a>
 
                         <a
                             href="{{ url_for('modules.sales_details') }}"
                             class="nav-sub-link"
                         >
-                            Purchase &amp; Sales Summary
+                            Purchase &amp; Sales
                         </a>
 
                         <a
                             href="{{ url_for('modules.finance_leads') }}"
                             class="nav-sub-link"
                         >
-                            Finance Leads
+                            Finance Requests
                         </a>
 
                         <a
                             href="{{ url_for('admin.mitra_bonus_settings') }}"
                             class="nav-sub-link"
                         >
-                            Mitra Bonus Settings
+                            Mitra Bonus
                         </a>
 
                         <a
                             href="{{ url_for('admin.ufc_mitra_earnings') }}"
                             class="nav-sub-link"
                         >
-                            UFC Mitra Earnings
+                            Mitra Earnings
                         </a>
 
                         <a
                             href="{{ url_for('modules.support') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
-                            Support
+                            Help & Support
                         </a>
 
                     </div>
@@ -3182,7 +3192,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                 </span>
 
                 <span class="nav-label">
-                    Finance Leads
+                    Finance Requests
                 </span>
 
             </a>
@@ -3196,7 +3206,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                         <path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/>
                     </svg>
                 </span>
-                <span class="nav-label">Support</span>
+                <span class="nav-label">Help & Support</span>
             </a>
 
         </div>
@@ -3256,7 +3266,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                 </span>
 
                 <span class="nav-label">
-                    Products Table
+                    Products
                 </span>
 
             </a>
@@ -3289,7 +3299,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                 </span>
 
                 <span class="nav-label">
-                    Onboard B2B Traders
+                    Add B2B Trader
                 </span>
 
             </a>
@@ -3323,7 +3333,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                 </span>
 
                 <span class="nav-label">
-                    Sales Details
+                    Sales
                 </span>
 
             </a>
@@ -3341,7 +3351,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
 
         <div class="sidebar-section">
             <div class="sidebar-section-title">Reports</div>
-            <a href="{{ url_for('reports.overview') }}" class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="nav-label">My Centre Reports</span></a>
+            <a href="{{ url_for('reports.overview') }}" class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="nav-label">Reports</span></a>
         </div>
 
         <div class="sidebar-section">
@@ -3386,7 +3396,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        AVPL Procurement
+                        Buy from AVPL
                     </span>
 
                     <span class="nav-chevron">
@@ -3411,35 +3421,28 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.buy') }}"
                             class="nav-sub-link {% if request.endpoint == 'modules.buy' %}active{% endif %}"
                         >
-                            AVPL Marketplace
+                            AVPL Products
                         </a>
 
                         <a
                             href="{{ url_for('modules.ufc_avpl_orders') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.ufc_avpl_orders','modules.ufc_avpl_order_detail'] %}active{% endif %}"
                         >
-                            My AVPL Orders
+                            My Orders
                         </a>
 
                         <a
                             href="{{ url_for('modules.ufc_purchases') }}"
                             class="nav-sub-link {% if request.endpoint == 'modules.ufc_purchases' %}active{% endif %}"
                         >
-                            Purchase Entries
+                            Purchases
                         </a>
 
                         <a
                             href="{{ url_for('modules.ufc_stock') }}"
                             class="nav-sub-link {% if request.endpoint == 'modules.ufc_stock' %}active{% endif %}"
                         >
-                            My UFC Stock
-                        </a>
-
-                        <a
-                            href="{{ url_for('modules.ufc_payments') }}"
-                            class="nav-sub-link {% if request.endpoint in ['modules.ufc_payments','modules.record_ufc_payment','modules.reverse_ufc_payment','modules.payment_receipt_print'] %}active{% endif %}"
-                        >
-                            Payments & Settlement
+                            Stock
                         </a>
 
                     </div>
@@ -3454,15 +3457,28 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
             <div class="nav-group" data-group="ufc_farmer_procurement">
                 <button type="button" class="nav-group-toggle" onclick="toggleNavGroup(this)">
                     <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 18c4-8 8-10 16-12-1 8-4 12-11 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 20c3-5 6-8 11-11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
-                    <span class="nav-group-title">Farmer Procurement</span>
+                    <span class="nav-group-title">Buy from Farmers</span>
                     <span class="nav-chevron"><svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2"/></svg></span>
                 </button>
                 <div class="nav-group-content"><div class="nav-group-inner">
-                    <a href="{{ url_for('modules.farmer_produce_market') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market' %}active{% endif %}">Farmer Produce Market</a>
-                    <a href="{{ url_for('modules.farmer_produce_market_my_orders') }}" class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_market_my_orders','modules.farmer_produce_market_order_detail'] %}active{% endif %}">My Produce Orders</a>
+                    <a href="{{ url_for('modules.farmer_produce_market') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market' %}active{% endif %}">Farmer Produce</a>
+                    <a href="{{ url_for('modules.farmer_produce_market_my_orders') }}" class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_market_my_orders','modules.farmer_produce_market_order_detail'] %}active{% endif %}">Produce Orders</a>
                     <a href="{{ url_for('modules.farmer_produce_market_purchases') }}" class="nav-sub-link {% if request.endpoint == 'modules.farmer_produce_market_purchases' %}active{% endif %}">Produce Purchases</a>
                 </div></div>
             </div>
+
+            <a
+                href="{{ url_for('modules.ufc_payments') }}"
+                class="sidebar-link {% if request.endpoint in ['modules.ufc_payments','modules.refresh_ufc_tax_documents','modules.record_ufc_payment','modules.reverse_ufc_payment','modules.confirm_farmer_reported_payment','modules.return_farmer_reported_payment','modules.payment_receipt_print'] %}active{% endif %}"
+            >
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="3.5" y="6" width="17" height="12" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M7 10h5M7 14h3M16.5 12h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <span class="nav-label">Payments & Settlement</span>
+            </a>
 
 
             <!-- FARMER OPERATIONS -->
@@ -3501,7 +3517,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Farmer Sales
+                        Sell to Farmers
                     </span>
 
                     <span class="nav-chevron">
@@ -3526,7 +3542,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.ufc_farmer_marketplace') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.ufc_farmer_marketplace','modules.save_ufc_farmer_marketplace_setup','modules.update_ufc_farmer_marketplace_publication'] %}active{% endif %}"
                         >
-                            Farmer Marketplace Setup
+                            Products for Farmers
                         </a>
 
                         <a
@@ -3540,7 +3556,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.ufc_farmer_sales') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.ufc_farmer_sales','modules.farmer_sales_invoice_print'] %}active{% endif %}"
                         >
-                            Sales to Farmers
+                            Farmer Sales
                         </a>
 
 
@@ -3562,7 +3578,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                         <path d="M7 9h10M8 13h3M14 13h2M8 16h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
                 </span>
-                <span class="nav-label">POS / Direct Sales</span>
+                <span class="nav-label">POS Sale</span>
             </a>
 
             <!-- CENTRE MANAGEMENT -->
@@ -3601,7 +3617,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Centre Management
+                        Centre Setup
                     </span>
 
                     <span class="nav-chevron">
@@ -3626,21 +3642,21 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.users') }}"
                             class="nav-sub-link"
                         >
-                            Create UFC Mitra
+                            Add Mitra
                         </a>
 
                         <a
                             href="{{ url_for('modules.lms') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.lms','modules.lms_course_view','modules.lms_resource_open','modules.lms_lesson_complete'] %}active{% endif %}"
                         >
-                            Learning Centre
+                            Training
                         </a>
 
                         <a
                             href="{{ url_for('modules.support') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
-                            Support
+                            Help & Support
                         </a>
 
                     </div>
@@ -3659,6 +3675,11 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
         =================================================== -->
 
         {% if session.get('role') == 'ufc_mitra' %}
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Reports</div>
+            <a href="{{ url_for('reports.overview') }}" class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="nav-label">Reports</span></a>
+        </div>
 
         <div class="sidebar-section">
 
@@ -3692,7 +3713,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Operations
+                        My Work
                     </span>
 
                     <span class="nav-chevron">
@@ -3717,14 +3738,14 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('validation.queue') }}"
                             class="nav-sub-link"
                         >
-                            Validations
+                            Approvals
                         </a>
 
                         <a
                             href="{{ url_for('modules.buy', view='all') }}"
                             class="nav-sub-link"
                         >
-                            AVPL Marketplace
+                            AVPL Products
                         </a>
 
                         <a
@@ -3779,7 +3800,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Learning & Support
+                        Help & Training
                     </span>
 
                     <span class="nav-chevron">
@@ -3804,21 +3825,21 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.insurance_leads') }}"
                             class="nav-sub-link"
                         >
-                            Insurance Support
+                            Insurance Help
                         </a>
 
                         <a
                             href="{{ url_for('modules.lms') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.lms','modules.lms_course_view','modules.lms_resource_open','modules.lms_lesson_complete'] %}active{% endif %}"
                         >
-                            Learning Centre
+                            Training
                         </a>
 
                         <a
                             href="{{ url_for('modules.support') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
-                            Support
+                            Help & Support
                         </a>
 
                     </div>
@@ -3840,7 +3861,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
 
         <div class="sidebar-section">
             <div class="sidebar-section-title">Reports</div>
-            <a href="{{ url_for('reports.overview') }}" class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="nav-label">My Reports</span></a>
+            <a href="{{ url_for('reports.overview') }}" class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="nav-label">Reports</span></a>
         </div>
 
         <div class="sidebar-section">
@@ -3885,7 +3906,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Marketplace
+                        Buy Products
                     </span>
 
                     <span class="nav-chevron">
@@ -3910,12 +3931,12 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.farmer_marketplace') }}"
                             class="nav-sub-link {% if request.endpoint == 'modules.farmer_marketplace' %}active{% endif %}"
                         >
-                            Buy Inputs
+                            Buy Products
                         </a>
 
                         <a
                             href="{{ url_for('modules.farmer_my_orders') }}"
-                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_my_orders','modules.farmer_cancel_order'] %}active{% endif %}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_my_orders','modules.farmer_order_detail','modules.farmer_cancel_order'] %}active{% endif %}"
                         >
                             My Orders
                         </a>
@@ -3928,16 +3949,10 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                         </a>
 
                         <a
-                            href="{{ url_for('modules.farmer_payments') }}"
-                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_payments','modules.payment_receipt_print'] %}active{% endif %}"
-                        >
-                            My Payments
-                        </a>
-                        <a
                             href="{{ url_for('modules.farmer_produce_market') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_market','modules.farmer_produce_market_order_detail','modules.farmer_produce_market_my_orders','modules.farmer_produce_market_purchases'] %}active{% endif %}"
                         >
-                            Farmer Produce Market
+                            Farmer Produce
                         </a>
 
 
@@ -3946,6 +3961,19 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                 </div>
 
             </div>
+
+            <a
+                href="{{ url_for('modules.farmer_payments') }}"
+                class="sidebar-link {% if request.endpoint in ['modules.farmer_payments','modules.report_farmer_ufc_payment','modules.record_farmer_outside_purchase_payment','modules.record_farmer_buyer_payment','modules.reverse_farmer_buyer_payment','modules.farmer_marketplace_record_payment','modules.farmer_marketplace_confirm_payment','modules.farmer_marketplace_return_payment','modules.payment_receipt_print'] %}active{% endif %}"
+            >
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="3.5" y="6" width="17" height="12" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M7 10h5M7 14h3M16.5 12h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <span class="nav-label">My Payments</span>
+            </a>
 
 
             <!-- OUTPUT -->
@@ -3982,7 +4010,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                     </span>
 
                     <span class="nav-group-title">
-                        Produce & Sell
+                        Sell Produce
                     </span>
 
                     <span class="nav-chevron">
@@ -4007,21 +4035,21 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.farmer_production') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.farmer_production','modules.farmer_production_expense'] %}active{% endif %}"
                         >
-                            Production / Harvest
+                            Add Production
                         </a>
 
                         <a
                             href="{{ url_for('modules.farmer_produce_stock') }}"
-                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_stock','modules.farmer_produce_stock_loss'] %}active{% endif %}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.farmer_produce_stock','modules.farmer_produce_stock_adjust','modules.farmer_produce_stock_loss'] %}active{% endif %}"
                         >
-                            My Produce Stock
+                            My Stock
                         </a>
 
                         <a
                             href="{{ url_for('modules.farmer_marketplace_listing_new') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.farmer_marketplace_listing_new','modules.farmer_marketplace_listing_edit'] %}active{% endif %}"
                         >
-                            Sell on Marketplace
+                            Sell on Market
                         </a>
 
                         <a
@@ -4035,14 +4063,14 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.farmer_marketplace_orders_received') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.farmer_marketplace_orders_received','modules.farmer_marketplace_order_approve','modules.farmer_marketplace_order_reject','modules.farmer_marketplace_order_dispatch','modules.farmer_marketplace_order_repair'] %}active{% endif %}"
                         >
-                            Orders Received
+                            Orders
                         </a>
 
                         <a
                             href="{{ url_for('modules.farmer_marketplace_sales') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.farmer_marketplace_sales','modules.farmer_marketplace_invoice_print'] %}active{% endif %}"
                         >
-                            Marketplace Sales
+                            Sales
                         </a>
 
 
@@ -4064,7 +4092,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                         <path d="M7 9h10M8 13h3M14 13h2M8 16h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
                 </span>
-                <span class="nav-label">POS / Direct Sale</span>
+                <span class="nav-label">POS Sale</span>
             </a>
 
             <!-- SERVICES -->
@@ -4132,7 +4160,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.lms') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.lms','modules.lms_course_view','modules.lms_resource_open','modules.lms_lesson_complete'] %}active{% endif %}"
                         >
-                            Learning Centre
+                            Training
                         </a>
 
                         <a
@@ -4146,7 +4174,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.support') }}"
                             class="nav-sub-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
                         >
-                            Support
+                            Help & Support
                         </a>
 
                     </div>

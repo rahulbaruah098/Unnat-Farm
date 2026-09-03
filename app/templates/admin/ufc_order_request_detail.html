@@ -190,6 +190,45 @@
     line-height:1.4;
 }
 
+.cost-reference{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-bottom:10px;
+}
+
+.cost-box{
+    padding:10px 11px;
+    border:1px solid #d8e6dc;
+    border-radius:9px;
+    background:#f8fbf9;
+}
+
+.cost-box small{
+    display:block;
+    color:#748279;
+    font-size:.63rem;
+    font-weight:750;
+}
+
+.cost-box strong{
+    display:block;
+    margin-top:4px;
+    color:#294535;
+    font-size:.78rem;
+    font-weight:850;
+}
+
+.cost-note{
+    margin:-2px 0 10px;
+    color:#748279;
+    font-size:.63rem;
+    line-height:1.45;
+}
+
+.payment-summary{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.payment-pill{display:inline-flex;padding:6px 9px;border-radius:7px;background:#f4f8f5;border:1px solid rgba(47,122,76,.11);color:#31543c;font-size:.67rem;font-weight:800}.payment-pill.paid{background:#ecfdf3;border-color:#b7e4c7;color:#237a43}.payment-pill.partial,.payment-pill.unpaid{background:#fff7e6;border-color:#f4d38a;color:#8a5b00}.payment-pill.pending{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+.payment-reports{display:grid;gap:9px;margin-top:12px}.payment-report{padding:11px;border:1px solid #bfdbfe;border-radius:9px;background:#f8fbff}.payment-report-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;color:#40566e;font-size:.69rem;line-height:1.45}.payment-report-head strong{color:#1d4ed8}.payment-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.return-payment{display:flex;gap:6px;flex-wrap:wrap}.return-payment input{min-width:220px;height:38px;border:1px solid #d8e1da;border-radius:9px;padding:0 10px;background:#fff;color:#34483b;font:inherit;font-size:.68rem}.payment-empty{margin-top:10px;padding:10px 12px;border-radius:9px;background:#f4f8f5;color:#526158;font-size:.69rem;line-height:1.45}
+
 .btn{
     display:inline-flex;
     align-items:center;
@@ -300,6 +339,10 @@
     .action-grid{
         grid-template-columns:1fr;
     }
+
+    .cost-reference{
+        grid-template-columns:1fr;
+    }
 }
 
 @media(max-width:560px){
@@ -320,6 +363,8 @@
         width:100%;
     }
 }
+
+.items-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.74rem}.items-table th,.items-table td{padding:10px;border-bottom:1px solid #e5eee8;text-align:left;vertical-align:middle}.items-table th{font-size:.64rem;text-transform:uppercase;letter-spacing:.04em;color:#718077;background:#f7fbf8}.items-table input{width:100%;min-width:90px;height:38px;border:1px solid #d5e3da;border-radius:8px;padding:0 9px}.line-cost{font-size:.68rem;color:#64748b}.table-wrap{overflow-x:auto;border:1px solid #e0ebe4;border-radius:11px}.items-table tr:last-child td{border-bottom:0}
 </style>
 <div class="od-page">
   <div class="od-head">
@@ -328,16 +373,20 @@
   </div>
 
   <div class="grid">
-    <div class="info"><small>Product</small><strong>{{ order.product_name }}</strong><small>{{ order.product_code or '-' }}</small></div>
-    <div class="info"><small>Requested</small><strong>{{ order.requested_quantity_display }} {{ order.unit_code }}</strong></div>
-    <div class="info"><small>Approved</small><strong>{{ order.approved_quantity_display if order.approved_quantity else '-' }}</strong></div>
-    <div class="info"><small>Dispatched</small><strong>{{ order.dispatched_quantity_display if order.dispatched_quantity else '-' }}</strong></div>
-    <div class="info"><small>Sale Price / Unit</small><strong>{% if order.status != 'requested' and order.status != 'rejected' %}₹{{ order.unit_price_display }}{% else %}-{% endif %}</strong></div>
+    <div class="info"><small>Products</small><strong>{{ order.product_summary or order.product_name }}</strong><small>{% if order.is_multi_item_order %}{{ order.item_count }} product lines{% else %}{{ order.product_code or '-' }}{% endif %}</small></div>
+    <div class="info"><small>Requested</small><strong>{% if order.is_multi_item_order %}Line-wise quantities{% else %}{{ order.requested_quantity_display }} {{ order.unit_code }}{% endif %}</strong></div>
+    <div class="info"><small>Approved</small><strong>{% if order.is_multi_item_order %}{% if order.status == 'requested' %}-{% else %}{{ order.approved_item_count }} / {{ order.item_count }} lines{% endif %}{% else %}{{ order.approved_quantity_display if order.approved_quantity else '-' }}{% endif %}</strong></div>
+    <div class="info"><small>Dispatched</small><strong>{% if order.is_multi_item_order %}{% if order.status in ['dispatched','received'] %}{{ order.dispatched_item_count }} / {{ order.item_count }} lines{% else %}-{% endif %}{% else %}{{ order.dispatched_quantity_display if order.dispatched_quantity else '-' }}{% endif %}</strong></div>
+    <div class="info"><small>Sale Price</small><strong>{% if order.status != 'requested' and order.status != 'rejected' %}{% if order.is_multi_item_order %}Line-wise pricing{% else %}₹{{ order.unit_price_display }} / {{ order.unit_code }}{% endif %}{% else %}-{% endif %}</strong></div>
     <div class="info"><small>Order Total</small><strong>{% if order.status != 'requested' and order.status != 'rejected' %}₹{{ order.total_amount_display }}{% else %}-{% endif %}</strong></div>
     <div class="info"><small>Payment Term</small><strong>{{ order.payment_term_label or 'Credit / Pay Later' }}</strong></div>
     <div class="info"><small>Requested By</small><strong>{{ order.requested_by_name or order.centre_name }}</strong></div>
     <div class="info"><small>Requested On</small><strong>{{ order.created_at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</strong></div>
   </div>
+
+  {% if order.is_multi_item_order %}
+  <div class="section"><h3>Order Items</h3><div class="table-wrap"><table class="items-table"><thead><tr><th>Product</th><th>Requested</th><th>Approved</th><th>Price / Unit</th><th>Line Value</th><th>Status</th></tr></thead><tbody>{% for line in order.get('items',[]) %}<tr><td><strong>{{ line.product_name }}</strong><div class="line-cost">{{ line.product_code or '-' }}</div></td><td>{{ line.requested_quantity_display }} {{ line.unit_code }}</td><td>{% if line.approved_quantity %}{{ line.approved_quantity_display }} {{ line.unit_code }}{% else %}-{% endif %}</td><td>{% if line.unit_price %}₹{{ line.unit_price_display }} / {{ line.unit_code }}{% else %}-{% endif %}</td><td>{% if line.approved_quantity and line.unit_price %}<strong>₹{{ line.line_total_display }}</strong>{% else %}-{% endif %}</td><td>{{ line.status_label }}</td></tr>{% endfor %}</tbody></table></div></div>
+  {% endif %}
 
   {% if order.request_note %}<div class="section"><h3>UFC Request Note</h3><div>{{ order.request_note }}</div></div>{% endif %}
 
@@ -347,8 +396,16 @@
     <div class="action-grid">
       <form class="form-card" method="post" action="{{ url_for('admin.approve_ufc_order_view', order_id=order.id) }}">
         <h4>Approve & Reserve Stock</h4>
+        {% if order.is_multi_item_order %}
+        <div class="table-wrap"><table class="items-table"><thead><tr><th>Product</th><th>Requested</th><th>AVPL Cost</th><th>Approve Qty</th><th>UFC Price / Unit</th></tr></thead><tbody>
+        {% for line in order.get('items',[]) %}{% set cost = purchase_costs.get(line.line_id, {}) %}<tr><td><strong>{{ line.product_name }}</strong><div class="line-cost">{{ line.unit_code }}</div></td><td>{{ line.requested_quantity_display }} {{ line.unit_code }}</td><td>{% if cost.get('available') %}₹{{ cost.get('unit_cost_display') }}{% else %}<span class="line-cost">Not available</span>{% endif %}</td><td><input type="number" step="0.0001" min="0" max="{{ line.requested_quantity }}" name="approved_quantity_{{ line.line_id }}" value="{{ line.requested_quantity_display }}" required></td><td><input type="number" step="0.01" min="0.01" name="unit_price_{{ line.line_id }}" placeholder="Selling price" required></td></tr>{% endfor %}
+        </tbody></table></div><div class="cost-note">Approve each product separately. Enter 0 quantity for a line you cannot supply. Stock is reserved line by line.</div>
+        {% else %}
         <div class="field"><label>Approved Quantity</label><input type="number" step="0.0001" min="0.0001" max="{{ order.requested_quantity }}" name="approved_quantity" value="{{ order.requested_quantity_display }}" required></div>
-        <div class="field"><label>AVPL Sale Price / Unit (₹, before GST)</label><input type="number" step="0.01" min="0.01" name="unit_price" placeholder="Enter sale price" required></div>
+        <div class="cost-reference"><div class="cost-box"><small>AVPL Purchase Cost / Unit (Avg.)</small><strong>{% if purchase_cost and purchase_cost.available %}₹{{ purchase_cost.unit_cost_display }}{% else %}Not available{% endif %}</strong></div><div class="cost-box"><small>Selling Price Difference / Unit</small><strong id="ufcPriceDifference">Enter selling price</strong></div></div>
+        <div class="cost-note">{% if purchase_cost and purchase_cost.available %}Reference from posted supplier receipts and approved PO net rates, before GST.{% else %}Supplier purchase cost is not available from posted receipts yet. You can still set the UFC selling price.{% endif %}</div>
+        <div class="field"><label>AVPL Sale Price / Unit (₹, before GST)</label><input id="ufcSalePriceInput" data-purchase-cost="{{ purchase_cost.unit_cost if purchase_cost and purchase_cost.available else 0 }}" type="number" step="0.01" min="0.01" name="unit_price" placeholder="Enter sale price" required></div>
+        {% endif %}
         {% if order.payment_term == 'credit' %}<div class="field"><label>Credit Days</label><input type="number" step="1" min="0" max="365" name="credit_period_days" value="0"><small style="display:block;margin-top:4px;color:#64748b">Set the agreed payment period. The invoice becomes due after these days.</small></div>{% else %}<input type="hidden" name="credit_period_days" value="0"><div class="field"><label>Payment</label><div style="padding:10px 12px;border:1px solid #d6e5da;border-radius:12px;background:#f7fcf8;color:#3e6850"><strong>Pay on Delivery</strong><br><small>UFC can record full or partial payment when it confirms receipt.</small></div></div>{% endif %}
         <div class="field"><label>Approval Note (optional)</label><textarea name="approval_note" placeholder="Any delivery or commercial note"></textarea></div>
         <button class="btn green" type="submit">Approve & Reserve</button>
@@ -387,11 +444,64 @@
   {% endif %}
 
   {% if order.status in ['dispatched','received'] %}
-  <div class="section"><h3>Dispatch Details</h3><div class="grid" style="margin:0"><div class="info"><small>Quantity</small><strong>{{ order.dispatched_quantity_display }} {{ order.unit_code }}</strong></div><div class="info"><small>Transporter</small><strong>{{ order.transporter_name or '-' }}</strong></div><div class="info"><small>Vehicle</small><strong>{{ order.vehicle_number or '-' }}</strong></div><div class="info"><small>Dispatched On</small><strong>{{ order.dispatched_at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</strong></div></div></div>
+  <div class="section"><h3>Dispatch Details</h3><div class="grid" style="margin:0"><div class="info"><small>Products Dispatched</small><strong>{% if order.is_multi_item_order %}{{ order.dispatched_item_count }} / {{ order.item_count }} lines{% else %}{{ order.dispatched_quantity_display }} {{ order.unit_code }}{% endif %}</strong></div><div class="info"><small>Transporter</small><strong>{{ order.transporter_name or '-' }}</strong></div><div class="info"><small>Vehicle</small><strong>{{ order.vehicle_number or '-' }}</strong></div><div class="info"><small>Dispatched On</small><strong>{{ order.dispatched_at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</strong></div></div></div>
   {% endif %}
 
+  {% if order.status == 'received' %}<div class="section"><h3>Buyer Receipt</h3><div class="grid" style="margin:0"><div class="info"><small>Status</small><strong>{{ order.receipt_status_label }}</strong></div><div class="info"><small>Accepted Lines</small><strong>{{ order.accepted_item_count }} / {{ order.dispatched_item_count }}</strong></div><div class="info"><small>Accepted Value</small><strong>₹{{ order.accepted_value_display }}</strong></div><div class="info"><small>Receipt Adjustment</small><strong>₹{{ order.receipt_adjustment_display }}</strong></div></div></div>{% endif %}
   {% if order.status == 'received' %}
-  <div class="section"><h3>UFC Receipt Completed</h3><p style="margin:0;color:#3e6850"><strong>{{ order.centre_name }}</strong> confirmed receipt. UFC Purchase Entry <strong>{{ order.ufc_purchase_number or '-' }}</strong> was created and UFC stock increased by {{ order.received_quantity_display }} {{ order.unit_code }}.</p><p style="margin:8px 0 0;color:#475569">Payment: <strong>{{ order.payment_status_label or 'Unpaid' }}</strong> · Paid ₹{{ order.amount_paid_display or '0.00' }} · Outstanding ₹{{ order.outstanding_amount_display or order.invoice_grand_total_display }}</p><div style="margin-top:10px"><a class="back" href="{{ url_for('admin.payments_dashboard') }}">Payments & Settlement</a></div></div>
+  <div class="section">
+    <h3>UFC Receipt Completed</h3>
+    <p style="margin:0;color:#3e6850"><strong>{{ order.centre_name }}</strong> confirmed receipt. UFC Purchase Entry <strong>{{ order.ufc_purchase_number or '-' }}</strong> was created and UFC stock increased {% if order.is_multi_item_order %}for {{ order.item_count }} product lines{% else %}by {{ order.received_quantity_display }} {{ order.unit_code }}{% endif %}.</p>
+    {% set pay_invoice = payment.get('invoice') if payment else none %}
+    <div class="payment-summary">
+      {% if pay_invoice %}
+        <span class="payment-pill {% if pay_invoice.payment_status == 'paid' %}paid{% elif pay_invoice.payment_status == 'partially_paid' %}partial{% else %}unpaid{% endif %}">{{ pay_invoice.payment_status_label }}</span>
+        <span class="payment-pill">Confirmed Paid ₹{{ pay_invoice.paid_display }}</span>
+        {% if pay_invoice.has_pending_report %}<span class="payment-pill pending">UFC Reported / Waiting ₹{{ pay_invoice.reported_pending_display }}</span>{% endif %}
+        <span class="payment-pill">Outstanding ₹{{ pay_invoice.outstanding_display }}</span>
+      {% else %}
+        <span class="payment-pill {% if order.payment_status == 'paid' %}paid{% elif order.payment_status == 'partially_paid' %}partial{% else %}unpaid{% endif %}">{{ order.payment_status_label or 'Unpaid' }}</span>
+        <span class="payment-pill">Confirmed Paid ₹{{ order.amount_paid_display or '0.00' }}</span>
+        <span class="payment-pill">Outstanding ₹{{ order.outstanding_amount_display or order.invoice_grand_total_display }}</span>
+      {% endif %}
+    </div>
+    <div style="margin-top:10px"><a class="back" href="{{ url_for('admin.payments_dashboard') }}">Payments & Settlement</a></div>
+  </div>
+
+  {% if payment and payment.get('invoice') %}
+  <div class="section">
+    <h3>UFC Payment Confirmation</h3>
+{% if payment.get('pending_payments') %}
+    <div class="payment-reports">
+      {% for p in payment.get('pending_payments',[]) %}
+      <div class="payment-report">
+        <div class="payment-report-head">
+          <div><strong>₹{{ p.amount_display }} reported by {{ p.payer_name }}</strong><br>{{ p.payment_mode_label }}{% if p.reference %} · Ref {{ p.reference }}{% endif %}</div>
+          <div>{{ p.reported_at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</div>
+        </div>
+        <div class="payment-actions">
+          <form method="post" action="{{ url_for('admin.confirm_ufc_payment_report', payment_id=p.id) }}" onsubmit="return confirm('Confirm that AVPL actually received ₹{{ p.amount_display }} for {{ p.invoice_number }}?');">
+            <input type="hidden" name="return_order_id" value="{{ order.id }}">
+            <button class="btn green" type="submit">Confirm Payment Received</button>
+          </form>
+          <form class="return-payment" method="post" action="{{ url_for('admin.reject_ufc_payment_report', payment_id=p.id) }}" onsubmit="return confirm('Return this payment report to the UFC without changing the invoice?');">
+            <input type="hidden" name="return_order_id" value="{{ order.id }}">
+            <input name="reason" minlength="4" required placeholder="Reason for return">
+            <button class="btn orange" type="submit">Return Report</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% elif payment.get('invoice').payment_status == 'paid' %}
+      <div class="payment-empty"><strong>Payment complete.</strong> The full invoice amount has been confirmed received by AVPL.</div>
+    {% else %}
+      <div class="payment-empty">No UFC payment is currently waiting for confirmation on this order.</div>
+    {% endif %}
+  </div>
+  {% elif payment and payment.get('error') %}
+  <div class="section"><h3>UFC Payment Confirmation</h3><div class="payment-empty">Payment details could not be loaded here: {{ payment.get('error') }} Use Payments & Settlement if needed.</div></div>
+  {% endif %}
   {% endif %}
 
   {% if order.status in ['dispatched','received'] %}
@@ -417,4 +527,30 @@
 
   <div class="section"><h3>Audit Timeline</h3><div class="timeline">{% for e in (order.history or [])|reverse %}<div class="event"><strong>{{ (e.action or 'Update')|replace('_',' ')|title }}</strong>{% if e.note %} — {{ e.note }}{% endif %}<small>{{ e.actor_name or 'System' }} · {{ e.at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</small></div>{% else %}<div class="event">No history recorded.</div>{% endfor %}</div></div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const salePriceInput = document.getElementById('ufcSalePriceInput');
+    const differenceOutput = document.getElementById('ufcPriceDifference');
+    if (!salePriceInput || !differenceOutput) return;
+
+    const purchaseCost = Number.parseFloat(salePriceInput.dataset.purchaseCost || '0');
+    function updatePriceDifference(){
+        const salePrice = Number.parseFloat(salePriceInput.value || '');
+        if (!Number.isFinite(purchaseCost) || purchaseCost <= 0) {
+            differenceOutput.textContent = 'Cost unavailable';
+            return;
+        }
+        if (!Number.isFinite(salePrice) || salePrice <= 0) {
+            differenceOutput.textContent = 'Enter selling price';
+            return;
+        }
+        const difference = salePrice - purchaseCost;
+        const markup = (difference / purchaseCost) * 100;
+        const sign = difference > 0 ? '+' : '';
+        differenceOutput.textContent = sign + '₹' + difference.toFixed(2) + ' (' + sign + markup.toFixed(1) + '% on cost)';
+    }
+    salePriceInput.addEventListener('input', updatePriceDifference);
+    updatePriceDifference();
+});
+</script>
 {% endblock %}

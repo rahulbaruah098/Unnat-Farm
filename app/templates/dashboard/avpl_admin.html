@@ -1,284 +1,34 @@
 {% extends 'base.html' %}
-
+{% block title %}AVPL Operations | UnnatFarm MIS{% endblock %}
 {% block content %}
-
 <style>
-.avpl-dashboard {
-    width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 28px;
-    border: 1px solid rgba(47, 122, 76, 0.11);
-    border-radius: 22px;
-    background: #ffffff;
-    box-shadow: 0 16px 40px rgba(28, 72, 43, 0.07);
-    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #435349;
-}
-
-.dashboard-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
-    margin-bottom: 22px;
-    flex-wrap: wrap;
-}
-
-.dashboard-title {
-    min-width: 0;
-}
-
-.dashboard-title h2 {
-    margin: 0;
-    color: #17251d;
-    font-size: clamp(1.55rem, 2vw, 2rem);
-    font-weight: 800;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-}
-
-.dashboard-title p {
-    max-width: 760px;
-    margin: 7px 0 0;
-    color: #748279;
-    font-size: 0.86rem;
-    font-weight: 500;
-    line-height: 1.5;
-}
-
-.dashboard-section {
-    margin-top: 4px;
-}
-
-.section-heading {
-    margin: 0 0 12px;
-    color: #58695f;
-    font-size: 0.74rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
-.stat-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.stat-card {
-    min-height: 108px;
-    padding: 16px;
-    border: 1px solid rgba(47, 122, 76, 0.10);
-    border-radius: 14px;
-    background: #fbfdfb;
-    transition:
-        transform 0.18s ease,
-        border-color 0.18s ease,
-        box-shadow 0.18s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-1px);
-    border-color: rgba(47, 122, 76, 0.20);
-    box-shadow: 0 9px 22px rgba(28, 72, 43, 0.055);
-}
-
-.stat-label {
-    display: block;
-    margin-bottom: 12px;
-    color: #7b8a80;
-    font-size: 0.71rem;
-    font-weight: 750;
-    line-height: 1.4;
-}
-
-.stat-value {
-    display: block;
-    color: #22372a;
-    font-size: clamp(1.28rem, 1.8vw, 1.7rem);
-    font-weight: 850;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    overflow-wrap: anywhere;
-}
-
-.stat-card.priority {
-    background: #f7fbf8;
-    border-color: rgba(47, 122, 76, 0.14);
-}
-
-.stat-card.financial .stat-value {
-    color: #2b6f47;
-}
-
-@media (max-width: 1180px) {
-    .stat-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 860px) {
-    .avpl-dashboard {
-        padding: 20px;
-        border-radius: 18px;
-    }
-
-    .stat-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 560px) {
-    .stat-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .stat-card {
-        min-height: auto;
-    }
-}
-
-@media (max-width: 420px) {
-    .avpl-dashboard {
-        padding: 15px;
-        border-radius: 16px;
-    }
-
-    .dashboard-title h2 {
-        font-size: 1.3rem;
-    }
-
-    .dashboard-title p {
-        font-size: 0.80rem;
-    }
-
-    .stat-card {
-        padding: 14px;
-    }
-
-    .stat-value {
-        font-size: 1.45rem;
-    }
-}
+.mgd{max-width:1500px;margin:0 auto;display:grid;gap:16px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f3127}.mgd-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px;background:#fff;border:1px solid #dbe9df;border-radius:20px;box-shadow:0 10px 28px rgba(26,72,43,.05)}.mgd-head h1{margin:0;color:#1f3127;font-size:clamp(1.45rem,2vw,2rem);font-weight:850;letter-spacing:-.025em}.mgd-head p{margin:6px 0 0;color:#718078;font-size:.85rem;line-height:1.45}.mgd-head-actions{display:flex;gap:8px;flex-wrap:wrap}.mgd-btn{display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:9px 13px;border-radius:9px;text-decoration:none;font-size:.78rem;font-weight:800;border:1px solid #d5e6da;background:#fff;color:#2f6e46}.mgd-btn.primary{background:#397e51;border-color:#397e51;color:#fff}.mgd-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:11px}.mgd-kpi{display:block;min-width:0;padding:16px;background:#fff;border:1px solid #dbe9df;border-radius:16px;text-decoration:none;box-shadow:0 8px 22px rgba(26,72,43,.035);transition:.18s ease}.mgd-kpi:hover{transform:translateY(-2px);border-color:#b9d5c1;box-shadow:0 12px 26px rgba(26,72,43,.07)}.mgd-kpi small{display:block;color:#718078;font-size:.7rem;font-weight:800;line-height:1.35;min-height:28px}.mgd-kpi strong{display:block;margin-top:8px;color:#1f5f39;font-size:clamp(1.25rem,1.8vw,1.75rem);font-weight:900;letter-spacing:-.02em;overflow-wrap:anywhere}.mgd-kpi span{display:block;margin-top:5px;color:#8a968f;font-size:.68rem;line-height:1.35}.mgd-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.8fr);gap:14px}.mgd-card{background:#fff;border:1px solid #dbe9df;border-radius:18px;box-shadow:0 8px 24px rgba(26,72,43,.035);overflow:hidden}.mgd-card-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:15px 17px;border-bottom:1px solid #edf3ef}.mgd-card-head h2{margin:0;font-size:.96rem;color:#25392e}.mgd-card-head span{font-size:.7rem;color:#87938c}.mgd-attn{display:grid}.mgd-attn-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid #edf3ef}.mgd-attn-row:last-child{border-bottom:0}.mgd-attn-row strong{display:block;font-size:.8rem;color:#30483a}.mgd-attn-row small{display:block;margin-top:3px;color:#839088;font-size:.7rem}.mgd-count{min-width:34px;height:28px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:#fff7e6;color:#8a5b00;font-size:.76rem;font-weight:900}.mgd-attn-row.danger .mgd-count{background:#fff0f0;color:#a83232}.mgd-link{color:#2f7346;text-decoration:none;font-weight:850;font-size:.72rem}.mgd-empty{padding:24px;text-align:center;color:#7d8b83;font-size:.8rem}.mgd-health{padding:17px}.mgd-health-top{display:flex;align-items:center;justify-content:space-between;gap:12px}.mgd-score{font-size:2rem;font-weight:900;color:#2f7346}.mgd-health-label{font-size:.72rem;color:#7b8981}.mgd-progress{height:8px;background:#edf3ef;border-radius:999px;overflow:hidden;margin:12px 0}.mgd-progress span{display:block;height:100%;background:#397e51;border-radius:999px}.mgd-health-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mgd-health-box{padding:10px;border:1px solid #e4eee7;border-radius:11px;background:#fafdfb}.mgd-health-box small{display:block;color:#849088;font-size:.66rem}.mgd-health-box strong{display:block;margin-top:3px;font-size:.95rem;color:#344b3d}.mgd-quick{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}.mgd-quick a{min-height:54px;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;border:1px solid #dbe9df;border-radius:13px;background:#fff;color:#315b42;text-decoration:none;font-size:.73rem;font-weight:850;transition:.18s}.mgd-quick a:hover{background:#eff8f1;border-color:#c5ddcc}.mgd-snapshot{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:#e5eee8}.mgd-snap{padding:14px;background:#fff}.mgd-snap small{display:block;color:#829087;font-size:.67rem;font-weight:750}.mgd-snap strong{display:block;margin-top:6px;color:#2d4838;font-size:1rem;font-weight:900;overflow-wrap:anywhere}.mgd-recent{display:grid}.mgd-recent-row{display:flex;align-items:flex-start;gap:10px;padding:11px 16px;border-bottom:1px solid #edf3ef}.mgd-recent-row:last-child{border-bottom:0}.mgd-dot{width:8px;height:8px;margin-top:5px;border-radius:50%;background:#86a994;flex:0 0 auto}.mgd-dot.good{background:#4f9a6a}.mgd-dot.warning{background:#d79b35}.mgd-recent-row strong{font-size:.76rem;color:#34493c}.mgd-recent-row small{display:block;margin-top:2px;color:#89948e;font-size:.67rem}.mgd-setup{padding:11px 14px;border:1px solid #f1d8a9;background:#fff9ed;border-radius:12px;color:#7a5a1d;font-size:.76rem;font-weight:700}@media(max-width:1250px){.mgd-kpis,.mgd-snapshot{grid-template-columns:repeat(3,1fr)}.mgd-quick{grid-template-columns:repeat(3,1fr)}}@media(max-width:850px){.mgd-grid{grid-template-columns:1fr}.mgd-kpis{grid-template-columns:repeat(2,1fr)}.mgd-head{flex-direction:column}.mgd-snapshot{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.mgd-kpis,.mgd-snapshot,.mgd-quick{grid-template-columns:1fr}.mgd-attn-row{grid-template-columns:1fr auto}.mgd-link{grid-column:1/-1}.mgd-head{padding:18px}.mgd-health-meta{grid-template-columns:1fr 1fr}}
 </style>
-
-<div class="avpl-dashboard">
-
-    <div class="dashboard-header">
-        <div class="dashboard-title">
-            <h2>AVPL Admin Dashboard</h2>
-            <p>
-                Operational overview of centres, users, procurement,
-                stock, orders, receivables and farmer marketplace activity.
-            </p>
-        </div>
-    </div>
-
-    <section class="dashboard-section">
-        <h3 class="section-heading">Network Overview</h3>
-
-        <div class="stat-grid">
-
-            <div class="stat-card priority">
-                <span class="stat-label">Centre-wise UFC Stats</span>
-                <strong class="stat-value">{{ stats.total_ufc_admins }}</strong>
-            </div>
-
-            <div class="stat-card priority">
-                <span class="stat-label">Centre-wise Mitra Stats</span>
-                <strong class="stat-value">{{ stats.total_ufc_mitras }}</strong>
-            </div>
-
-            <div class="stat-card priority">
-                <span class="stat-label">Centre-wise Farmer Stats</span>
-                <strong class="stat-value">{{ stats.total_farmers }}</strong>
-            </div>
-
-            <div class="stat-card priority">
-                <span class="stat-label">Pending Validations</span>
-                <strong class="stat-value">{{ stats.pending_validations }}</strong>
-            </div>
-
-        </div>
-    </section>
-
-    <section class="dashboard-section" style="margin-top: 24px;">
-        <h3 class="section-heading">Orders & Distribution</h3>
-
-        <div class="stat-grid">
-
-            <div class="stat-card">
-                <span class="stat-label">Supplier Purchase Orders</span>
-                <strong class="stat-value">{{ stats.supplier_order_count }}</strong>
-            </div>
-
-            <div class="stat-card">
-                <span class="stat-label">UFC Distribution Orders</span>
-                <strong class="stat-value">{{ stats.avpl_ufc_order_count }}</strong>
-            </div>
-
-            <div class="stat-card">
-                <span class="stat-label">Farmer Input Orders</span>
-                <strong class="stat-value">{{ stats.farmer_input_order_count }}</strong>
-            </div>
-
-            <div class="stat-card">
-                <span class="stat-label">Farmer Produce Orders</span>
-                <strong class="stat-value">{{ stats.produce_order_count }}</strong>
-            </div>
-
-            <div class="stat-card">
-                <span class="stat-label">Pending / In-Progress Orders</span>
-                <strong class="stat-value">{{ stats.pending_orders }}</strong>
-            </div>
-
-        </div>
-    </section>
-
-    <section class="dashboard-section" style="margin-top: 24px;">
-        <h3 class="section-heading">AVPL Stock</h3>
-
-        <div class="stat-grid">
-
-            <div class="stat-card">
-                <span class="stat-label">AVPL Physical Stock</span>
-                <strong class="stat-value">{{ stats.avpl_stock_physical }}</strong>
-            </div>
-
-            <div class="stat-card">
-                <span class="stat-label">AVPL Reserved Stock</span>
-                <strong class="stat-value">{{ stats.avpl_stock_reserved }}</strong>
-            </div>
-
-            <div class="stat-card">
-                <span class="stat-label">AVPL Saleable Stock</span>
-                <strong class="stat-value">{{ stats.avpl_stock_saleable }}</strong>
-            </div>
-
-        </div>
-    </section>
-
-    <section class="dashboard-section" style="margin-top: 24px;">
-        <h3 class="section-heading">Finance & Farmer Marketplace</h3>
-
-        <div class="stat-grid">
-
-            <div class="stat-card financial">
-                <span class="stat-label">UFC Receivable</span>
-                <strong class="stat-value">
-                    ₹{{ "%.2f"|format(stats.ufc_receivable|float) }}
-                </strong>
-            </div>
-
-            <div class="stat-card">
-                <span class="stat-label">Active Farmer Listings</span>
-                <strong class="stat-value">{{ stats.active_farmer_listings }}</strong>
-            </div>
-
-        </div>
-    </section>
-
+{% macro target_url(target) -%}
+{%- if target == 'orders' -%}{{ url_for('admin.ufc_order_requests', status='requested') }}
+{%- elif target == 'receiving' -%}{{ url_for('admin.goods_receipts') }}
+{%- elif target == 'finalize' -%}{{ url_for('admin.supplier_invoices') }}
+{%- elif target == 'payments' -%}{{ url_for('admin.payments_dashboard') }}
+{%- elif target == 'reconciliation' -%}{{ url_for('reports.reconciliation') }}
+{%- elif target == 'health' -%}{{ url_for('reports.system_health') }}
+{%- elif target == 'reports' -%}{{ url_for('reports.overview') }}
+{%- else -%}{{ url_for('dashboard.home') }}{%- endif -%}
+{%- endmacro %}
+<div class="mgd">
+  <section class="mgd-head">
+    <div><h1>{{ data.title }}</h1><p>{{ data.subtitle }}</p></div>
+    <div class="mgd-head-actions"><a class="mgd-btn" href="{{ url_for('reports.reconciliation') }}">Reconciliation</a><a class="mgd-btn" href="{{ url_for('reports.system_health') }}">System Health</a><a class="mgd-btn primary" href="{{ url_for('reports.overview') }}">Reports</a></div>
+  </section>
+  {% if data.setup_required %}<div class="mgd-setup">AVPL accounting setup is incomplete. Operational screens remain visible, but financial totals may stay at zero until the active entity is configured.</div>{% endif %}
+  <section class="mgd-kpis">
+    {% for kpi in data.kpis %}<a class="mgd-kpi" href="{{ target_url(kpi.target) }}"><small>{{ kpi.label }}</small><strong>{% if kpi.kind == 'money' %}₹{{ '{:,.2f}'.format(kpi.value or 0) }}{% else %}{{ kpi.value }}{% endif %}</strong><span>{{ kpi.note }}</span></a>{% endfor %}
+  </section>
+  <section class="mgd-grid">
+    <article class="mgd-card"><header class="mgd-card-head"><h2>Needs Attention</h2><span>Only items that need action</span></header><div class="mgd-attn">{% for item in data.attention %}<div class="mgd-attn-row {{ item.tone }}"><div><strong>{{ item.label }}</strong><small>{{ item.detail }}</small></div><span class="mgd-count">{{ item.value }}</span><a class="mgd-link" href="{{ target_url(item.target) }}">Open →</a></div>{% else %}<div class="mgd-empty">✓ Operations are up to date.</div>{% endfor %}</div></article>
+    <article class="mgd-card"><header class="mgd-card-head"><h2>System Control</h2><span>Live diagnostics</span></header><div class="mgd-health"><div class="mgd-health-top"><div><div class="mgd-score">{{ data.health.score }}%</div><div class="mgd-health-label">Health score</div></div><a class="mgd-btn" href="{{ url_for('reports.system_health') }}">Open Health</a></div><div class="mgd-progress"><span style="width:{{ data.health.score }}%"></span></div><div class="mgd-health-meta"><div class="mgd-health-box"><small>Critical</small><strong>{{ data.health.critical }}</strong></div><div class="mgd-health-box"><small>Reconciliation Issues</small><strong>{{ data.health.reconciliation_issues }}</strong></div></div></div></article>
+  </section>
+  <section class="mgd-card"><header class="mgd-card-head"><h2>Quick Actions</h2><span>Common AVPL work</span></header><div class="mgd-quick" style="padding:12px"><a href="{{ url_for('admin.create_purchase_order_view') }}">Create Purchase Order</a><a href="{{ url_for('admin.goods_receipts') }}">Receive Goods</a><a href="{{ url_for('admin.ufc_order_requests') }}">UFC Orders</a><a href="{{ url_for('modules.farmer_produce_market') }}">Buy Farmer Produce</a><a href="{{ url_for('admin.payments_dashboard') }}">Payments</a><a href="{{ url_for('admin.current_stock') }}">Inventory</a></div></section>
+  <section class="mgd-card"><header class="mgd-card-head"><h2>Business Snapshot</h2><span>Current network</span></header><div class="mgd-snapshot">{% for item in data.snapshot %}<div class="mgd-snap"><small>{{ item.label }}</small><strong>{% if item.kind == 'money' %}₹{{ '{:,.2f}'.format(item.value or 0) }}{% else %}{{ item.value }}{% endif %}</strong></div>{% endfor %}</div></section>
+  <section class="mgd-card"><header class="mgd-card-head"><h2>Recent Activity</h2><span>Latest important events</span></header><div class="mgd-recent">{% for item in data.recent %}<div class="mgd-recent-row"><span class="mgd-dot {{ item.tone }}"></span><div><strong>{{ item.title }}</strong><small>{{ item.detail }}</small></div></div>{% else %}<div class="mgd-empty">No recent activity yet.</div>{% endfor %}</div></section>
 </div>
-
 {% endblock %}

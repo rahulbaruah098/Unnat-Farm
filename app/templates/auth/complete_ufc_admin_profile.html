@@ -2,76 +2,382 @@
 {% block title %}Complete UFC Centre Profile{% endblock %}
 {% block content %}
 <style>
-.onboard{font-family:"Times New Roman",Georgia,serif;color:#17252A}.shell{width:100%;border:1px solid #DCEEE2;border-radius:26px;padding:26px;background:rgba(255,255,255,.95);box-shadow:0 22px 55px rgba(23,37,42,.10)}
-.head{margin-bottom:18px}.head h2{margin:0 0 5px;font-size:clamp(1.5rem,2vw,1.95rem)}.head p{margin:0;color:#64748B;line-height:1.5}.uid{margin-top:12px;display:inline-flex;padding:8px 12px;border-radius:999px;background:#EAF7EE;color:#2F6C47;border:1px solid #CDE8D6;font-weight:700}
-.notice{padding:13px 15px;border-radius:15px;border:1px solid #CDE8D6;background:#F2FAF5;color:#315F42;line-height:1.5;margin-bottom:16px}.notice.danger{border-color:#FECACA;background:#FEF2F2;color:#991B1B}
-fieldset{border:1px solid #DCEEE2;border-radius:20px;padding:18px;margin:0 0 16px;background:#FCFEFD}legend{padding:0 8px;font-size:1.18rem;font-weight:700}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:7px}.field.full{grid-column:1/-1}.field label,.label{font-weight:700}.field input,.field textarea{width:100%;min-height:44px;border:1px solid #D8E9DE;border-radius:13px;padding:10px 12px;background:#fff;color:#334155;font:inherit;outline:none}.field textarea{min-height:86px;resize:vertical}.field input[readonly]{background:#F8FAF9;color:#64748B}.hint{font-size:.86rem;color:#64748B;line-height:1.4}.radio-row{display:flex;gap:10px;flex-wrap:wrap}.radio-option{display:flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid #D8E9DE;border-radius:12px;background:#fff}.radio-option input{width:auto;min-height:auto;margin:0}.doc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.doc{padding:14px;border:1px solid #DCEEE2;border-radius:16px;background:#fff}.doc-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.badge{padding:4px 8px;border-radius:999px;font-size:.8rem;font-weight:700}.good{background:#DCFCE7;color:#166534}.warn{background:#FEF3C7;color:#92400E}.muted{background:#F1F5F9;color:#64748B}.doc a{color:#2F6C47;font-weight:700;text-decoration:none}.submit-row{display:flex;justify-content:flex-end}.submit{min-height:44px;padding:10px 18px;border:0;border-radius:999px;background:#5FA878;color:#fff;font:inherit;font-weight:700;cursor:pointer}.submit:hover{background:#3B7D55}
-@media(max-width:820px){.grid,.doc-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.shell{padding:20px}}@media(max-width:480px){.shell{padding:15px;border-radius:20px}.submit-row,.submit{width:100%}}
+.onboard{
+    max-width:1500px;
+    margin:0 auto;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:#1f3127;
+}
+.onboard *{box-sizing:border-box}
+
+.shell{
+    width:100%;
+    background:#fff;
+    border:1px solid #dbe9df;
+    border-radius:18px;
+    padding:22px;
+    box-shadow:0 12px 32px rgba(26,72,43,.055);
+}
+
+.head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:18px;
+    margin-bottom:16px;
+    padding-bottom:16px;
+    border-bottom:1px solid #e5eee8;
+}
+.head-copy{min-width:0}
+.head h2{
+    margin:0 0 4px;
+    color:#17251d;
+    font-size:clamp(1.28rem,1.7vw,1.55rem);
+    line-height:1.2;
+    font-weight:850;
+    letter-spacing:-.02em;
+}
+.head p{
+    margin:0;
+    color:#6e7f74;
+    font-size:.82rem;
+    line-height:1.45;
+}
+.uid{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    min-height:34px;
+    padding:7px 10px;
+    border:1px solid #c8ddce;
+    border-radius:8px;
+    background:#f6fbf7;
+    color:#2f6e46;
+    font-size:.72rem;
+    font-weight:800;
+    white-space:nowrap;
+}
+
+.notice{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    margin:0 0 14px;
+    padding:10px 12px;
+    border:1px solid #c8ddce;
+    border-radius:10px;
+    background:#f6fbf7;
+    color:#435349;
+    font-size:.76rem;
+    line-height:1.45;
+}
+.notice strong{color:#2f6e46}
+.notice.danger{
+    border-color:#f0c8c3;
+    background:#fff6f5;
+    color:#8f251c;
+}
+.notice.danger strong{color:#b42318}
+
+.profile-section{
+    margin:0 0 14px;
+    padding:16px;
+    border:1px solid #dbe9df;
+    border-radius:14px;
+    background:#fff;
+}
+.section-head{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin-bottom:13px;
+}
+.section-no{
+    display:grid;
+    place-items:center;
+    width:25px;
+    height:25px;
+    border-radius:7px;
+    background:#eff8f1;
+    color:#2b7346;
+    font-size:.68rem;
+    font-weight:900;
+}
+.section-head h3{
+    margin:0;
+    color:#1f3127;
+    font-size:.88rem;
+    font-weight:850;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px 14px;
+}
+.field{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+.field.full{grid-column:1/-1}
+.field label,.label{
+    color:#31463a;
+    font-size:.72rem;
+    font-weight:800;
+}
+.field input,
+.field textarea{
+    width:100%;
+    min-height:40px;
+    border:1px solid #d6e3d9;
+    border-radius:9px;
+    padding:9px 11px;
+    background:#fff;
+    color:#1f3127;
+    font:inherit;
+    font-size:.78rem;
+    outline:none;
+    transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.field textarea{
+    min-height:76px;
+    resize:vertical;
+    line-height:1.45;
+}
+.field input:focus,
+.field textarea:focus{
+    border-color:#8fbd9d;
+    box-shadow:0 0 0 3px rgba(43,115,70,.09);
+}
+.field input[readonly]{
+    background:#f7f9f7;
+    color:#6e7f74;
+}
+.hint{
+    color:#748279;
+    font-size:.66rem;
+    line-height:1.35;
+}
+
+.radio-row{display:flex;gap:8px;flex-wrap:wrap}
+.radio-option{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    min-height:40px;
+    padding:8px 11px;
+    border:1px solid #d6e3d9;
+    border-radius:9px;
+    background:#fff;
+    color:#31463a;
+    font-size:.76rem;
+    font-weight:750;
+    cursor:pointer;
+}
+.radio-option:hover{border-color:#a9cfb5;background:#fbfdfb}
+.radio-option input{
+    width:auto;
+    min-height:auto;
+    margin:0;
+    accent-color:#2b7346;
+}
+
+.doc-note{
+    margin:-2px 0 12px;
+    color:#6e7f74;
+    font-size:.7rem;
+    line-height:1.4;
+}
+.doc-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+}
+.doc{
+    padding:12px;
+    border:1px solid #dbe9df;
+    border-radius:11px;
+    background:#fff;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+.doc:hover{
+    transform:translateY(-2px);
+    border-color:#a9cfb5;
+    box-shadow:0 8px 20px rgba(26,72,43,.05);
+}
+.doc-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:7px;
+}
+.doc-head strong{
+    color:#31463a;
+    font-size:.73rem;
+    font-weight:850;
+}
+.badge{
+    display:inline-flex;
+    align-items:center;
+    padding:4px 7px;
+    border-radius:7px;
+    font-size:.6rem;
+    line-height:1;
+    font-weight:850;
+    white-space:nowrap;
+}
+.good{background:#e8f6ec;color:#25663e}
+.warn{background:#fff5db;color:#8a5b00}
+.muted{background:#f1f4f2;color:#6e7f74}
+.doc .hint{margin-bottom:8px}
+.doc a{color:#2b7346;font-weight:800;text-decoration:none}
+.doc a:hover{text-decoration:underline}
+.doc input[type="file"]{
+    width:100%;
+    color:#435349;
+    font-size:.7rem;
+}
+.doc input[type="file"]::file-selector-button{
+    min-height:34px;
+    margin-right:8px;
+    padding:7px 10px;
+    border:1px solid #c8ddce;
+    border-radius:8px;
+    background:#f6fbf7;
+    color:#2b7346;
+    font:inherit;
+    font-weight:800;
+    cursor:pointer;
+}
+.doc input[type="file"]::file-selector-button:hover{background:#eff8f1}
+
+.submit-row{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    margin-top:2px;
+    padding-top:2px;
+}
+.submit{
+    min-height:40px;
+    padding:9px 15px;
+    border:1px solid #2b7346;
+    border-radius:9px;
+    background:#2b7346;
+    color:#fff;
+    font:inherit;
+    font-size:.75rem;
+    font-weight:850;
+    cursor:pointer;
+    transition:transform .18s ease,background .18s ease,box-shadow .18s ease;
+}
+.submit:hover{
+    transform:translateY(-1px);
+    background:#1f5f39;
+    box-shadow:0 7px 16px rgba(31,95,57,.14);
+}
+.submit:active{transform:translateY(0)}
+
+@media(max-width:820px){
+    .shell{padding:18px}
+    .head{flex-direction:column;gap:10px}
+    .uid{white-space:normal}
+    .grid,.doc-grid{grid-template-columns:1fr}
+    .field.full{grid-column:auto}
+}
+@media(max-width:480px){
+    .shell{padding:13px;border-radius:14px}
+    .profile-section{padding:13px;border-radius:12px}
+    .submit-row,.submit{width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
 </style>
 
-<div class="onboard"><div class="shell">
-    <div class="head">
-        <h2>{% if session.get('approval_status') == 'rejected' %}Correct Centre Profile{% else %}Complete Centre Profile{% endif %}</h2>
-        <p>AVPL created your login with only the minimum account details. Complete the Centre business, tax and compliance profile once, then submit it for validation.</p>
-        <span class="uid">Centre UID: {{ user.centre_uid or master.centre_uid or 'Not Generated' }}</span>
-    </div>
-
-    {% if rejection_reason or session.get('rejection_reason') %}<div class="notice danger"><strong>Correction required:</strong> {{ rejection_reason or session.get('rejection_reason') }}</div>{% endif %}
-    <div class="notice">For GST-registered Centres, select <strong>Yes</strong>, enter the GSTIN and upload the GST registration document. If the Centre is not GST-registered, select <strong>No</strong>. UnnatFarm will not charge GST from an invalid or incomplete Centre tax profile.</div>
-
-    <form method="post" enctype="multipart/form-data" id="centreProfileForm">
-        <fieldset><legend>1. Centre & Owner</legend><div class="grid">
-            <div class="field"><label>Enterprise Name *</label><input name="name_of_enterprise" value="{{ master.name_of_enterprise or user.name_of_enterprise or user.name or '' }}" required></div>
-            <div class="field"><label>Owner Name *</label><input name="name_of_owner" value="{{ master.name_of_owner or user.name_of_owner or '' }}" required></div>
-            <div class="field"><label>Owner Date of Birth *</label><input type="date" name="owner_dob" id="ownerDob" value="{{ master.owner_dob or user.owner_dob or '' }}" required></div>
-            <div class="field"><label>Owner Age</label><input id="ownerAge" value="{{ master.owner_age or user.owner_age or '' }}" readonly></div>
-            <div class="field"><label>State</label><input value="{{ user.state or master.state or '' }}" readonly><input type="hidden" name="state" value="{{ user.state or master.state or '' }}"><span class="hint">State was selected by AVPL when the Centre UID was created.</span></div>
-            <div class="field"><label>Email</label><input type="email" name="email" value="{{ master.email or user.email or '' }}" placeholder="centre@example.com"></div>
-        </div></fieldset>
-
-        <fieldset><legend>2. Centre Address</legend><div class="grid">
-            <div class="field full"><label>Address / Landmark</label><textarea name="address" placeholder="Shop/building, road or landmark">{{ master.address or user.address or '' }}</textarea></div>
-            <div class="field"><label>District *</label><input name="district" value="{{ master.district or user.district or '' }}" required></div>
-            <div class="field"><label>Block *</label><input name="block" value="{{ master.block or user.block or '' }}" required></div>
-            <div class="field"><label>Village / Town *</label><input name="village" value="{{ master.village or user.village or '' }}" required></div>
-            <div class="field"><label>PIN Code</label><input name="postal_code" maxlength="6" inputmode="numeric" value="{{ master.postal_code or user.postal_code or '' }}" placeholder="6-digit PIN"></div>
-        </div></fieldset>
-
-        <fieldset><legend>3. Tax & License Details</legend><div class="grid">
-            <div class="field"><label>PAN *</label><input name="pan_number" id="panNumber" maxlength="10" value="{{ master.pan_number or user.pan_number or '' }}" placeholder="ABCDE1234F" required></div>
-            <div class="field"><span class="label">GST Registered? *</span><div class="radio-row">
-                <label class="radio-option"><input type="radio" name="gst_registered" value="yes" {% if master.gst_registered %}checked{% endif %} required> Yes</label>
-                <label class="radio-option"><input type="radio" name="gst_registered" value="no" {% if not master.gst_registered %}checked{% endif %}> No</label>
-            </div></div>
-            <div class="field full" id="gstinField"><label>GSTIN *</label><input name="gst_number" id="gstNumber" maxlength="15" value="{{ master.gst_number or user.gst_number or '' }}" placeholder="15-character GSTIN"><span class="hint">Format, PAN segment and Centre-state consistency are checked. This does not perform live GST-portal verification.</span></div>
-            <div class="field"><label>Trader License Number</label><input name="trader_license_number" value="{{ master.trader_license_number or user.trader_license_number or '' }}"></div>
-            <div class="field"><label>Other Licenses</label><input name="other_licenses" value="{{ master.other_licenses or user.other_licenses or '' }}"></div>
-        </div></fieldset>
-
-        <fieldset><legend>4. Compliance Documents</legend>
-            <div class="notice" style="margin-top:0">Registration Certificate and PAN document are required. GST document is required only if the Centre is GST-registered. A deleted/missing physical file does not count as an uploaded document.</div>
-            <div class="doc-grid">
-            {% set doc_fields = [
-                ('registration_certificate','Registration Certificate','Required'),
-                ('pan_file','PAN Document','Required'),
-                ('gst_file','GST Registration Document','Required if GST registered'),
-                ('trader_license_file','Trader License','Optional'),
-                ('other_license_file','Other Licenses','Optional')
-            ] %}
-            {% for field,label,requirement in doc_fields %}
-                {% set d = (existing_documents or {}).get(field, {}) %}
-                <div class="doc" id="doc-{{ field }}">
-                    <div class="doc-head"><strong>{{ label }}</strong>{% if d.exists %}<span class="badge good">Available</span>{% elif d.missing_file %}<span class="badge warn">File Missing</span>{% else %}<span class="badge muted">Not Uploaded</span>{% endif %}</div>
-                    <div class="hint" style="margin-bottom:8px">{{ requirement }}{% if d.exists %} · <a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">View current</a>{% endif %}</div>
-                    <input type="file" name="{{ field }}" id="{{ field }}" accept=".pdf,.jpg,.jpeg,.png,.webp" data-existing="{{ '1' if d.exists else '0' }}">
-                </div>
-            {% endfor %}
+<div class="onboard">
+    <div class="shell">
+        <div class="head">
+            <div class="head-copy">
+                <h2>{% if session.get('approval_status') == 'rejected' %}Correct Centre Profile{% else %}Complete Centre Profile{% endif %}</h2>
+                <p>Add the Centre details and required documents.</p>
             </div>
-        </fieldset>
+            <span class="uid">Centre UID: {{ user.centre_uid or master.centre_uid or 'Not Generated' }}</span>
+        </div>
 
-        <div class="submit-row"><button class="submit" type="submit">{% if session.get('approval_status') == 'rejected' %}Resubmit for AVPL Validation{% else %}Submit for AVPL Validation{% endif %}</button></div>
-    </form>
-</div></div>
+        {% if rejection_reason or session.get('rejection_reason') %}
+        <div class="notice danger"><strong>Correction:</strong> {{ rejection_reason or session.get('rejection_reason') }}</div>
+        {% endif %}
+
+        <div class="notice"><strong>GST:</strong> Select Yes only if the Centre is GST-registered. GSTIN and GST document will then be required.</div>
+
+        <form method="post" enctype="multipart/form-data" id="centreProfileForm">
+            <section class="profile-section">
+                <div class="section-head"><span class="section-no">1</span><h3>Centre & Owner</h3></div>
+                <div class="grid">
+                    <div class="field"><label>Enterprise Name *</label><input name="name_of_enterprise" value="{{ master.name_of_enterprise or user.name_of_enterprise or user.name or '' }}" required></div>
+                    <div class="field"><label>Owner Name *</label><input name="name_of_owner" value="{{ master.name_of_owner or user.name_of_owner or '' }}" required></div>
+                    <div class="field"><label>Date of Birth *</label><input type="date" name="owner_dob" id="ownerDob" value="{{ master.owner_dob or user.owner_dob or '' }}" required></div>
+                    <div class="field"><label>Age</label><input id="ownerAge" value="{{ master.owner_age or user.owner_age or '' }}" readonly></div>
+                    <div class="field"><label>State</label><input value="{{ user.state or master.state or '' }}" readonly><input type="hidden" name="state" value="{{ user.state or master.state or '' }}"><span class="hint">Set by AVPL during Centre creation.</span></div>
+                    <div class="field"><label>Email</label><input type="email" name="email" value="{{ master.email or user.email or '' }}" placeholder="centre@example.com"></div>
+                </div>
+            </section>
+
+            <section class="profile-section">
+                <div class="section-head"><span class="section-no">2</span><h3>Centre Address</h3></div>
+                <div class="grid">
+                    <div class="field full"><label>Address / Landmark</label><textarea name="address" placeholder="Shop/building, road or landmark">{{ master.address or user.address or '' }}</textarea></div>
+                    <div class="field"><label>District *</label><input name="district" value="{{ master.district or user.district or '' }}" required></div>
+                    <div class="field"><label>Block *</label><input name="block" value="{{ master.block or user.block or '' }}" required></div>
+                    <div class="field"><label>Village / Town *</label><input name="village" value="{{ master.village or user.village or '' }}" required></div>
+                    <div class="field"><label>PIN Code</label><input name="postal_code" maxlength="6" inputmode="numeric" value="{{ master.postal_code or user.postal_code or '' }}" placeholder="6-digit PIN"></div>
+                </div>
+            </section>
+
+            <section class="profile-section">
+                <div class="section-head"><span class="section-no">3</span><h3>Tax & Licenses</h3></div>
+                <div class="grid">
+                    <div class="field"><label>PAN *</label><input name="pan_number" id="panNumber" maxlength="10" value="{{ master.pan_number or user.pan_number or '' }}" placeholder="ABCDE1234F" required></div>
+                    <div class="field"><span class="label">GST Registered? *</span><div class="radio-row">
+                        <label class="radio-option"><input type="radio" name="gst_registered" value="yes" {% if master.gst_registered %}checked{% endif %} required> Yes</label>
+                        <label class="radio-option"><input type="radio" name="gst_registered" value="no" {% if not master.gst_registered %}checked{% endif %}> No</label>
+                    </div></div>
+                    <div class="field full" id="gstinField"><label>GSTIN *</label><input name="gst_number" id="gstNumber" maxlength="15" value="{{ master.gst_number or user.gst_number or '' }}" placeholder="15-character GSTIN"><span class="hint">Format, PAN and Centre-state consistency are checked.</span></div>
+                    <div class="field"><label>Trader License No.</label><input name="trader_license_number" value="{{ master.trader_license_number or user.trader_license_number or '' }}"></div>
+                    <div class="field"><label>Other Licenses</label><input name="other_licenses" value="{{ master.other_licenses or user.other_licenses or '' }}"></div>
+                </div>
+            </section>
+
+            <section class="profile-section">
+                <div class="section-head"><span class="section-no">4</span><h3>Documents</h3></div>
+                <div class="doc-note">Registration Certificate and PAN are required. GST document is required only for GST-registered Centres.</div>
+                <div class="doc-grid">
+                {% set doc_fields = [
+                    ('registration_certificate','Registration Certificate','Required'),
+                    ('pan_file','PAN Document','Required'),
+                    ('gst_file','GST Registration Document','Required if GST registered'),
+                    ('trader_license_file','Trader License','Optional'),
+                    ('other_license_file','Other Licenses','Optional')
+                ] %}
+                {% for field,label,requirement in doc_fields %}
+                    {% set d = (existing_documents or {}).get(field, {}) %}
+                    <div class="doc" id="doc-{{ field }}">
+                        <div class="doc-head"><strong>{{ label }}</strong>{% if d.exists %}<span class="badge good">Available</span>{% elif d.missing_file %}<span class="badge warn">File Missing</span>{% else %}<span class="badge muted">Not Uploaded</span>{% endif %}</div>
+                        <div class="hint">{{ requirement }}{% if d.exists %} · <a href="{{ url_for('documents.serve', filename=d.filename) }}" target="_blank">View</a>{% endif %}</div>
+                        <input type="file" name="{{ field }}" id="{{ field }}" accept=".pdf,.jpg,.jpeg,.png,.webp" data-existing="{{ '1' if d.exists else '0' }}">
+                    </div>
+                {% endfor %}
+                </div>
+            </section>
+
+            <div class="submit-row"><button class="submit" type="submit">{% if session.get('approval_status') == 'rejected' %}Resubmit Profile{% else %}Submit Profile{% endif %}</button></div>
+        </form>
+    </div>
+</div>
 
 <script>
 (function(){

@@ -180,12 +180,10 @@
 <section class="accounting-gst-det-card" id="gst-determination">
     <div class="accounting-section-heading">
         <div>
-            <p class="accounting-eyebrow">Stage 4 · Batch 4</p>
-            <h2>State and GST determination</h2>
+            <p class="accounting-eyebrow">GST</p>
+            <h2>GST Calculation Preview</h2>
             <p class="accounting-section-description">
-                Resolves seller state, party state and place of supply, then selects
-                CGST + SGST for intra-state supplies or IGST for inter-state supplies.
-                Exempt, Nil Rated and Non-GST products bypass GST component posting.
+                Preview CGST/SGST or IGST based on place of supply.
             </p>
         </div>
         {% if gst_determination_overview.prerequisites.is_ready %}
@@ -220,17 +218,15 @@
         </div>
 
         <div class="accounting-notice info compact">
-            <strong>Posting contract:</strong> this preview does not create an invoice, voucher,
-            stock movement or ledger balance. Future purchase and sales modules will call the same
-            determination service before controlled posting.
+            <strong>Preview only.</strong> No invoice, stock or ledger entry is created.
         </div>
 
         {% if not gst_determination_overview.prerequisites.is_ready %}
             <div class="accounting-notice warning">
                 <strong>Complete the prerequisites first.</strong>
-                {% if not gst_determination_overview.prerequisites.seller_state_ready %}Approve the AVPL entity state. {% endif %}
-                {% if not gst_determination_overview.prerequisites.has_parties %}Approve at least one supplier or customer ledger. {% endif %}
-                {% if not gst_determination_overview.prerequisites.has_product_mappings %}Approve at least one product Accounting mapping.{% endif %}
+                {% if not gst_determination_overview.prerequisites.seller_state_ready %}Set the AVPL entity state. {% endif %}
+                {% if not gst_determination_overview.prerequisites.has_parties %}Set up at least one supplier or customer. {% endif %}
+                {% if not gst_determination_overview.prerequisites.has_product_mappings %}Make at least one product Accounting Ready.{% endif %}
             </div>
         {% endif %}
 
@@ -238,8 +234,8 @@
             <form method="post"
                   action="{{ url_for('accounting.gst_determination_preview_route') }}"
                   class="accounting-gst-det-form">
-                <h3>Run controlled GST preview</h3>
-                <p>Select one real approved party and one Accounting-ready product to test the production determination path.</p>
+                <h3>Preview GST</h3>
+                <p>Choose a party and mapped product.</p>
 
                 <div class="accounting-gst-det-grid">
                     <label>
@@ -252,7 +248,7 @@
                     <label class="wide">
                         <span>Supplier or customer ledger</span>
                         <select name="party_ledger_id" required>
-                            <option value="">Select approved party</option>
+                            <option value="">Select party</option>
                             {% for party in gst_determination_overview.parties %}
                                 <option value="{{ party.id }}">
                                     {{ party.party_role_label }} · {{ party.ledger_code }} · {{ party.name }} · {{ party.state_name }} ({{ party.state_code }})
@@ -280,7 +276,7 @@
                         <input type="number" name="taxable_value" min="0.01" step="0.01" value="1000.00" required>
                     </label>
                     <label class="wide">
-                        <span>Place of supply override (optional)</span>
+                        <span>Place of supply (optional)</span>
                         <select name="place_of_supply_state_code">
                             <option value="">Use party ledger state</option>
                             {% for state in gst_determination_overview.states %}
@@ -291,10 +287,11 @@
                 </div>
 
                 <div class="accounting-gst-det-footer">
-                    <small>
-                        Select Sales with a customer or Purchase with a supplier. The service blocks mismatched party roles and invalid GST registration combinations.
-                    </small>
-                    <button type="submit" class="accounting-primary-button">Preview GST determination</button>
+                    <small>Customer for Sales · Supplier for Purchase</small>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button type="button" class="accounting-secondary-button" onclick="this.form.reset()">Cancel</button>
+                        <button type="submit" class="accounting-primary-button">Preview GST</button>
+                    </div>
                 </div>
             </form>
         {% endif %}
@@ -303,7 +300,7 @@
             <div class="accounting-gst-det-result">
                 <div class="accounting-gst-det-result-head">
                     <div>
-                        <h3>GST determination result</h3>
+                        <h3>GST Result</h3>
                         <p>{{ gst_determination_preview.transaction_type_label }} · {{ gst_determination_preview.transaction_date_display }} · {{ gst_determination_preview.product.name }}</p>
                     </div>
                     <span class="accounting-gst-det-result-badge">{{ gst_determination_preview.supply_type_label }}</span>

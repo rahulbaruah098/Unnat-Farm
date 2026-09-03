@@ -91,6 +91,7 @@ from app.services.avpl_inventory_service import (
 )
 from app.services.avpl_ufc_order_service import (
     approve_ufc_order,
+    approve_ufc_cart_order,
     cancel_approved_ufc_order,
     dispatch_ufc_order,
     get_avpl_order_overview,
@@ -102,11 +103,13 @@ from app.services.avpl_ufc_sales_service import (
     ensure_sales_documents_for_order,
     get_avpl_sale,
     get_avpl_sales_overview,
+    get_product_purchase_cost_preview,
     get_sales_invoice_print_context,
 )
 from app.services.payment_service import (
     confirm_reported_payment as stage8_confirm_reported_payment,
     get_avpl_payment_overview,
+    get_invoice_payment_context,
     get_payment_receipt_context,
     record_payment as stage8_record_payment,
     reject_reported_payment as stage8_reject_reported_payment,
@@ -1362,7 +1365,7 @@ def _upsert_product_accounting_mapping(product_id):
     }
     for key, label in required.items():
         if not form.get(key):
-            raise ValueError(f'Select an approved {label}.')
+            raise ValueError(f'Select an active {label}.')
 
     return upsert_product_mapping_request_from_product_master(
         entity['_id'],
@@ -1427,7 +1430,7 @@ def _build_product_master_payload(existing_product=None):
     try:
         base_unit_object_id = ObjectId(base_unit_id_raw)
     except Exception as exc:
-        raise ValueError('Select a valid approved base unit.') from exc
+        raise ValueError('Select a valid active base unit.') from exc
 
     avpl_entity = mongo.db.accounting_entities.find_one({
         'entity_code': 'AVPL',
@@ -3221,6 +3224,12 @@ def _auto_finalize_supplier_invoice_if_ready(result):
     """
     if not workflow_is_streamlined('avpl.supplier_invoice_posting'):
         return result, None
+    # Keep AVPL Admin finalization explicit. The detail page now provides one
+    # clear Finalize Purchase action, while the service performs preparation +
+    # posting safely in that single click. This avoids an unexpected financial
+    # posting merely because AVPL Admin saved/edited a supplier bill.
+    if str(session.get('role') or '').strip().lower() == 'avpl_admin':
+        return result, None
     invoice = (result or {}).get('invoice') or {}
     if invoice.get('status') not in ['matched', 'matched_with_warnings']:
         return result, None
@@ -3411,7 +3420,7 @@ def cancel_supplier_invoice_view(invoice_id):
     methods=['POST'],
 )
 @login_required
-@roles_required('super_admin', 'accounts')
+@roles_required('super_admin', 'avpl_admin', 'accounts')
 def prepare_supplier_invoice_posting_view(invoice_id):
     try:
         result = prepare_supplier_invoice_posting(
@@ -3774,7 +3783,35 @@ def ufc_order_request_detail(order_id):
     except ValueError as exc:
         flash(str(exc), 'danger')
         return redirect(url_for('admin.ufc_order_requests'))
-    return render_template('admin/ufc_order_request_detail.html', order=order)
+
+    purchase_costs = {}
+    for line in order.get('items', []):
+        product_id = line.get('source_product_id_str') or line.get('product_id_str')
+        try:
+            purchase_costs[str(line.get('line_id') or 'legacy')] = get_product_purchase_cost_preview(session.get('user_id'), product_id)
+        except (ValueError, PermissionError, RuntimeError):
+            purchase_costs[str(line.get('line_id') or 'legacy')] = {'available': False, 'unit_cost': 0.0, 'unit_cost_display': '0.00', 'basis_label': 'Supplier purchase cost is not available from posted receipts yet.'}
+    purchase_cost = purchase_costs.get('legacy') or (next(iter(purchase_costs.values())) if purchase_costs else {'available': False, 'unit_cost': 0.0, 'unit_cost_display': '0.00', 'basis_label': 'Supplier purchase cost is not available from posted receipts yet.'})
+
+    payment = None
+    invoice_id = order.get('avpl_sales_invoice_id_str')
+    if invoice_id:
+        try:
+            payment = get_invoice_payment_context(
+                session.get('user_id'),
+                'avpl_ufc_invoice',
+                invoice_id,
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            payment = {'error': str(exc), 'invoice': None, 'pending_payments': [], 'payment_modes': {}}
+
+    return render_template(
+        'admin/ufc_order_request_detail.html',
+        order=order,
+        purchase_cost=purchase_cost,
+        purchase_costs=purchase_costs,
+        payment=payment,
+    )
 
 
 @admin_bp.route('/ufc-orders/<order_id>/approve', methods=['POST'])
@@ -3782,14 +3819,30 @@ def ufc_order_request_detail(order_id):
 @roles_required('super_admin', 'avpl_admin')
 def approve_ufc_order_view(order_id):
     try:
-        result = approve_ufc_order(
-            session.get('user_id'),
-            order_id,
-            request.form.get('approved_quantity'),
-            request.form.get('unit_price'),
-            note=request.form.get('approval_note', ''),
-            credit_period_days=request.form.get('credit_period_days', 0),
-        )
+        current = get_avpl_ufc_order(order_id)
+        if current.get('is_multi_item_order'):
+            approvals = []
+            for line in current.get('items', []):
+                line_id = str(line.get('line_id') or '')
+                approvals.append({
+                    'line_id': line_id,
+                    'approved_quantity': request.form.get(f'approved_quantity_{line_id}', '0'),
+                    'unit_price': request.form.get(f'unit_price_{line_id}', '0'),
+                })
+            result = approve_ufc_cart_order(
+                session.get('user_id'), order_id, approvals,
+                note=request.form.get('approval_note', ''),
+                credit_period_days=request.form.get('credit_period_days', 0),
+            )
+        else:
+            result = approve_ufc_order(
+                session.get('user_id'),
+                order_id,
+                request.form.get('approved_quantity'),
+                request.form.get('unit_price'),
+                note=request.form.get('approval_note', ''),
+                credit_period_days=request.form.get('credit_period_days', 0),
+            )
         order = result.get('order') or {}
         log_action(
             session.get('user_id'),
@@ -4059,11 +4112,14 @@ def record_payment_view():
 @login_required
 @roles_required('super_admin', 'avpl_admin', 'accounts')
 def confirm_ufc_payment_report(payment_id):
+    return_order_id = str(request.form.get('return_order_id') or '').strip()
     try:
         result = stage8_confirm_reported_payment(session.get('user_id'), payment_id)
         flash(result.get('message') or 'UFC payment confirmed.', 'success')
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), 'danger')
+    if return_order_id:
+        return redirect(url_for('admin.ufc_order_request_detail', order_id=return_order_id))
     return redirect(url_for('admin.payments_dashboard'))
 
 
@@ -4071,6 +4127,7 @@ def confirm_ufc_payment_report(payment_id):
 @login_required
 @roles_required('super_admin', 'avpl_admin', 'accounts')
 def reject_ufc_payment_report(payment_id):
+    return_order_id = str(request.form.get('return_order_id') or '').strip()
     try:
         result = stage8_reject_reported_payment(
             session.get('user_id'),
@@ -4080,6 +4137,8 @@ def reject_ufc_payment_report(payment_id):
         flash(result.get('message') or 'UFC payment report returned.', 'success')
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), 'danger')
+    if return_order_id:
+        return redirect(url_for('admin.ufc_order_request_detail', order_id=return_order_id))
     return redirect(url_for('admin.payments_dashboard'))
 
 

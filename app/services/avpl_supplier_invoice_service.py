@@ -64,7 +64,14 @@ def _normalized_keys(keys):
     return [(str(field), int(direction)) for field, direction in keys]
 
 
-def _ensure_exact_index(collection, keys, name, **options):
+def _ensure_exact_index(collection, keys, name, *, required=True, **options):
+    """Ensure an index without making normal page loads depend on optional indexes.
+
+    Unique indexes are integrity controls and remain strict. Non-unique reporting/
+    lookup indexes are performance helpers: an old deployment may already have an
+    equivalent/conflicting definition, or the MongoDB deployment may temporarily
+    refuse another index build. Those cases must not take Purchase Summary down.
+    """
     required_keys = _normalized_keys(keys)
     required_unique = bool(options.get("unique", False))
     required_partial = options.get("partialFilterExpression")
@@ -72,9 +79,11 @@ def _ensure_exact_index(collection, keys, name, **options):
     try:
         index_info = collection.index_information()
     except Exception as exc:
-        raise RuntimeError(
-            f"Could not inspect indexes for {collection.name}."
-        ) from exc
+        if required:
+            raise RuntimeError(
+                f"Could not inspect indexes for {collection.name}."
+            ) from exc
+        return None
 
     for existing_name, metadata in index_info.items():
         if existing_name == "_id_":
@@ -84,12 +93,22 @@ def _ensure_exact_index(collection, keys, name, **options):
         same_keys = existing_keys == required_keys
         if not same_name and not same_keys:
             continue
+
+        # An exact compatible index is already sufficient even when it has an
+        # older name. Do not drop/recreate indexes during a web request.
         if (
             same_keys
             and bool(metadata.get("unique", False)) == required_unique
             and metadata.get("partialFilterExpression") == required_partial
         ):
             return existing_name
+
+        # A conflicting performance index should never make the operational
+        # page unavailable. Keep the existing index and continue; a controlled
+        # DBA/startup migration can normalize its definition later.
+        if not required:
+            return existing_name if same_name or same_keys else None
+
         raise RuntimeError(
             f"Conflicting index detected on {collection.name}: "
             f"{existing_name}. No index was dropped automatically."
@@ -98,6 +117,28 @@ def _ensure_exact_index(collection, keys, name, **options):
     try:
         return collection.create_index(keys, name=name, **options)
     except OperationFailure as exc:
+        # Another app worker/startup may have created the index after the first
+        # inspection. Re-read once before deciding this is a real failure.
+        try:
+            refreshed = collection.index_information()
+            for existing_name, metadata in refreshed.items():
+                if existing_name == "_id_":
+                    continue
+                if _normalized_keys(metadata.get("key", [])) != required_keys:
+                    continue
+                if (
+                    bool(metadata.get("unique", False)) == required_unique
+                    and metadata.get("partialFilterExpression") == required_partial
+                ):
+                    return existing_name
+        except Exception:
+            pass
+
+        if not required:
+            # Non-unique indexes only accelerate queries. Failing to create one
+            # must not block Procurement/Purchase Summary or invoice workflows.
+            return None
+
         raise RuntimeError(
             f"Could not create Supplier Invoice index {name}."
         ) from exc
@@ -131,11 +172,13 @@ def ensure_supplier_invoice_indexes():
             ("invoice_date", DESCENDING),
         ],
         name="avpl_supplier_invoice_entity_status_date_idx",
+        required=False,
     )
     _ensure_exact_index(
         collection,
         [("purchase_order_id", ASCENDING), ("invoice_date", DESCENDING)],
         name="avpl_supplier_invoice_po_date_idx",
+        required=False,
     )
 
 

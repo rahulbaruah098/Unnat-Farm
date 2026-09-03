@@ -4,16 +4,8 @@
 <div class="page-card">
     {% if session.get('role') in ['ufc_admin','ufc_mitra'] %}
     <h2>AVPL Marketplace</h2>
-    <div class="marketplace-stage-note">
-        <strong>Simple rule:</strong> You see only products published by AVPL Admin. UFC Admin can request a quantity; AVPL approval reserves stock, and stock moves only when AVPL dispatches.
-    </div>
-    {% if session.get('role') == 'ufc_admin' %}
-    <div class="stage4-top-actions">
-        <a href="{{ url_for('modules.ufc_avpl_orders') }}">My AVPL Orders</a>
-        <a href="{{ url_for('modules.ufc_stock') }}">My UFC Stock</a>
-        <a href="{{ url_for('modules.ufc_purchases') }}">Purchase Entries</a>
-    </div>
-    {% endif %}
+    
+   
 {% else %}
     <h2>Buy Module</h2>
 {% endif %}
@@ -168,17 +160,14 @@
                         </div>
                         {% if session.get('role') == 'ufc_admin' %}
                             {% if avpl_stock > 0 %}
-                            <form method="post" action="{{ url_for('modules.request_avpl_order') }}" class="avpl-request-form">
-                                <input type="hidden" name="product_id" value="{{ p._id }}">
-                                <input type="number" name="quantity" min="0.0001" max="{{ avpl_stock }}" step="0.0001" placeholder="Required Qty" required>
-                                <select name="payment_term" aria-label="Payment option">
-                                    <option value="credit">Credit / Pay Later</option>
-                                    <option value="cod">Pay on Delivery</option>
-                                    <option value="prepaid_online" disabled>Prepaid / Online — Coming Soon</option>
-                                </select>
-                                <input type="text" name="request_note" maxlength="300" placeholder="Note (optional)">
-                                <button type="submit">Request Order</button>
-                            </form>
+                            <div class="avpl-cart-add" data-product-id="{{ p._id }}" data-product-name="{{ p.name|e }}" data-unit="{{ (p.base_unit_code or p.unit or 'Unit')|e }}" data-max="{{ avpl_stock }}">
+                                <div class="avpl-cart-qty">
+                                    <button type="button" class="qty-step" data-step="-1" aria-label="Reduce quantity">−</button>
+                                    <input type="number" class="cart-qty-input" min="0.0001" max="{{ avpl_stock }}" step="0.0001" value="1" aria-label="Required quantity">
+                                    <button type="button" class="qty-step" data-step="1" aria-label="Increase quantity">+</button>
+                                </div>
+                                <button type="button" class="add-cart-btn">Add to Cart</button>
+                            </div>
                             {% else %}
                             <div class="stage4-chip">Request unavailable</div>
                             {% endif %}
@@ -198,6 +187,23 @@
     </div>
     {% endif %}
 </div>
+
+{% if session.get('role') == 'ufc_admin' %}
+<button type="button" class="commerce-cart-fab" id="avplCartOpen" aria-haspopup="dialog">Cart <span id="avplCartCount">0</span></button>
+<div class="commerce-cart-overlay" id="avplCartOverlay" aria-hidden="true">
+  <section class="commerce-cart-panel" role="dialog" aria-modal="true" aria-labelledby="avplCartTitle">
+    <div class="cart-head"><div><h3 id="avplCartTitle">Order from AVPL</h3><p>Add multiple products, then send one order request.</p></div><button type="button" class="cart-close" id="avplCartClose" aria-label="Close cart">×</button></div>
+    <div id="avplCartRows" class="cart-rows"></div>
+    <div class="cart-empty" id="avplCartEmpty">Your cart is empty.</div>
+    <form method="post" action="{{ url_for('modules.request_avpl_cart_order') }}" id="avplCartForm" class="cart-checkout">
+      <input type="hidden" name="cart_json" id="avplCartJson"><input type="hidden" name="checkout_token" id="avplCheckoutToken">
+      <label>Payment<select name="payment_term"><option value="credit">Credit / Pay Later</option><option value="cod">Pay on Delivery</option></select></label>
+      <label>Order note <input name="request_note" maxlength="300" placeholder="Optional"></label>
+      <div class="cart-actions"><button type="button" class="cart-secondary" id="avplContinue">Continue Shopping</button><button type="submit" class="cart-primary" id="avplCheckout">Place Order</button></div>
+    </form>
+  </section>
+</div>
+{% endif %}
 
 <style>
 .marketplace-stage-note {
@@ -1271,6 +1277,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const avplConfirmCancel = document.getElementById('avplConfirmCancel');
     const avplConfirmSubmit = document.getElementById('avplConfirmSubmit');
 
+    // Keep the confirmation overlay relative to the browser viewport, not the
+    // product card/content wrapper that submitted the request. Some layout
+    // containers use transforms, which otherwise make position:fixed behave
+    // like it is anchored to the clicked card.
+    if (avplConfirmModal && avplConfirmModal.parentElement !== document.body) {
+        document.body.appendChild(avplConfirmModal);
+    }
+
     function closeAvplConfirmModal() {
         if (!avplConfirmModal) {
             return;
@@ -1427,5 +1441,482 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+
+
+<style>
+.avpl-cart-add{margin-top:10px;display:grid;grid-template-columns:minmax(120px,.8fr) 1fr;gap:8px}.avpl-cart-qty{display:grid;grid-template-columns:36px 1fr 36px;border:1px solid #d8e5dc;border-radius:9px;overflow:hidden}.avpl-cart-qty input{min-width:0;width:100%;border:0;text-align:center;padding:0 4px}.qty-step{border:0;background:#f5faf7;color:#2f6e46;font-weight:900;cursor:pointer}.add-cart-btn{border:0;border-radius:9px;background:#397e51;color:#fff;font-weight:850;cursor:pointer}.commerce-cart-fab{position:fixed;right:26px;bottom:82px;z-index:1080;border:0;border-radius:999px;padding:12px 18px;background:#256b43;color:white;font-weight:900;box-shadow:0 12px 30px rgba(20,70,43,.22);cursor:pointer}.commerce-cart-fab span{display:inline-grid;place-items:center;min-width:22px;height:22px;margin-left:6px;border-radius:999px;background:#fff;color:#256b43}.commerce-cart-overlay{position:fixed;inset:0;z-index:1090;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.48)}.commerce-cart-overlay.open{display:flex}.commerce-cart-panel{width:min(620px,100%);max-height:82vh;overflow:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 30px 80px rgba(15,23,42,.26)}.cart-head{display:flex;justify-content:space-between;gap:14px}.cart-head h3{margin:0;color:#17251d;font-size:1.3rem}.cart-head p{margin:4px 0;color:#6f7d74;font-size:.8rem}.cart-close{border:0;background:#f1f5f2;width:38px;height:38px;border-radius:10px;font-size:1.35rem;cursor:pointer}.cart-rows{display:grid;gap:8px;margin-top:15px}.cart-line{display:grid;grid-template-columns:minmax(0,1fr) 120px 38px;gap:8px;align-items:center;padding:11px;border:1px solid #e0e9e3;border-radius:11px}.cart-line strong{display:block;color:#203629}.cart-line small{color:#738078}.cart-line input{width:100%;height:38px;border:1px solid #d7e3da;border-radius:8px;padding:0 8px}.cart-remove{height:38px;border:0;border-radius:8px;background:#fff1f2;color:#b42318;font-weight:900;cursor:pointer}.cart-empty{padding:24px 8px;text-align:center;color:#7b877f}.cart-checkout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #e5ece7}.cart-checkout label{display:grid;gap:5px;font-size:.72rem;font-weight:800;color:#526158}.cart-checkout select,.cart-checkout input{width:100%;height:40px;border:1px solid #d7e3da;border-radius:9px;padding:0 10px;background:#fff}.cart-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}.cart-actions button{min-height:40px;border-radius:9px;padding:0 14px;font-weight:850;cursor:pointer}.cart-secondary{border:1px solid #d6e3da;background:#fff;color:#526158}.cart-primary{border:0;background:#397e51;color:#fff}.cart-primary:disabled{opacity:.5;cursor:not-allowed}@media(max-width:620px){.commerce-cart-fab{right:16px;bottom:76px}.cart-line{grid-template-columns:1fr 100px 38px}.cart-checkout{grid-template-columns:1fr}.avpl-cart-add{grid-template-columns:1fr}.commerce-cart-panel{padding:15px}.cart-actions{grid-column:auto;flex-direction:column-reverse}.cart-actions button{width:100%}}
+</style>
+<script>
+(function(){
+ const openBtn=document.getElementById('avplCartOpen'); if(!openBtn)return;
+ const overlay=document.getElementById('avplCartOverlay'), rows=document.getElementById('avplCartRows'), empty=document.getElementById('avplCartEmpty'), count=document.getElementById('avplCartCount'), form=document.getElementById('avplCartForm'), json=document.getElementById('avplCartJson'), token=document.getElementById('avplCheckoutToken'), checkout=document.getElementById('avplCheckout');
+ const key='unnatfarm:ufc-avpl-cart:v2'; let cart=[];
+ function load(){try{cart=JSON.parse(sessionStorage.getItem(key)||'[]');if(!Array.isArray(cart))cart=[]}catch(_){cart=[]}}
+ function save(){sessionStorage.setItem(key,JSON.stringify(cart));render()}
+ function makeToken(){return 'UFC-CART-'+Date.now()+'-'+Math.random().toString(36).slice(2,10)}
+ function render(){count.textContent=String(cart.length);rows.innerHTML='';empty.style.display=cart.length?'none':'block';checkout.disabled=!cart.length;json.value=JSON.stringify(cart.map(x=>({product_id:x.id,quantity:x.qty})));cart.forEach((item,i)=>{const el=document.createElement('div');el.className='cart-line';el.innerHTML='<div><strong></strong><small></small></div><input type="number" min="0.0001" step="0.0001"><button type="button" class="cart-remove" aria-label="Remove">×</button>';el.querySelector('strong').textContent=item.name;el.querySelector('small').textContent='Available '+item.max+' '+item.unit;const input=el.querySelector('input');input.max=item.max;input.value=item.qty;input.addEventListener('change',()=>{let v=Math.max(.0001,Math.min(Number(item.max)||999999,Number(input.value)||.0001));item.qty=v;save()});el.querySelector('button').addEventListener('click',()=>{cart.splice(i,1);save()});rows.appendChild(el)})}
+ document.querySelectorAll('.avpl-cart-add').forEach(box=>{const input=box.querySelector('.cart-qty-input');box.querySelectorAll('.qty-step').forEach(b=>b.addEventListener('click',()=>{const max=Number(box.dataset.max)||999999;input.value=Math.max(.0001,Math.min(max,(Number(input.value)||0)+Number(b.dataset.step))).toString()}));box.querySelector('.add-cart-btn').addEventListener('click',()=>{const q=Number(input.value),max=Number(box.dataset.max);if(!Number.isFinite(q)||q<=0||q>max){showMarketplaceAlert('Enter a quantity within available stock.','error');input.focus();return}const old=cart.find(x=>x.id===box.dataset.productId);if(old)old.qty=Math.min(max,old.qty+q);else cart.push({id:box.dataset.productId,name:box.dataset.productName,unit:box.dataset.unit,max:max,qty:q});save();showMarketplaceAlert('Added to cart.','success')})});
+ function open(){render();overlay.classList.add('open');overlay.setAttribute('aria-hidden','false')}function close(){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true')}
+ openBtn.addEventListener('click',open);document.getElementById('avplCartClose').addEventListener('click',close);document.getElementById('avplContinue').addEventListener('click',close);overlay.addEventListener('click',e=>{if(e.target===overlay)close()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))close()});form.addEventListener('submit',e=>{if(!cart.length){e.preventDefault();return}token.value=makeToken();json.value=JSON.stringify(cart.map(x=>({product_id:x.id,quantity:x.qty})));checkout.disabled=true;checkout.textContent='Placing Order...';setTimeout(()=>sessionStorage.removeItem(key),50)});load();render();
+})();
+</script>
+
+
+
+<style id="sds-commerce-redesign">
+:root{
+    --uc-green:#2b7346;
+    --uc-green-dark:#1f5f39;
+    --uc-green-soft:#eff8f1;
+    --uc-green-softer:#f7fbf8;
+    --uc-text:#1f3127;
+    --uc-muted:#6e7f74;
+    --uc-border:#dbe9df;
+    --uc-border-strong:#c8ddce;
+    --uc-bg:#f7faf8;
+    --uc-white:#fff;
+    --uc-warn:#9a6500;
+    --uc-danger:#a73535;
+    --uc-shadow:0 12px 32px rgba(26,72,43,.055);
+    --uc-shadow-hover:0 16px 34px rgba(31,102,59,.10);
+}
+
+@keyframes ucFadeUp{
+    from{opacity:0;transform:translateY(7px)}
+    to{opacity:1;transform:translateY(0)}
+}
+@keyframes ucPop{
+    from{opacity:0;transform:scale(.975) translateY(5px)}
+    to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page,.orders-page{
+    max-width:1500px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    color:var(--uc-text) !important;
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page{
+    background:#fff !important;
+    border:1px solid var(--uc-border) !important;
+    border-radius:20px !important;
+    box-shadow:var(--uc-shadow) !important;
+}
+
+h1,h2,h3{
+    color:#16251c;
+    letter-spacing:-.02em;
+}
+
+.muted,.small,.soft-note,.marketplace-help{
+    color:var(--uc-muted) !important;
+}
+
+button,a,input,select,textarea{
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+button,.btn,.link,.view,.head-btn,.filter-button,.back,.invoice-link,
+.primary,.secondary,.add,.addbtn,.paybtn,.pay-submit,.receive,
+.cart-primary,.cart-secondary,.clear-btn,.clear-link,.view-order-btn{
+    border-radius:10px !important;
+    transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease !important;
+}
+
+button:hover,.btn:hover,.link:hover,.view:hover,.head-btn:hover,.filter-button:hover,
+.primary:hover,.add:hover,.addbtn:hover,.paybtn:hover,.pay-submit:hover,.receive:hover,
+.cart-primary:hover,.view-order-btn:hover{
+    transform:translateY(-1px);
+}
+
+input,select,textarea,.filter-input,.filter-select{
+    border:1px solid #d6e3d9 !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#31463a !important;
+    outline:none !important;
+    box-shadow:none !important;
+}
+
+input:focus,select:focus,textarea:focus,.filter-input:focus,.filter-select:focus{
+    border-color:#8eb69a !important;
+    box-shadow:0 0 0 3px rgba(43,115,70,.07) !important;
+}
+
+.pill,.badge,.status-badge,.type-pill,.status-pill,.published-badge,.stage4-chip{
+    border-radius:8px !important;
+    font-weight:800 !important;
+}
+
+.table,.table-wrap,.table-shell,.earnings-table-wrap,.items-table{
+    border:1px solid var(--uc-border) !important;
+    border-radius:13px !important;
+    overflow:auto;
+    box-shadow:none !important;
+    background:#fff !important;
+}
+
+table th{
+    background:#f4f8f5 !important;
+    color:#607066 !important;
+    font-size:.63rem !important;
+    font-weight:850 !important;
+    text-transform:uppercase;
+    letter-spacing:.025em;
+}
+
+table td{
+    color:#3e5145 !important;
+}
+
+table tr{
+    transition:background .14s ease;
+}
+
+table tbody tr:hover td{
+    background:#fbfdfb !important;
+}
+
+.summary,.stats,.stat-grid,.status-grid,.facts,.grid{
+    gap:11px !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact,.box,.section,.action-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:14px !important;
+    background:#fff !important;
+    box-shadow:none !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact{
+    transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease;
+}
+
+.sum:hover,.stat:hover,.stat-card:hover,.status-card:hover,.fact:hover{
+    transform:translateY(-2px);
+    border-color:#b7d5c0 !important;
+    box-shadow:0 9px 22px rgba(31,102,59,.07) !important;
+}
+
+.notice,.info,.soft-note,.warn-note,.next-step,.table-info{
+    border-radius:11px !important;
+}
+
+.empty,.orders-empty{
+    color:#809087 !important;
+}
+
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+        animation:none !important;
+        transition:none !important;
+        scroll-behavior:auto !important;
+    }
+}
+</style>
+
+
+
+<style id="sds-market-redesign">
+.marketplace-grid,.grid{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fill,minmax(235px,1fr)) !important;
+    gap:14px !important;
+}
+
+.market-card,.card{
+    position:relative;
+    overflow:hidden;
+    border:1px solid var(--uc-border) !important;
+    border-radius:17px !important;
+    background:#fff !important;
+    box-shadow:0 7px 20px rgba(26,72,43,.04) !important;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease !important;
+    animation:ucFadeUp .28s ease both;
+}
+
+.market-card:hover,.card:hover{
+    transform:translateY(-3px);
+    border-color:#aed0b7 !important;
+    box-shadow:var(--uc-shadow-hover) !important;
+}
+
+.market-img-wrap,.img{
+    background:linear-gradient(180deg,#f8fbf9 0%,#f1f7f3 100%) !important;
+    border-bottom:1px solid #edf2ee;
+    overflow:hidden;
+}
+
+.market-img-wrap img,.img img{
+    width:100%;
+    height:100%;
+    object-fit:contain !important;
+    transition:transform .28s ease;
+}
+
+.market-card:hover .market-img-wrap img,.card:hover .img img{
+    transform:scale(1.025);
+}
+
+.market-body,.body{
+    padding:14px !important;
+}
+
+.market-body h3,.body h3{
+    margin:0 0 5px !important;
+    color:#1e3325 !important;
+    font-size:.88rem !important;
+    line-height:1.3;
+}
+
+.price{
+    color:#1f6e3f !important;
+    font-weight:900 !important;
+    font-size:1rem !important;
+}
+
+.stock,.stock-text,.avail,.seller{
+    color:#728078 !important;
+    font-size:.68rem !important;
+    font-weight:650;
+}
+
+.buyrow,.actions,.mode{
+    gap:8px !important;
+}
+
+.add,.add-cart-btn{
+    min-height:39px !important;
+    padding:8px 13px !important;
+    border:1px solid #2b7346 !important;
+    border-radius:10px !important;
+    background:#2b7346 !important;
+    color:#fff !important;
+    font-size:.7rem !important;
+    font-weight:850 !important;
+    box-shadow:0 7px 16px rgba(43,115,70,.13);
+}
+
+.add:hover,.add-cart-btn:hover{
+    background:#1f5f39 !important;
+    border-color:#1f5f39 !important;
+}
+
+.cartfab,.commerce-cart-fab{
+    position:fixed !important;
+    top:88px !important;
+    right:28px !important;
+    bottom:auto !important;
+    z-index:1040 !important;
+    min-width:126px !important;
+    min-height:50px !important;
+    padding:10px 15px 10px 13px !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:8px !important;
+    border:1px solid #2b7346 !important;
+    border-radius:14px !important;
+    background:#fff !important;
+    color:#1f5f39 !important;
+    font-size:.78rem !important;
+    font-weight:900 !important;
+    box-shadow:0 12px 28px rgba(27,79,45,.16) !important;
+}
+
+.cartfab::before,.commerce-cart-fab::before{
+    content:"🛒";
+    font-size:1.25rem;
+    line-height:1;
+}
+
+.cartfab span,.commerce-cart-fab span{
+    min-width:25px;
+    height:25px;
+    padding:0 6px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:8px !important;
+    background:#2b7346 !important;
+    color:#fff !important;
+    font-size:.68rem !important;
+}
+
+.cartfab:hover,.commerce-cart-fab:hover{
+    transform:translateY(-2px);
+    background:#f7fbf8 !important;
+    box-shadow:0 15px 32px rgba(27,79,45,.20) !important;
+}
+
+.overlay,.commerce-cart-overlay{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:1100 !important;
+    background:rgba(11,27,17,.42) !important;
+    backdrop-filter:blur(4px);
+}
+
+.panel,.commerce-cart-panel{
+    background:#fff !important;
+    border:1px solid #d8e6dc !important;
+    box-shadow:0 26px 70px rgba(15,37,23,.22) !important;
+    animation:ucPop .2s ease both;
+}
+
+.phead,.cart-head,.head{
+    border-bottom-color:#e7efe9 !important;
+}
+
+.phead h3,.cart-head h3,.panel .head h3{
+    color:#183021 !important;
+    font-weight:900 !important;
+}
+
+.close,.cart-close{
+    width:38px !important;
+    height:38px !important;
+    border:1px solid #dbe7de !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#506158 !important;
+    font-size:1.2rem !important;
+}
+
+.close:hover,.cart-close:hover{
+    background:#f2f7f3 !important;
+    color:#1f5f39 !important;
+}
+
+.rows .line,.cart-rows .line,#pRows .line,#pRows .group{
+    border:1px solid #e2ebe4 !important;
+    border-radius:11px !important;
+    background:#fbfdfb !important;
+}
+
+.checkout{
+    border-top-color:#e6eee8 !important;
+}
+
+.checkout label,.cart-checkout label{
+    color:#5f7066 !important;
+    font-size:.68rem !important;
+    font-weight:800 !important;
+}
+
+.primary,.cart-primary{
+    background:#2b7346 !important;
+    border:1px solid #2b7346 !important;
+    color:#fff !important;
+    font-weight:850 !important;
+}
+
+.secondary,.cart-secondary{
+    background:#fff !important;
+    border:1px solid #d2e0d6 !important;
+    color:#355a42 !important;
+    font-weight:800 !important;
+}
+
+.uc-checkout-confirm{
+    position:fixed;
+    inset:0;
+    z-index:1400;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(11,27,17,.48);
+    backdrop-filter:blur(5px);
+}
+
+.uc-checkout-confirm.open{
+    display:flex;
+}
+
+.uc-checkout-card{
+    width:min(460px,100%);
+    padding:20px;
+    border:1px solid #d7e5db;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 28px 80px rgba(15,37,23,.26);
+    animation:ucPop .2s ease both;
+}
+
+.uc-checkout-icon{
+    width:48px;
+    height:48px;
+    display:grid;
+    place-items:center;
+    margin-bottom:13px;
+    border-radius:13px;
+    background:#eff8f1;
+    color:#247044;
+    font-size:1.35rem;
+}
+
+.uc-checkout-card h3{
+    margin:0;
+    font-size:1.12rem;
+    font-weight:900;
+}
+
+.uc-checkout-card p{
+    margin:7px 0 0;
+    color:#6b7b71;
+    font-size:.74rem;
+    line-height:1.5;
+}
+
+.uc-checkout-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+    margin-top:17px;
+}
+
+.uc-checkout-actions button{
+    min-height:41px;
+    border-radius:10px;
+    font-size:.72rem;
+    font-weight:850;
+    cursor:pointer;
+}
+
+.uc-checkout-cancel{
+    border:1px solid #d6e3d9;
+    background:#fff;
+    color:#4e6256;
+}
+
+.uc-checkout-ok{
+    border:1px solid #2b7346;
+    background:#2b7346;
+    color:#fff;
+}
+
+@media(max-width:700px){
+    .marketplace-grid,.grid{
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+        gap:10px !important;
+    }
+    .cartfab,.commerce-cart-fab{
+        top:auto !important;
+        right:15px !important;
+        bottom:18px !important;
+        min-width:116px !important;
+        min-height:48px !important;
+    }
+}
+
+@media(max-width:480px){
+    .marketplace-grid,.grid{
+        grid-template-columns:1fr !important;
+    }
+}
+</style>
 
 {% endblock %}

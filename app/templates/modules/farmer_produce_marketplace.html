@@ -1,61 +1,531 @@
-{% extends 'base.html' %}
-{% block title %}Farmer Produce Market{% endblock %}
-{% block content %}
-<style>
-.market{width:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d}.hero{padding:22px;border:1px solid rgba(47,122,76,.11);border-radius:18px;background:#fff;box-shadow:0 10px 26px rgba(28,72,43,.05)}.hero-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.hero h1{margin:0 0 5px;font-size:1.65rem}.muted{color:#748279}.tools{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:9px;border:1px solid rgba(47,122,76,.14);background:#f7fbf8;color:#2f6e46;text-decoration:none;font-weight:900;cursor:pointer;font:inherit}.btn.primary{background:#397e51;color:#fff;border-color:#397e51}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.stat{padding:12px;border:1px solid #e1eee5;border-radius:11px;background:#fbfdfb}.stat strong{display:block;font-size:1.25rem;margin-top:3px}.search{margin:16px 0;display:flex;gap:8px;flex-wrap:wrap}.search input{flex:1;min-width:220px;border:1px solid rgba(47,122,76,.14);border-radius:9px;padding:10px 12px;font:inherit}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.card{background:#fff;border:1px solid rgba(47,122,76,.11);border-radius:11px;overflow:hidden;box-shadow:0 10px 25px rgba(15,23,42,.05)}.photo{height:190px;background:#f0f7f2;display:flex;align-items:center;justify-content:center;color:#7d8f84;overflow:hidden}.photo img{width:100%;height:100%;object-fit:cover}.body{padding:15px}.seller{font-size:.85rem;color:#52705d;margin-bottom:5px}.name{font-size:1.2rem;font-weight:900;margin:0 0 5px}.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chip{font-size:.75rem;padding:4px 8px;border-radius:9px;background:#eef7f1;color:#2f6e46;font-weight:800}.stock{padding:8px 10px;border-radius:11px;background:#f5fbf7;margin:9px 0;font-weight:800}.out{background:#fff4f2;color:#a23c32}.price{font-size:1.08rem;font-weight:900;color:#245c39}.packages{font-size:.88rem;color:#4f6156;margin:5px 0}.order{border-top:1px solid #e8f0eb;padding-top:12px;margin-top:12px}.order select,.order input,.order textarea{width:100%;box-sizing:border-box;border:1px solid rgba(47,122,76,.14);border-radius:10px;padding:8px 9px;font:inherit;margin-top:5px}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.help{font-size:.8rem;color:#829087;margin-top:5px}.empty{padding:35px;text-align:center;background:#fff;border:1px dashed rgba(47,122,76,.14);border-radius:11px}.owner{padding:9px;border-radius:11px;background:#f8f5ec;color:#785d1f;font-size:.88rem}.mode-fields{margin-top:8px}@media(max-width:1000px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.grid{grid-template-columns:1fr}.hero{padding:16px}.two{grid-template-columns:1fr}.photo{height:180px}}
+{% extends 'base.html' %}{% block title %}Farmer Produce Market{% endblock %}{% block content %}
+<style>.pm{padding:22px;border:1px solid #e0eae3;border-radius:18px;background:#fff;color:#24372b;font-family:Inter,system-ui,sans-serif}.pm *{box-sizing:border-box}.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.ph h2{margin:0}.ph p{margin:4px 0;color:#758279;font-size:.78rem}.search{display:flex;gap:8px;margin:14px 0}.search input{flex:1;height:40px;border:1px solid #d9e5dc;border-radius:9px;padding:0 12px}.search button,.add{border:0;border-radius:9px;background:#397e51;color:#fff;font-weight:850}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px}.card{padding:14px;border:1px solid #e1eae3;border-radius:12px}.card h3{margin:0}.seller{font-size:.72rem;color:#718078;margin-top:3px}.avail{margin:10px 0;color:#277248;font-weight:850}.mode{display:grid;gap:7px}.mode select,.mode input{height:39px;border:1px solid #d8e4dc;border-radius:8px;padding:0 8px;width:100%}.add{height:40px;cursor:pointer}.cartfab{position:fixed;right:26px;bottom:82px;z-index:1080;border:0;border-radius:999px;padding:12px 18px;background:#256b43;color:#fff;font-weight:900}.cartfab span{margin-left:6px;background:#fff;color:#256b43;border-radius:99px;padding:2px 7px}.overlay{position:fixed;inset:0;z-index:1090;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.48)}.overlay.open{display:flex}.panel{width:min(680px,100%);max-height:84vh;overflow:auto;background:#fff;border-radius:17px;padding:18px}.head{display:flex;justify-content:space-between}.head h3{margin:0}.close{border:0;width:38px;height:38px;border-radius:9px;font-size:1.3rem}.group{margin-top:13px;border:1px solid #e1eae3;border-radius:11px;overflow:hidden}.gtitle{padding:8px 11px;background:#f5faf7;font-weight:850}.line{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 11px;border-top:1px solid #edf2ee}.line small{display:block;color:#77847c}.remove{border:0;background:#fff1f2;color:#b42318;border-radius:8px;padding:0 11px}.checkout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;border-top:1px solid #e4ece6;padding-top:13px}.checkout label{display:grid;gap:5px;font-size:.72rem;font-weight:800}.checkout select,.checkout input{height:40px;border:1px solid #d8e4dc;border-radius:8px;padding:0 9px}.actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}.actions button{height:40px;border-radius:9px;padding:0 14px;font-weight:850}.secondary{border:1px solid #d8e4dc;background:#fff}.primary{border:0;background:#397e51;color:#fff}.empty{text-align:center;color:#78857d;padding:22px}@media(max-width:600px){.pm{padding:14px}.grid{grid-template-columns:1fr}.checkout{grid-template-columns:1fr}.actions{grid-column:auto;flex-direction:column-reverse}.cartfab{right:16px;bottom:76px}}</style>
+<div class="pm"><div class="ph"><div><h2>Farmer Produce Market</h2><p>Choose produce from Farmers. Your cart is automatically split into one order per Farmer.</p></div><strong>{{ overview.get('summary',{}).get('available_count',0) }} available</strong></div><form class="search" method="get"><input name="q" value="{{ overview.get('query','') }}" placeholder="Search produce or Farmer"><button type="submit">Search</button></form><div class="grid">{% for p in overview.get('rows',[]) %}<article class="card"><h3>{{ p.product_name }}</h3><div class="seller">{{ p.farmer_name }} · {{ p.unit_code }}</div><div class="avail">{{ p.available_to_order_display }} {{ p.unit_code }} available</div>{% if p.is_available and not p.is_owner %}<div class="mode js-produce" data-listing="{{ p.id }}" data-seller="{{ p.farmer_name|e }}" data-name="{{ p.product_name|e }}" data-unit="{{ p.unit_code|e }}"><select class="purchase-mode"><option value="loose">Per {{ p.unit_code }}{% if p.loose_price_display %} · ₹{{ p.loose_price_display }}{% endif %}</option>{% if p.selling_mode in ['bag','both'] %}<option value="bag">Bag / Pack</option>{% endif %}</select>{% if p.package_options %}<select class="package-index" style="display:none">{% for opt in p.package_options %}<option value="{{ opt.index }}">{{ opt.label }} · {{ opt.quantity_per_bag_display }} {{ p.unit_code }} · ₹{{ opt.price_per_bag_display }}</option>{% endfor %}</select>{% endif %}<input class="quantity" type="number" min="0.0001" step="0.0001" value="{{ p.min_order_quantity_display or 1 }}"><button type="button" class="add">Add to Cart</button></div>{% else %}<small>Not available for ordering.</small>{% endif %}</article>{% else %}<div class="empty">No produce listings found.</div>{% endfor %}</div></div>
+<button type="button" class="cartfab" id="pCartOpen">Cart <span id="pCartCount">0</span></button><div class="overlay" id="pOverlay"><section class="panel"><div class="head"><div><h3>Your Produce Cart</h3><small>Different Farmers will receive separate orders automatically.</small></div><button type="button" class="close" id="pClose">×</button></div><div id="pRows"></div><div class="empty" id="pEmpty">Your cart is empty.</div><form method="post" action="{{ url_for('modules.farmer_produce_market_cart_order') }}" class="checkout" id="pForm"><input type="hidden" name="cart_json" id="pJson"><input type="hidden" name="order_token" id="pToken"><label>Payment<select name="payment_term"><option value="pay_on_receipt">Pay on Receipt</option><option value="credit">Credit / Pay Later</option></select></label><label>Note<input name="note" maxlength="300" placeholder="Optional"></label><div class="actions"><button type="button" class="secondary" id="pContinue">Continue Shopping</button><button type="submit" class="primary" id="pCheckout">Place Orders</button></div></form></section></div>
+<script>(function(){const key='unnatfarm:produce-cart:v2',overlay=document.getElementById('pOverlay'),rows=document.getElementById('pRows'),empty=document.getElementById('pEmpty'),count=document.getElementById('pCartCount'),form=document.getElementById('pForm'),json=document.getElementById('pJson'),token=document.getElementById('pToken'),checkout=document.getElementById('pCheckout');let cart=[];try{cart=JSON.parse(sessionStorage.getItem(key)||'[]');if(!Array.isArray(cart))cart=[]}catch(_){cart=[]}function save(){sessionStorage.setItem(key,JSON.stringify(cart));render()}function render(){count.textContent=cart.length;rows.innerHTML='';empty.style.display=cart.length?'none':'block';checkout.disabled=!cart.length;const groups={};cart.forEach((x,i)=>(groups[x.seller]||(groups[x.seller]=[])).push({...x,_i:i}));Object.entries(groups).forEach(([seller,items])=>{const g=document.createElement('div');g.className='group';const h=document.createElement('div');h.className='gtitle';h.textContent=seller;g.appendChild(h);items.forEach(x=>{const l=document.createElement('div');l.className='line';l.innerHTML='<div><strong></strong><small></small></div><button type="button" class="remove">Remove</button>';l.querySelector('strong').textContent=x.name;l.querySelector('small').textContent=x.qty+' '+(x.mode==='bag'?'pack(s)':x.unit);l.querySelector('button').addEventListener('click',()=>{cart.splice(x._i,1);save()});g.appendChild(l)});rows.appendChild(g)});json.value=JSON.stringify(cart.map(x=>({listing_id:x.listing,purchase_mode:x.mode,quantity:x.qty,package_index:x.packageIndex}))) }document.querySelectorAll('.js-produce').forEach(box=>{const mode=box.querySelector('.purchase-mode'),pack=box.querySelector('.package-index'),qty=box.querySelector('.quantity');mode.addEventListener('change',()=>{if(pack)pack.style.display=mode.value==='bag'?'block':'none'});box.querySelector('.add').addEventListener('click',()=>{const q=Number(qty.value);if(!Number.isFinite(q)||q<=0){qty.focus();return}cart.push({listing:box.dataset.listing,seller:box.dataset.seller,name:box.dataset.name,unit:box.dataset.unit,mode:mode.value,qty:q,packageIndex:pack&&mode.value==='bag'?pack.value:null});save()})});function show(){render();overlay.classList.add('open')}function hide(){overlay.classList.remove('open')}document.getElementById('pCartOpen').addEventListener('click',show);document.getElementById('pClose').addEventListener('click',hide);document.getElementById('pContinue').addEventListener('click',hide);overlay.addEventListener('click',e=>{if(e.target===overlay)hide()});form.addEventListener('submit',e=>{if(!cart.length){e.preventDefault();return}json.value=JSON.stringify(cart.map(x=>({listing_id:x.listing,purchase_mode:x.mode,quantity:x.qty,package_index:x.packageIndex})));token.value='FMCART-'+Date.now()+'-'+Math.random().toString(36).slice(2);checkout.disabled=true;checkout.textContent='Creating Orders...';setTimeout(()=>sessionStorage.removeItem(key),50)});render()})();</script>
+
+
+<style id="sds-commerce-redesign">
+:root{
+    --uc-green:#2b7346;
+    --uc-green-dark:#1f5f39;
+    --uc-green-soft:#eff8f1;
+    --uc-green-softer:#f7fbf8;
+    --uc-text:#1f3127;
+    --uc-muted:#6e7f74;
+    --uc-border:#dbe9df;
+    --uc-border-strong:#c8ddce;
+    --uc-bg:#f7faf8;
+    --uc-white:#fff;
+    --uc-warn:#9a6500;
+    --uc-danger:#a73535;
+    --uc-shadow:0 12px 32px rgba(26,72,43,.055);
+    --uc-shadow-hover:0 16px 34px rgba(31,102,59,.10);
+}
+
+@keyframes ucFadeUp{
+    from{opacity:0;transform:translateY(7px)}
+    to{opacity:1;transform:translateY(0)}
+}
+@keyframes ucPop{
+    from{opacity:0;transform:scale(.975) translateY(5px)}
+    to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page,.orders-page{
+    max-width:1500px !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+    color:var(--uc-text) !important;
+}
+
+.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page{
+    background:#fff !important;
+    border:1px solid var(--uc-border) !important;
+    border-radius:20px !important;
+    box-shadow:var(--uc-shadow) !important;
+}
+
+h1,h2,h3{
+    color:#16251c;
+    letter-spacing:-.02em;
+}
+
+.muted,.small,.soft-note,.marketplace-help{
+    color:var(--uc-muted) !important;
+}
+
+button,a,input,select,textarea{
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+button,.btn,.link,.view,.head-btn,.filter-button,.back,.invoice-link,
+.primary,.secondary,.add,.addbtn,.paybtn,.pay-submit,.receive,
+.cart-primary,.cart-secondary,.clear-btn,.clear-link,.view-order-btn{
+    border-radius:10px !important;
+    transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease !important;
+}
+
+button:hover,.btn:hover,.link:hover,.view:hover,.head-btn:hover,.filter-button:hover,
+.primary:hover,.add:hover,.addbtn:hover,.paybtn:hover,.pay-submit:hover,.receive:hover,
+.cart-primary:hover,.view-order-btn:hover{
+    transform:translateY(-1px);
+}
+
+input,select,textarea,.filter-input,.filter-select{
+    border:1px solid #d6e3d9 !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#31463a !important;
+    outline:none !important;
+    box-shadow:none !important;
+}
+
+input:focus,select:focus,textarea:focus,.filter-input:focus,.filter-select:focus{
+    border-color:#8eb69a !important;
+    box-shadow:0 0 0 3px rgba(43,115,70,.07) !important;
+}
+
+.pill,.badge,.status-badge,.type-pill,.status-pill,.published-badge,.stage4-chip{
+    border-radius:8px !important;
+    font-weight:800 !important;
+}
+
+.table,.table-wrap,.table-shell,.earnings-table-wrap,.items-table{
+    border:1px solid var(--uc-border) !important;
+    border-radius:13px !important;
+    overflow:auto;
+    box-shadow:none !important;
+    background:#fff !important;
+}
+
+table th{
+    background:#f4f8f5 !important;
+    color:#607066 !important;
+    font-size:.63rem !important;
+    font-weight:850 !important;
+    text-transform:uppercase;
+    letter-spacing:.025em;
+}
+
+table td{
+    color:#3e5145 !important;
+}
+
+table tr{
+    transition:background .14s ease;
+}
+
+table tbody tr:hover td{
+    background:#fbfdfb !important;
+}
+
+.summary,.stats,.stat-grid,.status-grid,.facts,.grid{
+    gap:11px !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact,.box,.section,.action-card{
+    border:1px solid var(--uc-border) !important;
+    border-radius:14px !important;
+    background:#fff !important;
+    box-shadow:none !important;
+}
+
+.sum,.stat,.stat-card,.status-card,.fact{
+    transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease;
+}
+
+.sum:hover,.stat:hover,.stat-card:hover,.status-card:hover,.fact:hover{
+    transform:translateY(-2px);
+    border-color:#b7d5c0 !important;
+    box-shadow:0 9px 22px rgba(31,102,59,.07) !important;
+}
+
+.notice,.info,.soft-note,.warn-note,.next-step,.table-info{
+    border-radius:11px !important;
+}
+
+.empty,.orders-empty{
+    color:#809087 !important;
+}
+
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+        animation:none !important;
+        transition:none !important;
+        scroll-behavior:auto !important;
+    }
+}
 </style>
-<div class="market">
-  <section class="hero">
-    <div class="hero-row">
-      <div><h1>Farmer Produce Market</h1><div class="muted">Fresh produce listed directly by Farmers. Farmers and AVPL can browse the network; UFC Centres see produce from Farmers mapped to their Centre.</div></div>
-      <div class="tools">
-        {% if overview.viewer.role == 'farmer' %}<a class="btn" href="{{ url_for('modules.farmer_marketplace_listings') }}">My Listings</a>{% endif %}
-        {% if overview.viewer.role != 'accounts' %}<a class="btn" href="{{ url_for('modules.farmer_produce_market_my_orders') }}">My Produce Orders</a>{% endif %}
-      </div>
+
+
+
+<style id="sds-market-redesign">
+.marketplace-grid,.grid{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fill,minmax(235px,1fr)) !important;
+    gap:14px !important;
+}
+
+.market-card,.card{
+    position:relative;
+    overflow:hidden;
+    border:1px solid var(--uc-border) !important;
+    border-radius:17px !important;
+    background:#fff !important;
+    box-shadow:0 7px 20px rgba(26,72,43,.04) !important;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease !important;
+    animation:ucFadeUp .28s ease both;
+}
+
+.market-card:hover,.card:hover{
+    transform:translateY(-3px);
+    border-color:#aed0b7 !important;
+    box-shadow:var(--uc-shadow-hover) !important;
+}
+
+.market-img-wrap,.img{
+    background:linear-gradient(180deg,#f8fbf9 0%,#f1f7f3 100%) !important;
+    border-bottom:1px solid #edf2ee;
+    overflow:hidden;
+}
+
+.market-img-wrap img,.img img{
+    width:100%;
+    height:100%;
+    object-fit:contain !important;
+    transition:transform .28s ease;
+}
+
+.market-card:hover .market-img-wrap img,.card:hover .img img{
+    transform:scale(1.025);
+}
+
+.market-body,.body{
+    padding:14px !important;
+}
+
+.market-body h3,.body h3{
+    margin:0 0 5px !important;
+    color:#1e3325 !important;
+    font-size:.88rem !important;
+    line-height:1.3;
+}
+
+.price{
+    color:#1f6e3f !important;
+    font-weight:900 !important;
+    font-size:1rem !important;
+}
+
+.stock,.stock-text,.avail,.seller{
+    color:#728078 !important;
+    font-size:.68rem !important;
+    font-weight:650;
+}
+
+.buyrow,.actions,.mode{
+    gap:8px !important;
+}
+
+.add,.add-cart-btn{
+    min-height:39px !important;
+    padding:8px 13px !important;
+    border:1px solid #2b7346 !important;
+    border-radius:10px !important;
+    background:#2b7346 !important;
+    color:#fff !important;
+    font-size:.7rem !important;
+    font-weight:850 !important;
+    box-shadow:0 7px 16px rgba(43,115,70,.13);
+}
+
+.add:hover,.add-cart-btn:hover{
+    background:#1f5f39 !important;
+    border-color:#1f5f39 !important;
+}
+
+.cartfab,.commerce-cart-fab{
+    position:fixed !important;
+    top:88px !important;
+    right:28px !important;
+    bottom:auto !important;
+    z-index:1040 !important;
+    min-width:126px !important;
+    min-height:50px !important;
+    padding:10px 15px 10px 13px !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:8px !important;
+    border:1px solid #2b7346 !important;
+    border-radius:14px !important;
+    background:#fff !important;
+    color:#1f5f39 !important;
+    font-size:.78rem !important;
+    font-weight:900 !important;
+    box-shadow:0 12px 28px rgba(27,79,45,.16) !important;
+}
+
+.cartfab::before,.commerce-cart-fab::before{
+    content:"🛒";
+    font-size:1.25rem;
+    line-height:1;
+}
+
+.cartfab span,.commerce-cart-fab span{
+    min-width:25px;
+    height:25px;
+    padding:0 6px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:8px !important;
+    background:#2b7346 !important;
+    color:#fff !important;
+    font-size:.68rem !important;
+}
+
+.cartfab:hover,.commerce-cart-fab:hover{
+    transform:translateY(-2px);
+    background:#f7fbf8 !important;
+    box-shadow:0 15px 32px rgba(27,79,45,.20) !important;
+}
+
+.overlay,.commerce-cart-overlay{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:1100 !important;
+    background:rgba(11,27,17,.42) !important;
+    backdrop-filter:blur(4px);
+}
+
+.panel,.commerce-cart-panel{
+    background:#fff !important;
+    border:1px solid #d8e6dc !important;
+    box-shadow:0 26px 70px rgba(15,37,23,.22) !important;
+    animation:ucPop .2s ease both;
+}
+
+.phead,.cart-head,.head{
+    border-bottom-color:#e7efe9 !important;
+}
+
+.phead h3,.cart-head h3,.panel .head h3{
+    color:#183021 !important;
+    font-weight:900 !important;
+}
+
+.close,.cart-close{
+    width:38px !important;
+    height:38px !important;
+    border:1px solid #dbe7de !important;
+    border-radius:10px !important;
+    background:#fff !important;
+    color:#506158 !important;
+    font-size:1.2rem !important;
+}
+
+.close:hover,.cart-close:hover{
+    background:#f2f7f3 !important;
+    color:#1f5f39 !important;
+}
+
+.rows .line,.cart-rows .line,#pRows .line,#pRows .group{
+    border:1px solid #e2ebe4 !important;
+    border-radius:11px !important;
+    background:#fbfdfb !important;
+}
+
+.checkout{
+    border-top-color:#e6eee8 !important;
+}
+
+.checkout label,.cart-checkout label{
+    color:#5f7066 !important;
+    font-size:.68rem !important;
+    font-weight:800 !important;
+}
+
+.primary,.cart-primary{
+    background:#2b7346 !important;
+    border:1px solid #2b7346 !important;
+    color:#fff !important;
+    font-weight:850 !important;
+}
+
+.secondary,.cart-secondary{
+    background:#fff !important;
+    border:1px solid #d2e0d6 !important;
+    color:#355a42 !important;
+    font-weight:800 !important;
+}
+
+.uc-checkout-confirm{
+    position:fixed;
+    inset:0;
+    z-index:1400;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(11,27,17,.48);
+    backdrop-filter:blur(5px);
+}
+
+.uc-checkout-confirm.open{
+    display:flex;
+}
+
+.uc-checkout-card{
+    width:min(460px,100%);
+    padding:20px;
+    border:1px solid #d7e5db;
+    border-radius:18px;
+    background:#fff;
+    box-shadow:0 28px 80px rgba(15,37,23,.26);
+    animation:ucPop .2s ease both;
+}
+
+.uc-checkout-icon{
+    width:48px;
+    height:48px;
+    display:grid;
+    place-items:center;
+    margin-bottom:13px;
+    border-radius:13px;
+    background:#eff8f1;
+    color:#247044;
+    font-size:1.35rem;
+}
+
+.uc-checkout-card h3{
+    margin:0;
+    font-size:1.12rem;
+    font-weight:900;
+}
+
+.uc-checkout-card p{
+    margin:7px 0 0;
+    color:#6b7b71;
+    font-size:.74rem;
+    line-height:1.5;
+}
+
+.uc-checkout-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+    margin-top:17px;
+}
+
+.uc-checkout-actions button{
+    min-height:41px;
+    border-radius:10px;
+    font-size:.72rem;
+    font-weight:850;
+    cursor:pointer;
+}
+
+.uc-checkout-cancel{
+    border:1px solid #d6e3d9;
+    background:#fff;
+    color:#4e6256;
+}
+
+.uc-checkout-ok{
+    border:1px solid #2b7346;
+    background:#2b7346;
+    color:#fff;
+}
+
+@media(max-width:700px){
+    .marketplace-grid,.grid{
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+        gap:10px !important;
+    }
+    .cartfab,.commerce-cart-fab{
+        top:auto !important;
+        right:15px !important;
+        bottom:18px !important;
+        min-width:116px !important;
+        min-height:48px !important;
+    }
+}
+
+@media(max-width:480px){
+    .marketplace-grid,.grid{
+        grid-template-columns:1fr !important;
+    }
+}
+</style>
+
+
+
+<div class="uc-checkout-confirm" id="ucCheckoutConfirm" aria-hidden="true">
+    <div class="uc-checkout-card" role="dialog" aria-modal="true" aria-labelledby="ucCheckoutTitle">
+        <div class="uc-checkout-icon">🛒</div>
+        <h3 id="ucCheckoutTitle">Confirm your order</h3>
+        <p>Please review the cart and payment option before placing the order. Your request will be sent after confirmation.</p>
+        <div class="uc-checkout-actions">
+            <button type="button" class="uc-checkout-cancel" id="ucCheckoutCancel">Go Back</button>
+            <button type="button" class="uc-checkout-ok" id="ucCheckoutOk">Confirm & Place Order</button>
+        </div>
     </div>
-    <div class="stats"><div class="stat"><span class="muted">Market listings</span><strong>{{ overview.summary.listing_count or 0 }}</strong></div><div class="stat"><span class="muted">Available now</span><strong>{{ overview.summary.available_count or 0 }}</strong></div></div>
-  </section>
-  <form class="search" method="get"><input name="q" value="{{ overview.query }}" placeholder="Search tomato, rice, farmer, village..."><label class="btn"><input type="checkbox" name="available" value="1" {% if request.args.get('available') == '1' %}checked{% endif %}> Available only</label><button class="btn primary">Search</button></form>
-
-  <div class="grid">
-    {% for p in overview.rows %}
-    <article class="card">
-      <div class="photo">{% if p.images %}<img src="{{ url_for('documents.serve', filename=p.images[0]) }}" alt="{{ p.product_name }}">{% else %}No product image{% endif %}</div>
-      <div class="body">
-        <div class="seller">{{ p.farmer_name }}{% if p.village %} · {{ p.village }}{% endif %}{% if p.district %} · {{ p.district }}{% endif %}</div>
-        <div class="name">{{ p.title or p.product_name }}</div>
-        <div class="muted">{{ p.product_name }}{% if p.variety %} · {{ p.variety }}{% endif %}{% if p.grade %} · {{ p.grade }}{% endif %}</div>
-        <div class="chips"><span class="chip">{{ p.unit_code }}</span>{% if p.selling_mode in ['loose','both'] %}<span class="chip">Loose</span>{% endif %}{% if p.selling_mode in ['bag','both'] %}<span class="chip">Bag / Pack</span>{% endif %}</div>
-        <div class="stock {{ 'out' if not p.is_available else '' }}">{% if p.is_available %}Available to order: {{ p.available_to_order_display }} {{ p.unit_code }}{% else %}Currently out of stock{% endif %}</div>
-        {% if p.selling_mode in ['loose','both'] %}<div class="price">₹{{ p.loose_price_display }} / {{ p.unit_code }}</div><div class="help">Minimum {{ p.min_order_quantity_display }} {{ p.unit_code }}</div>{% endif %}
-        {% if p.package_options %}<div class="packages">{% for b in p.package_options %}<div>{{ b.label }} · {{ b.quantity_per_bag_display }} {{ p.unit_code }} · <strong>₹{{ b.price_per_bag_display }}</strong>{% if b.available_bags is defined %} · up to {{ b.available_bags }} bag{{ '' if b.available_bags == 1 else 's' }} now{% endif %}</div>{% endfor %}</div>{% endif %}
-        {% if p.description %}<div class="muted" style="margin-top:8px">{{ p.description }}</div>{% endif %}
-
-        {% if p.is_owner %}<div class="owner" style="margin-top:12px">This is your own listing. Manage it from <a href="{{ url_for('modules.farmer_marketplace_listings') }}">My Listings</a>.</div>
-        {% elif overview.viewer.role == 'accounts' %}<div class="owner" style="margin-top:12px">View only. AVPL operational users place produce orders.</div>
-        {% elif p.is_available %}
-        <form class="order market-order-form" method="post" action="{{ url_for('modules.farmer_produce_market_order') }}" onsubmit="this.querySelector('button[type=submit]').disabled=true;">
-          <input type="hidden" name="listing_id" value="{{ p.id }}"><input type="hidden" name="order_token" value="{{ overview.order_token }}-{{ loop.index }}">
-          {% if p.selling_mode == 'both' %}<label>How do you want to buy?<select name="purchase_mode" class="purchase-mode"><option value="loose">Loose / per {{ p.unit_code }}</option><option value="bag">Bag / Pack</option></select></label>{% elif p.selling_mode == 'bag' %}<input type="hidden" name="purchase_mode" value="bag">{% else %}<input type="hidden" name="purchase_mode" value="loose">{% endif %}
-          <div class="mode-fields loose-fields" {% if p.selling_mode == 'bag' %}style="display:none"{% endif %}><label>Quantity ({{ p.unit_code }})<input type="number" name="quantity_loose" min="{{ p.min_order_quantity or 0.001 }}" max="{{ p.available_to_order }}" step="0.001" placeholder="e.g. 20"></label></div>
-          <div class="mode-fields bag-fields" {% if p.selling_mode != 'bag' %}style="display:none"{% endif %}><label>Bag / Pack size<select name="package_index">{% for b in p.package_options %}<option value="{{ b.index }}" {% if b.available_bags <= 0 %}disabled{% endif %}>{{ b.label }} · {{ b.quantity_per_bag_display }} {{ p.unit_code }} · ₹{{ b.price_per_bag_display }} · {{ b.available_bags }} available</option>{% endfor %}</select></label><label>Number of bags / packs<input type="number" name="quantity_bag" min="1" step="1" placeholder="e.g. 2"></label></div>
-          <input type="hidden" name="quantity" class="final-quantity">
-          <label>Payment<select name="payment_term"><option value="pay_on_receipt">Pay on Receipt</option><option value="credit">Request Credit / Pay Later</option></select></label>
-          <label>Note (optional)<textarea name="note" rows="2" maxlength="500" placeholder="Pickup, quality or delivery note"></textarea></label>
-          <button class="btn primary" type="submit" style="width:100%;margin-top:9px">Request Order</button>
-        </form>
-        {% endif %}
-      </div>
-    </article>
-    {% else %}<div class="empty" style="grid-column:1/-1"><h3>No Farmer produce listings found</h3><div class="muted">Try another search. Farmers can publish produce from their harvest stock.</div></div>{% endfor %}
-  </div>
 </div>
-<script>
-document.querySelectorAll('.market-order-form').forEach(function(form){
-  const mode=form.querySelector('.purchase-mode'); const loose=form.querySelector('.loose-fields'); const bag=form.querySelector('.bag-fields'); const final=form.querySelector('.final-quantity');
-  function update(){ const v=mode?mode.value:(form.querySelector('input[name=purchase_mode]')||{}).value; if(loose)loose.style.display=v==='loose'?'block':'none'; if(bag)bag.style.display=v==='bag'?'block':'none'; }
-  if(mode)mode.addEventListener('change',update); update();
-  form.addEventListener('submit',function(e){ const v=mode?mode.value:(form.querySelector('input[name=purchase_mode]')||{}).value; const src=form.querySelector(v==='bag'?'input[name=quantity_bag]':'input[name=quantity_loose]'); if(!src || !src.value){e.preventDefault(); const b=form.querySelector('button[type=submit]'); if(b)b.disabled=false; alert('Enter the order quantity.'); return;} final.value=src.value; });
-});
+<script id="uc-checkout-confirm-script">
+(function(){
+    const overlay = document.getElementById('ucCheckoutConfirm');
+    if(!overlay) return;
+
+    const cancel = document.getElementById('ucCheckoutCancel');
+    const ok = document.getElementById('ucCheckoutOk');
+    const selectors = ['#cartForm','#pForm'];
+    let pendingForm = null;
+
+    selectors.forEach(function(selector){
+        const form = document.querySelector(selector);
+        if(!form) return;
+
+        form.addEventListener('submit', function(event){
+            if(form.dataset.ucConfirmed === '1'){
+                form.dataset.ucConfirmed = '';
+                return;
+            }
+            event.preventDefault();
+            pendingForm = form;
+            overlay.classList.add('open');
+            overlay.setAttribute('aria-hidden','false');
+        });
+    });
+
+    function closeConfirm(){
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden','true');
+        pendingForm = null;
+    }
+
+    cancel.addEventListener('click', closeConfirm);
+
+    overlay.addEventListener('click', function(event){
+        if(event.target === overlay) closeConfirm();
+    });
+
+    document.addEventListener('keydown', function(event){
+        if(event.key === 'Escape' && overlay.classList.contains('open')) closeConfirm();
+    });
+
+    ok.addEventListener('click', function(){
+        if(!pendingForm) return;
+        const form = pendingForm;
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden','true');
+        pendingForm = null;
+        form.dataset.ucConfirmed = '1';
+        form.requestSubmit ? form.requestSubmit() : form.submit();
+    });
+})();
 </script>
+
 {% endblock %}

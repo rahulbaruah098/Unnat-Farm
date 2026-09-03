@@ -1,4 +1,74 @@
-{% extends 'base.html' %}{% block title %}Reconciliation | UnnatFarm MIS{% endblock %}{% block extra_head %}{% include 'reports/_styles.html' %}{% endblock %}{% block content %}
-<div class="s10-shell"><section class="s10-hero"><div><h1>Reconciliation Engine</h1><p>Detects stock-balance errors, invoice arithmetic mismatches, payment-state errors, orphan payments and missing linked transaction records.</p></div><a class="s10-btn secondary s10-no-print" href="{{ url_for('reports.export_csv', report_name='reconciliation', q=filters.q, from=filters.from_text, to=filters.to_text) }}">Export Issues</a></section>{% include 'reports/_tabs.html' %}{% include 'reports/_filters.html' %}
-<div class="s10-grid"><div class="s10-card"><small>Total Issues</small><strong>{{ report.summary.issues }}</strong></div><div class="s10-card"><small>Critical</small><strong>{{ report.summary.critical }}</strong></div><div class="s10-card"><small>Warnings</small><strong>{{ report.summary.warnings }}</strong></div><div class="s10-card"><small>Invoices Checked</small><strong>{{ report.summary.financial_documents_checked }}</strong></div><div class="s10-card"><small>Chains Checked</small><strong>{{ report.summary.transaction_chains_checked }}</strong></div><div class="s10-card"><small>Lots Checked</small><strong>{{ report.summary.stock_lots_checked }}</strong></div><div class="s10-card"><small>Orphan Payments</small><strong>{{ report.summary.orphan_payments }}</strong></div></div>
-<section class="s10-section"><div class="s10-section-head"><div><h2>Detected Issues</h2><p>Stage 10 is read-only here: it identifies problems but does not silently rewrite historical stock or finance.</p></div></div>{% for x in report.issues %}<div class="s10-issue"><div><span class="s10-pill {{ 'bad' if x.severity=='critical' else 'warn' }}">{{ x.severity|title }}</span></div><strong>{{ x.type }}</strong><div>{{ x.reference }}</div><div>{{ x.message }}</div></div>{% else %}<div class="s10-empty"><strong>No reconciliation issues detected in the checked scope.</strong><br>Run this again after each full UAT chain.</div>{% endfor %}</section>{% include 'reports/_pager.html' %}</div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Reconciliation | UnnatFarm MIS{% endblock %}
+{% block extra_head %}
+{% include 'reports/_styles.html' %}
+<style>
+.rc-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.rc-issue{padding:16px 18px;border-bottom:1px solid #edf2ee}.rc-issue:last-child{border-bottom:0}
+.rc-row{display:grid;grid-template-columns:auto minmax(160px,.7fr) minmax(190px,.85fr) 1.5fr auto;gap:12px;align-items:start}
+.rc-ref{font-size:.82rem;color:#6c7d74;font-weight:750;word-break:break-word}.rc-msg{font-size:.88rem;color:#334b40;line-height:1.5}
+.rc-detail{margin-top:11px;padding:12px 14px;background:#f8fbf9;border:1px solid #e5eee8;border-radius:13px}.rc-detail summary{cursor:pointer;font-size:.84rem;font-weight:850;color:#315c45}.rc-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:11px}.rc-detail-grid small{display:block;color:#7b8982;font-size:.71rem;font-weight:850;text-transform:uppercase;letter-spacing:.35px;margin-bottom:4px}.rc-detail-grid div div{font-size:.84rem;color:#3d5147;line-height:1.45}
+.rc-safe{font-size:.77rem;color:#6d7e75;margin-top:9px}.rc-empty{padding:38px 20px;text-align:center}.rc-empty strong{display:block;color:#1f5f39;font-size:1rem;margin-bottom:5px}.rc-empty span{color:#728179;font-size:.86rem}
+@media(max-width:980px){.rc-row{grid-template-columns:auto 1fr}.rc-row .rc-ref,.rc-row .rc-msg,.rc-row .rc-mode{grid-column:2}.rc-detail-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.rc-row{grid-template-columns:1fr}.rc-row .rc-ref,.rc-row .rc-msg,.rc-row .rc-mode{grid-column:auto}.rc-actions{justify-content:flex-start}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="s10-shell">
+  <section class="s10-hero">
+    <div>
+      <h1>Reconciliation</h1>
+      <p>Find mismatches across orders, stock, invoices and payments before they become operational or accounting problems.</p>
+    </div>
+    <div class="rc-actions s10-no-print">
+      <a class="s10-btn secondary" href="{{ url_for('reports.system_health') }}">System Health</a>
+      <a class="s10-btn secondary" href="{{ url_for('reports.control_export', report_name='reconciliation', file_type='xlsx', q=filters.q, from=filters.from_text, to=filters.to_text) }}">Excel</a>
+      <a class="s10-btn" href="{{ url_for('reports.control_export', report_name='reconciliation', file_type='pdf', q=filters.q, from=filters.from_text, to=filters.to_text) }}">PDF</a>
+    </div>
+  </section>
+
+  {% include 'reports/_tabs.html' %}
+  {% include 'reports/_filters.html' %}
+
+  <div class="s10-grid">
+    <div class="s10-card"><small>Total Issues</small><strong>{{ report.summary.issues }}</strong><div class="sub">Current checked scope</div></div>
+    <div class="s10-card"><small>Critical</small><strong>{{ report.summary.critical }}</strong><div class="sub">Needs immediate review</div></div>
+    <div class="s10-card"><small>Warnings</small><strong>{{ report.summary.warnings }}</strong><div class="sub">Check before closing</div></div>
+    <div class="s10-card"><small>Transaction Chains</small><strong>{{ report.summary.transaction_chains_checked }}</strong><div class="sub">Order → stock → invoice → payment</div></div>
+    <div class="s10-card"><small>Financial Docs</small><strong>{{ report.summary.financial_documents_checked }}</strong><div class="sub">Arithmetic and status checks</div></div>
+    <div class="s10-card"><small>Stock Lots</small><strong>{{ report.summary.stock_lots_checked }}</strong><div class="sub">Physical / reserved balances</div></div>
+    <div class="s10-card"><small>Orphan Payments</small><strong>{{ report.summary.orphan_payments }}</strong><div class="sub">Payment without valid source</div></div>
+  </div>
+
+  <section class="s10-section">
+    <div class="s10-section-head">
+      <div><h2>Issues to Review</h2><p>Nothing is changed automatically. Review the suggested action before correcting a business record.</p></div>
+      <a class="s10-btn secondary s10-no-print" href="{{ url_for('reports.transactions') }}">Transaction Chains</a>
+    </div>
+
+    {% for x in report.issues %}
+      <article class="rc-issue">
+        <div class="rc-row">
+          <span class="s10-pill {{ 'bad' if x.severity=='critical' else 'warn' }}">{{ x.severity|title }}</span>
+          <strong>{{ x.type }}</strong>
+          <div class="rc-ref">{{ x.reference or '—' }}</div>
+          <div class="rc-msg">{{ x.message }}</div>
+          <span class="s10-pill info rc-mode">{{ x.repair_mode or 'Review' }}</span>
+        </div>
+        <details class="rc-detail">
+          <summary>Why this happened & what to do</summary>
+          <div class="rc-detail-grid">
+            <div><small>Likely cause</small><div>{{ x.cause or 'Review the linked records to identify the source of the mismatch.' }}</div></div>
+            <div><small>Impact</small><div>{{ x.impact or 'May affect operational, stock or financial accuracy.' }}</div></div>
+            <div><small>Recommended action</small><div>{{ x.recommended_action or 'Open the linked transaction and reconcile it against its source records.' }}</div></div>
+          </div>
+          <div class="rc-safe">Safe-control rule: historical finance and stock records are not silently rewritten from this screen.</div>
+        </details>
+      </article>
+    {% else %}
+      <div class="rc-empty"><strong>Everything checked is reconciled.</strong><span>No issues were detected for the selected scope.</span></div>
+    {% endfor %}
+  </section>
+  {% include 'reports/_pager.html' %}
+</div>
+{% endblock %}

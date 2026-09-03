@@ -1,36 +1,135 @@
 {% extends 'base.html' %}
-{% block title %}{{ 'Edit Produce Listing' if listing else 'Sell on Marketplace' }}{% endblock %}
+{% block title %}{{ 'Edit Listing' if listing else 'Sell Produce' }}{% endblock %}
 {% block content %}
 <style>
-.wrap{max-width:1000px;margin:auto;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d}.head,.card{background:#fff;border:1px solid rgba(47,122,76,.11);border-radius:11px;padding:20px;box-shadow:0 12px 30px rgba(15,23,42,.05)}.head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.head h1{margin:0}.muted{color:#748279}.card{margin-top:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.full{grid-column:1/-1}label{display:flex;flex-direction:column;gap:5px;font-weight:800}input,select,textarea{width:100%;box-sizing:border-box;border:1px solid rgba(47,122,76,.14);border-radius:11px;padding:10px;font:inherit;background:#fff}.hint{font-size:.82rem;color:#829087;font-weight:400}.stock-info{padding:12px;border-radius:9px;background:#f7fbf8;border:1px solid rgba(47,122,76,.14)}.mode{display:flex;gap:12px;flex-wrap:wrap}.mode label{flex-direction:row;align-items:center;font-weight:700}.mode input{width:auto}.packs{display:grid;gap:9px}.pack{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:8px;padding:10px;border:1px solid #e0ece4;border-radius:9px;background:#fbfdfb}.actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:16px}.btn{border:1px solid rgba(47,122,76,.14);border-radius:9px;padding:10px 15px;background:#f7fbf8;color:#2f6e46;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.btn.primary{background:#397e51;color:#fff;border-color:#397e51}@media(max-width:650px){.grid,.pack{grid-template-columns:1fr}.full{grid-column:auto}.card,.head{padding:15px}}
+.sell-wrap{max-width:900px;margin:0 auto;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17251d}.sell-head,.sell-card{background:#fff;border:1px solid #dfece3;border-radius:18px;box-shadow:0 12px 30px rgba(15,23,42,.05)}.sell-head{padding:18px 20px}.sell-head h1{margin:0 0 4px;font-size:1.7rem}.muted{color:#718078}.steps{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.step{padding:6px 10px;border-radius:999px;background:#edf7f0;color:#337149;font-size:.8rem;font-weight:850}.step.active{background:#397e51;color:#fff}.sell-card{padding:20px;margin-top:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.full{grid-column:1/-1}.field{display:flex;flex-direction:column;gap:6px;font-weight:800}.field small{font-weight:500;color:#7b8980}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;border:1px solid #d9e8de;border-radius:11px;padding:11px 12px;background:#fff;font:inherit;color:#17251d}.stock-banner{display:none;margin-top:8px;padding:11px 12px;border-radius:10px;background:#f0f8f2;color:#28663f;font-weight:850}.stock-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}.stock-fact{padding:10px 12px;border:1px solid #dfece3;border-radius:10px;background:#fbfdfb}.stock-fact span{display:block;color:#718078;font-size:.76rem;font-weight:700}.stock-fact strong{display:block;margin-top:2px;color:#28663f}.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.mode{position:relative}.mode input{position:absolute;opacity:0}.mode label{display:block;padding:11px;border:1px solid #dce9e0;border-radius:11px;text-align:center;cursor:pointer;font-weight:850;background:#fbfdfb}.mode input:checked+label{border-color:#397e51;background:#edf7f0;color:#2f6e46}.simple-box{padding:14px;border:1px solid #e0ece4;border-radius:12px;background:#fbfdfb}.pack-grid{display:grid;gap:8px}.pack-row{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px}.pack-row input{border:1px solid #d9e8de;border-radius:9px;padding:9px;font:inherit}.optional{margin-top:14px;border:1px dashed #cfe1d5;border-radius:11px;padding:10px 12px}.optional summary{cursor:pointer;font-weight:850;color:#466653}.optional .grid{margin-top:12px}.actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:18px}.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #d5e5da;border-radius:10px;padding:10px 15px;background:#f8fbf9;color:#2f6e46;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.btn.primary{background:#397e51;color:#fff;border-color:#397e51}.photo-note,.field-note{font-size:.82rem;color:#718078;margin-top:5px;font-weight:600}@media(max-width:680px){.sell-head,.sell-card{padding:15px}.grid,.pack-row,.stock-facts{grid-template-columns:1fr}.full{grid-column:auto}.modes{grid-template-columns:1fr}.actions .btn{flex:1 1 140px}}
 </style>
-<div class="wrap">
-  <div class="head"><div><h1>{{ 'Edit Produce Listing' if listing else 'Sell on Farmer Produce Market' }}</h1><div class="muted">Choose produce already in My Produce Stock. Publishing does not reduce stock.</div></div><a class="btn" href="{{ url_for('modules.farmer_marketplace_listings') }}">My Listings</a></div>
-  <form method="post" enctype="multipart/form-data" class="card" id="listingForm">
+<div class="sell-wrap">
+  <div class="sell-head">
+    <h1>{{ 'Edit Produce Listing' if listing else 'Sell Produce' }}</h1>
+    <div class="muted">{{ 'Update what buyers can order from this listing.' if listing else 'Choose produce from My Stock, set quantity and price, then publish.' }}</div>
+    <div class="steps"><span class="step">1 · Add Production</span><span class="step">2 · My Stock</span><span class="step active">3 · Sell on Market</span></div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="sell-card" id="listingForm">
     <div class="grid">
-      <label class="full">Produce from My Stock
-        {% if listing %}<input type="hidden" name="product_key" value="{{ listing.product_key }}"><select disabled><option>{{ listing.product_name }} · {{ listing.physical_stock_display }} {{ listing.unit_code }} physical</option></select>
-        {% else %}<select name="product_key" id="productKey" required><option value="">Choose produce</option>{% for s in stock_rows %}<option value="{{ s.product_key }}" data-unit="{{ s.unit_code }}" data-saleable="{{ s.saleable_display }}" {% if selected_product_key == s.product_key %}selected{% endif %}>{{ s.product_name }} · {{ s.saleable_display }} {{ s.unit_code }} saleable</option>{% endfor %}</select>{% endif %}
-        <span class="hint">Add Production / Harvest first if the produce is not listed here.</span>
+      <label class="field full">Produce
+        {% if listing %}
+          <input type="hidden" name="product_key" value="{{ listing.product_key }}">
+          <input value="{{ listing.product_name }}" disabled>
+          <div class="stock-facts">
+            <div class="stock-fact"><span>Available in My Stock now</span><strong>{{ listing.farm_stock_available_display }} {{ listing.unit_code }}</strong></div>
+            <div class="stock-fact"><span>This listing</span><strong>{{ listing.available_to_order_display }} {{ listing.unit_code }} open for new orders</strong></div>
+          </div>
+          <div class="field-note">Sold {{ listing.fulfilled_quantity_display }} {{ listing.unit_code }} · Reserved {{ listing.reserved_quantity_display }} {{ listing.unit_code }}. Editing this listing does not change My Stock.</div>
+        {% else %}
+          <select name="product_key" id="productKey" required>
+            <option value="">Choose from My Stock</option>
+            {% for s in stock_rows %}
+              <option value="{{ s.product_key }}" data-unit="{{ s.unit_code }}" data-saleable="{{ s.saleable_quantity }}" data-saleable-display="{{ s.saleable_display }}" {% if selected_product_key == s.product_key %}selected{% endif %}>{{ s.product_name }}</option>
+            {% endfor %}
+          </select>
+          <div id="stockBanner" class="stock-banner"></div>
+        {% endif %}
       </label>
-      <label>Marketplace title<input name="title" maxlength="150" value="{{ listing.title if listing else '' }}" placeholder="e.g. Fresh Farm Tomatoes"></label>
-      <label>Quantity offered<input type="number" name="listed_quantity" min="0.001" step="0.001" required value="{{ listing.listed_quantity if listing else '' }}" placeholder="e.g. 400"><span class="hint">This is the maximum quantity you want to offer from current stock.</span></label>
-      <label>Variety<input name="variety" maxlength="120" value="{{ listing.variety if listing else '' }}" placeholder="Optional"></label>
-      <label>Grade / quality<input name="grade" maxlength="80" value="{{ listing.grade if listing else '' }}" placeholder="e.g. Grade A"></label>
-      <div class="full"><strong>How will you sell?</strong><div class="mode" style="margin-top:8px"><label><input type="radio" name="selling_mode" value="loose" {% if not listing or listing.selling_mode=='loose' %}checked{% endif %}> Per KG / unit</label><label><input type="radio" name="selling_mode" value="bag" {% if listing and listing.selling_mode=='bag' %}checked{% endif %}> Bags / packs</label><label><input type="radio" name="selling_mode" value="both" {% if listing and listing.selling_mode=='both' %}checked{% endif %}> Both</label></div></div>
-      <div id="looseFields" class="full stock-info"><div class="grid"><label>Price per stock unit (₹)<input type="number" name="loose_price" min="0.01" step="0.01" value="{{ listing.loose_price if listing else '' }}" placeholder="e.g. 35"></label><label>Minimum loose order<input type="number" name="min_order_quantity" min="0.001" step="0.001" value="{{ listing.min_order_quantity if listing else 1 }}" placeholder="e.g. 20"></label></div></div>
-      <div id="bagFields" class="full stock-info"><strong>Bag / Pack options</strong><div class="hint">Example: 25 KG bag ₹800, 30 KG bag ₹950, 40 KG bag ₹1,250. Actual stock always remains in the base harvest unit.</div><div class="packs" style="margin-top:9px">
-        {% for i in range(4) %}{% set b = listing.package_options[i] if listing and listing.package_options|length > i else {} %}<div class="pack"><input name="package_label" value="{{ b.label or '' }}" placeholder="Label, e.g. 25 KG Bag"><input type="number" name="package_quantity" min="0.001" step="0.001" value="{{ b.quantity_per_bag if b else '' }}" placeholder="Quantity inside bag"><input type="number" name="package_price" min="0.01" step="0.01" value="{{ b.price_per_bag if b else '' }}" placeholder="Price per bag ₹"></div>{% endfor %}
-      </div></div>
-      <label class="full">Product images<input type="file" name="images" accept="image/*" multiple><span class="hint">Up to 4 images. On edit, leave empty to keep current images.</span></label>
-      {% if listing and listing.images %}<div class="full muted">Current images: {{ listing.images|length }} uploaded.</div>{% endif %}
-      <label class="full">Short description<textarea name="description" rows="4" maxlength="1200" placeholder="Freshness, harvest details, pickup information...">{{ listing.description if listing else '' }}</textarea></label>
+
+      {% if listing %}
+        <label class="field">Quantity available for new orders
+          <input id="listedQuantity" type="number" name="available_quantity" min="0.001" max="{{ listing.farm_stock_available }}" step="0.001" required value="{{ listing.edit_available_quantity_display }}" placeholder="e.g. 20">
+          <span class="field-note">You can offer up to {{ listing.farm_stock_available_display }} {{ listing.unit_code }} from current unreserved stock.</span>
+        </label>
+      {% else %}
+        <label class="field">Quantity to sell
+          <input id="listedQuantity" type="number" name="listed_quantity" min="0.001" step="0.001" required value="" placeholder="e.g. 20">
+        </label>
+      {% endif %}
+
+      <div class="field">
+        <span>How do you want to sell?</span>
+        <div class="modes">
+          <div class="mode"><input id="modeLoose" type="radio" name="selling_mode" value="loose" {% if not listing or listing.selling_mode == 'loose' %}checked{% endif %}><label for="modeLoose">Per unit</label></div>
+          <div class="mode"><input id="modeBag" type="radio" name="selling_mode" value="bag" {% if listing and listing.selling_mode == 'bag' %}checked{% endif %}><label for="modeBag">Bags / packs</label></div>
+          <div class="mode"><input id="modeBoth" type="radio" name="selling_mode" value="both" {% if listing and listing.selling_mode == 'both' %}checked{% endif %}><label for="modeBoth">Both</label></div>
+        </div>
+      </div>
+
+      <div id="looseFields" class="simple-box full">
+        <div class="grid">
+          <label class="field">Selling price (₹)
+            <input type="number" name="loose_price" min="0.01" step="0.01" value="{{ listing.loose_price if listing else '' }}" placeholder="Price per stock unit">
+          </label>
+          <label class="field">Minimum order
+            <input type="number" name="min_order_quantity" min="0.001" step="0.001" value="{{ listing.min_order_quantity if listing else 1 }}">
+          </label>
+        </div>
+      </div>
+
+      <div id="bagFields" class="simple-box full">
+        <strong>Bag / pack price</strong>
+        <div class="muted" style="margin:3px 0 10px">Fill at least one row.</div>
+        <div class="pack-grid">
+          {% for i in range(4) %}
+            {% set b = listing.package_options[i] if listing and listing.package_options|length > i else {} %}
+            <div class="pack-row">
+              <input name="package_label" value="{{ b.label or '' }}" placeholder="Name, e.g. 25 KG Bag">
+              <input type="number" name="package_quantity" min="0.001" step="0.001" value="{{ b.quantity_per_bag if b else '' }}" placeholder="Qty in bag">
+              <input type="number" name="package_price" min="0.01" step="0.01" value="{{ b.price_per_bag if b else '' }}" placeholder="Price ₹">
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <label class="field full">Product photo
+        <input type="file" name="images" accept="image/*" multiple>
+        <span class="photo-note">A photo is required to publish. You can upload up to 4.{% if listing and listing.images %} Current photos stay if you do not choose new ones.{% endif %}</span>
+      </label>
     </div>
-    <div class="actions"><a class="btn" href="{{ url_for('modules.farmer_marketplace_listings') }}">Cancel</a><button class="btn" name="action" value="draft">Save Draft</button><button class="btn primary" name="action" value="publish">Publish to Marketplace</button></div>
+
+    <details class="optional">
+      <summary>Optional details</summary>
+      <div class="grid">
+        <label class="field">Listing name<input name="title" maxlength="150" value="{{ listing.title if listing else '' }}" placeholder="Uses produce name if blank"></label>
+        <label class="field">Variety<input name="variety" maxlength="120" value="{{ listing.variety if listing else '' }}" placeholder="Optional"></label>
+        <label class="field">Grade / quality<input name="grade" maxlength="80" value="{{ listing.grade if listing else '' }}" placeholder="Optional"></label>
+        <label class="field full">Short note<textarea name="description" rows="3" maxlength="1200" placeholder="Freshness, pickup note, etc.">{{ listing.description if listing else '' }}</textarea></label>
+      </div>
+    </details>
+
+    <div class="actions">
+      <a class="btn" href="{{ url_for('modules.farmer_marketplace_listings') }}">Cancel</a>
+      <button class="btn" name="action" value="draft">Save Draft</button>
+      <button class="btn primary" name="action" value="publish">{{ 'Save & Publish' if listing else 'Publish' }}</button>
+    </div>
   </form>
 </div>
 <script>
-function modeState(){const v=(document.querySelector('input[name=selling_mode]:checked')||{}).value;document.getElementById('looseFields').style.display=(v==='loose'||v==='both')?'block':'none';document.getElementById('bagFields').style.display=(v==='bag'||v==='both')?'block':'none';}
-document.querySelectorAll('input[name=selling_mode]').forEach(x=>x.addEventListener('change',modeState));modeState();
+(function(){
+  const loose=document.getElementById('looseFields');
+  const bags=document.getElementById('bagFields');
+  function updateMode(){
+    const checked=document.querySelector('input[name="selling_mode"]:checked');
+    const mode=checked?checked.value:'loose';
+    loose.style.display=(mode==='loose'||mode==='both')?'block':'none';
+    bags.style.display=(mode==='bag'||mode==='both')?'block':'none';
+  }
+  document.querySelectorAll('input[name="selling_mode"]').forEach(el=>el.addEventListener('change',updateMode));
+  updateMode();
+
+  const product=document.getElementById('productKey');
+  const banner=document.getElementById('stockBanner');
+  const qty=document.getElementById('listedQuantity');
+  function updateStock(){
+    if(!product||!banner) return;
+    const option=product.options[product.selectedIndex];
+    if(!option||!option.value){banner.style.display='none'; if(qty) qty.removeAttribute('max'); return;}
+    const availableRaw=option.dataset.saleable||'0';
+    const availableDisplay=option.dataset.saleableDisplay||availableRaw;
+    const unit=option.dataset.unit||'';
+    banner.textContent='Available in My Stock now: '+availableDisplay+' '+unit;
+    banner.style.display='block';
+    if(qty) qty.max=availableRaw;
+  }
+  if(product){product.addEventListener('change',updateStock);updateStock();}
+})();
 </script>
 {% endblock %}
