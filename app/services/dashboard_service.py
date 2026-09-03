@@ -5,6 +5,7 @@ from datetime import date, datetime
 from bson import ObjectId
 
 from app.extensions import mongo
+from app.services.mitra_activity_service import get_mitra_dashboard_data
 
 
 def _num(value):
@@ -218,39 +219,10 @@ def get_centre_dashboard(centre_uid):
 
 
 def get_mitra_dashboard(mitra_uid):
-    db = mongo.db
-    mitra_uid = str(mitra_uid or "").strip()
-    master = db.ufc_mitra_master.find_one({"mitra_uid": mitra_uid}) or {}
-    centre_uid = master.get("mapped_centre_uid") or master.get("centre_uid") or ""
-    farmers = list(db.farmer_master.find({"mitra_uid": mitra_uid}))
-
-    transactions = list(db.transactions.find({"mitra_uid": mitra_uid}).sort("created_at", -1).limit(10))
-    total_purchase = sum(_num(t.get("amount")) for t in transactions if t.get("transaction_type") == "input_purchase")
-    total_sale = sum(_num(t.get("amount")) for t in transactions if t.get("transaction_type") == "output_sale")
-
-    monthly_sales_pipeline = [
-        {"$match": {"mitra_uid": mitra_uid}},
-        {"$group": {"_id": {"year": {"$year": "$created_at"}, "month": {"$month": "$created_at"}}, "total_sales": {"$sum": "$total_amount"}, "total_orders": {"$sum": 1}}},
-        {"$sort": {"_id.year": -1, "_id.month": -1}},
-    ]
-    monthly_sales = list(db.pos_sales.aggregate(monthly_sales_pipeline))
-    pos_total = _sum("pos_sales", {"mitra_uid": mitra_uid}, "total_amount", "grand_total")
-    total_sale = max(total_sale, pos_total)
-
-    return {
-        "centre_uid": centre_uid,
-        "farmer_count": len(farmers),
-        "approved_farmer_count": sum(1 for f in farmers if (f.get("approval_status") or "approved") == "approved"),
-        "pending_farmer_count": sum(1 for f in farmers if (f.get("approval_status") or "approved") != "approved"),
-        "farmers": farmers[:20],
-        "transactions": transactions,
-        "monthly_sales": monthly_sales,
-        "monthly_sales_total": round(total_sale, 2),
-        "monthly_purchase_total": round(total_purchase, 2),
-        "input_bonus": round(total_purchase * 0.02, 2),
-        "output_bonus": round(total_sale * 0.02, 2),
-        "centre_farmer_orders_pending": db.ufc_farmer_orders.count_documents({"centre_uid": centre_uid, "status": "requested"}) if centre_uid else 0,
-    }
+    # UFC Mitra now reads current operational commerce sources instead of the
+    # legacy generic transactions collection. The service preserves old mobile
+    # response keys while adding the simpler web-dashboard fields.
+    return get_mitra_dashboard_data(mitra_uid)
 
 
 def get_farmer_dashboard(phone, user_id=None):

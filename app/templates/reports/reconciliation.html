@@ -35,14 +35,15 @@
     <div class="s10-card"><small>Critical</small><strong>{{ report.summary.critical }}</strong><div class="sub">Needs immediate review</div></div>
     <div class="s10-card"><small>Warnings</small><strong>{{ report.summary.warnings }}</strong><div class="sub">Check before closing</div></div>
     <div class="s10-card"><small>Transaction Chains</small><strong>{{ report.summary.transaction_chains_checked }}</strong><div class="sub">Order → stock → invoice → payment</div></div>
-    <div class="s10-card"><small>Financial Docs</small><strong>{{ report.summary.financial_documents_checked }}</strong><div class="sub">Arithmetic and status checks</div></div>
+    <div class="s10-card"><small>Financial Docs</small><strong>{{ report.summary.financial_documents_checked }}</strong><div class="sub">Settlement and status checks</div></div>
+    <div class="s10-card"><small>Valid Receipt Adjustments</small><strong>{{ report.summary.documented_receipt_adjustments or 0 }}</strong><div class="sub">₹{{ '%.2f'|format(report.summary.documented_receipt_adjustment_value or 0) }} tracked, not errors</div></div>
     <div class="s10-card"><small>Stock Lots</small><strong>{{ report.summary.stock_lots_checked }}</strong><div class="sub">Physical / reserved balances</div></div>
     <div class="s10-card"><small>Orphan Payments</small><strong>{{ report.summary.orphan_payments }}</strong><div class="sub">Payment without valid source</div></div>
   </div>
 
   <section class="s10-section">
     <div class="s10-section-head">
-      <div><h2>Issues to Review</h2><p>Nothing is changed automatically. Review the suggested action before correcting a business record.</p></div>
+      <div><h2>Issues to Review</h2><p>Only unexplained inconsistencies appear here. Recorded damaged, rejected or missing-goods receipt adjustments are tracked separately and are not treated as errors.</p></div>
       <a class="s10-btn secondary s10-no-print" href="{{ url_for('reports.transactions') }}">Transaction Chains</a>
     </div>
 

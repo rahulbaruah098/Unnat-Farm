@@ -17,8 +17,24 @@ from app.services.avpl_ufc_order_service import (
     get_ufc_stock_overview,
     receive_ufc_order,
 )
+from app.services.opening_stock_service import (
+    correct_opening_stock_entry,
+    create_ufc_opening_stock,
+    get_ufc_opening_stock_overview,
+    void_opening_stock_entry,
+)
+from app.services.document_service import store_document
+from app.services.audit_service import log_action
 from app.services.avpl_ufc_sales_service import (
     get_sales_invoice_print_context,
+)
+from app.services.mitra_activity_service import get_mitra_transactions
+from app.services.mitra_commission_service import get_mitra_earning_overview
+from app.services.sales_unnatfarm_service import (
+    get_finance_leads as get_sales_finance_leads,
+    get_sales_activity as get_sales_unnatfarm_activity,
+    get_sales_overview as get_sales_unnatfarm_overview,
+    update_finance_lead_followup as update_sales_finance_lead_followup,
 )
 from app.services.avpl_accounts_operations_service import (
     get_accounts_order_overview,
@@ -2287,9 +2303,9 @@ def transactions():
     role = str(session.get("role") or "").strip().lower()
     q = request.args.get("q", "").strip()
 
-    # Management Accounts view: real unified payments linked to Supplier and
-    # AVPL->UFC invoices.  Other roles intentionally keep the legacy/shared
-    # transaction page so Stage 6-9 flows are not changed by this repair.
+    # Management Accounts view remains payment-focused. Sales UnnatFarm gets
+    # a dedicated read-only activity view built from authoritative commerce
+    # records; lower-level roles keep their existing scoped transaction views.
     if role in {"accounts", "avpl_admin", "super_admin"}:
         try:
             overview = get_accounts_transaction_overview(
@@ -2318,13 +2334,62 @@ def transactions():
             return jsonify(json_safe({"ok": True, "overview": overview}))
         return render_template("modules/accounts_transactions.html", overview=overview)
 
+    if role == "sales_unnatfarm":
+        try:
+            overview = get_sales_unnatfarm_activity(
+                session.get("user_id"),
+                period=request.args.get("period", "this_month"),
+                channel=request.args.get("channel", "all"),
+                q=q,
+                page=request.args.get("page", 1),
+                per_page=request.args.get("per_page", 25),
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            current_app.logger.warning("Sales UnnatFarm activity unavailable: %s", exc)
+            overview = {
+                "rows": [], "summary": {"activity_count": 0, "business_value": 0, "in_progress": 0, "completed": 0},
+                "channels": [("all", "All Sales")], "periods": [("this_month", "This Month")],
+                "selected_period": request.args.get("period", "this_month"),
+                "selected_channel": request.args.get("channel", "all"), "q": q,
+                "pagination": {"page": 1, "per_page": 25, "total": 0, "total_pages": 1, "has_prev": False, "has_next": False},
+                "notice": str(exc),
+            }
+        if wants_json_response():
+            return jsonify(json_safe({
+                "ok": True, "overview": overview,
+                "items": overview.get("rows") or [], "q": q,
+            }))
+        return render_template("modules/sales_activity.html", overview=overview)
+
+    if role == "ufc_mitra":
+        try:
+            overview = get_mitra_transactions(
+                session.get("mitra_uid"),
+                q=q,
+                period=request.args.get("period", "all"),
+                activity_type=request.args.get("type", "all"),
+                farmer=request.args.get("farmer", ""),
+                page=request.args.get("page", 1),
+                per_page=request.args.get("per_page", 25),
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            current_app.logger.warning("Mitra transaction overview unavailable: %s", exc)
+            overview = {
+                "rows": [], "q": q, "selected_period": "all", "selected_type": "all",
+                "selected_farmer": "", "periods": [("all", "All Time")],
+                "types": [("all", "All Types")], "farmer_options": [],
+                "pagination": {"page": 1, "per_page": 25, "total": 0, "total_pages": 1, "has_prev": False, "has_next": False},
+                "summary": {"transactions": 0, "business_value": 0, "earnings": 0, "farmers_served": 0},
+                "notice": str(exc),
+            }
+        if wants_json_response():
+            return jsonify(json_safe({"ok": True, "overview": overview}))
+        return render_template("modules/mitra_transactions.html", overview=overview)
+
     query = {}
 
     if role == "ufc_admin":
         query["centre_uid"] = session.get("centre_uid")
-
-    elif role == "ufc_mitra":
-        query["mitra_uid"] = session.get("mitra_uid")
 
     elif role == "farmer":
         user = mongo.db.users.find_one({"_id": ObjectId(session["user_id"])}) or {}
@@ -3215,44 +3280,6 @@ def purchases():
 
     return render_template("modules/purchases.html", items=items, q=q)
 
-def get_mitra_bonus_percentage(mitra_uid, bonus_type, category):
-    setting = mongo.db.mitra_bonus_settings.find_one({
-        "mitra_uid": mitra_uid,
-        "bonus_type": bonus_type,
-        "category": category
-    })
-
-    if setting:
-        return float(setting.get("percentage") or 2)
-
-    setting = mongo.db.mitra_bonus_settings.find_one({
-        "mitra_uid": None,
-        "bonus_type": bonus_type,
-        "category": category
-    })
-
-    if setting:
-        return float(setting.get("percentage") or 2)
-
-    setting = mongo.db.mitra_bonus_settings.find_one({
-        "mitra_uid": mitra_uid,
-        "bonus_type": bonus_type,
-        "category": "all"
-    })
-
-    if setting:
-        return float(setting.get("percentage") or 2)
-
-    setting = mongo.db.mitra_bonus_settings.find_one({
-        "mitra_uid": None,
-        "bonus_type": bonus_type,
-        "category": "all"
-    })
-
-    if setting:
-        return float(setting.get("percentage") or 2)
-
-    return 2
 
 # UAT Fix 10 — stock-backed UFC POS.
 @modules_bp.route('/pos', methods=['GET', 'POST'])
@@ -3425,129 +3452,97 @@ def pos_void_sale(sale_id):
 @login_required
 @roles_required("ufc_mitra")
 def mitra_earnings():
-    user_id = session.get("user_id")
-    q = request.args.get("q", "").strip()
+    mitra_uid = str(session.get("mitra_uid") or "").strip()
+    if not mitra_uid:
+        user_id = session.get("user_id")
+        try:
+            oid = ObjectId(str(user_id))
+        except Exception:
+            oid = None
+        user = mongo.db.users.find_one({"_id": oid}) if oid else {}
+        mitra_uid = str((user or {}).get("mitra_uid") or (user or {}).get("mapped_mitra_uid") or "").strip()
 
-    mitra_profile = mongo.db.ufc_mitra_master.find_one({
-        "linked_user_id": user_id
-    }) or mongo.db.ufc_mitra_master.find_one({
-        "linked_user_id": ObjectId(user_id)
-    })
-
-    mitra_uid = mitra_profile.get("mitra_uid") if mitra_profile else None
-
-    today = datetime.utcnow()
-    month_start = datetime(today.year, today.month, 1)
-
-    if today.month == 12:
-        next_month_start = datetime(today.year + 1, 1, 1)
-    else:
-        next_month_start = datetime(today.year, today.month + 1, 1)
-
-    monthly_pos_sales = list(mongo.db.pos_sales.find({
-        "mitra_uid": mitra_uid,
-        "created_at": {
-            "$gte": month_start,
-            "$lt": next_month_start
+    try:
+        overview = get_mitra_earning_overview(
+            mitra_uid,
+            period=request.args.get("period", "this_month"),
+            q=request.args.get("q", ""),
+            page=request.args.get("page", 1),
+            per_page=request.args.get("per_page", 25),
+        )
+    except (ValueError, RuntimeError) as exc:
+        if wants_json_response():
+            return jsonify({"ok": False, "message": str(exc)}), 400
+        flash(str(exc), "danger")
+        overview = {
+            "profile": {"mitra_uid": mitra_uid, "name": "Mitra", "farmer_count": 0},
+            "current_rate": 0, "current_rate_display": "0", "current_rate_source": "Unavailable",
+            "period": request.args.get("period", "this_month"), "q": request.args.get("q", ""),
+            "periods": [("this_month", "This Month"), ("today", "Today"), ("this_year", "This Year"), ("all", "All Time")],
+            "rows": [],
+            "summary": {"month_business": 0, "month_earning": 0, "lifetime_business": 0, "lifetime_input_earning": 0, "legacy_other_earning": 0, "lifetime_total_earning": 0, "farmer_count": 0},
+            "pagination": {"page": 1, "per_page": 25, "total": 0, "total_pages": 1, "has_prev": False, "has_next": False},
         }
-    }))
-
-    total_pos_sales = list(mongo.db.pos_sales.find({
-        "mitra_uid": mitra_uid
-    }))
-
-    monthly_avpl_earning = sum(float(s.get("bonus_amount") or 0) for s in monthly_pos_sales)
-    total_avpl_earning = sum(float(s.get("bonus_amount") or 0) for s in total_pos_sales)
-
-    monthly_farmer_sales = list(mongo.db.farmer_product_sales.find({
-        "mitra_uid": mitra_uid,
-        "created_at": {
-            "$gte": month_start,
-            "$lt": next_month_start
-        }
-    }))
-
-    total_farmer_sales = list(mongo.db.farmer_product_sales.find({
-        "mitra_uid": mitra_uid
-    }))
-
-    monthly_farmer_earning = sum(float(s.get("bonus_amount") or 0) for s in monthly_farmer_sales)
-    total_farmer_earning = sum(float(s.get("bonus_amount") or 0) for s in total_farmer_sales)
-
-    current_month_earning = monthly_avpl_earning + monthly_farmer_earning
-    total_earning = total_avpl_earning + total_farmer_earning
-
-    recent_sales_source = monthly_pos_sales + monthly_farmer_sales
-
-    if q:
-        q_lower = q.lower()
-
-        def sale_matches_search(s):
-            searchable_text = " ".join([
-                str(s.get("bonus_type") or ""),
-                str(s.get("product_name") or ""),
-                str(s.get("sale_source") or ""),
-                str(s.get("total_amount") or ""),
-                str(s.get("bonus_percentage") or ""),
-                str(s.get("bonus_amount") or ""),
-                str(s.get("created_at") or "")
-            ]).lower()
-
-            return q_lower in searchable_text
-
-        recent_sales_source = [
-            s for s in recent_sales_source
-            if sale_matches_search(s)
-        ]
-
-    recent_sales = sorted(
-        recent_sales_source,
-        key=lambda x: x.get("created_at"),
-        reverse=True
-    )[:20]
 
     if wants_json_response():
+        summary = overview.get("summary") or {}
         return jsonify(json_safe({
             "ok": True,
-            "mitra_uid": mitra_uid,
-            "current_month_earning": current_month_earning,
-            "total_earning": total_earning,
-            "monthly_avpl_earning": monthly_avpl_earning,
-            "total_avpl_earning": total_avpl_earning,
-            "monthly_farmer_earning": monthly_farmer_earning,
-            "total_farmer_earning": total_farmer_earning,
-            "recent_sales": recent_sales,
-            "q": q
+            "overview": overview,
+            # Compatibility aliases retained for older clients. New clients
+            # should prefer the structured `overview` payload.
+            "mitra_uid": (overview.get("profile") or {}).get("mitra_uid") or mitra_uid,
+            "current_month_earning": summary.get("month_earning", 0),
+            "total_earning": summary.get("lifetime_total_earning", 0),
+            "monthly_avpl_earning": summary.get("month_earning", 0),
+            "total_avpl_earning": summary.get("lifetime_input_earning", 0),
+            "monthly_farmer_earning": 0,
+            "total_farmer_earning": summary.get("legacy_other_earning", 0),
+            "recent_sales": overview.get("rows", []),
+            "q": overview.get("q", ""),
         }))
+    return render_template("modules/mitra_earnings.html", overview=overview)
 
-    return render_template(
-        "modules/mitra_earnings.html",
-        mitra_profile=mitra_profile,
-        mitra_uid=mitra_uid,
-        current_month_earning=current_month_earning,
-        total_earning=total_earning,
-        monthly_avpl_earning=monthly_avpl_earning,
-        total_avpl_earning=total_avpl_earning,
-        monthly_farmer_earning=monthly_farmer_earning,
-        total_farmer_earning=total_farmer_earning,
-        recent_sales=recent_sales,
-        q=q
-    )
+
 @modules_bp.route("/finance/leads")
 @login_required
 @roles_required("avpl_admin", "sales_nelocals", "sales_unnatfarm", "accounts", "ufc_mitra")
 def finance_leads():
-    role = session.get("role")
+    role = str(session.get("role") or "").strip().lower()
     q = request.args.get("q", "").strip()
+
+    if role == "sales_unnatfarm":
+        try:
+            overview = get_sales_finance_leads(
+                session.get("user_id"),
+                q=q,
+                followup=request.args.get("followup", "all"),
+                page=request.args.get("page", 1),
+                per_page=request.args.get("per_page", 25),
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            current_app.logger.warning("Sales finance leads unavailable: %s", exc)
+            overview = {
+                "rows": [], "q": q, "selected_followup": "all",
+                "followup_statuses": [("all", "All Follow-up")],
+                "pagination": {"page": 1, "per_page": 25, "total": 0, "total_pages": 1, "has_prev": False, "has_next": False},
+                "summary": {"total": 0, "open": 0, "new": 0, "follow_up": 0, "forwarded": 0},
+                "notice": str(exc),
+            }
+        if wants_json_response():
+            return jsonify(json_safe({
+                "ok": True, "overview": overview,
+                "items": overview.get("rows") or [],
+                "leads": overview.get("rows") or [], "q": q,
+            }))
+        return render_template("modules/sales_finance_leads.html", overview=overview)
 
     if role == "ufc_mitra":
         leads = list(mongo.db.financial_assistance_leads.find({
             "mitra_uid": session.get("mitra_uid")
         }).sort("created_at", -1))
-
     elif role == "accounts":
         leads = list(mongo.db.financial_assistance_leads.find({}).sort("created_at", -1))
-
     else:
         leads = list(mongo.db.financial_assistance_leads.find({
             "visible_to_roles": role
@@ -3570,18 +3565,35 @@ def finance_leads():
         ]
 
     if wants_json_response():
-        return jsonify(json_safe({
-        "ok": True,
-        "items": leads,
-        "leads": leads,
-        "q": q
-    }))
+        return jsonify(json_safe({"ok": True, "items": leads, "leads": leads, "q": q}))
+    return render_template("modules/finance_leads.html", leads=leads)
 
-    return render_template(
-        "modules/finance_leads.html",
-        leads=leads
-    )
-   
+
+@modules_bp.route("/finance/leads/<lead_id>/sales-follow-up", methods=["POST"])
+@login_required
+@roles_required("sales_unnatfarm")
+def sales_finance_lead_follow_up(lead_id):
+    try:
+        result = update_sales_finance_lead_followup(
+            session.get("user_id"),
+            lead_id,
+            followup_status=request.form.get("followup_status", ""),
+            note=request.form.get("note", ""),
+        )
+        if wants_json_response():
+            return jsonify(json_safe({"ok": True, **result}))
+        flash(result.get("message") or "Finance lead follow-up updated.", "success")
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        if wants_json_response():
+            return json_error(str(exc), 400)
+        flash(str(exc), "danger")
+    return redirect(url_for(
+        "modules.finance_leads",
+        q=request.args.get("q", ""),
+        followup=request.args.get("followup", "all"),
+    ))
+
+
 @modules_bp.route("/sales-details")
 @login_required
 @roles_required("super_admin", "avpl_admin", "sales_unnatfarm", "accounts")
@@ -3589,9 +3601,8 @@ def sales_details():
     role = str(session.get("role") or "").strip().lower()
     q = request.args.get("q", "").strip()
 
-    # Accounts/AVPL management needs purchase-vs-sales finance, not the old POS
-    # farmer/mitra sales table.  Sales UnnatFarm intentionally keeps its
-    # existing POS screen to avoid changing that operational module.
+    # Accounts/AVPL keep their finance-focused purchase-vs-sales summary.
+    # Sales UnnatFarm uses its own read-only, cross-channel sales workspace.
     if role in {"accounts", "avpl_admin", "super_admin"}:
         try:
             overview = get_purchase_sales_summary(
@@ -3625,33 +3636,43 @@ def sales_details():
             return jsonify(json_safe({"ok": True, "overview": overview}))
         return render_template("modules/accounts_purchase_sales_summary.html", overview=overview)
 
-    sales = list(mongo.db.pos_sales.find({"$or": [{"seller_type": "ufc"}, {"seller_type": {"$exists": False}}]}).sort("created_at", -1))
+    if role == "sales_unnatfarm":
+        try:
+            overview = get_sales_unnatfarm_overview(
+                session.get("user_id"),
+                period=request.args.get("period", "this_month"),
+                channel=request.args.get("channel", "all"),
+                payment_status=request.args.get("payment", "all"),
+                q=q,
+                page=request.args.get("page", 1),
+                per_page=request.args.get("per_page", 25),
+            )
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            current_app.logger.warning("Sales UnnatFarm overview unavailable: %s", exc)
+            overview = {
+                "rows": [], "summary": {"sales_count": 0, "sales_value": 0, "received": 0, "outstanding": 0, "receipt_adjustments": 0},
+                "channels": [("all", "All Sales")], "periods": [("this_month", "This Month")],
+                "payment_statuses": [("all", "All Payments")],
+                "selected_period": request.args.get("period", "this_month"),
+                "selected_channel": request.args.get("channel", "all"),
+                "selected_payment": request.args.get("payment", "all"), "q": q,
+                "pagination": {"page": 1, "per_page": 25, "total": 0, "total_pages": 1, "has_prev": False, "has_next": False},
+                "notice": str(exc),
+            }
+        if wants_json_response():
+            return jsonify(json_safe({
+                "ok": True, "overview": overview,
+                "sales": overview.get("rows") or [], "q": q,
+            }))
+        return render_template("modules/sales_details.html", overview=overview)
 
-    if q:
-        q_lower = q.lower()
-        sales = [
-            s for s in sales
-            if q_lower in str(s.get("created_at", "")).lower()
-            or q_lower in str(s.get("centre_uid", "")).lower()
-            or q_lower in str(s.get("farmer_name", "")).lower()
-            or q_lower in str(s.get("farmer_phone", "")).lower()
-            or q_lower in str(s.get("mitra_uid", "")).lower()
-            or q_lower in str(s.get("product_name", "")).lower()
-            or q_lower in str(s.get("product_category", "")).lower()
-            or q_lower in str(s.get("quantity", "")).lower()
-            or q_lower in str(s.get("unit_price", "")).lower()
-            or q_lower in str(s.get("total_amount", "")).lower()
-            or q_lower in str(s.get("bonus_percentage", "")).lower()
-            or q_lower in str(s.get("bonus_amount", "")).lower()
-        ]
-
-    if wants_json_response():
-        return jsonify(json_safe({"ok": True, "sales": sales, "q": q}))
-
-    return render_template(
-        "modules/sales_details.html",
-        sales=sales
-    )
+    return render_template("modules/sales_details.html", overview={
+        "rows": [], "summary": {"sales_count": 0, "sales_value": 0, "received": 0, "outstanding": 0, "receipt_adjustments": 0},
+        "channels": [("all", "All Sales")], "periods": [("this_month", "This Month")],
+        "payment_statuses": [("all", "All Payments")], "selected_period": "this_month",
+        "selected_channel": "all", "selected_payment": "all", "q": q,
+        "pagination": {"page": 1, "per_page": 25, "total": 0, "total_pages": 1, "has_prev": False, "has_next": False},
+    })
    
 @modules_bp.route("/notifications")
 @login_required
@@ -3741,16 +3762,23 @@ def mitra_stock():
     if q and q.lower() in ["available", "in stock", "stock"]:
         items = [item for item in items if not item.get("low_stock")]
 
+    summary = {
+        "product_lines": len(items),
+        "low_stock_lines": sum(1 for item in items if item.get("low_stock")),
+    }
+
     if wants_json_response():
         return jsonify(json_safe({
             "ok": True,
             "items": items,
+            "summary": summary,
             "q": q
         }))
 
     return render_template(
         "modules/mitra_stock.html",
         items=items,
+        summary=summary,
         q=q
     )
 
@@ -4712,6 +4740,22 @@ def farmer_produce_market():
     return render_template("modules/farmer_produce_marketplace.html", overview=overview)
 
 
+@modules_bp.route("/farmer-produce-market/listings/<listing_id>")
+@login_required
+@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin", "accounts")
+def farmer_produce_market_listing_detail(listing_id):
+    try:
+        listing = stage9_market_get_listing(session.get("user_id"), listing_id)
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("modules.farmer_produce_market"))
+    return render_template(
+        "modules/farmer_produce_marketplace_detail.html",
+        listing=listing,
+        order_token=f"FMORD-{uuid4().hex.upper()}",
+    )
+
+
 @modules_bp.route("/farmer-produce-market/order", methods=["POST"])
 @login_required
 @roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin")
@@ -5220,6 +5264,118 @@ def receive_avpl_order(order_id):
             return json_error(str(exc), 400)
         flash(str(exc), 'danger')
     return redirect(url_for('modules.ufc_avpl_order_detail', order_id=order_id))
+
+
+@modules_bp.route('/ufc-opening-stock', methods=['GET', 'POST'])
+@login_required
+@roles_required('ufc_admin')
+def ufc_opening_stock():
+    if request.method == 'POST':
+        proof_doc = None
+        try:
+            proof_file = request.files.get('proof')
+            if proof_file and proof_file.filename:
+                proof_doc = store_document(
+                    proof_file,
+                    session.get('user_id'),
+                    None,
+                    session.get('user_id'),
+                    session.get('role'),
+                    'UFC Opening Stock Proof',
+                )
+            result = create_ufc_opening_stock(
+                session.get('user_id'), session.get('centre_uid'),
+                product_id=request.form.get('product_id'),
+                quantity=request.form.get('quantity'),
+                unit_cost=request.form.get('unit_cost'),
+                warehouse_bin=request.form.get('warehouse_bin'),
+                batch_number=request.form.get('batch_number'),
+                manufacturing_date=request.form.get('manufacturing_date'),
+                expiry_date=request.form.get('expiry_date'),
+                opening_date=request.form.get('opening_date'),
+                reference=request.form.get('reference'),
+                note=request.form.get('note'),
+                proof_filename=(proof_doc or {}).get('filename') or '',
+                proof_document_id=(proof_doc or {}).get('_id'),
+                idempotency_key=request.form.get('opening_token'),
+            )
+            entry = result.get('entry') or {}
+            log_action(
+                session.get('user_id'), 'create_ufc_opening_stock', 'opening_stock',
+                str(entry.get('_id') or ''),
+                metadata={
+                    'opening_number': entry.get('opening_number'), 'centre_uid': entry.get('centre_uid'),
+                    'product_name': entry.get('product_name'), 'quantity': entry.get('opening_quantity'),
+                },
+            )
+            flash(result.get('message') or 'UFC opening stock saved.', 'success')
+            return redirect(url_for('modules.ufc_opening_stock'))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if proof_doc and proof_doc.get('_id'):
+                mongo.db.documents.update_one(
+                    {'_id': proof_doc['_id']}, {'$set': {'status': 'orphaned', 'updated_at': now_utc()}}
+                )
+            flash(str(exc), 'danger')
+            return redirect(url_for('modules.ufc_opening_stock'))
+
+    try:
+        overview = get_ufc_opening_stock_overview(
+            session.get('user_id'), session.get('centre_uid'), search=request.args.get('q', '')
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'mode': {'enabled': False, 'status': 'closed'}, 'rows': [], 'products': [],
+            'query': request.args.get('q', ''), 'centre_uid': session.get('centre_uid') or '',
+            'centre_name': session.get('centre_uid') or 'UFC',
+            'summary': {'active_entries': 0, 'product_count': 0, 'opening_value': '0.00'},
+        }
+    overview['opening_token'] = f"OPEN-UFC-{uuid4().hex.upper()}"
+    return render_template('modules/ufc_opening_stock.html', overview=overview)
+
+
+@modules_bp.route('/ufc-opening-stock/<entry_id>/correct', methods=['POST'])
+@login_required
+@roles_required('ufc_admin')
+def ufc_correct_opening_stock(entry_id):
+    try:
+        result = correct_opening_stock_entry(
+            session.get('user_id'), entry_id,
+            new_quantity=request.form.get('new_quantity'),
+            new_unit_cost=request.form.get('new_unit_cost'),
+            reason=request.form.get('reason'),
+            centre_uid_hint=session.get('centre_uid'),
+        )
+        entry = result.get('entry') or {}
+        log_action(
+            session.get('user_id'), 'correct_ufc_opening_stock', 'opening_stock', entry_id,
+            metadata={'opening_number': entry.get('opening_number'), 'centre_uid': entry.get('centre_uid'), 'reason': request.form.get('reason') or ''},
+        )
+        flash(result.get('message') or 'Opening stock corrected.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('modules.ufc_opening_stock'))
+
+
+@modules_bp.route('/ufc-opening-stock/<entry_id>/void', methods=['POST'])
+@login_required
+@roles_required('ufc_admin')
+def ufc_void_opening_stock(entry_id):
+    try:
+        result = void_opening_stock_entry(
+            session.get('user_id'), entry_id,
+            reason=request.form.get('reason'),
+            centre_uid_hint=session.get('centre_uid'),
+        )
+        entry = result.get('entry') or {}
+        log_action(
+            session.get('user_id'), 'void_ufc_opening_stock', 'opening_stock', entry_id,
+            metadata={'opening_number': entry.get('opening_number'), 'centre_uid': entry.get('centre_uid'), 'reason': request.form.get('reason') or ''},
+        )
+        flash(result.get('message') or 'Opening stock entry voided.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('modules.ufc_opening_stock'))
 
 
 @modules_bp.route('/ufc-stock')

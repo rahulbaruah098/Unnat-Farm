@@ -2501,6 +2501,13 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                         </a>
 
                         <a
+                            href="{{ url_for('admin.opening_stock') }}"
+                            class="nav-sub-link {% if (request.endpoint and request.endpoint.startswith('admin.opening_stock')) or request.endpoint in ['admin.correct_opening_stock','admin.void_opening_stock'] %}active{% endif %}"
+                        >
+                            Opening Stock
+                        </a>
+
+                        <a
                             href="{{ url_for('admin.stock_adjustments') }}"
                             class="nav-sub-link {% if (request.endpoint and request.endpoint.startswith('admin.stock_adjustment')) or request.endpoint in ['admin.approve_stock_adjustment_view','admin.reject_stock_adjustment_view'] %}active{% endif %}"
                         >
@@ -2758,6 +2765,20 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                         </a>
 
                         <a
+                            href="{{ url_for('admin.mitra_bonus_settings') }}"
+                            class="nav-sub-link {% if request.endpoint in ['admin.mitra_bonus_settings','admin.mitra_user_earning_settings'] %}active{% endif %}"
+                        >
+                            Mitra Earning Setup
+                        </a>
+
+                        <a
+                            href="{{ url_for('admin.ufc_mitra_earnings') }}"
+                            class="nav-sub-link {% if request.endpoint == 'admin.ufc_mitra_earnings' %}active{% endif %}"
+                        >
+                            Mitra Earnings
+                        </a>
+
+                        <a
                             href="{{ url_for('validation.queue') }}"
                             class="nav-sub-link {% if request.blueprint == 'validation' %}active{% endif %}"
                         >
@@ -2838,20 +2859,6 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             class="nav-sub-link {% if request.endpoint and request.endpoint.startswith('admin.lms_') %}active{% endif %}"
                         >
                             Training
-                        </a>
-
-                        <a
-                            href="{{ url_for('admin.mitra_bonus_settings') }}"
-                            class="nav-sub-link"
-                        >
-                            Mitra Bonus
-                        </a>
-
-                        <a
-                            href="{{ url_for('admin.ufc_mitra_earnings') }}"
-                            class="nav-sub-link"
-                        >
-                            Mitra Earnings
                         </a>
 
                         <a
@@ -3110,7 +3117,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('admin.mitra_bonus_settings') }}"
                             class="nav-sub-link"
                         >
-                            Mitra Bonus
+                            Mitra Earning Setup
                         </a>
 
                         <a
@@ -3142,204 +3149,57 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
              SALES USERS
         =================================================== -->
 
-        {% if session.get('role') in ['sales_nelocals','sales_unnatfarm'] %}
-
-        <div class="sidebar-section">
-
-            <div class="sidebar-section-title">
-                Sales
-            </div>
-
-            <a
-                href="{{ url_for('modules.transactions') }}"
-                class="sidebar-link"
-            >
-
-                <span class="nav-icon">
-
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path
-                            d="M4 7h16M4 12h16M4 17h10"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                            stroke-linecap="round"
-                        />
-                    </svg>
-
-                </span>
-
-                <span class="nav-label">
-                    Transactions
-                </span>
-
-            </a>
-
-            <a
-                href="{{ url_for('modules.finance_leads') }}"
-                class="sidebar-link"
-            >
-
-                <span class="nav-icon">
-
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path
-                            d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        />
-                    </svg>
-
-                </span>
-
-                <span class="nav-label">
-                    Finance Requests
-                </span>
-
-            </a>
-
-            <a
-                href="{{ url_for('modules.support') }}"
-                class="sidebar-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}"
-            >
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/>
-                    </svg>
-                </span>
-                <span class="nav-label">Help & Support</span>
-            </a>
-
-        </div>
-
-        {% endif %}
-
-
         {% if session.get('role') == 'sales_nelocals' %}
 
         <div class="sidebar-section">
-
-            <a
-                href="{{ url_for('modules.products') }}"
-                class="sidebar-link"
-            >
-                <span class="nav-icon">
-
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <rect
-                            x="4"
-                            y="4"
-                            width="6"
-                            height="6"
-                            rx="1.5"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        />
-                        <rect
-                            x="14"
-                            y="4"
-                            width="6"
-                            height="6"
-                            rx="1.5"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        />
-                        <rect
-                            x="4"
-                            y="14"
-                            width="6"
-                            height="6"
-                            rx="1.5"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        />
-                        <rect
-                            x="14"
-                            y="14"
-                            width="6"
-                            height="6"
-                            rx="1.5"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        />
-                    </svg>
-
-                </span>
-
-                <span class="nav-label">
-                    Products
-                </span>
-
+            <div class="sidebar-section-title">Sales</div>
+            <a href="{{ url_for('modules.transactions') }}" class="sidebar-link {% if request.endpoint == 'modules.transactions' %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                <span class="nav-label">Transactions</span>
             </a>
-
-            <a
-                href="{{ url_for('admin.onboard_trader') }}"
-                class="sidebar-link"
-            >
-
-                <span class="nav-icon">
-
-                    <svg viewBox="0 0 24 24" fill="none">
-
-                        <circle
-                            cx="9"
-                            cy="8"
-                            r="3"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        />
-
-                        <path
-                            d="M3 21c.8-4 3-6 6-6"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        />
-
-                    </svg>
-
-                </span>
-
-                <span class="nav-label">
-                    Add B2B Trader
-                </span>
-
+            <a href="{{ url_for('modules.finance_leads') }}" class="sidebar-link {% if request.endpoint == 'modules.finance_leads' %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15" stroke="currentColor" stroke-width="1.8"/></svg></span>
+                <span class="nav-label">Finance Requests</span>
             </a>
+            <a href="{{ url_for('modules.support') }}" class="sidebar-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/></svg></span>
+                <span class="nav-label">Help & Support</span>
+            </a>
+        </div>
 
+        <div class="sidebar-section">
+            <a href="{{ url_for('modules.products') }}" class="sidebar-link {% if request.endpoint == 'modules.products' %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="4" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg></span>
+                <span class="nav-label">Products</span>
+            </a>
+            <a href="{{ url_for('admin.onboard_trader') }}" class="sidebar-link">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M3 21c.8-4 3-6 6-6" stroke="currentColor" stroke-width="1.8"/></svg></span>
+                <span class="nav-label">Add B2B Trader</span>
+            </a>
         </div>
 
         {% endif %}
 
-
         {% if session.get('role') == 'sales_unnatfarm' %}
-
         <div class="sidebar-section">
-
-            <a
-                href="{{ url_for('modules.sales_details') }}"
-                class="sidebar-link"
-            >
-
-                <span class="nav-icon">
-
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path
-                            d="M4 19V5M4 19h16M8 15l3-3 3 2 5-7"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                    </svg>
-
-                </span>
-
-                <span class="nav-label">
-                    Sales
-                </span>
-
+            <div class="sidebar-section-title">Sales</div>
+            <a href="{{ url_for('modules.sales_details') }}" class="sidebar-link {% if request.endpoint == 'modules.sales_details' %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="nav-label">Sales</span>
             </a>
-
+            <a href="{{ url_for('modules.transactions') }}" class="sidebar-link {% if request.endpoint == 'modules.transactions' %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                <span class="nav-label">Sales Activity</span>
+            </a>
+            <a href="{{ url_for('modules.finance_leads') }}" class="sidebar-link {% if request.endpoint in ['modules.finance_leads','modules.sales_finance_lead_follow_up'] %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 20V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v15" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+                <span class="nav-label">Finance Leads</span>
+            </a>
+            <a href="{{ url_for('modules.support') }}" class="sidebar-link {% if request.endpoint in ['modules.support','modules.support_ticket_detail','modules.support_ticket_reply','modules.update_support_ticket','modules.support_ticket_action'] %}active{% endif %}">
+                <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 1 1 16 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/></svg></span>
+                <span class="nav-label">Help & Support</span>
+            </a>
         </div>
-
         {% endif %}
 
 
@@ -3443,6 +3303,13 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             class="nav-sub-link {% if request.endpoint == 'modules.ufc_stock' %}active{% endif %}"
                         >
                             Stock
+                        </a>
+
+                        <a
+                            href="{{ url_for('modules.ufc_opening_stock') }}"
+                            class="nav-sub-link {% if request.endpoint in ['modules.ufc_opening_stock','modules.ufc_correct_opening_stock','modules.ufc_void_opening_stock'] %}active{% endif %}"
+                        >
+                            Existing Stock
                         </a>
 
                     </div>
@@ -3738,14 +3605,14 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('validation.queue') }}"
                             class="nav-sub-link"
                         >
-                            Approvals
+                            Farmer Requests
                         </a>
 
                         <a
                             href="{{ url_for('modules.buy', view='all') }}"
                             class="nav-sub-link"
                         >
-                            AVPL Products
+                            Products
                         </a>
 
                         <a
@@ -3766,7 +3633,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             href="{{ url_for('modules.transactions') }}"
                             class="nav-sub-link"
                         >
-                            Transactions
+                            My Transactions
                         </a>
 
                     </div>

@@ -33,7 +33,11 @@ GOODS_RECEIPT_COLLECTION = "avpl_goods_receipts"
 
 AVPL_VIEW_ROLES = {"super_admin", "avpl_admin", "accounts"}
 AVPL_ISSUE_ROLES = {"super_admin", "avpl_admin"}
-INVOICE_NUMBER_PERMISSION = "accounting.voucher.post"
+# Commercial authorization is already enforced by AVPL_ISSUE_ROLES before this
+# service reaches the Accounting number-series allocator.  Do not require
+# accounting.voucher.post here: issuing the commercial invoice number is not
+# the same action as posting an Accounting voucher.
+INVOICE_NUMBER_PERMISSION = "accounting.number_series.view"
 MONEY_QUANTUM = Decimal("0.01")
 QTY_QUANTUM = Decimal("0.0001")
 
@@ -618,6 +622,10 @@ def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_
             "estimated_cogs": float(financial["estimated_cogs"]),
             "gross_margin_amount": float(financial["gross_margin"]),
             "gross_margin_percent": float(financial["gross_margin_percent"]),
+            # A commercial invoice is not considered fully issued until its
+            # official number has been committed.  This prevents blank-number
+            # invoices from leaking into Payments as MongoDB ObjectIds.
+            "status": "issued" if invoice.get("invoice_number") else "numbering_pending",
             "dispatch": {
                 "quantity": float(financial["quantity"]),
                 "item_count": int(financial.get("item_count") or 1),
@@ -712,7 +720,7 @@ def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_
                 "dispatched_at": order.get("dispatched_at"),
                 "allocations": order.get("dispatch_allocations") or [],
             },
-            "status": "issued",
+            "status": "numbering_pending",
             "accounting_status": "ready_for_posting",
             "accounting_readiness": {
                 "product_mapping_ready": True,
@@ -742,34 +750,50 @@ def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_
     if not financial_year:
         mongo.db[INVOICE_COLLECTION].update_one(
             {"_id": invoice["_id"]},
-            {"$set": {"numbering_status": "recovery_required", "numbering_error": "No approved open Financial Year covers the invoice date.", "updated_at": now_utc()}},
+            {"$set": {"status": "numbering_pending", "numbering_status": "recovery_required", "numbering_error": "No approved open Financial Year covers the invoice date.", "updated_at": now_utc()}},
         )
         raise ValueError("No approved open Financial Year covers this Sales Invoice date.")
 
-    reservation = reserve_document_number(
-        entity_id=entity["_id"],
-        financial_year_id=financial_year["_id"],
-        document_category="invoice",
-        document_type="sales_invoice",
-        idempotency_key=f"avpl-ufc-sales-invoice:{order['_id']}",
-        actor_user_id=actor["_id"],
-        required_permission=INVOICE_NUMBER_PERMISSION,
-        source_collection=INVOICE_COLLECTION,
-        source_id=invoice["_id"],
-        metadata={
-            "avpl_order_number": order.get("order_number") or "",
-            "sale_number": sale.get("sale_number") or "",
-            "centre_uid": order.get("centre_uid") or "",
-        },
-    )
-    reservation = commit_reserved_number(
-        reservation_id=reservation["id"],
-        actor_user_id=actor["_id"],
-        required_permission=INVOICE_NUMBER_PERMISSION,
-        source_collection=INVOICE_COLLECTION,
-        source_id=invoice["_id"],
-        source_reference=sale.get("sale_number") or order.get("order_number") or "",
-    )
+    try:
+        reservation = reserve_document_number(
+            entity_id=entity["_id"],
+            financial_year_id=financial_year["_id"],
+            document_category="invoice",
+            document_type="sales_invoice",
+            idempotency_key=f"avpl-ufc-sales-invoice:{order['_id']}",
+            actor_user_id=actor["_id"],
+            required_permission=INVOICE_NUMBER_PERMISSION,
+            source_collection=INVOICE_COLLECTION,
+            source_id=invoice["_id"],
+            metadata={
+                "avpl_order_number": order.get("order_number") or "",
+                "sale_number": sale.get("sale_number") or "",
+                "centre_uid": order.get("centre_uid") or "",
+            },
+        )
+        reservation = commit_reserved_number(
+            reservation_id=reservation["id"],
+            actor_user_id=actor["_id"],
+            required_permission=INVOICE_NUMBER_PERMISSION,
+            source_collection=INVOICE_COLLECTION,
+            source_id=invoice["_id"],
+            source_reference=sale.get("sale_number") or order.get("order_number") or "",
+        )
+    except Exception as exc:
+        # Dispatch is already physically complete at this point, so the
+        # operational order must not be rolled back.  Keep the invoice in an
+        # explicit recovery state instead of pretending that a blank-number
+        # document is issued.
+        mongo.db[INVOICE_COLLECTION].update_one(
+            {"_id": invoice["_id"]},
+            {"$set": {
+                "status": "numbering_pending",
+                "numbering_status": "recovery_required",
+                "numbering_error": _clean(str(exc), 800),
+                "updated_at": now_utc(),
+            }},
+        )
+        raise
     invoice_number = reservation.get("full_number") or ""
     if not invoice_number:
         raise RuntimeError("The official Sales Invoice number could not be resolved.")
@@ -778,6 +802,8 @@ def _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_
         {"_id": invoice["_id"], "invoice_number": {"$in": [None, ""]}},
         {"$set": {
             "invoice_number": invoice_number,
+            "status": "issued",
+            "issued_at": invoice.get("issued_at") or now_utc(),
             "numbering_status": "committed",
             "number_reservation_id": _to_object_id(reservation.get("id")),
             "number_reservation_id_str": reservation.get("id") or "",
@@ -907,7 +933,7 @@ def link_ufc_purchase_financials(order_id):
         "ufc_payable_id": payable.get("_id") if payable else None,
         "ufc_payable_id_str": str((payable or {}).get("_id") or ""),
         "accounting_status": "not_posted",
-        "financial_link_status": "linked",
+        "financial_link_status": "linked" if invoice.get("invoice_number") else "invoice_number_pending",
         "updated_at": now_utc(),
     }
     mongo.db[UFC_PURCHASE_COLLECTION].update_one({"avpl_ufc_order_id": oid}, {"$set": update})
@@ -930,10 +956,45 @@ def link_ufc_purchase_financials(order_id):
         "settlement_total": total,
         "accepted_goods_total": total,
         "receipt_adjustment_amount": float(_decimal(invoice.get("receipt_adjustment_amount"))),
-        "financial_sync_status": "complete",
+        "financial_sync_status": "complete" if invoice.get("invoice_number") else "recovery_required",
+        "financial_sync_error": None if invoice.get("invoice_number") else (invoice.get("numbering_error") or "Sales Invoice number is pending recovery."),
         "updated_at": now_utc(),
     }})
     return mongo.db[UFC_PURCHASE_COLLECTION].find_one({"avpl_ufc_order_id": oid})
+
+
+def _sync_existing_payment_invoice_number(invoice):
+    """Repair display references created while an older invoice had no number.
+
+    Payment identity remains the immutable invoice ObjectId.  Only the human
+    readable reference cached on payment/receipt/accounting-event documents is
+    refreshed, so no financial amount or settlement history is changed.
+    """
+    if not invoice or not invoice.get("_id") or not invoice.get("invoice_number"):
+        return
+    number = str(invoice.get("invoice_number") or "").strip()
+    timestamp = now_utc()
+    payment_ids = [
+        row.get("_id")
+        for row in mongo.db.payments.find(
+            {"source_type": "avpl_ufc_invoice", "invoice_id": invoice["_id"]},
+            {"_id": 1},
+        )
+        if row.get("_id")
+    ]
+    mongo.db.payments.update_many(
+        {"source_type": "avpl_ufc_invoice", "invoice_id": invoice["_id"]},
+        {"$set": {"invoice_number": number, "updated_at": timestamp}},
+    )
+    if payment_ids:
+        mongo.db.payment_receipts.update_many(
+            {"payment_id": {"$in": payment_ids}},
+            {"$set": {"invoice_number": number}},
+        )
+        mongo.db.accounting_payment_events.update_many(
+            {"payment_id": {"$in": payment_ids}},
+            {"$set": {"source_invoice_number": number, "updated_at": timestamp}},
+        )
 
 
 def ensure_sales_documents_for_order(actor_user_id, order_id):
@@ -960,6 +1021,7 @@ def ensure_sales_documents_for_order(actor_user_id, order_id):
 
     sale = _upsert_sale(order, actor, financial)
     invoice = _upsert_invoice(order, sale, actor, entity, buyer, financial, credit_period_days=credit_days)
+    _sync_existing_payment_invoice_number(invoice)
     receivable = _upsert_receivable(order, sale, invoice)
     payable = _upsert_ufc_payable(order, sale, invoice)
 
@@ -1024,6 +1086,7 @@ def bulk_sync_existing_orders(actor_user_id, limit=100):
             {"avpl_sales_invoice_id": {"$exists": False}},
             {"avpl_sales_invoice_id": None},
             {"financial_sync_status": {"$ne": "complete"}},
+            {"avpl_sales_invoice_number": {"$in": [None, ""]}},
             {"commerce_version": 2},
             {"is_multi_item_order": True},
             {"items.1": {"$exists": True}},

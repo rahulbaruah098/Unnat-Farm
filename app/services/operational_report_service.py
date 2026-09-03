@@ -1120,9 +1120,14 @@ def _mitra_earning_rows(scope, filters, mitras=None, farmers=None):
     grouped = {}
 
     for sale in mongo.db.pos_sales.find({"status": "completed", "mitra_uid": {"$in": list(allowed)}} if allowed else {"_id": None}):
+        buyer = sale.get("buyer") or {}
+        if _clean(sale.get("buyer_type") or buyer.get("type")).lower() != "registered_farmer" and _clean(sale.get("sale_type")).lower() != "registered":
+            continue
         if not _in_range(sale, filters, "sale_date", "created_at"):
             continue
-        business_value = _amount(sale, "grand_total", "total_amount")
+        items = [item for item in (sale.get("items") or []) if isinstance(item, dict)]
+        eligible_items = [item for item in items if _clean(item.get("bonus_type")) == "avpl_product_sale" or item.get("bonus_snapshot_version")]
+        business_value = _amount(sale, "bonus_base_total") or (sum(_amount(item, "bonus_basis_amount", "line_total") for item in eligible_items) if eligible_items else _amount(sale, "grand_total", "total_amount"))
         bonus = _amount(sale, "bonus_amount")
         if filters.get("product"):
             items = sale.get("items") or []
@@ -1141,6 +1146,30 @@ def _mitra_earning_rows(scope, filters, mitras=None, farmers=None):
             if buyer_uid not in farmer_strings:
                 continue
         uid = _clean(sale.get("mitra_uid"))
+        row = grouped.setdefault(uid, {"mitra_uid": uid, "mitra_name": name_map.get(uid, uid), "transactions": 0, "business_value": 0.0, "earnings": 0.0, "avpl_earnings": 0.0, "farmer_earnings": 0.0})
+        row["transactions"] += 1
+        row["business_value"] += business_value
+        row["earnings"] += bonus
+        row["avpl_earnings"] += bonus
+
+    for sale in mongo.db.ufc_farmer_sales.find({"mitra_uid": {"$in": list(allowed)}, "bonus_snapshot_version": {"$exists": True}, "bonus_financial_sync_status": "complete"} if allowed else {"_id": None}):
+        if not _in_range(sale, filters, "sale_date", "created_at"):
+            continue
+        uid = _clean(sale.get("mitra_uid"))
+        items = [item for item in (sale.get("items") or []) if isinstance(item, dict) and item.get("bonus_snapshot_version")]
+        business_value = sum(_amount(item, "bonus_basis_amount", "line_total") for item in items) if items else _amount(sale, "bonus_base_total", "grand_total")
+        bonus = sum(_amount(item, "bonus_amount") for item in items) if items else _amount(sale, "bonus_amount")
+        if filters.get("product"):
+            matching = [item for item in items if _product_match(item.get("product_name"), filters.get("product"))]
+            if items and matching:
+                business_value = sum(_amount(item, "bonus_basis_amount", "line_total") for item in matching)
+                bonus = sum(_amount(item, "bonus_amount") for item in matching)
+            elif items or not _product_match(sale.get("product_name"), filters.get("product")):
+                continue
+        if filters.get("farmer") and not _row_matches_farmer(
+            sale, farmer_object_ids, farmer_strings, ("farmer_user_id", "farmer_user_id_str")
+        ):
+            continue
         row = grouped.setdefault(uid, {"mitra_uid": uid, "mitra_name": name_map.get(uid, uid), "transactions": 0, "business_value": 0.0, "earnings": 0.0, "avpl_earnings": 0.0, "farmer_earnings": 0.0})
         row["transactions"] += 1
         row["business_value"] += business_value

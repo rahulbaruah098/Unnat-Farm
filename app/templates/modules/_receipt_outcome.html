@@ -1,0 +1,27 @@
+{% if order.status == 'received' %}
+<style>
+.rcpt-outcome{margin-top:12px;padding:14px;border:1px solid #dbe9df;border-radius:12px;background:#fff}.rcpt-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px;flex-wrap:wrap}.rcpt-head h3{margin:0;color:#1f3127;font-size:.88rem}.rcpt-head p{margin:3px 0 0;color:#6e7f74;font-size:.64rem}.rcpt-badge{display:inline-flex;align-items:center;min-height:24px;padding:3px 7px;border:1px solid #d5e5da;border-radius:6px;background:#f3f8f4;color:#397e51;font-size:.59rem;font-weight:800}.rcpt-badge.issue{border-color:#efcf90;background:#fff8e8;color:#8c5e08}.rcpt-wrap{overflow-x:auto;border:1px solid #e3ece6;border-radius:9px}.rcpt-table{width:100%;min-width:830px;border-collapse:collapse}.rcpt-table th,.rcpt-table td{padding:9px 10px;border-bottom:1px solid #edf2ee;text-align:left;vertical-align:middle;font-size:.65rem}.rcpt-table th{background:#f7fbf8;color:#6d7c72;font-size:.57rem;font-weight:850;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}.rcpt-table tr:last-child td{border-bottom:0}.rcpt-table tr.issue td{background:#fffdf7}.rcpt-product{font-weight:850;color:#2b3c31}.rcpt-zero{color:#9aa39d}.rcpt-problem{font-weight:850;color:#a36108}.rcpt-ok{font-weight:850;color:#2b7346}.rcpt-note{margin-top:9px;padding:8px 9px;border:1px solid #e4ece6;border-radius:8px;background:#f9fcfa;color:#5f7065;font-size:.64rem}.rcpt-note strong{color:#33483a}
+</style>
+<div class="rcpt-outcome">
+  <div class="rcpt-head">
+    <div><h3>Receipt Outcome</h3></div>
+    <span class="rcpt-badge {% if order.receipt_status == 'discrepancy' or order.discrepancy_item_count %}issue{% endif %}">{{ order.receipt_status_label or ('Received with Discrepancy' if order.discrepancy_item_count else 'Fully Received') }}</span>
+  </div>
+  <div class="rcpt-wrap"><table class="rcpt-table"><thead><tr><th>Product</th><th>Dispatched</th><th>Physically Received</th><th>Accepted</th><th>Damaged</th><th>Rejected</th><th>Missing</th></tr></thead><tbody>
+    {% for line in order.get('items', []) %}
+      {% if line.dispatched_quantity or line.delivered_quantity or line.dispatched_quantity_for_receipt %}
+      <tr class="{% if line.discrepancy_quantity %}issue{% endif %}">
+        <td><span class="rcpt-product">{{ line.product_name or 'Product' }}</span></td>
+        <td>{{ line.dispatched_quantity_display }} {{ line.unit_code }}</td>
+        <td>{{ line.physically_received_quantity_display }} {{ line.unit_code }}</td>
+        <td><span class="rcpt-ok">{{ line.accepted_quantity_display }} {{ line.unit_code }}</span></td>
+        <td>{% if line.damaged_quantity %}<span class="rcpt-problem">{{ line.damaged_quantity_display }} {{ line.unit_code }}</span>{% else %}<span class="rcpt-zero">0</span>{% endif %}</td>
+        <td>{% if line.rejected_quantity %}<span class="rcpt-problem">{{ line.rejected_quantity_display }} {{ line.unit_code }}</span>{% else %}<span class="rcpt-zero">0</span>{% endif %}</td>
+        <td>{% if line.missing_quantity %}<span class="rcpt-problem">{{ line.missing_quantity_display }} {{ line.unit_code }}</span>{% else %}<span class="rcpt-zero">0</span>{% endif %}</td>
+      </tr>
+      {% endif %}
+    {% endfor %}
+  </tbody></table></div>
+  {% if order.receipt_note %}<div class="rcpt-note"><strong>Buyer receipt note:</strong> {{ order.receipt_note }}</div>{% endif %}
+</div>
+{% endif %}

@@ -345,13 +345,19 @@ def _mitra_performance(filters):
     farmers_per = defaultdict(int)
     for f in mongo.db.farmer_master.find({}): farmers_per[_clean(f.get("mitra_uid") or f.get("mapped_mitra_uid"))] += 1
     grouped = {uid: {"mitra": name, "mitra_uid": uid, "farmers": farmers_per[uid], "transactions": 0, "business": 0.0, "avpl_earning": 0.0, "farmer_earning": 0.0, "earning": 0.0} for uid, name in mitras.items()}
-    for collection, earning_key in (("pos_sales", "avpl_earning"), ("farmer_product_sales", "farmer_earning")):
+    for collection, earning_key in (("pos_sales", "avpl_earning"), ("ufc_farmer_sales", "avpl_earning"), ("farmer_product_sales", "farmer_earning")):
         for sale in _fetch(collection, {}):
             if not _matches(sale, filters): continue
+            if collection == "pos_sales":
+                buyer = sale.get("buyer") or {}
+                if _clean(sale.get("buyer_type") or buyer.get("type")).lower() != "registered_farmer" and _clean(sale.get("sale_type")).lower() != "registered":
+                    continue
+            if collection == "ufc_farmer_sales" and (not sale.get("bonus_snapshot_version") or sale.get("bonus_financial_sync_status") != "complete"):
+                continue
             uid = _clean(sale.get("mitra_uid"));
             if filters.get("mitra") and uid != filters["mitra"]: continue
             row = grouped.setdefault(uid, {"mitra": uid or "Mitra", "mitra_uid": uid, "farmers": farmers_per[uid], "transactions": 0, "business": 0.0, "avpl_earning": 0.0, "farmer_earning": 0.0, "earning": 0.0})
-            business = _num(_first(sale, "grand_total", "total_amount", "amount", default=0)); bonus = _num(sale.get("bonus_amount")); row["transactions"] += 1; row["business"] += business; row[earning_key] += bonus; row["earning"] += bonus
+            business = _num(_first(sale, "bonus_base_total", "grand_total", "total_amount", "amount", default=0)); bonus = _num(sale.get("bonus_amount")); row["transactions"] += 1; row["business"] += business; row[earning_key] += bonus; row["earning"] += bonus
     rows = list(grouped.values()); rows.sort(key=lambda r: (-r["business"], r["mitra"]))
     return rows
 

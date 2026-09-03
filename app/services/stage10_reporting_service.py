@@ -642,7 +642,8 @@ def _reconciliation_guidance(issue_type):
         "Invalid stock classification": ("A damaged or blocked stock bucket contains an invalid negative value.", "Review the latest stock adjustment and movement history for this lot, then post a controlled correction.", "Saleable stock may be overstated or understated."),
         "Lot balance mismatch": ("The stored lot balance does not agree with receipt, issue and adjustment movements.", "Compare GRN/receipt, dispatch and stock-adjustment history. Use the authoritative movements to determine the correct balance.", "Stock valuation and availability may be inconsistent."),
         "Produce lot balance mismatch": ("Farmer produce stock does not reconcile with production less sale/loss movements.", "Review production, manual stock adjustments, marketplace reservations and completed sales for this produce lot.", "Farmer stock/listing availability may be inaccurate."),
-        "Financial mismatch": ("Invoice total, confirmed paid amount and stored outstanding do not reconcile.", "Compare the invoice with completed payment records. Recalculate outstanding from confirmed payments and correct only the stale financial snapshot.", "Receivable/payable and dashboard totals can be incorrect."),
+        "Financial mismatch": ("The payable/settlement amount, confirmed paid amount and stored outstanding do not reconcile.", "Compare completed/reversed payments with the authoritative settlement amount, then correct only the stale financial snapshot.", "Receivable/payable and dashboard totals can be incorrect."),
+        "Receipt adjustment mismatch": ("The original invoice value, accepted-goods settlement value and recorded receipt adjustment do not reconcile.", "Open the buyer receipt and compare accepted, damaged, rejected and missing quantities with the invoice receipt adjustment. Repair only the authoritative receipt/financial snapshot; do not alter the original dispatch invoice value.", "A genuine damaged/rejected/missing-goods adjustment may be mistaken for a payment error, or an invalid adjustment may hide a real financial mismatch."),
         "Payment status mismatch": ("The invoice payment status conflicts with its confirmed paid/outstanding amounts.", "Verify completed/reversed payments first, then synchronize payment status from the confirmed settlement balance.", "Users may see Paid and Outstanding at the same time."),
         "Broken transaction chain": ("A completed business step is missing a linked stock, invoice, sale, purchase or payment-side record.", "Open the source transaction and identify the missing linked step. Rebuild only from the authoritative order/receipt; do not create a duplicate transaction manually.", "Audit history, stock or accounting may be incomplete."),
         "Product line mismatch": ("A multi-item order was synchronized into a sale/invoice using only part of its active product lines, usually through a legacy single-line path.", "Open the authoritative order and rebuild/synchronize the linked sale from its item lines before further settlement.", "Sales, stock, invoice totals and product-wise reports can be incomplete or understated."),
@@ -655,19 +656,62 @@ def build_reconciliation_report(scope, filters=None):
     filters = filters or {}
     issues = _stock_reconciliation(scope)
     financial_checked = 0
+    documented_adjustments = 0
+    documented_adjustment_value = Decimal("0")
     for source_label, collection, query in _invoice_sources(scope):
         rows = _collection_rows(collection, query, limit=MAX_REPORT_ROWS)
         for invoice in rows:
             if str(invoice.get("status") or "").lower() in {"cancelled", "voided"}:
                 continue
             financial_checked += 1
-            total = _dec(_first(invoice, "grand_total", "total_amount", "invoice_total", default=0))
+            gross_total = _dec(_first(invoice, "grand_total", "total_amount", "invoice_total", default=0))
+            settlement_raw = invoice.get("settlement_total")
+            settlement_total = _dec(settlement_raw) if settlement_raw not in (None, "") else gross_total
+            adjustment_raw = invoice.get("receipt_adjustment_amount")
+            receipt_adjustment = _dec(adjustment_raw) if adjustment_raw not in (None, "") else Decimal("0")
             paid = _dec(_first(invoice, "amount_paid", "paid_amount", default=0))
-            outstanding = _dec(_first(invoice, "outstanding_amount", default=max(total - paid, Decimal("0"))))
-            difference = total - paid - outstanding
+            outstanding = _dec(_first(invoice, "outstanding_amount", default=max(settlement_total - paid, Decimal("0"))))
+            difference = settlement_total - paid - outstanding
             ref = _first(invoice, "invoice_number", "document_number", "supplier_invoice_number", "internal_reference", default=str(invoice.get("_id") or ""))
+
+            # Universal receiving intentionally preserves the original dispatch/
+            # invoice value for audit while making only buyer-accepted goods
+            # payable.  A documented receipt adjustment is therefore a normal
+            # business outcome, not a financial mismatch.
+            has_receipt_settlement = settlement_raw not in (None, "") or adjustment_raw not in (None, "")
+            if has_receipt_settlement:
+                adjustment_difference = gross_total - settlement_total - receipt_adjustment
+                invalid_adjustment = (
+                    settlement_total < -TOLERANCE
+                    or receipt_adjustment < -TOLERANCE
+                    or settlement_total - gross_total > TOLERANCE
+                    or abs(adjustment_difference) > TOLERANCE
+                )
+                if invalid_adjustment:
+                    issues.append({
+                        "severity": "critical",
+                        "type": "Receipt adjustment mismatch",
+                        "reference": f"{source_label} {ref}",
+                        "message": (
+                            f"Original ₹{_money(gross_total)} does not reconcile to payable ₹{_money(settlement_total)} "
+                            f"+ receipt adjustment ₹{_money(receipt_adjustment)} "
+                            f"(difference ₹{_money(adjustment_difference)})."
+                        ),
+                    })
+                elif receipt_adjustment > TOLERANCE:
+                    documented_adjustments += 1
+                    documented_adjustment_value += receipt_adjustment
+
             if abs(difference) > TOLERANCE:
-                issues.append({"severity": "critical", "type": "Financial mismatch", "reference": f"{source_label} {ref}", "message": f"Total ₹{_money(total)} ≠ paid ₹{_money(paid)} + outstanding ₹{_money(outstanding)} (difference ₹{_money(difference)})."})
+                issues.append({
+                    "severity": "critical",
+                    "type": "Financial mismatch",
+                    "reference": f"{source_label} {ref}",
+                    "message": (
+                        f"Payable ₹{_money(settlement_total)} ≠ paid ₹{_money(paid)} "
+                        f"+ outstanding ₹{_money(outstanding)} (difference ₹{_money(difference)})."
+                    ),
+                })
             payment_status = str(invoice.get("payment_status") or "unpaid")
             if outstanding <= TOLERANCE and payment_status not in {"paid", "voided", "reversed"}:
                 issues.append({"severity": "warning", "type": "Payment status mismatch", "reference": f"{source_label} {ref}", "message": f"Outstanding is zero but payment status is {payment_status}."})
@@ -743,6 +787,8 @@ def build_reconciliation_report(scope, filters=None):
             "critical": sum(1 for x in issues if x["severity"] == "critical"),
             "warnings": sum(1 for x in issues if x["severity"] == "warning"),
             "financial_documents_checked": financial_checked,
+            "documented_receipt_adjustments": documented_adjustments,
+            "documented_receipt_adjustment_value": float(documented_adjustment_value.quantize(Decimal("0.01"))),
             "transaction_chains_checked": chain_report["summary"]["total"],
             "stock_lots_checked": len(_collection_rows(_inventory_scope(scope)[1], _inventory_scope(scope)[2], projection={"_id": 1}, limit=MAX_REPORT_ROWS)),
             "orphan_payments": orphan_payments,
@@ -913,7 +959,9 @@ def build_system_health(scope, filters=None):
     add("Open financial year", bool(open_fy), "Official invoice numbering requires an open, unlocked Financial Year for the active AVPL entity.", "critical", "Accounting", "Open or create the correct financial year before posting new financial documents.")
     mapping_count = db.accounting_product_mappings.count_documents({"status": {"$in": ["active", "approved"]}, "is_deleted": {"$ne": True}}) + db.product_accounting_mappings.count_documents({"status": {"$in": ["active", "approved"]}, "is_deleted": {"$ne": True}})
     add("Product accounting mappings", mapping_count > 0 or db.products.count_documents({}) == 0, f"{mapping_count} active/approved mapping record(s) found.", "warning", "GST / Accounting", "Review Product Accounting Mapping and complete missing HSN/ledger mappings.")
-    add("No critical reconciliation errors", reconciliation["summary"]["critical"] == 0, f"{reconciliation['summary']['critical']} critical reconciliation issue(s).", "critical", "Reconciliation", "Open Reconciliation, start with Critical issues, and repair the authoritative source chain before posting further changes.")
+    documented_adjustments = int(reconciliation["summary"].get("documented_receipt_adjustments") or 0)
+    adjustment_note = f" {documented_adjustments} documented receipt adjustment(s) recognized as valid business outcomes." if documented_adjustments else ""
+    add("No critical reconciliation errors", reconciliation["summary"]["critical"] == 0, f"{reconciliation['summary']['critical']} critical reconciliation issue(s).{adjustment_note}", "critical", "Reconciliation", "Open Reconciliation, start with Critical issues, and repair the authoritative source chain before posting further changes.")
     add("No orphan payments", reconciliation["summary"]["orphan_payments"] == 0, f"{reconciliation['summary']['orphan_payments']} orphan payment(s).", "critical", "Payments", "Open Reconciliation and link each payment to its verified source invoice, or keep it under manual review.")
     posting_failures = db.posting_failures.count_documents({"status": {"$nin": ["resolved", "closed"]}})
     add("No unresolved posting failures", posting_failures == 0, f"{posting_failures} unresolved posting failure(s).", "critical", "Accounting", "Review the posting failure record and fix the source validation/mapping before retrying the posting.")

@@ -149,13 +149,13 @@
 }
 </style>
 <div class="sd">
-  <div class="head"><div><h2>{{ sale.sale_number }}</h2><p>{{ sale.centre_name }} · {{ sale.centre_uid }} · {{ sale.avpl_order_number }}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="{{ url_for('admin.ufc_sales') }}">← Sales to UFC</a>{% if sale.invoice %}<a class="btn" target="_blank" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=sale.invoice.id) }}">Print Invoice</a>{% endif %}</div></div>
+  <div class="head"><div><h2>{{ sale.sale_number }}</h2><p>{{ sale.centre_name }} · {{ sale.centre_uid }} · {{ sale.avpl_order_number }}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="{{ url_for('admin.ufc_sales') }}">← Sales to UFC</a>{% if sale.invoice and sale.invoice.invoice_number %}<a class="btn" target="_blank" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=sale.invoice.id) }}">Print Invoice</a>{% endif %}</div></div>
 
   <div class="grid">
     <div class="info"><small>Products</small><strong>{{ sale.product_summary or sale.product_name }}</strong><small>{% if sale.is_multi_item_order %}{{ sale.item_count }} product lines{% else %}{{ sale.product_code or '-' }}{% endif %}</small></div>
     <div class="info"><small>Quantity</small><strong>{% if sale.is_multi_item_order %}Line-wise quantities{% else %}{{ sale.quantity_display }} {{ sale.unit_code }}{% endif %}</strong></div>
     <div class="info"><small>Sale Price</small><strong>{% if sale.is_multi_item_order %}Line-wise pricing{% else %}₹{{ sale.unit_price_display }} / {{ sale.unit_code }}{% endif %}</strong></div>
-    <div class="info"><small>Invoice</small><strong>{{ sale.invoice_number or '-' }}</strong></div>
+    <div class="info"><small>Invoice</small><strong>{{ sale.invoice_number or 'Numbering Pending' }}</strong></div>
     <div class="info"><small>Taxable Value</small><strong>₹{{ sale.taxable_value_display }}</strong></div>
     <div class="info"><small>Invoice Total</small><strong>₹{{ sale.grand_total_display }}</strong></div>
     <div class="info"><small>Payment</small><strong>{{ sale.payment_status_label }}</strong></div>

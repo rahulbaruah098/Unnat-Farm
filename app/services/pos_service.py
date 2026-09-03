@@ -13,6 +13,7 @@ from pymongo.errors import DuplicateKeyError
 from app.extensions import mongo
 from app.services.accounting_product_mapping_service import get_product_accounting_mapping_for_posting
 from app.services.avpl_ufc_sales_service import _resolve_gst_state
+from app.services.mitra_commission_service import resolve_input_commission
 from app.utils.helpers import now_utc
 from app.utils.timezone import business_today
 
@@ -294,20 +295,6 @@ def _mapped_farmers(centre_uid):
         row["gst_state_code"] = state_code or ""
         rows.append(row)
     return rows
-
-
-def _mitra_bonus_percentage(mitra_uid, category):
-    """Preserve the existing UFC Mitra bonus rule for AVPL-derived input sales."""
-    for query in [
-        {"mitra_uid": mitra_uid, "bonus_type": "avpl_product_sale", "category": category},
-        {"mitra_uid": None, "bonus_type": "avpl_product_sale", "category": category},
-        {"mitra_uid": mitra_uid, "bonus_type": "avpl_product_sale", "category": "all"},
-        {"mitra_uid": None, "bonus_type": "avpl_product_sale", "category": "all"},
-    ]:
-        setting = mongo.db.mitra_bonus_settings.find_one(query)
-        if setting:
-            return max(_decimal(setting.get("percentage"), "2"), Decimal("0"))
-    return Decimal("2")
 
 
 def _input_catalog(centre_uid):
@@ -1224,7 +1211,10 @@ def create_ufc_pos_sale(actor_user_id, centre_uid_hint, cart_json, *, buyer_type
         "accounting_status": "not_posted", "migration_status": "pos_v2",
         "payment_term": term, "payment_term_label": PAYMENT_TERMS[term], "credit_days": days,
         "status": "processing", "payment_status": "unpaid", "amount_paid": 0.0, "outstanding_amount": 0.0,
-        "note": _clean(note, 1000), "mitra_uid": buyer.get("mitra_uid") or _clean(mitra_uid, 80),
+        "note": _clean(note, 1000),
+        # Commission ownership is authoritative only for a registered Farmer.
+        # Walk-in / trader sales cannot be manually attributed to a Mitra.
+        "mitra_uid": buyer.get("mitra_uid") if buyer.get("type") == "registered_farmer" else "",
         "created_by": actor["_id"], "created_by_name": actor.get("resolved_name") or "",
         "created_at": now_utc(), "updated_at": now_utc(),
     }
@@ -1258,11 +1248,16 @@ def create_ufc_pos_sale(actor_user_id, centre_uid_hint, cart_json, *, buyer_type
             cogs = sum((_decimal(a.get("cogs")) for a in allocations), Decimal("0"))
             line_bonus_percentage = Decimal("0")
             line_bonus_amount = Decimal("0")
-            if catalog_item.get("source_type") == "input" and (buyer.get("mitra_uid") or _clean(mitra_uid, 80)):
-                line_bonus_percentage = _mitra_bonus_percentage(
-                    buyer.get("mitra_uid") or _clean(mitra_uid, 80),
+            commission = {
+                "source": "not_eligible", "source_label": "Not eligible", "setting_id": ""
+            }
+            mapped_mitra_uid = buyer.get("mitra_uid") if buyer.get("type") == "registered_farmer" else ""
+            if catalog_item.get("source_type") == "input" and mapped_mitra_uid:
+                commission = resolve_input_commission(
+                    mapped_mitra_uid,
                     catalog_item.get("category") or "all",
                 )
+                line_bonus_percentage = commission["percentage"]
                 line_bonus_amount = (tax["line_total"] * line_bonus_percentage / Decimal("100")).quantize(MONEY, rounding=ROUND_HALF_UP)
                 bonus_base_total += tax["line_total"]
                 bonus_total += line_bonus_amount
@@ -1280,8 +1275,13 @@ def create_ufc_pos_sale(actor_user_id, centre_uid_hint, cart_json, *, buyer_type
                 "gst_amount": float(tax["gst_amount"]), "line_total": float(tax["line_total"]),
                 "document_warning": tax.get("warning") or "", "allocations": allocations, "cogs": float(cogs),
                 "gross_margin": float(tax["line_total"] - cogs),
-                "bonus_type": "avpl_product_sale" if catalog_item.get("source_type") == "input" else "",
+                "bonus_type": "avpl_product_sale" if catalog_item.get("source_type") == "input" and mapped_mitra_uid else "",
                 "bonus_percentage": float(line_bonus_percentage), "bonus_amount": float(line_bonus_amount),
+                "bonus_basis_amount": float(tax["line_total"]) if catalog_item.get("source_type") == "input" and mapped_mitra_uid else 0.0,
+                "bonus_setting_id": commission.get("setting_id") or "",
+                "bonus_setting_source": commission.get("source") or "",
+                "bonus_setting_source_label": commission.get("source_label") or "",
+                "bonus_snapshot_version": 2 if catalog_item.get("source_type") == "input" and mapped_mitra_uid else 0,
             }
             items.append(line)
             subtotal += tax["gross"]; discount_total += tax["discount_amount"]; taxable_total += tax["taxable_value"]
@@ -1297,9 +1297,11 @@ def create_ufc_pos_sale(actor_user_id, centre_uid_hint, cart_json, *, buyer_type
             "product_category": items[0].get("category") if len(items) == 1 else "Mixed",
             "quantity": items[0].get("quantity") if len(items) == 1 else 0.0,
             "unit_price": items[0].get("unit_price") if len(items) == 1 else 0.0,
-            "bonus_type": "avpl_product_sale",
+            "bonus_type": "avpl_product_sale" if bonus_base_total > EPS else "",
+            "bonus_base_total": float(bonus_base_total),
             "bonus_amount": float(bonus_total),
             "bonus_percentage": float((bonus_total * Decimal("100") / bonus_base_total) if bonus_base_total > EPS else Decimal("0")),
+            "bonus_snapshot_version": 2 if bonus_base_total > EPS else 0,
             "stock_allocations": all_allocations, "status": "completed", "outstanding_amount": float(grand_total), "updated_at": now_utc(),
         }
         mongo.db[POS_SALE_COLLECTION].update_one({"_id": sale_doc["_id"], "status": "processing"}, {"$set": patch})

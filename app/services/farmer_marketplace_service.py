@@ -12,7 +12,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.extensions import mongo
 from app.utils.helpers import now_utc
-from app.services.commerce_receipt_service import normalize_receipt_lines, summarize_receipt, receipt_label
+from app.services.commerce_receipt_service import normalize_receipt_lines, summarize_receipt, receipt_label, receipt_issue_summary
 
 
 LISTING_COLLECTION = "farmer_produce_marketplace_listings"
@@ -650,7 +650,11 @@ def get_marketplace(actor_user_id, search="", only_available=False):
             {"items.product_name": {"$regex": re.escape(q), "$options": "i"}},
             {"title": {"$regex": re.escape(q), "$options": "i"}},
             {"farmer_name": {"$regex": re.escape(q), "$options": "i"}},
+            {"variety": {"$regex": re.escape(q), "$options": "i"}},
+            {"grade": {"$regex": re.escape(q), "$options": "i"}},
+            {"description": {"$regex": re.escape(q), "$options": "i"}},
             {"village": {"$regex": re.escape(q), "$options": "i"}},
+            {"block": {"$regex": re.escape(q), "$options": "i"}},
             {"district": {"$regex": re.escape(q), "$options": "i"}},
         ]
     rows = []
@@ -665,6 +669,7 @@ def get_marketplace(actor_user_id, search="", only_available=False):
         "query": q,
         "order_token": f"FMORD-{uuid4().hex.upper()}",
         "payment_terms": PAYMENT_TERMS,
+        "available_only": bool(only_available),
         "summary": {"listing_count": len(rows), "available_count": sum(1 for r in rows if r.get("is_available"))},
     }
 
@@ -1488,8 +1493,13 @@ def receive_order(actor_user_id, order_id, receipt_lines=None, receipt_note=""):
     except Exception as exc:
         financial_status="needs_repair"; financial_error=_clean(exc,500)
     mongo.db[ORDER_COLLECTION].update_one({"_id":order["_id"]},{"$set":{"purchase_id":(purchase or {}).get("_id"),"payable_id":(payable or {}).get("_id"),"buyer_stock_lot_ids":[x.get("_id") for x in buyer_stock if x.get("_id")],"buyer_stock_lot_id":((buyer_stock or [{}])[0]).get("_id") if buyer_stock else None,"financial_status":financial_status,"financial_error":financial_error,"updated_at":now_utc()}})
-    _audit(user,"receive_order","order",order["_id"],f"Buyer received {summary.get('accepted_item_count',0)} accepted line(s); {summary.get('discrepancy_item_count',0)} discrepancy line(s).")
-    _notify(order.get("seller_farmer_user_id"),"farmer","Produce received",f"{(order.get('buyer') or {}).get('name')} confirmed receipt of {order.get('order_number')}. Payment is based on accepted quantity.")
+    discrepancy_text=receipt_issue_summary(rows) if summary.get("receipt_status")=="discrepancy" else ""
+    audit_note=discrepancy_text or f"Buyer received {summary.get('accepted_item_count',0)} accepted line(s); no discrepancy."
+    _audit(user,"receive_order","order",order["_id"],audit_note)
+    seller_message=f"{(order.get('buyer') or {}).get('name')} confirmed receipt of {order.get('order_number')}. Payment is based on accepted quantity."
+    if discrepancy_text:
+        seller_message += f" {discrepancy_text}"
+    _notify(order.get("seller_farmer_user_id"),"farmer","Produce received",seller_message)
     final=mongo.db[ORDER_COLLECTION].find_one({"_id":order["_id"]}) or received_order
     message="Receipt confirmed. Only accepted quantity entered buyer stock and payment is based on accepted value." if financial_status=="ready" else "Receipt confirmed safely. Financial documents need repair; receipt quantities were not lost."
     return {"order":serialize_order(final),"purchase":serialize_purchase(purchase),"invoice":serialize_invoice(invoice),"message":message}

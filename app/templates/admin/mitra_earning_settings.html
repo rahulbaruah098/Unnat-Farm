@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.mx-page{display:grid;gap:14px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f3127}.mx-card{background:#fff;border:1px solid #dbe9df;border-radius:16px;box-shadow:0 10px 26px rgba(26,72,43,.05)}
+.mx-head{padding:20px 22px;display:flex;justify-content:space-between;gap:15px;align-items:flex-start;flex-wrap:wrap}.mx-head h2{margin:0;font-size:1.5rem;color:#17251d}.mx-head p{margin:5px 0 0;color:#6d7b72;font-size:.88rem}.mx-actions{display:flex;gap:8px;flex-wrap:wrap}.mx-btn{display:inline-flex;align-items:center;justify-content:center;height:38px;padding:0 13px;border:1px solid #cfe1d4;border-radius:9px;background:#fff;color:#2b7346;text-decoration:none;font-weight:800;font-size:.82rem;cursor:pointer}.mx-btn.primary{background:#397e51;color:#fff;border-color:#397e51}.mx-btn.warn{color:#9b5d19;border-color:#ead5b9;background:#fffaf2}
+.mx-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.mx-kpi{padding:14px 16px}.mx-kpi span{display:block;color:#75827a;font-size:.68rem;text-transform:uppercase;font-weight:800;letter-spacing:.055em}.mx-kpi strong{display:block;margin-top:5px;font-size:1.2rem}.mx-kpi small{display:block;margin-top:3px;color:#7b877f;font-size:.72rem}
+.mx-config{padding:18px;display:grid;grid-template-columns:1fr 1.5fr;gap:20px;align-items:start}.mx-rule h3{margin:0 0 8px;font-size:1rem}.mx-rule p{margin:0;color:#65756b;font-size:.84rem;line-height:1.55}.mx-rule b{color:#2b7346}.mx-form{display:grid;gap:9px}.mx-form-row{display:grid;grid-template-columns:150px 1fr auto;gap:8px;align-items:end}.mx-field label{display:block;font-size:.7rem;font-weight:800;color:#66766c;margin-bottom:5px}.mx-field input{width:100%;height:38px;border:1px solid #cfe1d4;border-radius:8px;padding:0 10px;font:inherit;font-size:.84rem;outline:none}.mx-field input:focus{border-color:#397e51;box-shadow:0 0 0 3px rgba(57,126,81,.1)}.mx-reset{display:flex;justify-content:flex-end;gap:8px;align-items:center;color:#768279;font-size:.76rem}
+.mx-table-card{overflow:hidden}.mx-table-head{padding:15px 16px 10px;display:flex;justify-content:space-between;gap:10px;align-items:center}.mx-table-head h3{margin:0;font-size:1rem}.mx-table{overflow:auto;border-top:1px solid #e3ece6}.mx-table table{width:100%;border-collapse:collapse;min-width:850px}.mx-table th{padding:9px 11px;background:#f5faf6;color:#607167;font-size:.67rem;text-transform:uppercase;letter-spacing:.05em;text-align:left;border-bottom:1px solid #dbe9df}.mx-table td{padding:10px 11px;border-bottom:1px solid #e7efe9;font-size:.8rem}.mx-table tr:last-child td{border-bottom:0}.mx-sub{display:block;color:#7a867e;font-size:.72rem;margin-top:2px}.mx-empty{text-align:center;padding:24px!important;color:#78857d}
+@media(max-width:850px){.mx-kpis{grid-template-columns:repeat(2,1fr)}.mx-config{grid-template-columns:1fr}.mx-form-row{grid-template-columns:1fr}.mx-reset{justify-content:stretch;flex-direction:column}.mx-btn{width:100%}}@media(max-width:500px){.mx-kpis{grid-template-columns:1fr}}
+</style>
+<div class="mx-page">
+  <section class="mx-card mx-head">
+    <div><h2>{{ setting.profile.name }} — Earning Settings</h2><p>{{ setting.profile.mitra_uid }} · {{ setting.profile.centre_name or setting.profile.centre_uid or 'Centre not mapped' }}</p></div>
+    <div class="mx-actions"><a class="mx-btn" href="{{ url_for('admin.users') }}">UFC Mitra Users</a><a class="mx-btn" href="{{ url_for('admin.mitra_bonus_settings') }}">All Rates</a><a class="mx-btn" href="{{ url_for('admin.ufc_mitra_earnings') }}">All Earnings</a></div>
+  </section>
+
+  <div class="mx-kpis">
+    <section class="mx-card mx-kpi"><span>Current Input Rate</span><strong>{{ '%.2f'|format(setting.current_percentage|float)|trim('0')|trim('.') }}%</strong><small>{{ setting.current_source_label }}</small></section>
+    <section class="mx-card mx-kpi"><span>Mapped Farmers</span><strong>{{ setting.profile.farmer_count }}</strong><small>Farmer → Mitra mapping</small></section>
+    <section class="mx-card mx-kpi"><span>Input Business This Month</span><strong>₹{{ '%.2f'|format(earnings.summary.month_business|float) }}</strong><small>Eligible stored sale basis</small></section>
+    <section class="mx-card mx-kpi"><span>Earned This Month</span><strong>₹{{ '%.2f'|format(earnings.summary.month_earning|float) }}</strong><small>Stored at sale time</small></section>
+  </div>
+
+  <section class="mx-card mx-config">
+    <div class="mx-rule"><h3>How this earning works</h3><p>When a <b>registered Farmer mapped to this Mitra</b> buys an AVPL-origin input product from the UFC, the applicable rate is stored on that sale. Direct POS and Farmer UFC orders are both covered. Walk-in buyers do not create Mitra earnings. Changing the rate never changes old earnings.</p></div>
+    {% if can_manage %}
+    <div class="mx-form">
+      <form method="post" class="mx-form-row">
+        <input type="hidden" name="action" value="save">
+        <div class="mx-field"><label>Mitra override %</label><input type="number" name="percentage" min="0" max="100" step="0.01" value="{{ setting.override_percentage if setting.has_override else setting.current_percentage }}" required></div>
+        <div class="mx-field"><label>Reason / note</label><input name="reason" maxlength="300" placeholder="Why this rate applies"></div>
+        <button class="mx-btn primary" type="submit">Save Rate</button>
+      </form>
+      <form method="post" class="mx-reset" onsubmit="return confirm('Use the AVPL default rate for this Mitra?');">
+        <input type="hidden" name="action" value="reset"><input type="hidden" name="reason" value="Reset to AVPL default from Mitra earning settings">
+        <span>AVPL default: <strong>{{ setting.global_percentage }}%</strong></span><button class="mx-btn warn" type="submit">Use AVPL Default</button>
+      </form>
+    </div>
+    {% else %}<div style="color:#6f7e74;font-size:.84rem">Read-only access. AVPL Admin or Super Admin manages this rate.</div>{% endif %}
+  </section>
+
+  <section class="mx-card mx-table-card">
+    <div class="mx-table-head"><h3>Recent Input Earnings</h3><span style="font-size:.75rem;color:#748178">No Paid/Pending status is invented.</span></div>
+    <div class="mx-table"><table><thead><tr><th>Date</th><th>Farmer</th><th>Product</th><th>Qty</th><th>Business</th><th>Rate</th><th>Earning</th><th>Reference</th></tr></thead><tbody>
+      {% for row in earnings.rows %}<tr><td>{{ row.date_display }}</td><td><strong>{{ row.farmer_name }}</strong></td><td>{{ row.product_name }}{% if row.category %}<span class="mx-sub">{{ row.category }}</span>{% endif %}</td><td>{{ row.quantity_display }} {{ row.unit_code }}</td><td>₹{{ row.business_value_display }}</td><td>{{ row.percentage_display }}%</td><td><strong>₹{{ row.earning_display }}</strong></td><td>{{ row.reference or '-' }}<span class="mx-sub">{{ 'POS' if row.source == 'pos_sale' else 'Farmer Order' }}</span></td></tr>
+      {% else %}<tr><td class="mx-empty" colspan="8">No input commission has been stored for this month yet.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+{% endblock %}

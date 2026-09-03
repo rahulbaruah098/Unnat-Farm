@@ -13,7 +13,8 @@ from app.extensions import mongo
 from app.services.accounting_product_mapping_service import get_product_accounting_mapping_for_posting
 from app.services.avpl_ufc_sales_service import _resolve_gst_state
 from app.services.ufc_farmer_marketplace_service import is_farmer_delivery_enabled
-from app.services.commerce_receipt_service import normalize_receipt_lines, summarize_receipt, receipt_label
+from app.services.commerce_receipt_service import normalize_receipt_lines, summarize_receipt, receipt_label, receipt_issue_summary
+from app.services.mitra_commission_service import resolve_input_commission
 from app.utils.helpers import now_utc
 
 
@@ -417,6 +418,7 @@ def _farmer_snapshot(actor, farmer, farmer_name):
         "block": farmer.get("block") or actor.get("block") or "",
         "village": farmer.get("village") or actor.get("village") or "",
         "address": farmer.get("address") or actor.get("address") or "",
+        "mitra_uid": farmer.get("mitra_uid") or farmer.get("mapped_mitra_uid") or actor.get("mapped_mitra_uid") or actor.get("mitra_uid") or "",
     }
 
 
@@ -583,6 +585,7 @@ def create_farmer_order(actor_user_id, product_id, quantity, *, request_token=""
         "farmer_name": farmer_name,
         "farmer_contact": farmer_snapshot.get("contact_no") or "",
         "farmer_snapshot": farmer_snapshot,
+        "mitra_uid": farmer_snapshot.get("mitra_uid") or "",
         "source_product_id": product_oid,
         "source_product_id_str": str(product_oid),
         "marketplace_listing_id": listing.get("_id"),
@@ -680,7 +683,7 @@ def create_farmer_cart_order(actor_user_id, items, *, request_token="", note="",
     doc={
         "order_number":order_number,"request_token":token,"commerce_version":2,"is_multi_item_order":len(lines)>1,"item_count":len(lines),"items":lines,
         "centre_uid":centre_uid,"centre_name":centre_name,"farmer_user_id":actor["_id"],"farmer_user_id_str":str(actor["_id"]),"farmer_master_id":farmer.get("_id"),"farmer_master_id_str":str(farmer.get("_id") or ""),
-        "farmer_name":farmer_name,"farmer_contact":farmer_snapshot.get("contact_no") or "","farmer_snapshot":farmer_snapshot,
+        "farmer_name":farmer_name,"farmer_contact":farmer_snapshot.get("contact_no") or "","farmer_snapshot":farmer_snapshot,"mitra_uid":farmer_snapshot.get("mitra_uid") or "",
         "total_amount":float(cart_total),"order_note":_clean(note,1000),"status":"requested","approval_scope":"pending","stock_reserved":False,"stock_delivered":False,"financial_sync_status":"not_started",
         "payment_term":payment_term,"payment_term_label":PAYMENT_TERM_LABELS.get(payment_term,payment_term.replace("_"," ").title()),"payment_status":"not_recorded","amount_paid":0.0,"outstanding_amount":0.0,
         "history":[],"created_at":timestamp,"updated_at":timestamp,
@@ -1116,16 +1119,44 @@ def _financial_snapshot(order, centre):
     }
 
 
+def _order_mitra_uid(order):
+    """Resolve the Farmer's mapped Mitra without allowing seller-side choice."""
+    uid = _clean(order.get("mitra_uid") or (order.get("farmer_snapshot") or {}).get("mitra_uid"), 80)
+    if uid:
+        return uid
+    farmer_oid = _to_object_id(order.get("farmer_master_id"))
+    farmer = mongo.db.farmer_master.find_one({"_id": farmer_oid}) if farmer_oid else None
+    if not farmer and order.get("farmer_user_id"):
+        user_id = order.get("farmer_user_id")
+        farmer = mongo.db.farmer_master.find_one({"$or": [
+            {"linked_user_id": user_id}, {"linked_user_id": str(user_id)}
+        ]})
+    return _clean((farmer or {}).get("mitra_uid") or (farmer or {}).get("mapped_mitra_uid"), 80)
+
+
 def _upsert_sale(order, actor):
     """Create/repair the UFC seller-side sale from buyer-accepted quantities.
 
-    Historical Fix-18 records may already exist from dispatch. If no money has
-    been settled yet, repair those records to the receipt quantities instead of
-    creating a duplicate financial document. Confirmed legacy settlements are
-    never silently rewritten.
+    New sales snapshot the mapped Mitra commission rate line-by-line. If a sale
+    already has a commission snapshot, repair work reuses that stored rate so a
+    later AVPL setting change never rewrites historical earnings. Legacy sales
+    that predate commission snapshots are not back-calculated.
     """
+    existing = mongo.db[SALE_COLLECTION].find_one({"ufc_farmer_order_id": order["_id"]})
+    existing_line_map = {}
+    if existing and existing.get("bonus_snapshot_version"):
+        for old_line in existing.get("items") or []:
+            if not isinstance(old_line, dict):
+                continue
+            key = str(old_line.get("line_id") or old_line.get("source_product_id") or "")
+            if key:
+                existing_line_map[key] = old_line
+
+    mitra_uid = _order_mitra_uid(order)
     lines = []
     total = Decimal("0")
+    bonus_base_total = Decimal("0")
+    bonus_total = Decimal("0")
     for line in _order_items(order):
         qty = _decimal(
             line.get("accepted_quantity")
@@ -1137,25 +1168,78 @@ def _upsert_sale(order, actor):
             continue
         line_total = qty * price
         total += line_total
+        category = line.get("category") or order.get("category") or "all"
+        product_role = _clean(line.get("product_role") or order.get("product_role"), 40).lower()
+        eligible_input = product_role in {"", "input"}
+        key = str(line.get("line_id") or line.get("source_product_id") or "")
+        old_line = existing_line_map.get(key) or {}
+        bonus_percentage = Decimal("0")
+        bonus_amount = Decimal("0")
+        bonus_source = ""
+        bonus_source_label = ""
+        bonus_setting_id = ""
+        snapshot_version = 0
+
+        if mitra_uid and eligible_input and existing and existing.get("bonus_snapshot_version"):
+            bonus_percentage = _decimal(old_line.get("bonus_percentage"))
+            bonus_amount = (line_total * bonus_percentage / Decimal("100")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+            bonus_source = old_line.get("bonus_setting_source") or "stored_snapshot"
+            bonus_source_label = old_line.get("bonus_setting_source_label") or "Stored sale snapshot"
+            bonus_setting_id = old_line.get("bonus_setting_id") or ""
+            snapshot_version = int(old_line.get("bonus_snapshot_version") or existing.get("bonus_snapshot_version") or 2)
+        elif mitra_uid and eligible_input and not existing:
+            commission = resolve_input_commission(mitra_uid, category)
+            bonus_percentage = commission["percentage"]
+            bonus_amount = (line_total * bonus_percentage / Decimal("100")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+            bonus_source = commission.get("source") or ""
+            bonus_source_label = commission.get("source_label") or ""
+            bonus_setting_id = commission.get("setting_id") or ""
+            snapshot_version = 2
+        # Existing legacy sales intentionally remain zero; no retroactive earning.
+
+        if snapshot_version:
+            bonus_base_total += line_total
+            bonus_total += bonus_amount
+
         lines.append({
             "line_id": line.get("line_id") or "legacy",
             "source_product_id": line.get("source_product_id"),
             "source_product_id_str": str(line.get("source_product_id") or ""),
             "product_name": line.get("product_name") or "Product",
             "product_code": line.get("product_code") or "",
+            "category": category,
+            "product_role": product_role or "input",
             "quantity": float(qty),
             "accepted_quantity": float(qty),
             "unit_code": line.get("unit_code") or "Unit",
             "unit_price": float(price),
             "line_total": float(line_total),
             "accepted_commercial_total": float(line_total),
+            "bonus_type": "avpl_product_sale" if snapshot_version else "",
+            "bonus_basis_amount": float(line_total) if snapshot_version else 0.0,
+            "bonus_percentage": float(bonus_percentage),
+            "bonus_amount": float(bonus_amount),
+            "bonus_setting_id": bonus_setting_id,
+            "bonus_setting_source": bonus_source,
+            "bonus_setting_source_label": bonus_source_label,
+            "bonus_snapshot_version": snapshot_version,
         })
     if not lines:
         raise RuntimeError("No accepted goods are available for the UFC sale.")
 
     first = lines[0]
     timestamp = now_utc()
-    existing = mongo.db[SALE_COLLECTION].find_one({"ufc_farmer_order_id": order["_id"]})
+    weighted_rate = (bonus_total * Decimal("100") / bonus_base_total) if bonus_base_total > Decimal("0.004") else Decimal("0")
+    commission_patch = {
+        "mitra_uid": mitra_uid,
+        "bonus_type": "avpl_product_sale" if bonus_base_total > Decimal("0.004") else "",
+        "bonus_base_total": float(bonus_base_total),
+        "bonus_percentage": float(weighted_rate),
+        "bonus_amount": float(bonus_total),
+        "bonus_snapshot_version": 2 if bonus_base_total > Decimal("0.004") else (existing.get("bonus_snapshot_version") if existing else 0),
+        "bonus_financial_sync_status": (existing.get("bonus_financial_sync_status") if existing else None) or ("pending" if bonus_base_total > Decimal("0.004") else "not_applicable"),
+    }
+
     if existing:
         paid = _decimal(existing.get("amount_paid") if existing.get("amount_paid") is not None else existing.get("paid_amount"))
         updates = {
@@ -1171,8 +1255,15 @@ def _upsert_sale(order, actor):
             "unit_price": first.get("unit_price") if len(lines) == 1 else 0.0,
             "receipt_status": order.get("receipt_status") or "",
             "accepted_goods_total": float(total),
+            "farmer_contact": order.get("farmer_contact") or (order.get("farmer_snapshot") or {}).get("contact_no") or "",
             "updated_at": timestamp,
         }
+        # Only commission-aware sales receive commission recalculation, using
+        # their stored rates. Legacy sales remain untouched financially.
+        if existing.get("bonus_snapshot_version"):
+            updates.update(commission_patch)
+        elif mitra_uid:
+            updates.update({"mitra_uid": mitra_uid, "bonus_migration_status": "legacy_not_recalculated"})
         if paid <= Decimal("0.004"):
             updates.update({
                 "base_amount": float(total),
@@ -1198,6 +1289,8 @@ def _upsert_sale(order, actor):
         "farmer_user_id": order.get("farmer_user_id"),
         "farmer_user_id_str": str(order.get("farmer_user_id") or ""),
         "farmer_name": order.get("farmer_name") or "Farmer",
+        "farmer_contact": order.get("farmer_contact") or (order.get("farmer_snapshot") or {}).get("contact_no") or "",
+        "mitra_uid": mitra_uid,
         "source_product_id": first.get("source_product_id"),
         "source_product_id_str": first.get("source_product_id_str"),
         "product_name": first.get("product_name"),
@@ -1209,6 +1302,7 @@ def _upsert_sale(order, actor):
         "grand_total": float(total),
         "accepted_goods_total": float(total),
         "receipt_status": order.get("receipt_status") or "",
+        **commission_patch,
         "payment_status": "unpaid",
         "amount_paid": 0.0,
         "outstanding_amount": float(total),
@@ -1228,6 +1322,52 @@ def _upsert_sale(order, actor):
         if existing:
             return existing
         raise
+
+
+def _sync_sale_commission_to_financial(sale, financial):
+    """Finalize commission basis using the same GST-inclusive line totals as POS.
+
+    Rates always come from the stored sale snapshot; this function never reads
+    the current AVPL rate and therefore cannot rewrite history after a rate
+    change.
+    """
+    if not sale or not sale.get("bonus_snapshot_version"):
+        return sale
+    financial_items = {
+        str(item.get("line_id") or item.get("source_product_id") or ""): item
+        for item in (financial.get("items") or []) if isinstance(item, dict)
+    }
+    updated_items = []
+    base_total = Decimal("0")
+    bonus_total = Decimal("0")
+    for old_line in sale.get("items") or []:
+        if not isinstance(old_line, dict):
+            continue
+        line = dict(old_line)
+        if not line.get("bonus_snapshot_version"):
+            updated_items.append(line)
+            continue
+        key = str(line.get("line_id") or line.get("source_product_id") or "")
+        fin = financial_items.get(key) or {}
+        basis = _decimal(fin.get("line_total") if fin.get("line_total") is not None else line.get("bonus_basis_amount") or line.get("line_total"))
+        rate = _decimal(line.get("bonus_percentage"))
+        earning = (basis * rate / Decimal("100")).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+        line["bonus_basis_amount"] = float(basis)
+        line["bonus_amount"] = float(earning)
+        line["bonus_financial_sync_status"] = "complete"
+        updated_items.append(line)
+        base_total += basis
+        bonus_total += earning
+    weighted = (bonus_total * Decimal("100") / base_total) if base_total > Decimal("0.004") else Decimal("0")
+    mongo.db[SALE_COLLECTION].update_one({"_id": sale["_id"]}, {"$set": {
+        "items": updated_items,
+        "bonus_base_total": float(base_total),
+        "bonus_amount": float(bonus_total),
+        "bonus_percentage": float(weighted),
+        "bonus_financial_sync_status": "complete",
+        "updated_at": now_utc(),
+    }})
+    return mongo.db[SALE_COLLECTION].find_one({"_id": sale["_id"]}) or {**sale, "items": updated_items, "bonus_base_total": float(base_total), "bonus_amount": float(bonus_total), "bonus_percentage": float(weighted), "bonus_financial_sync_status": "complete"}
 
 def _upsert_purchase(order, actor):
     """Create/repair the Farmer buyer-side purchase from accepted receipt lines."""
@@ -1572,6 +1712,7 @@ def ensure_delivery_documents(actor_user_id, order_id):
         "updated_at": now_utc(),
     }})
     financial = _financial_snapshot(order, centre)
+    sale = _sync_sale_commission_to_financial(sale, financial)
     invoice = _upsert_invoice(order, sale, purchase, actor, centre, financial)
     receivable, payable = _upsert_receivable_payable(order, sale, invoice, purchase)
 
@@ -1731,13 +1872,18 @@ def receive_farmer_order(actor_user_id, order_id, receipt_note="", receipt_lines
     _copy_line_to_legacy_fields(patch,first)
     result=mongo.db[ORDER_COLLECTION].update_one({"_id":oid,"status":{"$in":["dispatched","delivered"]}},{"$set":patch})
     if result.modified_count!=1: raise RuntimeError("The order changed while receipt was being saved. Refresh and try again.")
-    _append_history(oid,action="receive_order",actor=actor,note=receipt_note or f"Farmer confirmed receipt: {summary.get('accepted_item_count',0)} accepted line(s), {summary.get('discrepancy_item_count',0)} line(s) with discrepancy.",from_status=order.get("status"),to_status="received")
+    discrepancy_text = receipt_issue_summary(receipt_rows) if summary.get("receipt_status") == "discrepancy" else ""
+    history_note = receipt_note or (discrepancy_text or f"Farmer confirmed receipt: {summary.get('accepted_item_count',0)} accepted line(s), no discrepancy.")
+    _append_history(oid,action="receive_order",actor=actor,note=history_note,from_status=order.get("status"),to_status="received")
     financial_warning=None
     try:
         financial=ensure_delivery_documents(actor_user_id,oid)
     except Exception as exc:
         financial_warning=str(exc); mark_financial_sync_error(oid,financial_warning)
-    _notify_centre_admins(order.get("centre_uid"),"Farmer Confirmed Receipt",f"{order.get('farmer_name') or 'Farmer'} confirmed receipt of {order.get('order_number')}. {summary.get('accepted_item_count',0)} line(s) accepted.")
+    centre_message=f"{order.get('farmer_name') or 'Farmer'} confirmed receipt of {order.get('order_number')}. {summary.get('accepted_item_count',0)} line(s) accepted."
+    if discrepancy_text:
+        centre_message += f" {discrepancy_text}"
+    _notify_centre_admins(order.get("centre_uid"),"Farmer Confirmed Receipt",centre_message)
     final=mongo.db[ORDER_COLLECTION].find_one({"_id":oid}) or order
     message="Receipt confirmed. Payment is now based only on accepted goods." if not financial_warning else "Receipt confirmed. Financial documents need attention, but receipt was saved safely."
     return {"order":_serialize_order(final),"financial_warning":financial_warning,"message":message}

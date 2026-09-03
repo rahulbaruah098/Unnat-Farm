@@ -43,7 +43,7 @@
         {% elif order.status == 'approved' %}
           <div class="good">Produce is reserved. Dispatch only when it physically leaves you.</div><form method="post" action="{{ url_for('modules.farmer_marketplace_order_dispatch', order_id=order.id) }}"><div class="actions"><button class="btn primary" type="submit">Dispatch Produce</button></div></form>
         {% elif order.status == 'dispatched' %}<div class="notice">Dispatched. The buyer will check the quantities that actually arrived before payment.</div>{% if is_seller %}{% if order.seller_delivery_confirmed %}<div class="good" style="margin-top:10px">Delivery marked. Waiting for buyer receipt.</div>{% else %}<form method="post" action="{{ url_for('modules.farmer_marketplace_order_delivered', order_id=order.id) }}"><div class="actions"><button class="btn primary" type="submit">Mark Delivered</button></div></form>{% endif %}{% endif %}
-        {% elif order.status == 'received' %}<div class="good"><strong>{{ order.receipt_status_label or 'Receipt confirmed' }}.</strong> Buyer accepted {{ order.accepted_item_count }} / {{ order.dispatched_item_count }} line(s).{% if order.receipt_adjustment_amount %} Adjustment ₹{{ order.receipt_adjustment_amount_display }}.{% endif %}</div>
+        {% elif order.status == 'received' %}<div class="good"><strong>{{ order.receipt_status_label or 'Receipt confirmed' }}.</strong> Buyer recorded accepted quantity on {{ order.accepted_item_count }} / {{ order.dispatched_item_count }} dispatched line(s).{% if order.discrepancy_item_count %} {{ order.discrepancy_item_count }} line(s) had a receipt issue.{% endif %}{% if order.receipt_adjustment_amount %} Adjustment ₹{{ order.receipt_adjustment_amount_display }}.{% endif %}</div>
         {% else %}<div class="muted">No action is required.</div>{% endif %}
       {% elif is_buyer %}
         <h3>Next Action</h3>
@@ -58,16 +58,18 @@
             <div class="field" style="margin-top:10px"><label>Receipt / quality note (optional)</label><input name="receipt_note" maxlength="1000"></div>
             <div class="good"><strong>Only accepted quantity becomes stock/payable.</strong> Damaged, rejected or missing quantity is not charged automatically.</div><div class="actions"><button class="btn primary" type="submit">Confirm Receipt</button></div>
           </form>
-        {% elif order.status == 'received' %}<div class="good"><strong>{{ order.receipt_status_label or 'Receipt confirmed' }}.</strong> Accepted {{ order.accepted_item_count }} line(s). Payment is now available for accepted value only.</div>
+        {% elif order.status == 'received' %}<div class="good"><strong>{{ order.receipt_status_label or 'Receipt confirmed' }}.</strong> Accepted quantity was recorded on {{ order.accepted_item_count }} dispatched line(s).{% if order.discrepancy_item_count %} {{ order.discrepancy_item_count }} line(s) had a receipt issue.{% endif %} Payment is now available for accepted value only.</div>
         {% else %}<div class="muted">No action is required.</div>{% endif %}
         {% if order.status in ['requested','approved'] %}<form method="post" action="{{ url_for('modules.farmer_produce_market_cancel_order', order_id=order.id) }}"><div class="actions"><button class="btn danger" type="submit">Cancel Order</button></div></form>{% endif %}
       {% endif %}
     </div>
   </section>
 
+  {% include 'modules/_receipt_outcome.html' %}
+<br> 
   {% if invoice %}
   <section class="box">
-    <div class="top"><div><h3 style="margin:0">Payment</h3><div class="muted">Goods and money are tracked separately.</div></div><a class="btn" target="_blank" href="{{ url_for('modules.farmer_marketplace_invoice_print', invoice_id=invoice.id) }}">View Receipt</a></div>
+    <div class="top"><div><h3 style="margin:0">Payment</h3></div><a class="btn" target="_blank" href="{{ url_for('modules.farmer_marketplace_invoice_print', invoice_id=invoice.id) }}">View Receipt</a></div>
     <div class="money">
       <div class="fact"><span>Total</span><strong>₹{{ pay_invoice.total_display if pay_invoice else invoice.total_display }}</strong></div>
       <div class="fact"><span>Confirmed Paid</span><strong>₹{{ pay_invoice.paid_display if pay_invoice else invoice.paid_display }}</strong></div>
@@ -367,6 +369,207 @@ table tbody tr:hover td{
     .orders-grid{
         grid-template-columns:1fr !important;
     }
+}
+</style>
+
+
+
+<style id="uf-order-clean-layout">
+/* Clean, flat order-detail layout. Visual-only overrides. */
+.order-page{
+    max-width:1500px !important;
+    margin:0 auto !important;
+    padding:0 !important;
+    background:#fff !important;
+    border:1px solid #dbe9df !important;
+    border-radius:16px !important;
+    box-shadow:0 10px 28px rgba(26,72,43,.045) !important;
+    overflow:hidden;
+}
+
+/* Main sections are separated, not individually boxed. */
+.order-page > .box{
+    margin:0 !important;
+    padding:18px 20px !important;
+    border:0 !important;
+    border-bottom:1px solid #e5eee8 !important;
+    border-radius:0 !important;
+    background:#fff !important;
+    box-shadow:none !important;
+}
+.order-page > .box:last-of-type{border-bottom:0 !important}
+
+/* Order items should read like a table section, not a card inside a card. */
+.order-page > .box:first-child .multi-items,
+.order-page .multi-items{
+    margin-top:10px;
+    border:1px solid #e2ece5 !important;
+    border-radius:10px !important;
+    box-shadow:none !important;
+}
+
+.top{align-items:center !important;margin-bottom:0 !important}
+.top h1{font-size:1.35rem !important;line-height:1.2;color:#1d3425 !important}
+.top .muted{font-size:.8rem;margin-top:3px}
+
+/* Progress becomes one quiet strip. */
+.flow{
+    margin:14px 0 0 !important;
+    gap:0 !important;
+    border:1px solid #dce8df;
+    border-radius:10px;
+    overflow:hidden;
+    background:#fafcfb;
+}
+.step{
+    position:relative;
+    min-height:34px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:7px 8px !important;
+    border:0 !important;
+    border-right:1px solid #e3ece6 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    color:#7a887f !important;
+    font-size:.69rem !important;
+    font-weight:700 !important;
+}
+.step:last-child{border-right:0 !important}
+.step.done{background:#f0f8f2 !important;color:#286b42 !important}
+.step.current{outline:0 !important;box-shadow:inset 0 -2px 0 #397e51}
+
+/* Main four facts: no little boxes; use dividers. */
+.facts{
+    display:grid !important;
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    gap:0 !important;
+    margin-top:14px !important;
+    padding:0 !important;
+    border-top:1px solid #edf2ee;
+    border-bottom:1px solid #edf2ee;
+}
+.fact{
+    min-width:0;
+    padding:11px 14px !important;
+    border:0 !important;
+    border-right:1px solid #edf2ee !important;
+    border-radius:0 !important;
+    background:#fff !important;
+    box-shadow:none !important;
+}
+.fact:last-child{border-right:0 !important}
+.fact:hover{transform:none !important;box-shadow:none !important;border-color:#edf2ee !important}
+.fact span{font-size:.67rem !important;text-transform:uppercase;letter-spacing:.035em;color:#7a887f !important}
+.fact strong{margin-top:2px !important;font-size:.88rem;color:#213b2a}
+.fact .muted{font-size:.72rem}
+
+/* The next-action area is itself the section; remove the extra nested card. */
+.action-card{
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+}
+.action-card h3{font-size:1rem !important;margin:0 0 9px !important}
+.good,.notice{
+    margin:8px 0 !important;
+    padding:9px 11px !important;
+    border-radius:8px !important;
+    font-size:.8rem;
+    line-height:1.4;
+}
+
+.actions{margin-top:9px !important}
+.btn{min-height:35px !important;padding:7px 11px !important;font-size:.69rem !important;border-radius:8px !important}
+.pill{padding:4px 8px !important;font-size:.65rem !important;border-radius:7px !important}
+
+/* Payment: one compact strip rather than 4 floating cards. */
+.money{
+    display:grid !important;
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    gap:0 !important;
+    margin-top:12px !important;
+    border:1px solid #e2ece5;
+    border-radius:10px;
+    overflow:hidden;
+}
+.money .fact{
+    text-align:left !important;
+    padding:10px 12px !important;
+}
+.money .fact strong{font-size:.92rem !important}
+
+.form-grid{gap:10px !important}
+.field label{font-size:.74rem !important;margin-bottom:4px !important}
+.field input,.field select,.field textarea{min-height:37px;padding:8px 10px !important;font-size:.78rem !important;border-radius:8px !important}
+
+/* Pending payment is a simple subsection, not another large card. */
+.pending{
+    margin-top:12px !important;
+    padding:10px 0 0 !important;
+    border:0 !important;
+    border-top:1px solid #e6eee8 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+}
+.pending-row{padding:9px 0 !important}
+
+/* Technical/history: compact accordion rows. */
+.technical details,.timeline details{
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+}
+.technical summary,.timeline summary{
+    padding:2px 0;
+    font-size:.82rem;
+    color:#2d5239;
+}
+.technical .facts{
+    margin-top:10px !important;
+    border:1px solid #edf2ee;
+    border-radius:9px;
+    overflow:hidden;
+}
+
+/* Included receipt block: remove common nested-card shells if present. */
+.order-page .receipt-outcome,
+.order-page .receipt-outcome-wrap,
+.order-page .receipt-card,
+.order-page .outcome-card{
+    border:0 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    background:transparent !important;
+}
+
+/* Do not add hover movement to information blocks. */
+.order-page .sum:hover,
+.order-page .stat:hover,
+.order-page .stat-card:hover,
+.order-page .status-card:hover,
+.order-page .fact:hover{transform:none !important;box-shadow:none !important}
+
+@media(max-width:900px){
+    .order-page > .box{padding:16px !important}
+    .facts,.money{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+    .facts .fact:nth-child(2n),.money .fact:nth-child(2n){border-right:0 !important}
+    .facts .fact:nth-child(-n+2),.money .fact:nth-child(-n+2){border-bottom:1px solid #edf2ee !important}
+}
+@media(max-width:600px){
+    .order-page{border-radius:12px !important}
+    .order-page > .box{padding:14px !important}
+    .flow{grid-template-columns:1fr !important;overflow:visible;border:0;background:transparent}
+    .step{justify-content:flex-start !important;border:0 !important;border-bottom:1px solid #e8efea !important;padding:7px 4px !important}
+    .step:last-child{border-bottom:0 !important}
+    .facts,.money{grid-template-columns:1fr !important}
+    .facts .fact,.money .fact{border-right:0 !important;border-bottom:1px solid #edf2ee !important}
+    .facts .fact:last-child,.money .fact:last-child{border-bottom:0 !important}
+    .top{align-items:flex-start !important}
 }
 </style>
 

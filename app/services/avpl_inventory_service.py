@@ -52,6 +52,8 @@ MOVEMENT_LABELS = {
     "expiry": "Expiry",
     "adjustment": "Adjustment",
     "opening_stock": "Opening Stock",
+    "opening_stock_correction": "Opening Stock Correction",
+    "opening_stock_void": "Opening Stock Void",
 }
 
 
@@ -213,7 +215,11 @@ def _lot_quantities(lot, on_date=None):
 
 
 def _purchase_cost_by_product(accounting_entity_id):
-    """Derive a safe WAC from posted GRNs and their approved PO snapshots."""
+    """Derive WAC from posted GRNs plus auditable go-live opening stock.
+
+    Opening stock is not a fake purchase/GRN, but its historical unit cost must
+    participate in inventory valuation once the MIS becomes authoritative.
+    """
     totals = defaultdict(lambda: {"qty": Decimal("0"), "cost": Decimal("0")})
     receipts = mongo.db[GOODS_RECEIPT_COLLECTION].find(
         {
@@ -246,6 +252,31 @@ def _purchase_cost_by_product(accounting_entity_id):
             net_rate = rate * (Decimal("1") - (discount / Decimal("100")))
             totals[str(product_id)]["qty"] += quantity
             totals[str(product_id)]["cost"] += quantity * net_rate
+
+    # Go-live opening lots are a legitimate inventory origin, not a supplier
+    # purchase. Include their recorded historical cost in WAC without creating
+    # procurement, payable or invoice records.
+    for lot in mongo.db[INVENTORY_LOT_COLLECTION].find(
+        {
+            "accounting_entity_id": accounting_entity_id,
+            "status": {"$ne": "cancelled"},
+            "source_type": "opening_stock",
+            "opening_stock_entry_id": {"$exists": True},
+        },
+        {"source_product_id": 1, "opening_quantity": 1, "received_quantity": 1, "opening_unit_cost": 1, "purchase_cost_total": 1},
+    ):
+        product_id = _to_object_id(lot.get("source_product_id"))
+        if not product_id:
+            continue
+        quantity = _decimal(lot.get("opening_quantity") if lot.get("opening_quantity") is not None else lot.get("received_quantity"))
+        if quantity <= 0:
+            continue
+        unit_cost = _decimal(lot.get("opening_unit_cost"))
+        cost_total = _decimal(lot.get("purchase_cost_total"))
+        if unit_cost <= 0 and cost_total > 0:
+            unit_cost = cost_total / quantity
+        totals[str(product_id)]["qty"] += quantity
+        totals[str(product_id)]["cost"] += quantity * unit_cost
 
     result = {}
     for product_id, values in totals.items():
@@ -583,8 +614,8 @@ def get_current_stock_overview(accounting_entity_id, query_text="", warehouse_co
             "stock_value": _money(total_value),
         },
         "cost_basis_note": (
-            "Average cost uses posted GRN quantities and approved PO net rates "
-            "after line discount and before GST."
+            "Average cost uses posted GRN quantities/approved PO net rates plus "
+            "verified go-live opening-stock unit costs; GST is excluded from stock cost."
         ),
     }
 
@@ -845,6 +876,15 @@ def _sync_legacy_product_quantity(entity_id, product_id):
             }
         },
     )
+
+
+def sync_legacy_product_quantity(accounting_entity_id, product_id):
+    """Public compatibility wrapper for transaction-owned inventory updates."""
+    entity_id = _entity_id(accounting_entity_id)
+    source_product_id = _to_object_id(product_id)
+    if not source_product_id:
+        raise ValueError("Invalid product reference while synchronizing inventory.")
+    return _sync_legacy_product_quantity(entity_id, source_product_id)
 
 
 def create_stock_adjustment(

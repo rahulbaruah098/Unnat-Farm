@@ -399,7 +399,7 @@
 
         <td><strong>{{ r.sale_number }}</strong><br><small>{{ r.avpl_order_number }}</small></td>
 
-        <td><strong>{{ r.invoice_number or 'Pending' }}</strong></td>
+        <td>{% if r.invoice_number %}<strong>{{ r.invoice_number }}</strong>{% else %}<span class="pill unpaid">Numbering Pending</span><br><small>Use Sync / Repair Orders</small>{% endif %}</td>
 
         <td><strong>{{ r.centre_name }}</strong><br><small>{{ r.centre_uid }}</small></td>
 

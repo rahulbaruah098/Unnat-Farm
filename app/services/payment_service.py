@@ -228,6 +228,11 @@ def _assert_access(actor, source_type, invoice, *, write=False):
 
     if source_type == "avpl_ufc_invoice":
         centre_uid = _avpl_invoice_centre_uid(invoice)
+        if write and not str(invoice.get("invoice_number") or "").strip():
+            raise ValueError(
+                "This AVPL Sales Invoice is awaiting official numbering. "
+                "AVPL must run Sales to UFC → Sync / Repair Orders before payment can be recorded."
+            )
         if role in {"super_admin", "avpl_admin", "accounts"}:
             if write:
                 order_id = _to_object_id(invoice.get("avpl_ufc_order_id"))
@@ -362,14 +367,27 @@ def _assert_access(actor, source_type, invoice, *, write=False):
         raise PermissionError("You are not authorized for this Farmer Produce Market payment.")
 
 
+def _looks_like_object_id(value):
+    text = str(value or "").strip()
+    if len(text) != 24:
+        return False
+    try:
+        int(text, 16)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 def _invoice_number(source_type, invoice):
     if source_type == "supplier_invoice":
-        return invoice.get("official_purchase_invoice_number") or invoice.get("supplier_invoice_number") or invoice.get("internal_reference") or str(invoice.get("_id"))
+        return invoice.get("official_purchase_invoice_number") or invoice.get("supplier_invoice_number") or invoice.get("internal_reference") or "Invoice Pending"
     if source_type == "avpl_ufc_invoice":
-        return invoice.get("invoice_number") or invoice.get("document_number") or str(invoice.get("_id"))
+        # Never expose MongoDB _id as a commercial invoice number.  A missing
+        # official number is a recoverable numbering problem, not an invoice ID.
+        return invoice.get("invoice_number") or invoice.get("document_number") or "Numbering Pending"
     if source_type in {"farmer_external_invoice", "farmer_external_purchase_invoice"}:
-        return invoice.get("document_number") or invoice.get("invoice_number") or str(invoice.get("_id"))
-    return invoice.get("document_number") or invoice.get("invoice_number") or str(invoice.get("_id"))
+        return invoice.get("document_number") or invoice.get("invoice_number") or "Invoice Pending"
+    return invoice.get("document_number") or invoice.get("invoice_number") or "Invoice Pending"
 
 
 def _invoice_total(invoice):
@@ -644,6 +662,17 @@ def serialize_payment(payment):
     row = dict(payment)
     row["id"] = str(row.get("_id") or "")
     row["invoice_id_str"] = str(row.get("invoice_id") or "")
+    cached_invoice_number = str(row.get("invoice_number") or "").strip()
+    if row.get("source_type") == "avpl_ufc_invoice" and (
+        not cached_invoice_number
+        or cached_invoice_number == row["invoice_id_str"]
+        or _looks_like_object_id(cached_invoice_number)
+    ):
+        current_invoice = mongo.db[AVPL_UFC_INVOICE_COLLECTION].find_one(
+            {"_id": _to_object_id(row.get("invoice_id"))},
+            {"invoice_number": 1},
+        ) or {}
+        row["invoice_number"] = current_invoice.get("invoice_number") or "Numbering Pending"
     row["amount_display"] = _money(row.get("amount"))
     row["invoice_total_display"] = _money(row.get("invoice_total"))
     row["paid_after_display"] = _money(row.get("paid_after"))
@@ -711,7 +740,7 @@ def _annotate_reportable_invoice_rows(rows, pending_totals):
         row["reported_pending_display"] = _money(pending)
         row["reportable_outstanding_display"] = _money(available)
         row["has_pending_report"] = pending > Decimal("0.004")
-        row["can_pay"] = available > Decimal("0.004")
+        row["can_pay"] = available > Decimal("0.004") and not row.get("payment_blocked")
     return rows
 
 
@@ -1451,11 +1480,15 @@ def _serialize_invoice_row(source_type, invoice):
         row.update({"party_name": invoice.get("supplier_name") or "Supplier", "reference": invoice.get("po_number") or "", "can_pay": invoice.get("payable_posted") is True and outstanding > 0})
     elif source_type == "avpl_ufc_invoice":
         centre_uid = _avpl_invoice_centre_uid(invoice)
+        numbered = bool(str(invoice.get("invoice_number") or "").strip())
         row.update({
             "party_name": _avpl_invoice_centre_name(invoice),
             "reference": invoice.get("avpl_order_number") or "",
             "centre_uid": centre_uid,
-            "can_pay": outstanding > 0,
+            "numbering_pending": not numbered,
+            "payment_blocked": not numbered,
+            "payment_block_reason": "Official Sales Invoice numbering must be repaired before payment." if not numbered else "",
+            "can_pay": outstanding > 0 and numbered,
         })
     elif source_type == "farmer_external_invoice":
         buyer = invoice.get("buyer") or {}
@@ -1843,10 +1876,12 @@ def get_payment_receipt_context(actor_user_id, payment_id):
     collection_name, invoice = _source_invoice(payment.get("source_type"), payment.get("invoice_id"))
     _assert_access(actor, payment.get("source_type"), invoice, write=False)
     receipt = mongo.db[RECEIPT_COLLECTION].find_one({"payment_id": oid}) or {}
+    live_invoice_number = _invoice_number(payment.get("source_type"), invoice)
     return {
         "payment": serialize_payment(payment),
         "receipt": {
             **receipt,
+            "invoice_number": live_invoice_number,
             "id": str(receipt.get("_id") or ""),
             "amount_display": _money(receipt.get("amount") or payment.get("amount")),
             "invoice_total_display": _money(receipt.get("invoice_total") or payment.get("invoice_total")),

@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'modules/_sales_workspace_styles.html' %}
+{% set s = overview.summary or {} %}
+{% set p = overview.pagination or {} %}
+<div class="sales-workspace">
+    <section class="sw-card sw-head">
+        <div><h1>Finance Leads</h1><p>Farmer finance requests requiring Sales follow-up.</p></div>
+        <div class="sw-actions"><a class="sw-btn" href="{{ url_for('modules.sales_details') }}">Sales</a><a class="sw-btn" href="{{ url_for('modules.transactions') }}">Sales Activity</a></div>
+    </section>
+    {% if overview.notice %}<div class="sw-note">{{ overview.notice }}</div>{% endif %}
+    <section class="sw-kpis">
+        <div class="sw-kpi"><span>Visible Leads</span><strong>{{ s.total or 0 }}</strong><small>Selected filters</small></div>
+        <div class="sw-kpi"><span>New</span><strong>{{ s.new or 0 }}</strong><small>Not yet contacted</small></div>
+        <div class="sw-kpi"><span>In Follow-up</span><strong>{{ s.follow_up or 0 }}</strong><small>Contacted / follow-up</small></div>
+        <div class="sw-kpi"><span>Forwarded</span><strong>{{ s.forwarded or 0 }}</strong><small>Sent onward for processing</small></div>
+    </section>
+    <div class="sw-note">Sales follow-up does not approve or reject finance. The original finance-request status remains unchanged.</div>
+    <form method="get" class="sw-card sw-filter" style="grid-template-columns:minmax(150px,.8fr) minmax(260px,2fr) auto">
+        <div class="sw-field"><label>Follow-up</label><select name="followup">{% for value,label in overview.followup_statuses or [] %}<option value="{{ value }}" {% if overview.selected_followup == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="sw-field search"><label>Search</label><input name="q" value="{{ overview.q or '' }}" placeholder="Farmer, mobile, centre, purpose or amount"></div>
+        <button class="sw-btn primary" type="submit">Apply</button>
+    </form>
+    <section class="sw-card sw-section">
+        <div class="sw-section-head"><div><h3>Farmer Requests</h3><p>Update only the Sales follow-up status and note.</p></div></div>
+        <div class="sw-table-wrap"><table class="sw-table" style="min-width:1100px">
+            <thead><tr><th>Date</th><th>Farmer</th><th>Centre</th><th>Requested</th><th>Purpose</th><th>Business Value</th><th>Finance Status</th><th>Sales Follow-up</th></tr></thead>
+            <tbody>
+            {% for row in overview.rows or [] %}
+                <tr>
+                    <td>{{ row.created_at_display }}</td>
+                    <td><span class="sw-ref">{{ row.farmer_name or 'Farmer' }}</span><span class="sw-sub">{{ row.farmer_mobile or '-' }}</span></td>
+                    <td>{{ row.centre_uid or '-' }}{% if row.mitra_uid %}<span class="sw-sub">Mitra {{ row.mitra_uid }}</span>{% endif %}</td>
+                    <td class="sw-money">₹{{ '%.2f'|format(row.amount_value|float) }}</td>
+                    <td>{{ row.purpose or '-' }}{% if row.farmer_address %}<span class="sw-sub">{{ row.farmer_address }}</span>{% endif %}</td>
+                    <td>₹{{ '%.2f'|format(row.transaction_value|float) }}</td>
+                    <td><span class="sw-pill {{ row.status or 'new' }}">{{ row.finance_status_label }}</span></td>
+                    <td style="min-width:390px">
+                        <form method="post" class="sw-inline-form" action="{{ url_for('modules.sales_finance_lead_follow_up', lead_id=row.id, q=overview.q, followup=overview.selected_followup) }}">
+                            <select name="followup_status" aria-label="Follow-up status">{% for value,label in overview.followup_statuses or [] %}{% if value != 'all' %}<option value="{{ value }}" {% if row.followup_status == value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}</select>
+                            <input name="note" maxlength="1000" value="{{ row.sales_followup_note or '' }}" placeholder="Short follow-up note">
+                            <button class="sw-btn primary" type="submit">Save</button>
+                        </form>
+                        {% if row.updated_at_display != '-' %}<span class="sw-sub">Updated {{ row.updated_at_display }}{% if row.sales_followup_by_name %} · {{ row.sales_followup_by_name }}{% endif %}</span>{% endif %}
+                    </td>
+                </tr>
+            {% else %}<tr><td colspan="8" class="sw-empty">No finance leads match the selected filters.</td></tr>{% endfor %}
+            </tbody>
+        </table></div>
+        <div class="sw-pager"><div class="sw-pager-info">Page {{ p.page or 1 }} of {{ p.total_pages or 1 }} · {{ p.total or 0 }} records</div><div class="sw-page-links">
+            <a class="sw-page {% if not p.has_prev %}disabled{% endif %}" href="{{ url_for('modules.finance_leads', followup=overview.selected_followup, q=overview.q, per_page=p.per_page, page=(p.page or 1)-1) }}">Prev</a><span class="sw-page active">{{ p.page or 1 }}</span><a class="sw-page {% if not p.has_next %}disabled{% endif %}" href="{{ url_for('modules.finance_leads', followup=overview.selected_followup, q=overview.q, per_page=p.per_page, page=(p.page or 1)+1) }}">Next</a>
+        </div></div>
+    </section>
+</div>
+{% endblock %}

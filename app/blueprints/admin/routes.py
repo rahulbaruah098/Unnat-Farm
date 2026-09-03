@@ -89,6 +89,22 @@ from app.services.avpl_inventory_service import (
     publish_products_to_ufc,
     reject_stock_adjustment,
 )
+from app.services.opening_stock_service import (
+    correct_opening_stock_entry,
+    create_avpl_opening_stock,
+    get_management_opening_stock_overview,
+    set_opening_stock_mode,
+    void_opening_stock_entry,
+)
+from app.services.mitra_commission_service import (
+    get_admin_mitra_earning_overview,
+    get_mitra_earning_overview,
+    get_mitra_setting_context,
+    resolve_mitra_for_user,
+    reset_mitra_input_rate,
+    save_global_input_rate,
+    save_mitra_input_rate,
+)
 from app.services.avpl_ufc_order_service import (
     approve_ufc_order,
     approve_ufc_cart_order,
@@ -117,6 +133,7 @@ from app.services.payment_service import (
 )
 from datetime import datetime
 from math import isfinite
+from uuid import uuid4
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -2065,6 +2082,150 @@ def procurement_home():
     )
 
 
+@admin_bp.route('/inventory/opening-stock', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def opening_stock():
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+
+    if request.method == 'POST':
+        proof_doc = None
+        try:
+            proof_file = request.files.get('proof')
+            if proof_file and proof_file.filename:
+                proof_doc = store_document(
+                    proof_file,
+                    session.get('user_id'),
+                    None,
+                    session.get('user_id'),
+                    session.get('role'),
+                    'Opening Stock Proof',
+                )
+            result = create_avpl_opening_stock(
+                entity['_id'],
+                session.get('user_id'),
+                product_id=request.form.get('product_id'),
+                quantity=request.form.get('quantity'),
+                unit_cost=request.form.get('unit_cost'),
+                warehouse_code=request.form.get('warehouse_code') or 'AVPL-MAIN',
+                warehouse_name=request.form.get('warehouse_name') or 'AVPL Main Stock',
+                warehouse_bin=request.form.get('warehouse_bin'),
+                batch_number=request.form.get('batch_number'),
+                manufacturing_date=request.form.get('manufacturing_date'),
+                expiry_date=request.form.get('expiry_date'),
+                opening_date=request.form.get('opening_date'),
+                reference=request.form.get('reference'),
+                note=request.form.get('note'),
+                proof_filename=(proof_doc or {}).get('filename') or '',
+                proof_document_id=(proof_doc or {}).get('_id'),
+                idempotency_key=request.form.get('opening_token'),
+            )
+            entry = result.get('entry') or {}
+            log_action(
+                session.get('user_id'), 'create_opening_stock', 'opening_stock',
+                str(entry.get('_id') or ''),
+                metadata={
+                    'opening_number': entry.get('opening_number'),
+                    'scope': 'avpl',
+                    'product_name': entry.get('product_name'),
+                    'quantity': entry.get('opening_quantity'),
+                    'unit_cost': entry.get('unit_cost'),
+                },
+            )
+            flash(result.get('message') or 'AVPL opening stock saved.', 'success')
+            return redirect(url_for('admin.opening_stock'))
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            if proof_doc and proof_doc.get('_id'):
+                mongo.db.documents.update_one(
+                    {'_id': proof_doc['_id']},
+                    {'$set': {'status': 'orphaned', 'updated_at': now_utc()}},
+                )
+            flash(str(exc), 'danger')
+            return redirect(url_for('admin.opening_stock'))
+
+    try:
+        overview = get_management_opening_stock_overview(
+            entity['_id'], session.get('user_id'),
+            search=request.args.get('q', ''),
+            scope=request.args.get('scope', 'all'),
+        )
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+        overview = {
+            'mode': {'enabled': False, 'status': 'closed'}, 'rows': [], 'products': [],
+            'query': request.args.get('q', ''), 'selected_scope': request.args.get('scope', 'all'),
+            'actor_role': session.get('role'), 'can_toggle': session.get('role') in ['super_admin','avpl_admin'],
+            'can_create_avpl': session.get('role') in ['super_admin','avpl_admin'],
+            'summary': {'active_entries': 0, 'avpl_entries': 0, 'ufc_entries': 0, 'opening_value': '0.00'},
+        }
+    overview['opening_token'] = f"OPEN-AVPL-{uuid4().hex.upper()}"
+    return render_template('admin/opening_stock.html', overview=overview)
+
+
+@admin_bp.route('/inventory/opening-stock/mode', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def opening_stock_mode():
+    try:
+        action = str(request.form.get('action') or '').strip().lower()
+        if action not in {'open', 'close'}:
+            raise ValueError('Choose Open or Close for Opening Stock Mode.')
+        result = set_opening_stock_mode(
+            session.get('user_id'), action == 'open', request.form.get('reason')
+        )
+        log_action(
+            session.get('user_id'), f'opening_stock_mode_{action}', 'inventory_migration',
+            'opening_stock_v1', metadata={'reason': request.form.get('reason') or ''}
+        )
+        flash(result.get('message') or 'Opening Stock Mode updated.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.opening_stock'))
+
+
+@admin_bp.route('/inventory/opening-stock/<entry_id>/correct', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def correct_opening_stock(entry_id):
+    try:
+        result = correct_opening_stock_entry(
+            session.get('user_id'), entry_id,
+            new_quantity=request.form.get('new_quantity'),
+            new_unit_cost=request.form.get('new_unit_cost'),
+            reason=request.form.get('reason'),
+        )
+        entry = result.get('entry') or {}
+        log_action(
+            session.get('user_id'), 'correct_opening_stock', 'opening_stock', entry_id,
+            metadata={'opening_number': entry.get('opening_number'), 'scope': entry.get('scope'), 'reason': request.form.get('reason') or ''},
+        )
+        flash(result.get('message') or 'Opening stock corrected.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.opening_stock'))
+
+
+@admin_bp.route('/inventory/opening-stock/<entry_id>/void', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def void_opening_stock(entry_id):
+    try:
+        result = void_opening_stock_entry(
+            session.get('user_id'), entry_id, reason=request.form.get('reason')
+        )
+        entry = result.get('entry') or {}
+        log_action(
+            session.get('user_id'), 'void_opening_stock', 'opening_stock', entry_id,
+            metadata={'opening_number': entry.get('opening_number'), 'scope': entry.get('scope'), 'reason': request.form.get('reason') or ''},
+        )
+        flash(result.get('message') or 'Opening stock entry voided.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.opening_stock'))
+
+
 @admin_bp.route('/inventory/current-stock')
 @login_required
 @roles_required('super_admin', 'avpl_admin', 'accounts')
@@ -3545,129 +3706,115 @@ def onboard_trader():
 
 @admin_bp.route('/mitra-bonus-settings', methods=['GET', 'POST'])
 @login_required
-@roles_required('avpl_admin', 'accounts')
+@roles_required('super_admin', 'avpl_admin', 'accounts')
 def mitra_bonus_settings():
+    """AVPL-managed input commission policy.
+
+    The historical endpoint is retained for bookmarks, but it now manages one
+    clear business rule: commission earned by a Mitra when a Farmer mapped to
+    that Mitra buys an AVPL-origin input product from the UFC.
+    """
+    can_manage = session.get('role') in {'super_admin', 'avpl_admin'}
     if request.method == 'POST':
-        bonus_type = request.form.get('bonus_type')
-        category = request.form.get('category') or 'all'
-        mitra_uid = request.form.get('mitra_uid') or None
-        percentage = float(request.form.get('percentage') or 2)
-
-        mongo.db.mitra_bonus_settings.insert_one({
-            "bonus_type": bonus_type,
-            "category": category,
-            "mitra_uid": mitra_uid,
-            "percentage": percentage,
-            "created_at": now_utc(),
-            "updated_at": now_utc()
-        })
-
-        flash("Bonus setting saved.", "success")
+        if not can_manage:
+            flash('Accounts can review Mitra earning settings but cannot change them.', 'danger')
+            return redirect(url_for('admin.mitra_bonus_settings'))
+        try:
+            result = save_global_input_rate(
+                session.get('user_id'),
+                request.form.get('percentage'),
+                reason=request.form.get('reason', ''),
+            )
+            log_action(
+                session.get('user_id'), 'set_mitra_global_input_commission',
+                'mitra_commission_setting', result.get('setting_id') or 'global',
+                metadata={'percentage': result.get('percentage'), 'reason': request.form.get('reason', '')},
+            )
+            flash(f"Default Mitra input commission set to {result.get('percentage_display')}%.", 'success')
+        except (ValueError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
         return redirect(url_for('admin.mitra_bonus_settings'))
 
-    q = request.args.get("q", "").strip()
-
-    settings = list(
-    mongo.db.mitra_bonus_settings.find({}).sort([
-        ('created_at', 1),
-        ('_id', 1)
-    ])
-)
-
-
-    if q:
-        q_lower = q.lower()
-        settings = [
-            s for s in settings
-            if q_lower in str(s.get("bonus_type", "")).lower()
-            or q_lower in str(s.get("category", "")).lower()
-            or q_lower in str(s.get("mitra_uid", "") or "All").lower()
-            or q_lower in str(s.get("percentage", "")).lower()
-        ]
-
-    mitras = list(mongo.db.ufc_mitra_master.find({}).sort('name', 1))
-
+    overview = get_admin_mitra_earning_overview(
+        month=request.args.get('month', ''),
+        q=request.args.get('q', ''),
+    )
     return render_template(
         'admin/mitra_bonus_settings.html',
-        settings=settings,
-        mitras=mitras
+        overview=overview,
+        can_manage=can_manage,
     )
-    
+
+
+@admin_bp.route('/users/<user_id>/mitra-earning-settings', methods=['GET', 'POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin', 'accounts')
+def mitra_user_earning_settings(user_id):
+    can_manage = session.get('role') in {'super_admin', 'avpl_admin'}
+    try:
+        resolved = resolve_mitra_for_user(user_id)
+        mitra_uid = resolved['mitra_uid']
+    except ValueError as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('admin.users'))
+
+    if request.method == 'POST':
+        if not can_manage:
+            flash('Accounts can review Mitra earning settings but cannot change them.', 'danger')
+            return redirect(url_for('admin.mitra_user_earning_settings', user_id=user_id))
+        action = str(request.form.get('action') or 'save').strip().lower()
+        try:
+            if action == 'reset':
+                context = reset_mitra_input_rate(
+                    mitra_uid, session.get('user_id'), reason=request.form.get('reason', '')
+                )
+                action_name = 'reset_mitra_input_commission'
+                message = f"{context['profile']['name']} now uses the AVPL default commission rate."
+            else:
+                context = save_mitra_input_rate(
+                    mitra_uid, session.get('user_id'), request.form.get('percentage'),
+                    reason=request.form.get('reason', ''),
+                )
+                action_name = 'set_mitra_input_commission'
+                message = f"Input commission for {context['profile']['name']} set to {context['current_percentage']:g}%."
+            log_action(
+                session.get('user_id'), action_name, 'ufc_mitra', mitra_uid,
+                metadata={
+                    'percentage': context.get('current_percentage'),
+                    'reason': request.form.get('reason', ''),
+                    'source': context.get('current_source'),
+                },
+            )
+            flash(message, 'success')
+        except (ValueError, RuntimeError) as exc:
+            flash(str(exc), 'danger')
+        return redirect(url_for('admin.mitra_user_earning_settings', user_id=user_id))
+
+    context = get_mitra_setting_context(mitra_uid)
+    earnings = get_mitra_earning_overview(mitra_uid, period='this_month', page=1, per_page=10)
+    return render_template(
+        'admin/mitra_earning_settings.html',
+        setting=context,
+        earnings=earnings,
+        user=resolved.get('user') or {},
+        can_manage=can_manage,
+    )
+
+
 @admin_bp.route('/ufc-mitra-earnings')
 @login_required
-@roles_required('avpl_admin', 'accounts')
+@roles_required('super_admin', 'avpl_admin', 'accounts')
 def ufc_mitra_earnings():
-    selected_month = request.args.get('month', '').strip()
-    selected_mitra_uid = request.args.get('mitra_uid', '').strip()
-
-    mitras = list(mongo.db.ufc_mitra_master.find({}).sort('name', 1))
-
-    date_filter = {}
-
-    if selected_month:
-        year, month = map(int, selected_month.split('-'))
-        start_date = datetime(year, month, 1)
-
-        if month == 12:
-            end_date = datetime(year + 1, 1, 1)
-        else:
-            end_date = datetime(year, month + 1, 1)
-
-        date_filter = {
-            'created_at': {
-                '$gte': start_date,
-                '$lt': end_date
-            }
-        }
-
-    rows = []
-
-    for mitra in mitras:
-        mitra_uid = mitra.get('mitra_uid')
-
-        if selected_mitra_uid and selected_mitra_uid != mitra_uid:
-            continue
-
-        base_filter = {
-            'mitra_uid': mitra_uid
-        }
-
-        monthly_filter = {
-            **base_filter,
-            **date_filter
-        }
-
-        pos_sales = list(mongo.db.pos_sales.find(monthly_filter))
-        farmer_sales = list(mongo.db.farmer_product_sales.find(monthly_filter))
-
-        total_pos_sales = list(mongo.db.pos_sales.find(base_filter))
-        total_farmer_sales = list(mongo.db.farmer_product_sales.find(base_filter))
-
-        monthly_avpl_earning = sum(float(s.get('bonus_amount') or 0) for s in pos_sales)
-        monthly_farmer_earning = sum(float(s.get('bonus_amount') or 0) for s in farmer_sales)
-
-        total_avpl_earning = sum(float(s.get('bonus_amount') or 0) for s in total_pos_sales)
-        total_farmer_earning = sum(float(s.get('bonus_amount') or 0) for s in total_farmer_sales)
-
-        rows.append({
-            'mitra_name': mitra.get('name'),
-            'mitra_uid': mitra_uid,
-            'linked_user_id': mitra.get('linked_user_id'),
-            'monthly_avpl_earning': monthly_avpl_earning,
-            'monthly_farmer_earning': monthly_farmer_earning,
-            'monthly_total_earning': monthly_avpl_earning + monthly_farmer_earning,
-            'total_avpl_earning': total_avpl_earning,
-            'total_farmer_earning': total_farmer_earning,
-            'total_earning': total_avpl_earning + total_farmer_earning
-        })
-
+    overview = get_admin_mitra_earning_overview(
+        month=request.args.get('month', ''),
+        q=request.args.get('q', ''),
+    )
     return render_template(
         'admin/ufc_mitra_earnings.html',
-        rows=rows,
-        mitras=mitras,
-        selected_month=selected_month,
-        selected_mitra_uid=selected_mitra_uid
-    )    
+        overview=overview,
+        can_manage=session.get('role') in {'super_admin', 'avpl_admin'},
+    )
+
 
 @admin_bp.route('/mitra-profile/<mitra_uid>')
 @login_required

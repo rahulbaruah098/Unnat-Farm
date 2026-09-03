@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Produce Listing Details{% endblock %}
+{% block content %}
+<style>
+.fpd{max-width:1180px;margin:0 auto;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f3127}.fpd-head,.fpd-card{background:#fff;border:1px solid #dbe9df;border-radius:18px;box-shadow:0 12px 30px rgba(26,72,43,.05)}.fpd-head{padding:18px 20px;display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.fpd-head h1{margin:0;color:#17251d;font-size:1.55rem;font-weight:900;letter-spacing:-.025em}.fpd-head p{margin:5px 0 0;color:#718078;font-size:.75rem}.fpd-actions{display:flex;gap:8px;flex-wrap:wrap}.fpd-btn{min-height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0 13px;border:1px solid #cfe0d4;border-radius:9px;background:#fff;color:#2f6e46;text-decoration:none;font-size:.7rem;font-weight:900;cursor:pointer}.fpd-btn.primary{border-color:#397e51;background:#397e51;color:#fff}.fpd-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr);gap:14px;margin-top:14px}.fpd-card{padding:16px}.gallery-main{height:390px;border:1px solid #e1ebe4;border-radius:13px;background:#f5faf7;overflow:hidden;display:flex;align-items:center;justify-content:center}.gallery-main img{width:100%;height:100%;object-fit:contain}.gallery-empty{color:#7d8981;font-size:.75rem}.thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.thumb{height:74px;padding:0;border:1px solid #dbe9df;border-radius:9px;background:#f7fbf8;overflow:hidden;cursor:pointer}.thumb.active{border-color:#397e51;box-shadow:0 0 0 2px rgba(57,126,81,.08)}.thumb img{width:100%;height:100%;object-fit:cover}.section-title{margin:0 0 10px;color:#203828;font-size:.86rem;font-weight:900}.seller{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid #edf2ee}.seller strong{display:block;color:#21382a;font-size:.9rem}.seller small{display:block;margin-top:3px;color:#748179;font-size:.67rem}.status{padding:5px 8px;border:1px solid #bee1c9;border-radius:7px;background:#f2fbf5;color:#286b40;font-size:.61rem;font-weight:900}.status.off{border-color:#e6d8bd;background:#fffaf0;color:#8a5b0a}.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.fact{padding:10px 11px;border:1px solid #e1eae3;border-radius:10px;background:#fbfdfb}.fact span{display:block;color:#7a8780;font-size:.61rem;font-weight:750}.fact strong{display:block;margin-top:3px;color:#2d4937;font-size:.75rem}.note{margin-top:12px;padding:11px 12px;border:1px solid #dce8df;border-radius:10px;background:#f8fbf9;color:#516358;font-size:.71rem;line-height:1.5;white-space:pre-wrap}.pricing{margin-top:14px}.price-box{padding:12px;border:1px solid #dce8df;border-radius:11px;background:#f7fbf8}.price-main{color:#1f6e3f;font-size:1.13rem;font-weight:950}.price-main small{color:#718078;font-size:.64rem;font-weight:700}.pack-list{display:grid;gap:7px;margin-top:8px}.pack-row{display:flex;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid #e1ebe4;border-radius:9px;background:#fff;font-size:.68rem}.pack-row strong{color:#1f6e3f}.order-card{margin-top:14px;padding-top:14px;border-top:1px solid #edf2ee}.order-card h3{margin:0 0 4px;color:#203828;font-size:.86rem}.order-card>p{margin:0 0 11px;color:#78857d;font-size:.66rem}.order-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.field{display:grid;gap:5px;color:#4b6052;font-size:.66rem;font-weight:800}.field.full{grid-column:1/-1}.field select,.field input{height:40px;border:1px solid #d6e3d9;border-radius:9px;padding:0 9px;background:#fff;color:#31463a}.estimate{grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;padding:10px 11px;border-radius:9px;background:#f2f8f4;color:#355c43;font-size:.7rem;font-weight:850}.order-submit{grid-column:1/-1;min-height:41px;border:1px solid #397e51;border-radius:9px;background:#397e51;color:#fff;font-size:.72rem;font-weight:900;cursor:pointer}.hint{margin-top:7px;color:#7b8880;font-size:.61rem;line-height:1.4}.readonly{margin-top:14px;padding:11px 12px;border:1px solid #dce8df;border-radius:10px;background:#f8fbf9;color:#63746a;font-size:.7rem;font-weight:750}.meta{margin-top:12px;padding-top:11px;border-top:1px solid #edf2ee;color:#7c8981;font-size:.62rem;line-height:1.6}@media(max-width:850px){.fpd-layout{grid-template-columns:1fr}.gallery-main{height:300px}}@media(max-width:560px){.fpd-head,.fpd-card{padding:14px}.facts,.order-grid{grid-template-columns:1fr}.field.full,.estimate,.order-submit{grid-column:auto}.gallery-main{height:240px}.thumbs{grid-template-columns:repeat(4,1fr)} }
+</style>
+{% set role = session.get('role','') %}
+{% set can_order = role in ['farmer','ufc_admin','avpl_admin','super_admin'] and listing.is_available and not listing.is_owner %}
+{% set can_view_contact = role in ['ufc_admin','avpl_admin','super_admin','accounts'] %}
+<div class="fpd">
+  <header class="fpd-head">
+    <div>
+      <h1>{{ listing.title or listing.product_name }}</h1>
+      <p>Farmer produce listing details{% if listing.listing_number %} · {{ listing.listing_number }}{% endif %}</p>
+    </div>
+    <div class="fpd-actions">
+      <a class="fpd-btn" href="{{ url_for('modules.farmer_produce_market') }}">← Back to Market</a>
+      {% if role in ['farmer','ufc_admin','avpl_admin','super_admin'] %}<a class="fpd-btn" href="{{ url_for('modules.farmer_produce_market_my_orders') }}">My Produce Orders</a>{% endif %}
+    </div>
+  </header>
+
+  <div class="fpd-layout">
+    <section class="fpd-card">
+      <div class="gallery-main" id="galleryMain">
+        {% if listing.images %}<img src="{{ url_for('documents.serve', filename=listing.images[0]) }}" alt="{{ listing.title or listing.product_name }}" id="mainImage">{% else %}<div class="gallery-empty">No product photo available.</div>{% endif %}
+      </div>
+      {% if listing.images|length > 1 %}
+        <div class="thumbs">
+          {% for image in listing.images %}<button class="thumb{% if loop.first %} active{% endif %}" type="button" data-src="{{ url_for('documents.serve', filename=image) }}"><img src="{{ url_for('documents.serve', filename=image) }}" alt="Product photo {{ loop.index }}"></button>{% endfor %}
+        </div>
+      {% endif %}
+
+      <h2 class="section-title" style="margin-top:16px">Produce Details</h2>
+      <div class="facts">
+        <div class="fact"><span>Produce</span><strong>{{ listing.product_name }}</strong></div>
+        <div class="fact"><span>Available Now</span><strong>{{ listing.available_to_order_display }} {{ listing.unit_code }}</strong></div>
+        <div class="fact"><span>Variety</span><strong>{{ listing.variety or 'Not specified' }}</strong></div>
+        <div class="fact"><span>Grade / Quality</span><strong>{{ listing.grade or 'Not specified' }}</strong></div>
+        <div class="fact"><span>Selling Format</span><strong>{{ 'Per unit' if listing.selling_mode == 'loose' else ('Bags / packs' if listing.selling_mode == 'bag' else 'Per unit + bags / packs') }}</strong></div>
+        <div class="fact"><span>Stock Unit</span><strong>{{ listing.unit_code }}</strong></div>
+      </div>
+      {% if listing.description %}<div class="note"><strong>Farmer's note</strong><br>{{ listing.description }}</div>{% endif %}
+    </section>
+
+    <aside class="fpd-card">
+      <div class="seller">
+        <div><span style="color:#7a8780;font-size:.61rem;font-weight:800">SELLER</span><strong>{{ listing.farmer_name }}</strong><small>{% if listing.village %}{{ listing.village }}{% if listing.block or listing.district %}, {% endif %}{% endif %}{% if listing.block %}{{ listing.block }}{% if listing.district %}, {% endif %}{% endif %}{{ listing.district or '' }}{% if listing.state %}{% if listing.village or listing.block or listing.district %}, {% endif %}{{ listing.state }}{% endif %}</small>{% if can_view_contact and listing.farmer_phone %}<small>Contact: {{ listing.farmer_phone }}</small>{% endif %}</div>
+        <span class="status{% if not listing.is_available %} off{% endif %}">{{ 'Available' if listing.is_available else 'Unavailable' }}</span>
+      </div>
+
+      <div class="pricing">
+        <h2 class="section-title">Price & Order Terms</h2>
+        {% if listing.selling_mode in ['loose','both'] %}
+          <div class="price-box"><div class="price-main">₹{{ listing.loose_price_display }} <small>/ {{ listing.unit_code }}</small></div><div class="hint">Minimum order: {{ listing.min_order_quantity_display or '1' }} {{ listing.unit_code }}</div></div>
+        {% endif %}
+        {% if listing.package_options %}
+          <div class="pack-list">
+            {% for opt in listing.package_options %}<div class="pack-row"><span>{{ opt.label }} · {{ opt.quantity_per_bag_display }} {{ listing.unit_code }}</span><strong>₹{{ opt.price_per_bag_display }}</strong></div>{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      {% if can_order %}
+      <form class="order-card" method="post" action="{{ url_for('modules.farmer_produce_market_order') }}" id="detailOrderForm">
+        <h3>Order This Produce</h3>
+        <p>Final availability and amount are validated again by the backend when you place the order.</p>
+        <input type="hidden" name="listing_id" value="{{ listing.id }}"><input type="hidden" name="order_token" value="{{ order_token }}">
+        <div class="order-grid">
+          <label class="field">Purchase format
+            <select name="purchase_mode" id="detailMode">
+              {% if listing.selling_mode in ['loose','both'] %}<option value="loose" data-price="{{ listing.loose_price or 0 }}">Per {{ listing.unit_code }}</option>{% endif %}
+              {% if listing.selling_mode in ['bag','both'] %}<option value="bag">Bag / Pack</option>{% endif %}
+            </select>
+          </label>
+          <label class="field">Quantity
+            <input name="quantity" id="detailQty" type="number" min="0.0001" step="0.0001" value="{{ listing.min_order_quantity_display or 1 }}" required>
+          </label>
+          {% if listing.package_options %}
+          <label class="field full" id="detailPackField" {% if listing.selling_mode == 'loose' %}style="display:none"{% endif %}>Pack size
+            <select name="package_index" id="detailPack">{% for opt in listing.package_options %}<option value="{{ opt.index }}" data-price="{{ opt.price_per_bag or 0 }}">{{ opt.label }} · {{ opt.quantity_per_bag_display }} {{ listing.unit_code }} · ₹{{ opt.price_per_bag_display }}</option>{% endfor %}</select>
+          </label>
+          {% endif %}
+          <label class="field">Payment
+            <select name="payment_term"><option value="pay_on_receipt">Pay on Receipt</option><option value="credit">Credit / Pay Later</option></select>
+          </label>
+          <label class="field">Order note<input name="note" maxlength="300" placeholder="Optional"></label>
+          <div class="estimate"><span>Estimated order value</span><strong id="detailEstimate">₹0.00</strong></div>
+          <button class="order-submit" type="submit">Place Order Request</button>
+        </div>
+      </form>
+      {% elif listing.is_owner %}
+        <div class="readonly">This is your own produce listing. Manage it from My Listings.</div>
+      {% elif role == 'accounts' %}
+        <div class="readonly">Accounts has view-only access to marketplace listings.</div>
+      {% else %}
+        <div class="readonly">This listing is not currently available for ordering.</div>
+      {% endif %}
+
+      <div class="meta">
+        {% if listing.listing_number %}Listing: {{ listing.listing_number }}<br>{% endif %}
+        {% if listing.centre_uid %}Mapped UFC: {{ listing.centre_uid }}<br>{% endif %}
+     </div>
+    </aside>
+  </div>
+</div>
+<script>
+(function(){
+  const main=document.getElementById('mainImage');document.querySelectorAll('.thumb').forEach(btn=>btn.addEventListener('click',()=>{if(main)main.src=btn.dataset.src;document.querySelectorAll('.thumb').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}));
+  const mode=document.getElementById('detailMode'),qty=document.getElementById('detailQty'),pack=document.getElementById('detailPack'),packField=document.getElementById('detailPackField'),estimate=document.getElementById('detailEstimate');if(!mode||!qty||!estimate)return;
+  function refresh(){const bag=mode.value==='bag';if(packField)packField.style.display=bag?'grid':'none';let price=Number(mode.options[mode.selectedIndex]?.dataset.price||0);if(bag&&pack)price=Number(pack.options[pack.selectedIndex]?.dataset.price||0);const q=Number(qty.value||0);const total=Number.isFinite(q)&&Number.isFinite(price)?q*price:0;estimate.textContent='₹'+total.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
+  mode.addEventListener('change',refresh);qty.addEventListener('input',refresh);if(pack)pack.addEventListener('change',refresh);refresh();
+})();
+</script>
+{% endblock %}

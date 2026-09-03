@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.mt-page{max-width:1500px;margin:0 auto;display:grid;gap:14px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f3127}
+.mt-card{background:#fff;border:1px solid #dbe9df;border-radius:16px;box-shadow:0 10px 26px rgba(26,72,43,.045)}
+.mt-head{padding:18px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}.mt-head h1{margin:0;font-size:1.35rem;line-height:1.2;color:#1f3127}.mt-head p{margin:5px 0 0;color:#6e7f74;font-size:.76rem}
+.mt-actions{display:flex;gap:8px;flex-wrap:wrap}.mt-btn{min-height:37px;padding:8px 12px;border:1px solid #c8ddce;border-radius:8px;background:#fff;color:#2f6e46;font-size:.7rem;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.mt-btn:hover{background:#f6fbf7}.mt-btn.primary{background:#397e51;color:#fff;border-color:#397e51}
+.mt-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.mt-kpi{padding:13px 14px}.mt-kpi span{display:block;color:#718077;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.mt-kpi strong{display:block;margin-top:5px;color:#1f3127;font-size:1.05rem}.mt-kpi small{display:block;margin-top:4px;color:#839087;font-size:.62rem}
+.mt-filter{padding:14px;display:grid;grid-template-columns:150px 170px minmax(190px,1fr) minmax(220px,1.4fr) auto auto;gap:8px;align-items:end}.mt-field{display:grid;gap:5px}.mt-field label{font-size:.61rem;color:#68776e;font-weight:800}.mt-field input,.mt-field select{width:100%;height:37px;padding:0 10px;border:1px solid #d8e5dc;border-radius:8px;background:#fff;color:#2b3e31;font:inherit;font-size:.69rem;outline:none}.mt-field input:focus,.mt-field select:focus{border-color:#75a785;box-shadow:0 0 0 3px rgba(57,126,81,.07)}
+.mt-notice{padding:10px 12px;border:1px solid #efdca7;border-radius:9px;background:#fffaf0;color:#805c09;font-size:.68rem;font-weight:700}
+.mt-table-card{overflow:hidden}.mt-table-head{padding:13px 14px;border-bottom:1px solid #e5eee8;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.mt-table-head h2{margin:0;font-size:.9rem}.mt-table-head span{color:#75837a;font-size:.65rem}.mt-wrap{overflow:auto}.mt-table{width:100%;min-width:940px;border-collapse:collapse}.mt-table th,.mt-table td{padding:10px 11px;border-bottom:1px solid #edf2ee;text-align:left;vertical-align:middle;font-size:.68rem}.mt-table th{background:#f6fbf7;color:#68776e;font-size:.59rem;text-transform:uppercase;letter-spacing:.04em;font-weight:850;white-space:nowrap}.mt-table tr:last-child td{border-bottom:0}.mt-table tbody tr:hover td{background:#fbfdfb}.mt-main{font-weight:800;color:#2a3b30}.mt-sub{margin-top:2px;color:#819087;font-size:.61rem}.mt-money{font-weight:850;color:#2b7346}.mt-pill{display:inline-flex;align-items:center;min-height:23px;padding:3px 7px;border:1px solid #d5e5da;border-radius:6px;background:#f3f8f4;color:#397e51;font-size:.59rem;font-weight:800;white-space:nowrap}.mt-empty{padding:28px!important;text-align:center!important;color:#7b897f!important}.mt-foot{padding:12px 14px;border-top:1px solid #e5eee8;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.mt-foot span{font-size:.65rem;color:#718077}.mt-pages{display:flex;gap:6px}.mt-pagebtn{min-width:36px;height:34px;padding:0 9px;border:1px solid #d5e3da;border-radius:7px;background:#fff;color:#397e51;text-decoration:none;font-size:.66rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center}.mt-pagebtn.disabled{opacity:.45;pointer-events:none}
+@media(max-width:1050px){.mt-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.mt-filter{grid-template-columns:repeat(2,minmax(0,1fr))}.mt-filter .wide{grid-column:span 2}}
+@media(max-width:620px){.mt-kpis,.mt-filter{grid-template-columns:1fr}.mt-filter .wide{grid-column:auto}.mt-head{padding:15px}.mt-actions{width:100%}.mt-btn{flex:1}.mt-kpi strong{font-size:1rem}}
+</style>
+<div class="mt-page">
+  <section class="mt-card mt-head">
+    <div><h1>My Transactions</h1><p>Your current Mitra business activity. Values and earnings come from the operational records that created the activity.</p></div>
+    <div class="mt-actions"><a class="mt-btn" href="{{ url_for('reports.overview') }}">Reports</a><a class="mt-btn primary" href="{{ url_for('modules.mitra_stock') }}">My Stock</a></div>
+  </section>
+
+  <div class="mt-kpis">
+    <section class="mt-card mt-kpi"><span>Business Generated</span><strong>₹{{ '%.2f'|format(overview.summary.business_value or 0) }}</strong><small>Filtered period · current reporting basis</small></section>
+    <section class="mt-card mt-kpi"><span>Transactions</span><strong>{{ overview.summary.transactions or 0 }}</strong><small>Matching activity rows</small></section>
+    <section class="mt-card mt-kpi"><span>Farmers Served</span><strong>{{ overview.summary.farmers_served or 0 }}</strong><small>Distinct matching farmers / buyers</small></section>
+    <section class="mt-card mt-kpi"><span>My Earnings</span><strong>₹{{ '%.2f'|format(overview.summary.earnings or 0) }}</strong><small>Stored commission only; no settlement status assumed</small></section>
+  </div>
+
+  {% if overview.notice %}<div class="mt-notice">{{ overview.notice }}</div>{% endif %}
+
+  <form class="mt-card mt-filter" method="get" action="{{ url_for('modules.transactions') }}">
+    <div class="mt-field"><label>Period</label><select name="period">{% for value,label in overview.periods %}<option value="{{ value }}" {% if overview.selected_period == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="mt-field"><label>Type</label><select name="type">{% for value,label in overview.types %}<option value="{{ value }}" {% if overview.selected_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="mt-field"><label>Farmer</label><select name="farmer"><option value="">All Farmers</option>{% for f in overview.farmer_options %}<option value="{{ f.value }}" {% if overview.selected_farmer == f.value %}selected{% endif %}>{{ f.label }}{% if f.contact %} · {{ f.contact }}{% endif %}</option>{% endfor %}</select></div>
+    <div class="mt-field wide"><label>Search</label><input name="q" value="{{ overview.q }}" placeholder="Farmer, product, type, reference or status"></div>
+    <button class="mt-btn primary" type="submit">Apply</button>
+    <a class="mt-btn" href="{{ url_for('modules.transactions') }}">Reset</a>
+  </form>
+
+  <section class="mt-card mt-table-card">
+    <div class="mt-table-head"><h2>Activity</h2><span>{{ overview.pagination.total }} matching row{% if overview.pagination.total != 1 %}s{% endif %}</span></div>
+    <div class="mt-wrap"><table class="mt-table"><thead><tr><th>Date</th><th>Type</th><th>Farmer / Buyer</th><th>Product</th><th>Qty</th><th>Value</th><th>My Earning</th><th>Status</th></tr></thead><tbody>
+    {% for row in overview.rows %}
+      <tr>
+        <td><div class="mt-main">{{ row.display_date }}</div><div class="mt-sub">{{ row.display_datetime }}</div></td>
+        <td><span class="mt-pill">{{ row.type_label }}</span>{% if row.reference %}<div class="mt-sub">{{ row.reference }}</div>{% endif %}</td>
+        <td><div class="mt-main">{{ row.farmer_name }}</div>{% if row.farmer_contact %}<div class="mt-sub">{{ row.farmer_contact }}</div>{% endif %}</td>
+        <td><div class="mt-main">{{ row.product_name }}</div></td>
+        <td>{{ row.quantity_display }} {{ row.unit_code }}</td>
+        <td class="mt-money">₹{{ row.value_display }}</td>
+        <td>{% if row.has_earning %}<span class="mt-money">₹{{ row.earning_display }}</span>{% else %}<span class="mt-sub">—</span>{% endif %}</td>
+        <td><span class="mt-pill">{{ row.status_label }}</span></td>
+      </tr>
+    {% else %}<tr><td class="mt-empty" colspan="8">No Mitra activity matches these filters.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <div class="mt-foot">
+      <span>Page {{ overview.pagination.page }} of {{ overview.pagination.total_pages }}</span>
+      <div class="mt-pages">
+        <a class="mt-pagebtn {% if not overview.pagination.has_prev %}disabled{% endif %}" href="{{ url_for('modules.transactions', period=overview.selected_period, type=overview.selected_type, farmer=overview.selected_farmer, q=overview.q, per_page=overview.pagination.per_page, page=overview.pagination.page-1) }}">← Prev</a>
+        <a class="mt-pagebtn {% if not overview.pagination.has_next %}disabled{% endif %}" href="{{ url_for('modules.transactions', period=overview.selected_period, type=overview.selected_type, farmer=overview.selected_farmer, q=overview.q, per_page=overview.pagination.per_page, page=overview.pagination.page+1) }}">Next →</a>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -44,14 +44,14 @@
 
   {% if order.status in ['dispatched','received'] %}<div class="section"><h3>Dispatch</h3><p style="margin:0;color:#475569"><strong>{% if order.is_multi_item_order %}{{ order.item_count }} product line(s){% else %}{{ order.dispatched_quantity_display }} {{ order.unit_code }}{% endif %}</strong> dispatched{% if order.vehicle_number %} · Vehicle {{ order.vehicle_number }}{% endif %}{% if order.transporter_name %} · {{ order.transporter_name }}{% endif %}.</p></div>{% endif %}
 
-  {% if order.avpl_sales_invoice_id_str %}
+  {% if order.avpl_sales_invoice_id_str and order.avpl_sales_invoice_number %}
   <div class="section">
     <h3>AVPL Invoice</h3>
     <p style="margin:0 0 10px;color:#3e6850">Invoice <strong>{{ order.avpl_sales_invoice_number }}</strong> was generated automatically when AVPL dispatched this order. You can view, print or save it as PDF and use it as the supplier document for this UFC purchase.{% if order.invoice_grand_total %} Invoice Total: <strong>₹{{ order.invoice_grand_total_display }}</strong>.{% endif %}</p>
     <a class="back" href="{{ url_for('modules.ufc_avpl_sales_invoice_print', invoice_id=order.avpl_sales_invoice_id_str) }}" target="_blank">View / Print Invoice</a>
   </div>
   {% elif order.status in ['dispatched','received'] %}
-  <div class="section"><h3>AVPL Sales Invoice</h3><p style="margin:0;color:#8a5b15">Invoice generation is pending AVPL financial synchronization. Your physical order status is not affected.</p></div>
+  <div class="section"><h3>AVPL Sales Invoice</h3><p style="margin:0;color:#8a5b15"><strong>Official invoice numbering is pending.</strong> AVPL must repair the seller-side financial documents. Your physical dispatch/receipt and accepted stock are not changed.</p></div>
   {% endif %}
 
   {% if order.status == 'dispatched' %}
@@ -72,7 +72,7 @@
   {% if order.status == 'received' %}
   <div class="section">
     <h3>{{ order.receipt_status_label or 'Receipt Confirmed' }}</h3>
-    <p style="margin:0;color:#3e6850">Accepted <strong>{{ order.accepted_item_count }} / {{ order.dispatched_item_count }}</strong> product line(s). Only accepted quantities were added to UFC stock.{% if order.ufc_purchase_number %} Purchase Entry <strong>{{ order.ufc_purchase_number }}</strong>.{% endif %}</p>
+    <p style="margin:0;color:#3e6850">Accepted quantity was recorded on <strong>{{ order.accepted_item_count }} / {{ order.dispatched_item_count }}</strong> dispatched product line(s). {% if order.discrepancy_item_count %}<strong>{{ order.discrepancy_item_count }}</strong> line(s) had damaged, rejected or missing quantity. {% endif %}Only accepted quantities were added to UFC stock.{% if order.ufc_purchase_number %} Purchase Entry <strong>{{ order.ufc_purchase_number }}</strong>.{% endif %}</p>
     <div class="payment-summary"><span class="payment-pill">Accepted Value ₹{{ order.accepted_value_display }}</span>{% if order.receipt_adjustment_amount %}<span class="payment-pill unpaid">Receipt Adjustment ₹{{ order.receipt_adjustment_display }}</span>{% endif %}</div>
     {% set pay_invoice = payment.get('invoice') if payment else none %}
     <div class="payment-summary">

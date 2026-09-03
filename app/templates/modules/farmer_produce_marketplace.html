@@ -1,531 +1,142 @@
-{% extends 'base.html' %}{% block title %}Farmer Produce Market{% endblock %}{% block content %}
-<style>.pm{padding:22px;border:1px solid #e0eae3;border-radius:18px;background:#fff;color:#24372b;font-family:Inter,system-ui,sans-serif}.pm *{box-sizing:border-box}.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.ph h2{margin:0}.ph p{margin:4px 0;color:#758279;font-size:.78rem}.search{display:flex;gap:8px;margin:14px 0}.search input{flex:1;height:40px;border:1px solid #d9e5dc;border-radius:9px;padding:0 12px}.search button,.add{border:0;border-radius:9px;background:#397e51;color:#fff;font-weight:850}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:12px}.card{padding:14px;border:1px solid #e1eae3;border-radius:12px}.card h3{margin:0}.seller{font-size:.72rem;color:#718078;margin-top:3px}.avail{margin:10px 0;color:#277248;font-weight:850}.mode{display:grid;gap:7px}.mode select,.mode input{height:39px;border:1px solid #d8e4dc;border-radius:8px;padding:0 8px;width:100%}.add{height:40px;cursor:pointer}.cartfab{position:fixed;right:26px;bottom:82px;z-index:1080;border:0;border-radius:999px;padding:12px 18px;background:#256b43;color:#fff;font-weight:900}.cartfab span{margin-left:6px;background:#fff;color:#256b43;border-radius:99px;padding:2px 7px}.overlay{position:fixed;inset:0;z-index:1090;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.48)}.overlay.open{display:flex}.panel{width:min(680px,100%);max-height:84vh;overflow:auto;background:#fff;border-radius:17px;padding:18px}.head{display:flex;justify-content:space-between}.head h3{margin:0}.close{border:0;width:38px;height:38px;border-radius:9px;font-size:1.3rem}.group{margin-top:13px;border:1px solid #e1eae3;border-radius:11px;overflow:hidden}.gtitle{padding:8px 11px;background:#f5faf7;font-weight:850}.line{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 11px;border-top:1px solid #edf2ee}.line small{display:block;color:#77847c}.remove{border:0;background:#fff1f2;color:#b42318;border-radius:8px;padding:0 11px}.checkout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;border-top:1px solid #e4ece6;padding-top:13px}.checkout label{display:grid;gap:5px;font-size:.72rem;font-weight:800}.checkout select,.checkout input{height:40px;border:1px solid #d8e4dc;border-radius:8px;padding:0 9px}.actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}.actions button{height:40px;border-radius:9px;padding:0 14px;font-weight:850}.secondary{border:1px solid #d8e4dc;background:#fff}.primary{border:0;background:#397e51;color:#fff}.empty{text-align:center;color:#78857d;padding:22px}@media(max-width:600px){.pm{padding:14px}.grid{grid-template-columns:1fr}.checkout{grid-template-columns:1fr}.actions{grid-column:auto;flex-direction:column-reverse}.cartfab{right:16px;bottom:76px}}</style>
-<div class="pm"><div class="ph"><div><h2>Farmer Produce Market</h2><p>Choose produce from Farmers. Your cart is automatically split into one order per Farmer.</p></div><strong>{{ overview.get('summary',{}).get('available_count',0) }} available</strong></div><form class="search" method="get"><input name="q" value="{{ overview.get('query','') }}" placeholder="Search produce or Farmer"><button type="submit">Search</button></form><div class="grid">{% for p in overview.get('rows',[]) %}<article class="card"><h3>{{ p.product_name }}</h3><div class="seller">{{ p.farmer_name }} · {{ p.unit_code }}</div><div class="avail">{{ p.available_to_order_display }} {{ p.unit_code }} available</div>{% if p.is_available and not p.is_owner %}<div class="mode js-produce" data-listing="{{ p.id }}" data-seller="{{ p.farmer_name|e }}" data-name="{{ p.product_name|e }}" data-unit="{{ p.unit_code|e }}"><select class="purchase-mode"><option value="loose">Per {{ p.unit_code }}{% if p.loose_price_display %} · ₹{{ p.loose_price_display }}{% endif %}</option>{% if p.selling_mode in ['bag','both'] %}<option value="bag">Bag / Pack</option>{% endif %}</select>{% if p.package_options %}<select class="package-index" style="display:none">{% for opt in p.package_options %}<option value="{{ opt.index }}">{{ opt.label }} · {{ opt.quantity_per_bag_display }} {{ p.unit_code }} · ₹{{ opt.price_per_bag_display }}</option>{% endfor %}</select>{% endif %}<input class="quantity" type="number" min="0.0001" step="0.0001" value="{{ p.min_order_quantity_display or 1 }}"><button type="button" class="add">Add to Cart</button></div>{% else %}<small>Not available for ordering.</small>{% endif %}</article>{% else %}<div class="empty">No produce listings found.</div>{% endfor %}</div></div>
-<button type="button" class="cartfab" id="pCartOpen">Cart <span id="pCartCount">0</span></button><div class="overlay" id="pOverlay"><section class="panel"><div class="head"><div><h3>Your Produce Cart</h3><small>Different Farmers will receive separate orders automatically.</small></div><button type="button" class="close" id="pClose">×</button></div><div id="pRows"></div><div class="empty" id="pEmpty">Your cart is empty.</div><form method="post" action="{{ url_for('modules.farmer_produce_market_cart_order') }}" class="checkout" id="pForm"><input type="hidden" name="cart_json" id="pJson"><input type="hidden" name="order_token" id="pToken"><label>Payment<select name="payment_term"><option value="pay_on_receipt">Pay on Receipt</option><option value="credit">Credit / Pay Later</option></select></label><label>Note<input name="note" maxlength="300" placeholder="Optional"></label><div class="actions"><button type="button" class="secondary" id="pContinue">Continue Shopping</button><button type="submit" class="primary" id="pCheckout">Place Orders</button></div></form></section></div>
-<script>(function(){const key='unnatfarm:produce-cart:v2',overlay=document.getElementById('pOverlay'),rows=document.getElementById('pRows'),empty=document.getElementById('pEmpty'),count=document.getElementById('pCartCount'),form=document.getElementById('pForm'),json=document.getElementById('pJson'),token=document.getElementById('pToken'),checkout=document.getElementById('pCheckout');let cart=[];try{cart=JSON.parse(sessionStorage.getItem(key)||'[]');if(!Array.isArray(cart))cart=[]}catch(_){cart=[]}function save(){sessionStorage.setItem(key,JSON.stringify(cart));render()}function render(){count.textContent=cart.length;rows.innerHTML='';empty.style.display=cart.length?'none':'block';checkout.disabled=!cart.length;const groups={};cart.forEach((x,i)=>(groups[x.seller]||(groups[x.seller]=[])).push({...x,_i:i}));Object.entries(groups).forEach(([seller,items])=>{const g=document.createElement('div');g.className='group';const h=document.createElement('div');h.className='gtitle';h.textContent=seller;g.appendChild(h);items.forEach(x=>{const l=document.createElement('div');l.className='line';l.innerHTML='<div><strong></strong><small></small></div><button type="button" class="remove">Remove</button>';l.querySelector('strong').textContent=x.name;l.querySelector('small').textContent=x.qty+' '+(x.mode==='bag'?'pack(s)':x.unit);l.querySelector('button').addEventListener('click',()=>{cart.splice(x._i,1);save()});g.appendChild(l)});rows.appendChild(g)});json.value=JSON.stringify(cart.map(x=>({listing_id:x.listing,purchase_mode:x.mode,quantity:x.qty,package_index:x.packageIndex}))) }document.querySelectorAll('.js-produce').forEach(box=>{const mode=box.querySelector('.purchase-mode'),pack=box.querySelector('.package-index'),qty=box.querySelector('.quantity');mode.addEventListener('change',()=>{if(pack)pack.style.display=mode.value==='bag'?'block':'none'});box.querySelector('.add').addEventListener('click',()=>{const q=Number(qty.value);if(!Number.isFinite(q)||q<=0){qty.focus();return}cart.push({listing:box.dataset.listing,seller:box.dataset.seller,name:box.dataset.name,unit:box.dataset.unit,mode:mode.value,qty:q,packageIndex:pack&&mode.value==='bag'?pack.value:null});save()})});function show(){render();overlay.classList.add('open')}function hide(){overlay.classList.remove('open')}document.getElementById('pCartOpen').addEventListener('click',show);document.getElementById('pClose').addEventListener('click',hide);document.getElementById('pContinue').addEventListener('click',hide);overlay.addEventListener('click',e=>{if(e.target===overlay)hide()});form.addEventListener('submit',e=>{if(!cart.length){e.preventDefault();return}json.value=JSON.stringify(cart.map(x=>({listing_id:x.listing,purchase_mode:x.mode,quantity:x.qty,package_index:x.packageIndex})));token.value='FMCART-'+Date.now()+'-'+Math.random().toString(36).slice(2);checkout.disabled=true;checkout.textContent='Creating Orders...';setTimeout(()=>sessionStorage.removeItem(key),50)});render()})();</script>
-
-
-<style id="sds-commerce-redesign">
-:root{
-    --uc-green:#2b7346;
-    --uc-green-dark:#1f5f39;
-    --uc-green-soft:#eff8f1;
-    --uc-green-softer:#f7fbf8;
-    --uc-text:#1f3127;
-    --uc-muted:#6e7f74;
-    --uc-border:#dbe9df;
-    --uc-border-strong:#c8ddce;
-    --uc-bg:#f7faf8;
-    --uc-white:#fff;
-    --uc-warn:#9a6500;
-    --uc-danger:#a73535;
-    --uc-shadow:0 12px 32px rgba(26,72,43,.055);
-    --uc-shadow-hover:0 16px 34px rgba(31,102,59,.10);
-}
-
-@keyframes ucFadeUp{
-    from{opacity:0;transform:translateY(7px)}
-    to{opacity:1;transform:translateY(0)}
-}
-@keyframes ucPop{
-    from{opacity:0;transform:scale(.975) translateY(5px)}
-    to{opacity:1;transform:scale(1) translateY(0)}
-}
-
-.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page,.orders-page{
-    max-width:1500px !important;
-    margin-left:auto !important;
-    margin-right:auto !important;
-    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
-    color:var(--uc-text) !important;
-}
-
-.page-card,.wrap,.shop,.page,.od,.fod,.pp,.order-page{
-    background:#fff !important;
-    border:1px solid var(--uc-border) !important;
-    border-radius:20px !important;
-    box-shadow:var(--uc-shadow) !important;
-}
-
-h1,h2,h3{
-    color:#16251c;
-    letter-spacing:-.02em;
-}
-
-.muted,.small,.soft-note,.marketplace-help{
-    color:var(--uc-muted) !important;
-}
-
-button,a,input,select,textarea{
-    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-}
-
-button,.btn,.link,.view,.head-btn,.filter-button,.back,.invoice-link,
-.primary,.secondary,.add,.addbtn,.paybtn,.pay-submit,.receive,
-.cart-primary,.cart-secondary,.clear-btn,.clear-link,.view-order-btn{
-    border-radius:10px !important;
-    transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease !important;
-}
-
-button:hover,.btn:hover,.link:hover,.view:hover,.head-btn:hover,.filter-button:hover,
-.primary:hover,.add:hover,.addbtn:hover,.paybtn:hover,.pay-submit:hover,.receive:hover,
-.cart-primary:hover,.view-order-btn:hover{
-    transform:translateY(-1px);
-}
-
-input,select,textarea,.filter-input,.filter-select{
-    border:1px solid #d6e3d9 !important;
-    border-radius:10px !important;
-    background:#fff !important;
-    color:#31463a !important;
-    outline:none !important;
-    box-shadow:none !important;
-}
-
-input:focus,select:focus,textarea:focus,.filter-input:focus,.filter-select:focus{
-    border-color:#8eb69a !important;
-    box-shadow:0 0 0 3px rgba(43,115,70,.07) !important;
-}
-
-.pill,.badge,.status-badge,.type-pill,.status-pill,.published-badge,.stage4-chip{
-    border-radius:8px !important;
-    font-weight:800 !important;
-}
-
-.table,.table-wrap,.table-shell,.earnings-table-wrap,.items-table{
-    border:1px solid var(--uc-border) !important;
-    border-radius:13px !important;
-    overflow:auto;
-    box-shadow:none !important;
-    background:#fff !important;
-}
-
-table th{
-    background:#f4f8f5 !important;
-    color:#607066 !important;
-    font-size:.63rem !important;
-    font-weight:850 !important;
-    text-transform:uppercase;
-    letter-spacing:.025em;
-}
-
-table td{
-    color:#3e5145 !important;
-}
-
-table tr{
-    transition:background .14s ease;
-}
-
-table tbody tr:hover td{
-    background:#fbfdfb !important;
-}
-
-.summary,.stats,.stat-grid,.status-grid,.facts,.grid{
-    gap:11px !important;
-}
-
-.sum,.stat,.stat-card,.status-card,.fact,.box,.section,.action-card{
-    border:1px solid var(--uc-border) !important;
-    border-radius:14px !important;
-    background:#fff !important;
-    box-shadow:none !important;
-}
-
-.sum,.stat,.stat-card,.status-card,.fact{
-    transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease;
-}
-
-.sum:hover,.stat:hover,.stat-card:hover,.status-card:hover,.fact:hover{
-    transform:translateY(-2px);
-    border-color:#b7d5c0 !important;
-    box-shadow:0 9px 22px rgba(31,102,59,.07) !important;
-}
-
-.notice,.info,.soft-note,.warn-note,.next-step,.table-info{
-    border-radius:11px !important;
-}
-
-.empty,.orders-empty{
-    color:#809087 !important;
-}
-
-@media(prefers-reduced-motion:reduce){
-    *,*::before,*::after{
-        animation:none !important;
-        transition:none !important;
-        scroll-behavior:auto !important;
-    }
-}
+{% extends 'base.html' %}
+{% block title %}Farmer Produce Market{% endblock %}
+{% block content %}
+<style>
+.fpm{max-width:1500px;margin:0 auto;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f3127}.fpm-shell{background:#fff;border:1px solid #dbe9df;border-radius:20px;box-shadow:0 12px 32px rgba(26,72,43,.055);padding:20px}.fpm-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}.fpm-head h1{margin:0;color:#17251d;font-size:1.55rem;font-weight:900;letter-spacing:-.025em}.fpm-head p{margin:5px 0 0;color:#718078;font-size:.76rem;line-height:1.45}.fpm-summary{display:flex;gap:8px;flex-wrap:wrap}.fpm-chip{padding:7px 10px;border:1px solid #dbe9df;border-radius:9px;background:#f7fbf8;color:#356a49;font-size:.68rem;font-weight:850}.fpm-filter{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;margin-top:16px}.fpm-filter input{height:40px;border:1px solid #d6e3d9;border-radius:9px;padding:0 12px;color:#31463a}.fpm-filter button,.fpm-filter a{height:40px;display:inline-flex;align-items:center;justify-content:center;padding:0 14px;border-radius:9px;font-size:.72rem;font-weight:850;text-decoration:none;cursor:pointer}.fpm-filter button{border:1px solid #397e51;background:#397e51;color:#fff}.fpm-filter a{border:1px solid #d6e3d9;background:#fff;color:#2f6e46}.fpm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:14px;margin-top:16px}.produce-card{overflow:hidden;border:1px solid #dbe9df;border-radius:16px;background:#fff;box-shadow:0 7px 20px rgba(26,72,43,.04);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}.produce-card:hover{transform:translateY(-2px);border-color:#b6d4bf;box-shadow:0 14px 28px rgba(31,102,59,.08)}.produce-photo{height:178px;background:#f5faf7;border-bottom:1px solid #edf2ee;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}.produce-photo img{width:100%;height:100%;object-fit:cover}.produce-photo-empty{color:#829087;font-size:.72rem;font-weight:750}.photo-count{position:absolute;right:9px;bottom:9px;padding:5px 7px;border-radius:7px;background:rgba(255,255,255,.94);border:1px solid #dbe9df;color:#456052;font-size:.6rem;font-weight:850}.produce-body{padding:14px}.produce-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.produce-title{min-width:0}.produce-title h3{margin:0;color:#1d3324;font-size:.96rem;font-weight:900;line-height:1.3}.produce-title small{display:block;margin-top:3px;color:#748179;font-size:.65rem}.availability{flex:0 0 auto;padding:5px 7px;border-radius:7px;border:1px solid #bee1c9;background:#f2fbf5;color:#286b40;font-size:.6rem;font-weight:900}.availability.off{border-color:#e4d8c0;background:#fffaf0;color:#8a5b0a}.seller-line{margin-top:9px;color:#56685d;font-size:.7rem;font-weight:750}.seller-line span{color:#7a8780;font-weight:650}.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;min-height:23px}.tag{padding:4px 7px;border:1px solid #dce8df;border-radius:7px;background:#f8fbf9;color:#50685a;font-size:.61rem;font-weight:800}.price-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;margin-top:12px;padding-top:11px;border-top:1px solid #edf2ee}.price-main{color:#1f6e3f;font-size:1rem;font-weight:950}.price-main small{display:block;margin-top:2px;color:#7b8880;font-size:.6rem;font-weight:700}.qty-avail{text-align:right;color:#315941;font-size:.73rem;font-weight:900}.qty-avail small{display:block;color:#7a8780;font-size:.59rem;font-weight:700}.card-actions{display:grid;grid-template-columns:auto 1fr;gap:8px;margin-top:12px}.details-btn{min-height:39px;display:inline-flex;align-items:center;justify-content:center;padding:0 11px;border:1px solid #cfe0d4;border-radius:9px;background:#fff;color:#2f6e46;text-decoration:none;font-size:.68rem;font-weight:900}.buy-box{display:grid;gap:7px;margin-top:12px;padding-top:12px;border-top:1px solid #edf2ee}.buy-box select,.buy-box input{width:100%;height:38px;border:1px solid #d6e3d9;border-radius:9px;padding:0 9px;background:#fff;color:#31463a;font-size:.7rem}.buy-line{display:grid;grid-template-columns:1.3fr .7fr;gap:7px}.add{min-height:39px;border:1px solid #2b7346;border-radius:9px;background:#2b7346;color:#fff;font-size:.7rem;font-weight:900;cursor:pointer}.add:hover{background:#1f5f39}.view-only{min-height:39px;display:flex;align-items:center;color:#7b8880;font-size:.68rem;font-weight:700}.empty{grid-column:1/-1;padding:34px;text-align:center;border:1px dashed #cfe0d4;border-radius:13px;color:#7a8780}.cartfab{position:fixed;top:88px;right:28px;z-index:1040;min-width:126px;min-height:50px;padding:10px 15px;border:1px solid #2b7346;border-radius:14px;background:#fff;color:#1f5f39;font-size:.78rem;font-weight:900;box-shadow:0 12px 28px rgba(27,79,45,.16);cursor:pointer}.cartfab span{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;margin-left:7px;padding:0 6px;border-radius:8px;background:#2b7346;color:#fff;font-size:.68rem}.overlay{position:fixed;inset:0;z-index:1100;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(11,27,17,.42);backdrop-filter:blur(4px)}.overlay.open{display:flex}.panel{width:min(720px,100%);max-height:84vh;overflow:auto;background:#fff;border:1px solid #d8e6dc;border-radius:18px;padding:18px;box-shadow:0 26px 70px rgba(15,37,23,.22)}.cart-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.cart-head h3{margin:0;color:#183021}.cart-head small{color:#77847c}.close{width:38px;height:38px;border:1px solid #d8e4dc;border-radius:9px;background:#fff;font-size:1.2rem}.group{margin-top:13px;border:1px solid #e1eae3;border-radius:11px;overflow:hidden}.gtitle{padding:8px 11px;background:#f5faf7;font-weight:850}.line{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px 11px;border-top:1px solid #edf2ee}.line:first-of-type{border-top:0}.line small{display:block;margin-top:2px;color:#77847c}.remove{border:1px solid #f0cccc;background:#fff6f6;color:#a73a35;border-radius:8px;padding:0 10px;font-weight:800}.cart-total{display:flex;justify-content:space-between;gap:10px;margin-top:12px;padding:11px 12px;border-radius:10px;background:#f4faf6;color:#315941;font-size:.75rem;font-weight:850}.checkout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;border-top:1px solid #e4ece6;padding-top:13px}.checkout label{display:grid;gap:5px;color:#42594a;font-size:.7rem;font-weight:800}.checkout select,.checkout input{height:40px;border:1px solid #d8e4dc;border-radius:8px;padding:0 9px}.actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}.actions button{height:40px;border-radius:9px;padding:0 14px;font-weight:850}.secondary{border:1px solid #d8e4dc;background:#fff;color:#2f6e46}.primary{border:1px solid #397e51;background:#397e51;color:#fff}.cart-empty{text-align:center;color:#78857d;padding:22px}@media(max-width:760px){.fpm-shell{padding:14px}.fpm-filter{grid-template-columns:1fr 1fr}.fpm-filter input{grid-column:1/-1}.fpm-grid{grid-template-columns:1fr}.cartfab{top:auto;right:16px;bottom:76px}.checkout{grid-template-columns:1fr}.actions{grid-column:auto;flex-direction:column-reverse}.card-actions{grid-template-columns:1fr}.produce-photo{height:205px}}@media(prefers-reduced-motion:reduce){.produce-card{transition:none}}
 </style>
-
-
-
-<style id="sds-market-redesign">
-.marketplace-grid,.grid{
-    display:grid !important;
-    grid-template-columns:repeat(auto-fill,minmax(235px,1fr)) !important;
-    gap:14px !important;
-}
-
-.market-card,.card{
-    position:relative;
-    overflow:hidden;
-    border:1px solid var(--uc-border) !important;
-    border-radius:17px !important;
-    background:#fff !important;
-    box-shadow:0 7px 20px rgba(26,72,43,.04) !important;
-    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease !important;
-    animation:ucFadeUp .28s ease both;
-}
-
-.market-card:hover,.card:hover{
-    transform:translateY(-3px);
-    border-color:#aed0b7 !important;
-    box-shadow:var(--uc-shadow-hover) !important;
-}
-
-.market-img-wrap,.img{
-    background:linear-gradient(180deg,#f8fbf9 0%,#f1f7f3 100%) !important;
-    border-bottom:1px solid #edf2ee;
-    overflow:hidden;
-}
-
-.market-img-wrap img,.img img{
-    width:100%;
-    height:100%;
-    object-fit:contain !important;
-    transition:transform .28s ease;
-}
-
-.market-card:hover .market-img-wrap img,.card:hover .img img{
-    transform:scale(1.025);
-}
-
-.market-body,.body{
-    padding:14px !important;
-}
-
-.market-body h3,.body h3{
-    margin:0 0 5px !important;
-    color:#1e3325 !important;
-    font-size:.88rem !important;
-    line-height:1.3;
-}
-
-.price{
-    color:#1f6e3f !important;
-    font-weight:900 !important;
-    font-size:1rem !important;
-}
-
-.stock,.stock-text,.avail,.seller{
-    color:#728078 !important;
-    font-size:.68rem !important;
-    font-weight:650;
-}
-
-.buyrow,.actions,.mode{
-    gap:8px !important;
-}
-
-.add,.add-cart-btn{
-    min-height:39px !important;
-    padding:8px 13px !important;
-    border:1px solid #2b7346 !important;
-    border-radius:10px !important;
-    background:#2b7346 !important;
-    color:#fff !important;
-    font-size:.7rem !important;
-    font-weight:850 !important;
-    box-shadow:0 7px 16px rgba(43,115,70,.13);
-}
-
-.add:hover,.add-cart-btn:hover{
-    background:#1f5f39 !important;
-    border-color:#1f5f39 !important;
-}
-
-.cartfab,.commerce-cart-fab{
-    position:fixed !important;
-    top:88px !important;
-    right:28px !important;
-    bottom:auto !important;
-    z-index:1040 !important;
-    min-width:126px !important;
-    min-height:50px !important;
-    padding:10px 15px 10px 13px !important;
-    display:inline-flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    gap:8px !important;
-    border:1px solid #2b7346 !important;
-    border-radius:14px !important;
-    background:#fff !important;
-    color:#1f5f39 !important;
-    font-size:.78rem !important;
-    font-weight:900 !important;
-    box-shadow:0 12px 28px rgba(27,79,45,.16) !important;
-}
-
-.cartfab::before,.commerce-cart-fab::before{
-    content:"🛒";
-    font-size:1.25rem;
-    line-height:1;
-}
-
-.cartfab span,.commerce-cart-fab span{
-    min-width:25px;
-    height:25px;
-    padding:0 6px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:8px !important;
-    background:#2b7346 !important;
-    color:#fff !important;
-    font-size:.68rem !important;
-}
-
-.cartfab:hover,.commerce-cart-fab:hover{
-    transform:translateY(-2px);
-    background:#f7fbf8 !important;
-    box-shadow:0 15px 32px rgba(27,79,45,.20) !important;
-}
-
-.overlay,.commerce-cart-overlay{
-    position:fixed !important;
-    inset:0 !important;
-    z-index:1100 !important;
-    background:rgba(11,27,17,.42) !important;
-    backdrop-filter:blur(4px);
-}
-
-.panel,.commerce-cart-panel{
-    background:#fff !important;
-    border:1px solid #d8e6dc !important;
-    box-shadow:0 26px 70px rgba(15,37,23,.22) !important;
-    animation:ucPop .2s ease both;
-}
-
-.phead,.cart-head,.head{
-    border-bottom-color:#e7efe9 !important;
-}
-
-.phead h3,.cart-head h3,.panel .head h3{
-    color:#183021 !important;
-    font-weight:900 !important;
-}
-
-.close,.cart-close{
-    width:38px !important;
-    height:38px !important;
-    border:1px solid #dbe7de !important;
-    border-radius:10px !important;
-    background:#fff !important;
-    color:#506158 !important;
-    font-size:1.2rem !important;
-}
-
-.close:hover,.cart-close:hover{
-    background:#f2f7f3 !important;
-    color:#1f5f39 !important;
-}
-
-.rows .line,.cart-rows .line,#pRows .line,#pRows .group{
-    border:1px solid #e2ebe4 !important;
-    border-radius:11px !important;
-    background:#fbfdfb !important;
-}
-
-.checkout{
-    border-top-color:#e6eee8 !important;
-}
-
-.checkout label,.cart-checkout label{
-    color:#5f7066 !important;
-    font-size:.68rem !important;
-    font-weight:800 !important;
-}
-
-.primary,.cart-primary{
-    background:#2b7346 !important;
-    border:1px solid #2b7346 !important;
-    color:#fff !important;
-    font-weight:850 !important;
-}
-
-.secondary,.cart-secondary{
-    background:#fff !important;
-    border:1px solid #d2e0d6 !important;
-    color:#355a42 !important;
-    font-weight:800 !important;
-}
-
-.uc-checkout-confirm{
-    position:fixed;
-    inset:0;
-    z-index:1400;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-    background:rgba(11,27,17,.48);
-    backdrop-filter:blur(5px);
-}
-
-.uc-checkout-confirm.open{
-    display:flex;
-}
-
-.uc-checkout-card{
-    width:min(460px,100%);
-    padding:20px;
-    border:1px solid #d7e5db;
-    border-radius:18px;
-    background:#fff;
-    box-shadow:0 28px 80px rgba(15,37,23,.26);
-    animation:ucPop .2s ease both;
-}
-
-.uc-checkout-icon{
-    width:48px;
-    height:48px;
-    display:grid;
-    place-items:center;
-    margin-bottom:13px;
-    border-radius:13px;
-    background:#eff8f1;
-    color:#247044;
-    font-size:1.35rem;
-}
-
-.uc-checkout-card h3{
-    margin:0;
-    font-size:1.12rem;
-    font-weight:900;
-}
-
-.uc-checkout-card p{
-    margin:7px 0 0;
-    color:#6b7b71;
-    font-size:.74rem;
-    line-height:1.5;
-}
-
-.uc-checkout-actions{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:9px;
-    margin-top:17px;
-}
-
-.uc-checkout-actions button{
-    min-height:41px;
-    border-radius:10px;
-    font-size:.72rem;
-    font-weight:850;
-    cursor:pointer;
-}
-
-.uc-checkout-cancel{
-    border:1px solid #d6e3d9;
-    background:#fff;
-    color:#4e6256;
-}
-
-.uc-checkout-ok{
-    border:1px solid #2b7346;
-    background:#2b7346;
-    color:#fff;
-}
-
-@media(max-width:700px){
-    .marketplace-grid,.grid{
-        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-        gap:10px !important;
-    }
-    .cartfab,.commerce-cart-fab{
-        top:auto !important;
-        right:15px !important;
-        bottom:18px !important;
-        min-width:116px !important;
-        min-height:48px !important;
-    }
-}
-
-@media(max-width:480px){
-    .marketplace-grid,.grid{
-        grid-template-columns:1fr !important;
-    }
-}
-</style>
-
-
-
-<div class="uc-checkout-confirm" id="ucCheckoutConfirm" aria-hidden="true">
-    <div class="uc-checkout-card" role="dialog" aria-modal="true" aria-labelledby="ucCheckoutTitle">
-        <div class="uc-checkout-icon">🛒</div>
-        <h3 id="ucCheckoutTitle">Confirm your order</h3>
-        <p>Please review the cart and payment option before placing the order. Your request will be sent after confirmation.</p>
-        <div class="uc-checkout-actions">
-            <button type="button" class="uc-checkout-cancel" id="ucCheckoutCancel">Go Back</button>
-            <button type="button" class="uc-checkout-ok" id="ucCheckoutOk">Confirm & Place Order</button>
-        </div>
+{% set role = overview.get('viewer',{}).get('role','') %}
+{% set can_order = role in ['farmer','ufc_admin','avpl_admin','super_admin'] %}
+<div class="fpm">
+  <section class="fpm-shell">
+    <div class="fpm-head">
+      <div>
+        <h1>Farmer Produce Market</h1>
+        <p>Review the Farmer, produce quality, photos, quantity and selling terms before ordering. Cart checkout is split automatically into one order per Farmer.</p>
+      </div>
+      <div class="fpm-summary">
+        <span class="fpm-chip">{{ overview.get('summary',{}).get('available_count',0) }} available</span>
+        <span class="fpm-chip">{{ overview.get('summary',{}).get('listing_count',0) }} shown</span>
+      </div>
     </div>
+
+    <form class="fpm-filter" method="get">
+      <input name="q" value="{{ overview.get('query','') }}" placeholder="Search produce, Farmer, variety, grade or location">
+      {% if overview.get('available_only') %}<input type="hidden" name="available" value="1">{% endif %}
+      <button type="submit">Search</button>
+      {% if overview.get('available_only') %}
+        <a href="{{ url_for('modules.farmer_produce_market', q=overview.get('query','')) }}">Show All</a>
+      {% else %}
+        <a href="{{ url_for('modules.farmer_produce_market', q=overview.get('query',''), available=1) }}">Available Only</a>
+      {% endif %}
+    </form>
+
+    <div class="fpm-grid">
+      {% for p in overview.get('rows',[]) %}
+        <article class="produce-card">
+          <a class="produce-photo" href="{{ url_for('modules.farmer_produce_market_listing_detail', listing_id=p.id) }}" aria-label="View {{ p.title or p.product_name }} details">
+            {% if p.images %}
+              <img src="{{ url_for('documents.serve', filename=p.images[0]) }}" alt="{{ p.title or p.product_name }}">
+              {% if p.images|length > 1 %}<span class="photo-count">{{ p.images|length }} photos</span>{% endif %}
+            {% else %}
+              <span class="produce-photo-empty">No product photo</span>
+            {% endif %}
+          </a>
+          <div class="produce-body">
+            <div class="produce-top">
+              <div class="produce-title">
+                <h3>{{ p.title or p.product_name }}</h3>
+                {% if p.title and p.title != p.product_name %}<small>{{ p.product_name }}</small>{% endif %}
+              </div>
+              <span class="availability{% if not p.is_available %} off{% endif %}">{{ 'Available' if p.is_available else 'Unavailable' }}</span>
+            </div>
+
+            <div class="seller-line">{{ p.farmer_name }}{% if p.village or p.district %} <span>· {{ p.village or p.district }}{% if p.village and p.district %}, {{ p.district }}{% endif %}</span>{% endif %}</div>
+            <div class="tags">
+              {% if p.variety %}<span class="tag">Variety: {{ p.variety }}</span>{% endif %}
+              {% if p.grade %}<span class="tag">Grade: {{ p.grade }}</span>{% endif %}
+              <span class="tag">{{ 'Per unit' if p.selling_mode == 'loose' else ('Bags / packs' if p.selling_mode == 'bag' else 'Unit + packs') }}</span>
+            </div>
+
+            <div class="price-row">
+              <div class="price-main">
+                {% if p.selling_mode in ['loose','both'] and p.loose_price_display %}₹{{ p.loose_price_display }} / {{ p.unit_code }}{% elif p.package_options %}₹{{ p.package_options[0].price_per_bag_display }} / pack{% else %}Price on listing{% endif %}
+                <small>{% if p.selling_mode in ['loose','both'] %}Minimum {{ p.min_order_quantity_display or '1' }} {{ p.unit_code }}{% else %}Pack options available{% endif %}</small>
+              </div>
+              <div class="qty-avail">{{ p.available_to_order_display }} {{ p.unit_code }}<small>available now</small></div>
+            </div>
+
+            <div class="card-actions">
+              <a class="details-btn" href="{{ url_for('modules.farmer_produce_market_listing_detail', listing_id=p.id) }}">View Details</a>
+              {% if p.description %}<span class="view-only">{{ p.description[:72] }}{% if p.description|length > 72 %}…{% endif %}</span>{% else %}<span class="view-only">Photos, quality, seller & pricing details</span>{% endif %}
+            </div>
+
+            {% if can_order and p.is_available and not p.is_owner %}
+              <div class="buy-box js-produce" data-listing="{{ p.id }}" data-seller="{{ p.farmer_name|e }}" data-name="{{ (p.title or p.product_name)|e }}" data-unit="{{ p.unit_code|e }}" data-loose-price="{{ p.loose_price or 0 }}">
+                <div class="buy-line">
+                  <select class="purchase-mode" aria-label="Purchase format">
+                    {% if p.selling_mode in ['loose','both'] %}<option value="loose" data-price="{{ p.loose_price or 0 }}">Per {{ p.unit_code }} · ₹{{ p.loose_price_display }}</option>{% endif %}
+                    {% if p.selling_mode in ['bag','both'] %}<option value="bag">Bag / Pack</option>{% endif %}
+                  </select>
+                  <input class="quantity" type="number" min="0.0001" step="0.0001" value="{{ p.min_order_quantity_display or 1 }}" aria-label="Quantity">
+                </div>
+                {% if p.package_options %}
+                  <select class="package-index" {% if p.selling_mode == 'loose' %}style="display:none"{% endif %} aria-label="Package size">
+                    {% for opt in p.package_options %}<option value="{{ opt.index }}" data-price="{{ opt.price_per_bag or 0 }}" data-label="{{ opt.label|e }}">{{ opt.label }} · {{ opt.quantity_per_bag_display }} {{ p.unit_code }} · ₹{{ opt.price_per_bag_display }}</option>{% endfor %}
+                  </select>
+                {% endif %}
+                <button type="button" class="add">Add to Cart</button>
+              </div>
+            {% elif p.is_owner %}
+              <div class="view-only">This is your own listing.</div>
+            {% elif not can_order %}
+              <div class="view-only">View-only access for this role.</div>
+            {% endif %}
+          </div>
+        </article>
+      {% else %}
+        <div class="empty">No produce listings match this view.</div>
+      {% endfor %}
+    </div>
+  </section>
 </div>
-<script id="uc-checkout-confirm-script">
+
+{% if can_order %}
+<button type="button" class="cartfab" id="pCartOpen">🛒 Cart <span id="pCartCount">0</span></button>
+<div class="overlay" id="pOverlay" aria-hidden="true">
+  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="pCartTitle">
+    <div class="cart-head">
+      <div><h3 id="pCartTitle">Your Produce Cart</h3><small>Different Farmers receive separate orders automatically.</small></div>
+      <button type="button" class="close" id="pClose" aria-label="Close cart">×</button>
+    </div>
+    <div id="pRows"></div>
+    <div class="cart-empty" id="pEmpty">Your cart is empty.</div>
+    <div class="cart-total" id="pTotal" style="display:none"><span>Estimated cart value</span><strong>₹0.00</strong></div>
+    <form method="post" action="{{ url_for('modules.farmer_produce_market_cart_order') }}" class="checkout" id="pForm">
+      <input type="hidden" name="cart_json" id="pJson"><input type="hidden" name="order_token" id="pToken">
+      <label>Payment<select name="payment_term"><option value="pay_on_receipt">Pay on Receipt</option><option value="credit">Credit / Pay Later</option></select></label>
+      <label>Note<input name="note" maxlength="300" placeholder="Optional note to sellers"></label>
+      <div class="actions"><button type="button" class="secondary" id="pContinue">Continue Shopping</button><button type="submit" class="primary" id="pCheckout">Place Orders</button></div>
+    </form>
+  </section>
+</div>
+<script>
 (function(){
-    const overlay = document.getElementById('ucCheckoutConfirm');
-    if(!overlay) return;
-
-    const cancel = document.getElementById('ucCheckoutCancel');
-    const ok = document.getElementById('ucCheckoutOk');
-    const selectors = ['#cartForm','#pForm'];
-    let pendingForm = null;
-
-    selectors.forEach(function(selector){
-        const form = document.querySelector(selector);
-        if(!form) return;
-
-        form.addEventListener('submit', function(event){
-            if(form.dataset.ucConfirmed === '1'){
-                form.dataset.ucConfirmed = '';
-                return;
-            }
-            event.preventDefault();
-            pendingForm = form;
-            overlay.classList.add('open');
-            overlay.setAttribute('aria-hidden','false');
-        });
-    });
-
-    function closeConfirm(){
-        overlay.classList.remove('open');
-        overlay.setAttribute('aria-hidden','true');
-        pendingForm = null;
-    }
-
-    cancel.addEventListener('click', closeConfirm);
-
-    overlay.addEventListener('click', function(event){
-        if(event.target === overlay) closeConfirm();
-    });
-
-    document.addEventListener('keydown', function(event){
-        if(event.key === 'Escape' && overlay.classList.contains('open')) closeConfirm();
-    });
-
-    ok.addEventListener('click', function(){
-        if(!pendingForm) return;
-        const form = pendingForm;
-        overlay.classList.remove('open');
-        overlay.setAttribute('aria-hidden','true');
-        pendingForm = null;
-        form.dataset.ucConfirmed = '1';
-        form.requestSubmit ? form.requestSubmit() : form.submit();
-    });
+  const key='unnatfarm:produce-cart:v2',overlay=document.getElementById('pOverlay'),rows=document.getElementById('pRows'),empty=document.getElementById('pEmpty'),count=document.getElementById('pCartCount'),form=document.getElementById('pForm'),json=document.getElementById('pJson'),token=document.getElementById('pToken'),checkout=document.getElementById('pCheckout'),totalBox=document.getElementById('pTotal');
+  let cart=[];try{cart=JSON.parse(sessionStorage.getItem(key)||'[]');if(!Array.isArray(cart))cart=[]}catch(_){cart=[]}
+  function money(v){const n=Number(v);return Number.isFinite(n)?n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}):'0.00'}
+  function save(){sessionStorage.setItem(key,JSON.stringify(cart));render()}
+  function render(){
+    count.textContent=cart.length;rows.innerHTML='';empty.style.display=cart.length?'none':'block';checkout.disabled=!cart.length;
+    const groups={};let total=0;cart.forEach((x,i)=>{(groups[x.seller]||(groups[x.seller]=[])).push({...x,_i:i});total+=Number(x.estimate||0)});
+    Object.entries(groups).forEach(([seller,items])=>{const g=document.createElement('div');g.className='group';const h=document.createElement('div');h.className='gtitle';h.textContent=seller;g.appendChild(h);items.forEach(x=>{const l=document.createElement('div');l.className='line';l.innerHTML='<div><strong></strong><small></small></div><button type="button" class="remove">Remove</button>';l.querySelector('strong').textContent=x.name;const qtyText=x.mode==='bag'?x.qty+' pack(s)'+(x.packLabel?' · '+x.packLabel:''):x.qty+' '+x.unit;l.querySelector('small').textContent=qtyText+(Number(x.estimate)>0?' · est. ₹'+money(x.estimate):'');l.querySelector('button').addEventListener('click',()=>{cart.splice(x._i,1);save()});g.appendChild(l)});rows.appendChild(g)});
+    if(totalBox){totalBox.style.display=cart.length?'flex':'none';totalBox.querySelector('strong').textContent='₹'+money(total)}
+    json.value=JSON.stringify(cart.map(x=>({listing_id:x.listing,purchase_mode:x.mode,quantity:x.qty,package_index:x.packageIndex})))
+  }
+  document.querySelectorAll('.js-produce').forEach(box=>{const mode=box.querySelector('.purchase-mode'),pack=box.querySelector('.package-index'),qty=box.querySelector('.quantity');function modeUI(){if(pack)pack.style.display=mode.value==='bag'?'block':'none'}mode.addEventListener('change',modeUI);modeUI();box.querySelector('.add').addEventListener('click',()=>{const q=Number(qty.value);if(!Number.isFinite(q)||q<=0){qty.focus();return}let price=Number(box.dataset.loosePrice||0),packLabel='';if(mode.value==='bag'&&pack){const opt=pack.options[pack.selectedIndex];price=Number(opt?.dataset.price||0);packLabel=opt?.dataset.label||''}cart.push({listing:box.dataset.listing,seller:box.dataset.seller,name:box.dataset.name,unit:box.dataset.unit,mode:mode.value,qty:q,packageIndex:pack&&mode.value==='bag'?pack.value:null,packLabel:packLabel,estimate:q*price});save()})});
+  function show(){render();overlay.classList.add('open');overlay.setAttribute('aria-hidden','false')}function hide(){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true')}
+  document.getElementById('pCartOpen').addEventListener('click',show);document.getElementById('pClose').addEventListener('click',hide);document.getElementById('pContinue').addEventListener('click',hide);overlay.addEventListener('click',e=>{if(e.target===overlay)hide()});
+  form.addEventListener('submit',e=>{if(!cart.length){e.preventDefault();return}json.value=JSON.stringify(cart.map(x=>({listing_id:x.listing,purchase_mode:x.mode,quantity:x.qty,package_index:x.packageIndex})));token.value='FMCART-'+Date.now()+'-'+Math.random().toString(36).slice(2);checkout.disabled=true;checkout.textContent='Creating Orders...';setTimeout(()=>sessionStorage.removeItem(key),50)});render();
 })();
 </script>
-
+{% endif %}
 {% endblock %}

@@ -231,3 +231,78 @@ def receipt_label(status):
         "discrepancy": "Received with Discrepancy",
         "none": "Not Received",
     }.get(str(status or ""), str(status or "").replace("_", " ").title())
+
+
+def receipt_issue_details(receipt_lines, *, max_lines=6):
+    """Return compact, unit-safe buyer receipt discrepancy details.
+
+    This is presentation/audit text only. It never changes stock, invoice or
+    settlement calculations. Quantities remain line-wise so unlike units are
+    never added together.
+    """
+    details = []
+    for raw in receipt_lines or []:
+        if not isinstance(raw, dict) or not raw.get("receipt_applicable"):
+            continue
+        damaged = _decimal(raw.get("damaged_quantity"))
+        rejected = _decimal(raw.get("rejected_quantity"))
+        missing = _decimal(raw.get("missing_quantity"))
+        if damaged + rejected + missing <= QTY_EPSILON:
+            continue
+
+        product = str(raw.get("product_name") or raw.get("produce_name") or "Product").strip()
+        unit = str(raw.get("unit_code") or "Unit").strip()
+        dispatched = _decimal(
+            raw.get("dispatched_quantity_for_receipt")
+            if raw.get("dispatched_quantity_for_receipt") is not None
+            else raw.get("dispatched_quantity")
+            if raw.get("dispatched_quantity") is not None
+            else raw.get("delivered_quantity")
+            if raw.get("delivered_quantity") is not None
+            else raw.get("base_quantity")
+        )
+        received = _decimal(
+            raw.get("physically_received_quantity")
+            if raw.get("physically_received_quantity") is not None
+            else raw.get("received_quantity")
+        )
+        accepted = _decimal(raw.get("accepted_quantity"))
+
+        issues = []
+        if damaged > QTY_EPSILON:
+            issues.append(f"{_qty_text(damaged)} damaged")
+        if rejected > QTY_EPSILON:
+            issues.append(f"{_qty_text(rejected)} rejected")
+        if missing > QTY_EPSILON:
+            issues.append(f"{_qty_text(missing)} missing")
+
+        details.append(
+            f"{product}: {_qty_text(dispatched)} {unit} dispatched, "
+            f"{_qty_text(received)} received, {_qty_text(accepted)} accepted; "
+            + ", ".join(issues)
+        )
+        if len(details) >= max(int(max_lines or 6), 1):
+            break
+    return details
+
+
+def receipt_issue_summary(receipt_lines, *, max_lines=6):
+    """Return one concise seller-facing sentence for receipt issues."""
+    details = receipt_issue_details(receipt_lines, max_lines=max_lines)
+    if not details:
+        return "No receipt discrepancy."
+    extra_count = 0
+    all_discrepant = 0
+    for raw in receipt_lines or []:
+        if not isinstance(raw, dict) or not raw.get("receipt_applicable"):
+            continue
+        discrepancy = (
+            _decimal(raw.get("damaged_quantity"))
+            + _decimal(raw.get("rejected_quantity"))
+            + _decimal(raw.get("missing_quantity"))
+        )
+        if discrepancy > QTY_EPSILON:
+            all_discrepant += 1
+    extra_count = max(all_discrepant - len(details), 0)
+    suffix = f"; +{extra_count} more discrepant line(s)" if extra_count else ""
+    return "Receipt issue: " + "; ".join(details) + suffix + "."

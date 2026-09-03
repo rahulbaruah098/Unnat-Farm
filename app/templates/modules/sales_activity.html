@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'modules/_sales_workspace_styles.html' %}
+{% set s = overview.summary or {} %}
+{% set p = overview.pagination or {} %}
+<div class="sales-workspace">
+    <section class="sw-card sw-head">
+        <div><h1>Sales Activity</h1><p>Authoritative activity from current AVPL, UFC, POS and Farmer Produce sales records.</p></div>
+        <div class="sw-actions"><a class="sw-btn primary" href="{{ url_for('modules.sales_details') }}">Sales</a><a class="sw-btn" href="{{ url_for('modules.finance_leads') }}">Finance Leads</a></div>
+    </section>
+    {% if overview.notice %}<div class="sw-note">{{ overview.notice }}</div>{% endif %}
+    <section class="sw-kpis">
+        <div class="sw-kpi"><span>Activity Records</span><strong>{{ s.activity_count or 0 }}</strong><small>Orders + POS</small></div>
+        <div class="sw-kpi"><span>Business Value</span><strong>₹{{ '%.2f'|format((s.business_value or 0)|float) }}</strong><small>Selected period</small></div>
+        <div class="sw-kpi"><span>In Progress</span><strong>{{ s.in_progress or 0 }}</strong><small>Requested / approved / dispatched</small></div>
+        <div class="sw-kpi"><span>Completed</span><strong>{{ s.completed or 0 }}</strong><small>Received / delivered / completed</small></div>
+    </section>
+    <form method="get" class="sw-card sw-filter" style="grid-template-columns:repeat(3,minmax(120px,1fr)) minmax(220px,1.7fr) auto">
+        <div class="sw-field"><label>Period</label><select name="period">{% for value,label in overview.periods or [] %}<option value="{{ value }}" {% if overview.selected_period == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="sw-field"><label>Channel</label><select name="channel">{% for value,label in overview.channels or [] %}<option value="{{ value }}" {% if overview.selected_channel == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="sw-field"><label>Rows</label><select name="per_page">{% for n in [25,50,100] %}<option value="{{ n }}" {% if p.per_page == n %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+        <div class="sw-field search"><label>Search</label><input name="q" value="{{ overview.q or '' }}" placeholder="Reference, party, product or status"></div>
+        <button class="sw-btn primary" type="submit">Apply</button>
+    </form>
+    <section class="sw-card sw-section">
+        <div class="sw-section-head"><div><h3>Activity</h3><p>No legacy generic transaction reader for Sales UnnatFarm.</p></div></div>
+        <div class="sw-table-wrap"><table class="sw-table">
+            <thead><tr><th>Date</th><th>Activity</th><th>Reference</th><th>Party</th><th>Products</th><th>Value</th><th>Payment</th><th>Status</th></tr></thead>
+            <tbody>{% for row in overview.rows or [] %}<tr>
+                <td>{{ row.date_display }}</td><td><span class="sw-pill">{{ row.channel_label }}</span></td><td><span class="sw-ref">{{ row.reference }}</span></td>
+                <td>{{ row.party }}{% if row.party_sublabel %}<span class="sw-sub">{{ row.party_sublabel }}</span>{% endif %}</td><td>{{ row.products }}{% if row.line_count > 1 %}<span class="sw-sub">{{ row.line_count }} lines</span>{% endif %}</td>
+                <td class="sw-money">₹{{ '%.2f'|format(row.value|float) }}</td><td><span class="sw-pill {{ row.payment_status }}">{{ row.payment_status_label }}</span></td><td><span class="sw-pill {{ row.status }}">{{ row.status_label }}</span></td>
+            </tr>{% else %}<tr><td colspan="8" class="sw-empty">No activity matches the selected filters.</td></tr>{% endfor %}</tbody>
+        </table></div>
+        <div class="sw-pager"><div class="sw-pager-info">Page {{ p.page or 1 }} of {{ p.total_pages or 1 }} · {{ p.total or 0 }} records</div><div class="sw-page-links">
+            <a class="sw-page {% if not p.has_prev %}disabled{% endif %}" href="{{ url_for('modules.transactions', period=overview.selected_period, channel=overview.selected_channel, q=overview.q, per_page=p.per_page, page=(p.page or 1)-1) }}">Prev</a><span class="sw-page active">{{ p.page or 1 }}</span><a class="sw-page {% if not p.has_next %}disabled{% endif %}" href="{{ url_for('modules.transactions', period=overview.selected_period, channel=overview.selected_channel, q=overview.q, per_page=p.per_page, page=(p.page or 1)+1) }}">Next</a>
+        </div></div>
+    </section>
+</div>
+{% endblock %}

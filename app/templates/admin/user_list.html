@@ -1156,6 +1156,8 @@ th:nth-child(10), td.action-cell{min-width:330px;width:330px}
 <th>Status</th>
 {% if session.get('role') == 'super_admin' %}
     <th>Account State</th>
+{% endif %}
+{% if session.get('role') in ['super_admin', 'avpl_admin'] %}
     <th>Action</th>
 {% endif %}
                 </tr>
@@ -1180,23 +1182,28 @@ th:nth-child(10), td.action-cell{min-width:330px;width:330px}
         <span class="account-state-badge disabled">Disabled</span>
     {% endif %}
 </td>
+{% endif %}
 
+{% if session.get('role') in ['super_admin', 'avpl_admin'] %}
 <td class="action-cell" data-label="Action">
-    <a class="btn-link small" href="{{ url_for('admin.edit_user_view', user_id=u._id) }}">Edit</a>
-
-    <a class="btn-link small" href="{{ url_for('admin.reset_user_password', user_id=u._id) }}">Reset Password</a>
-
-    <form method="post"
-          action="{{ url_for('admin.delete_user', user_id=u._id) }}"
-          onsubmit="return handleDelete(event, this);">
-        <button type="submit" class="danger-btn">Delete</button>
-    </form>
+    {% if u.role == 'ufc_mitra' %}
+        <a class="btn-link small" href="{{ url_for('admin.mitra_user_earning_settings', user_id=u._id) }}">Earning Settings</a>
+    {% endif %}
+    {% if session.get('role') == 'super_admin' %}
+        <a class="btn-link small" href="{{ url_for('admin.edit_user_view', user_id=u._id) }}">Edit</a>
+        <a class="btn-link small" href="{{ url_for('admin.reset_user_password', user_id=u._id) }}">Reset Password</a>
+        <form method="post" action="{{ url_for('admin.delete_user', user_id=u._id) }}" onsubmit="return handleDelete(event, this);">
+            <button type="submit" class="danger-btn">Delete</button>
+        </form>
+    {% elif u.role != 'ufc_mitra' %}
+        <span style="color:#7a877f;font-size:.8rem">—</span>
+    {% endif %}
 </td>
 {% endif %}
                 </tr>
             {% else %}
 <tr>
-<td colspan="{% if session.get('role') == 'super_admin' %}10{% else %}8{% endif %}">
+<td colspan="{% if session.get('role') == 'super_admin' %}10{% elif session.get('role') == 'avpl_admin' %}9{% else %}8{% endif %}">
         No users found.
     </td>
 </tr>

@@ -14,6 +14,7 @@ from app.services.commerce_receipt_service import (
     normalize_receipt_lines,
     proportional_amount,
     receipt_label,
+    receipt_issue_summary,
     summarize_receipt,
 )
 from app.utils.helpers import now_utc
@@ -1627,9 +1628,13 @@ def receive_ufc_order(actor_user_id, centre_uid_hint, order_id, receipt_note="",
     except Exception:
         pass
 
-    note = receipt_note or ("UFC accepted all dispatched goods." if summary.get("receipt_status") == "full" else f"UFC receipt recorded with {summary.get('discrepancy_item_count')} discrepant product line(s).")
+    discrepancy_text = receipt_issue_summary(receipt_items) if summary.get("receipt_status") == "discrepancy" else ""
+    note = receipt_note or ("UFC accepted all dispatched goods." if summary.get("receipt_status") == "full" else discrepancy_text)
     _append_history(oid, action="receive_order", actor=actor, note=note, from_status="dispatched", to_status="received")
-    _notify_avpl_admins("UFC Confirmed Receipt", f"{centre_name} ({centre_uid}) received order {order.get('order_number')}. Accepted payable value: ₹{_money(settlement_total)}.")
+    notification_message = f"{centre_name} ({centre_uid}) received order {order.get('order_number')}. Accepted payable value: ₹{_money(settlement_total)}."
+    if discrepancy_text:
+        notification_message += f" {discrepancy_text}"
+    _notify_avpl_admins("UFC Confirmed Receipt", notification_message)
     message = "Goods received. Accepted quantities were added to UFC stock and are now payable."
     if summary.get("receipt_status") == "discrepancy":
         message = f"Receipt saved with discrepancy. Only accepted goods worth ₹{_money(settlement_total)} are payable; missing/damaged/rejected goods were excluded."

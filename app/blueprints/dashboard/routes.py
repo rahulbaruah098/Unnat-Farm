@@ -16,6 +16,7 @@ from app.services.dashboard_service import (
 from app.services.ufc_farmer_marketplace_service import get_farmer_marketplace
 from app.services.avpl_accounts_operations_service import get_accounts_dashboard_overview
 from app.services.management_dashboard_service import get_management_dashboard
+from app.services.sales_unnatfarm_service import get_sales_dashboard as get_sales_unnatfarm_dashboard
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -571,7 +572,15 @@ def home():
                     "pending_farmer_count": data.get("pending_farmer_count", 0),
                     "centre_farmer_orders_pending": data.get("centre_farmer_orders_pending", 0),
                     "monthly_purchase_total": data.get("monthly_purchase_total", 0),
-                    "monthly_sales_total": data.get("monthly_sales_total", 0)
+                    "monthly_sales_total": data.get("monthly_sales_total", 0),
+                    # New simple Mitra read-model. Existing keys above remain for
+                    # backward compatibility with released mobile builds.
+                    "business_this_month": data.get("business_this_month", 0),
+                    "my_earnings": data.get("my_earnings", 0),
+                    "current_input_commission_rate": data.get("current_input_commission_rate", 0),
+                    "current_input_commission_source": data.get("current_input_commission_source", ""),
+                    "needs_action": data.get("needs_action", 0),
+                    "recent_activity": data.get("recent_activity", [])
                 }
             })), 200
 
@@ -679,16 +688,16 @@ def home():
         )
 
     if role == "sales_unnatfarm":
-        product_summary, farmer_products = get_farmer_product_dashboard()
-        ufc_sales_trends = get_ufc_admin_sales_trends()
-
-        return render_template(
-            "dashboard/sales_unnatfarm.html",
-            product_summary=product_summary,
-            farmer_products=farmer_products,
-            ufc_sales_trends=ufc_sales_trends,
-            network_stats=get_system_overview(),
-        )
+        try:
+            data = get_sales_unnatfarm_dashboard(session.get("user_id"))
+        except Exception as exc:
+            current_app.logger.exception("Sales UnnatFarm dashboard unavailable: %s", exc)
+            data = {
+                "kpis": [], "attention": [], "recent": [],
+                "snapshot": {"sales_records": 0, "received": 0, "outstanding": 0, "receipt_adjustments": 0},
+                "notice": str(exc),
+            }
+        return render_template("dashboard/sales_unnatfarm.html", data=data)
 
     if role == "ufc_admin":
         data = get_simple_ufc_dashboard(

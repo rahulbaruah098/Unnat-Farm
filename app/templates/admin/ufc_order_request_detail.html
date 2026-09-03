@@ -447,11 +447,12 @@
   <div class="section"><h3>Dispatch Details</h3><div class="grid" style="margin:0"><div class="info"><small>Products Dispatched</small><strong>{% if order.is_multi_item_order %}{{ order.dispatched_item_count }} / {{ order.item_count }} lines{% else %}{{ order.dispatched_quantity_display }} {{ order.unit_code }}{% endif %}</strong></div><div class="info"><small>Transporter</small><strong>{{ order.transporter_name or '-' }}</strong></div><div class="info"><small>Vehicle</small><strong>{{ order.vehicle_number or '-' }}</strong></div><div class="info"><small>Dispatched On</small><strong>{{ order.dispatched_at|ist_datetime('%d %b %Y %I:%M %p', '-') }}</strong></div></div></div>
   {% endif %}
 
-  {% if order.status == 'received' %}<div class="section"><h3>Buyer Receipt</h3><div class="grid" style="margin:0"><div class="info"><small>Status</small><strong>{{ order.receipt_status_label }}</strong></div><div class="info"><small>Accepted Lines</small><strong>{{ order.accepted_item_count }} / {{ order.dispatched_item_count }}</strong></div><div class="info"><small>Accepted Value</small><strong>₹{{ order.accepted_value_display }}</strong></div><div class="info"><small>Receipt Adjustment</small><strong>₹{{ order.receipt_adjustment_display }}</strong></div></div></div>{% endif %}
+  {% if order.status == 'received' %}<div class="section"><h3>Buyer Receipt</h3><div class="grid" style="margin:0"><div class="info"><small>Status</small><strong>{{ order.receipt_status_label }}</strong></div><div class="info"><small>Lines with Accepted Qty</small><strong>{{ order.accepted_item_count }} / {{ order.dispatched_item_count }}</strong></div><div class="info"><small>Receipt Issue Lines</small><strong>{{ order.discrepancy_item_count or 0 }}</strong></div><div class="info"><small>Accepted Value</small><strong>₹{{ order.accepted_value_display }}</strong></div><div class="info"><small>Receipt Adjustment (Not Payable)</small><strong>₹{{ order.receipt_adjustment_display }}</strong></div></div></div>{% endif %}
+  {% include 'modules/_receipt_outcome.html' %}
   {% if order.status == 'received' %}
   <div class="section">
     <h3>UFC Receipt Completed</h3>
-    <p style="margin:0;color:#3e6850"><strong>{{ order.centre_name }}</strong> confirmed receipt. UFC Purchase Entry <strong>{{ order.ufc_purchase_number or '-' }}</strong> was created and UFC stock increased {% if order.is_multi_item_order %}for {{ order.item_count }} product lines{% else %}by {{ order.received_quantity_display }} {{ order.unit_code }}{% endif %}.</p>
+    <p style="margin:0;color:#3e6850"><strong>{{ order.centre_name }}</strong> confirmed receipt. UFC Purchase Entry <strong>{{ order.ufc_purchase_number or '-' }}</strong> was created. Only buyer-accepted quantities entered UFC stock; {% if order.discrepancy_item_count %}<strong>{{ order.discrepancy_item_count }}</strong> dispatched line(s) had a receipt issue.{% else %}all dispatched goods were accepted.{% endif %}</p>
     {% set pay_invoice = payment.get('invoice') if payment else none %}
     <div class="payment-summary">
       {% if pay_invoice %}
@@ -507,17 +508,18 @@
   {% if order.status in ['dispatched','received'] %}
   <div class="section">
     <h3>AVPL Sales / Tax Document</h3>
-    {% if order.avpl_sales_invoice_id_str %}
-      <p style="margin:0 0 10px;color:#3e6850"><strong>Dispatch completed and the seller document was generated automatically.</strong> AVPL Sale <strong>{{ order.avpl_sale_number or '-' }}</strong> · Invoice <strong>{{ order.avpl_sales_invoice_number or '-' }}</strong>{% if order.invoice_grand_total %} · ₹{{ order.invoice_grand_total_display }}{% endif %}.</p>
+    {% if order.avpl_sales_invoice_id_str and order.avpl_sales_invoice_number %}
+      <p style="margin:0 0 10px;color:#3e6850"><strong>Dispatch completed and the seller document was generated automatically.</strong> AVPL Sale <strong>{{ order.avpl_sale_number or '-' }}</strong> · Invoice <strong>{{ order.avpl_sales_invoice_number }}</strong>{% if order.invoice_grand_total %} · ₹{{ order.invoice_grand_total_display }}{% endif %}.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         {% if order.avpl_sale_id_str %}<a class="back" href="{{ url_for('admin.ufc_sale_detail', sale_id=order.avpl_sale_id_str) }}">View AVPL Sale</a>{% endif %}
         <a class="back" href="{{ url_for('admin.ufc_sales_invoice_print', invoice_id=order.avpl_sales_invoice_id_str) }}" target="_blank">View / Print Invoice</a>
       </div>
     {% else %}
-      <p style="margin:0 0 10px;color:#8a5b15"><strong>Financial sync pending.</strong> Physical dispatch remains valid; use the safe repair action below to generate the seller-side Sale Entry, Sales Invoice and receivable.</p>
+      <p style="margin:0 0 10px;color:#8a5b15"><strong>Sales Invoice numbering needs repair.</strong> Physical dispatch/receipt remains valid and no stock or payment history will be duplicated. Repair only completes the missing official invoice reference and seller-side links.</p>
+      {% if order.avpl_sale_id_str %}<p style="margin:0 0 10px;color:#64748b">AVPL Sale <strong>{{ order.avpl_sale_number or '-' }}</strong>{% if order.invoice_grand_total %} · Original Invoice Total ₹{{ order.invoice_grand_total_display }}{% endif %}</p>{% endif %}
       {% if session.get('role') in ['super_admin','avpl_admin'] %}
       <form method="post" action="{{ url_for('admin.sync_ufc_order_financials', order_id=order.id) }}">
-        <button class="btn green" type="submit">Create / Repair Sales Documents</button>
+        <button class="btn green" type="submit">Repair Sales Invoice Number</button>
       </form>
       {% endif %}
       {% if order.financial_sync_error %}<p style="margin:10px 0 0;color:#b45309">{{ order.financial_sync_error }}</p>{% endif %}
