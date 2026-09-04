@@ -21,7 +21,86 @@
         <button type="button" id="buyClearBtn" class="clear-btn" style="display:none;">Clear</button>
     </div>
 
-    {% if session.get('role') != 'ufc_admin' %}
+    {% if session.get('role') == 'ufc_mitra' %}
+    <div class="mitra-produce-heading">
+        <div>
+            <h3>My Farmers' Produce</h3>
+            <p>Published produce from Farmers mapped to you. View-only here; UFC Admin handles Centre purchases.</p>
+        </div>
+        <a href="{{ url_for('modules.farmer_produce_market') }}">View Produce Market</a>
+    </div>
+
+    <div class="marketplace-grid" id="farmerProductGrid">
+        {% for p in mitra_farmer_listings or [] %}
+            <div class="market-card searchable-card">
+                <a class="market-img-wrap mitra-produce-image"
+                   href="{{ url_for('modules.farmer_produce_market_listing_detail', listing_id=p.id) }}"
+                   aria-label="View {{ p.title or p.product_name }} details">
+                    {% if p.images %}
+                        <img src="{{ url_for('documents.serve', filename=p.images[0]) }}"
+                             alt="{{ p.title or p.product_name }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="no-image" style="display:none;">No Image</div>
+                    {% else %}
+                        <div class="no-image">No Image</div>
+                    {% endif %}
+                </a>
+
+                <div class="market-body">
+                    <div class="mitra-produce-title-row">
+                        <h4>{{ p.title or p.product_name }}</h4>
+                        <span class="published-badge">{{ 'Available' if p.is_available else 'Unavailable' }}</span>
+                    </div>
+
+                    <p><strong>Farmer:</strong> {{ p.farmer_name or '-' }}</p>
+                    <p><strong>Location:</strong>
+                        {% if p.village or p.block or p.district %}
+                            {{ p.village or '' }}{% if p.village and (p.block or p.district) %}, {% endif %}{{ p.block or '' }}{% if p.block and p.district %}, {% endif %}{{ p.district or '' }}
+                        {% else %}-{% endif %}
+                    </p>
+                    <p><strong>Variety:</strong> {{ p.variety or '-' }} &nbsp; <strong>Grade:</strong> {{ p.grade or '-' }}</p>
+
+                    <div class="market-footer marketplace-readonly">
+                        <div class="mitra-produce-stock-row">
+                            <div>
+                                {% if p.selling_mode in ['loose','both'] and p.loose_price_display %}
+                                    <span class="price">₹{{ p.loose_price_display }} / {{ p.unit_code }}</span>
+                                    <small class="stock-text">Minimum {{ p.min_order_quantity_display or '1' }} {{ p.unit_code }}</small>
+                                {% elif p.package_options %}
+                                    <span class="price">₹{{ p.package_options[0].price_per_bag_display }} / pack</span>
+                                    <small class="stock-text">Pack options available</small>
+                                {% else %}
+                                    <span class="price">Price on listing</span>
+                                {% endif %}
+                            </div>
+                            <div class="mitra-produce-qty">
+                                <strong>{{ p.available_to_order_display }} {{ p.unit_code }}</strong>
+                                <small>available now</small>
+                            </div>
+                        </div>
+
+                        <a class="mitra-produce-detail"
+                           href="{{ url_for('modules.farmer_produce_market_listing_detail', listing_id=p.id) }}">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-market">No published produce from your mapped Farmers yet.</div>
+        {% endfor %}
+    </div>
+
+    <div class="empty-market search-empty" id="farmerSearchEmpty" style="display:none;">
+        No matching produce from your mapped Farmers found.
+    </div>
+
+    <div class="farmer-product-pagination-wrap">
+        <div class="farmer-product-page-info" id="farmerProductPageInfo"></div>
+        <div class="farmer-product-pagination" id="farmerProductPagination"></div>
+    </div>
+
+    {% elif session.get('role') != 'ufc_admin' %}
     <h3>Farmer Marketplace Products</h3>
 
     <div class="marketplace-grid" id="farmerProductGrid">
@@ -38,58 +117,42 @@
                     {% endif %}
                 </div>
 
-<div class="market-body">
-    <h4>{{ p.product_name }}</h4>
+                <div class="market-body">
+                    <h4>{{ p.product_name }}</h4>
+                    <p><strong>Category:</strong> Farmer Product</p>
+                    <p><strong>Variety:</strong> {{ p.variety or '-' }}</p>
+                    <p><strong>Farmer:</strong> {{ p.farmer_name or '-' }}</p>
+                    <p><strong>Centre UID:</strong> {{ p.centre_uid or '-' }}</p>
 
-    <p><strong>Category:</strong> Farmer Product</p>
-    <p><strong>Variety:</strong> {{ p.variety or '-' }}</p>
-    <p><strong>Farmer:</strong> {{ p.farmer_name or '-' }}</p>
-    <p><strong>Centre UID:</strong> {{ p.centre_uid or '-' }}</p>
+                    <div class="market-footer">
+                        <div>
+                            <span class="price">₹{{ p.unit_price or '-' }}</span>
+                            {% set farmer_stock = p.available_quantity|float %}
+                            {% if farmer_stock <= 0 %}
+                                <small class="stock-text stock-out">Out of Stock</small>
+                            {% else %}
+                                <small class="stock-text">Available: {{ p.available_quantity }}</small>
+                            {% endif %}
+                        </div>
 
-    <div class="market-footer">
-     <div>
-    <span class="price">₹{{ p.unit_price or '-' }}</span>
-
-    {% set farmer_stock = p.available_quantity|float %}
-    {% if farmer_stock <= 0 %}
-        <small class="stock-text stock-out">Out of Stock</small>
-    {% else %}
-        <small class="stock-text">Available: {{ p.available_quantity }}</small>
-    {% endif %}
-</div>
-
-{% if session.get('role') == 'farmer' %}
-    {% if farmer_stock <= 0 %}
-        <form class="buy-form">
-            <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="Qty"
-                disabled
-            >
-            <button type="button" disabled>Buy</button>
-        </form>
-    {% else %}
-        <form method="POST" action="{{ url_for('modules.place_farmer_order') }}" class="buy-form">
-            <input type="hidden" name="product_id" value="{{ p._id }}">
-            <input type="hidden" name="product_name" value="{{ p.product_name }}">
-            <input type="hidden" name="unit_price" value="{{ p.unit_price or 0 }}">
-            <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                max="{{ p.available_quantity }}"
-                name="quantity"
-                placeholder="Qty"
-                required
-            >
-            <button type="submit">Buy</button>
-        </form>
-    {% endif %}
-{% endif %}
-    </div>
-</div>
+                        {% if session.get('role') == 'farmer' %}
+                            {% if farmer_stock <= 0 %}
+                                <form class="buy-form">
+                                    <input type="number" step="0.01" min="0.01" placeholder="Qty" disabled>
+                                    <button type="button" disabled>Buy</button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('modules.place_farmer_order') }}" class="buy-form">
+                                    <input type="hidden" name="product_id" value="{{ p._id }}">
+                                    <input type="hidden" name="product_name" value="{{ p.product_name }}">
+                                    <input type="hidden" name="unit_price" value="{{ p.unit_price or 0 }}">
+                                    <input type="number" step="0.01" min="0.01" max="{{ p.available_quantity }}" name="quantity" placeholder="Qty" required>
+                                    <button type="submit">Buy</button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         {% else %}
             <div class="empty-market">No farmer products available.</div>
@@ -101,9 +164,9 @@
     </div>
 
     <div class="farmer-product-pagination-wrap">
-    <div class="farmer-product-page-info" id="farmerProductPageInfo"></div>
-    <div class="farmer-product-pagination" id="farmerProductPagination"></div>
-</div>
+        <div class="farmer-product-page-info" id="farmerProductPageInfo"></div>
+        <div class="farmer-product-pagination" id="farmerProductPagination"></div>
+    </div>
     {% endif %}
 
     {% if session.get('role') in ['ufc_admin','ufc_mitra'] %}
@@ -225,6 +288,41 @@
     color: #64748b;
     line-height: 1.45;
 }
+
+.mitra-produce-heading {
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:12px;
+    margin:2px 0 4px;
+    flex-wrap:wrap;
+}
+.mitra-produce-heading h3 { margin:0; }
+.mitra-produce-heading p { margin:4px 0 0;color:#6e7f74;font-size:.78rem; }
+.mitra-produce-heading > a,
+.mitra-produce-detail {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:8px 12px;
+    border:1px solid #c8ddce;
+    border-radius:9px;
+    background:#fff;
+    color:#2b7346;
+    text-decoration:none;
+    font-size:.76rem;
+    font-weight:850;
+}
+.mitra-produce-heading > a:hover,
+.mitra-produce-detail:hover { background:#eff8f1;border-color:#8fbea0; }
+.mitra-produce-image { text-decoration:none; }
+.mitra-produce-title-row { display:flex;align-items:flex-start;justify-content:space-between;gap:8px; }
+.mitra-produce-title-row h4 { margin-right:auto; }
+.mitra-produce-stock-row { display:flex;align-items:flex-end;justify-content:space-between;gap:10px; }
+.mitra-produce-qty { text-align:right;color:#2f6e46; }
+.mitra-produce-qty strong { display:block;font-size:.82rem; }
+.mitra-produce-qty small { display:block;margin-top:2px;color:#748279;font-size:.66rem; }
 
 .published-badge {
     display: inline-flex;

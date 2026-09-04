@@ -1165,18 +1165,33 @@ def buy():
 
     view_mode = request.args.get("view", "").strip()
 
-    # Keep the UFC Admin marketplace focused on AVPL-published products only.
-    # Farmer-output purchasing is a separate workflow and should not be mixed
-    # into the new AVPL -> UFC marketplace screen.
+    # UFC Admin keeps Farmer Produce purchasing in the dedicated marketplace.
+    # UFC Mitra, however, needs a read-only view of produce published by Farmers
+    # mapped specifically to that Mitra. Use the authoritative Stage 9 listing
+    # service instead of the retired `farmer_products` collection.
+    mitra_farmer_listings = []
     if role == "ufc_admin":
         farmer_products = []
+    elif role == "ufc_mitra":
+        farmer_products = []
+        try:
+            mitra_market = stage9_market_get_marketplace(
+                session.get("user_id"),
+                search="",
+                only_available=False,
+            )
+            mitra_farmer_listings = mitra_market.get("rows") or []
+        except (ValueError, PermissionError, RuntimeError) as exc:
+            # Keep AVPL catalogue usable even if the produce read-model has an
+            # issue, while surfacing the real reason to the logged-in Mitra.
+            if not wants_json_response():
+                flash(str(exc), "warning")
+            mitra_farmer_listings = []
     else:
+        # Legacy compatibility for roles still using the old farmer_products
+        # source. Mitra access is deliberately excluded above so `view=all` can
+        # never widen a Mitra beyond their mapped Farmers.
         farmer_query = {"status": "active"}
-        if view_mode != "all" and role == "ufc_mitra":
-            farmer_query["mitra_uid"] = session.get("mitra_uid")
-        elif view_mode == "all" and role == "ufc_admin":
-            farmer_query["centre_uid"] = session.get("centre_uid")
-
         farmer_products = list(
             mongo.db.farmer_products.find(farmer_query).sort("created_at", -1)
         )
@@ -1188,13 +1203,15 @@ def buy():
         return jsonify(json_safe({
             "ok": True,
             "products": products,
-            "farmer_products": farmer_products
+            "farmer_products": farmer_products,
+            "mitra_farmer_listings": mitra_farmer_listings,
         }))
 
     return render_template(
         "modules/buy.html",
         products=products,
-        farmer_products=farmer_products
+        farmer_products=farmer_products,
+        mitra_farmer_listings=mitra_farmer_listings,
     )
 
 def _farmer_product_choices(farmer):
@@ -4724,7 +4741,7 @@ def _stage9_cleanup_saved_images(filenames):
 
 @modules_bp.route("/farmer-produce-market")
 @login_required
-@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin", "accounts")
+@roles_required("farmer", "ufc_admin", "ufc_mitra", "avpl_admin", "super_admin", "accounts")
 def farmer_produce_market():
     try:
         overview = stage9_market_get_marketplace(
@@ -4742,7 +4759,7 @@ def farmer_produce_market():
 
 @modules_bp.route("/farmer-produce-market/listings/<listing_id>")
 @login_required
-@roles_required("farmer", "ufc_admin", "avpl_admin", "super_admin", "accounts")
+@roles_required("farmer", "ufc_admin", "ufc_mitra", "avpl_admin", "super_admin", "accounts")
 def farmer_produce_market_listing_detail(listing_id):
     try:
         listing = stage9_market_get_listing(session.get("user_id"), listing_id)

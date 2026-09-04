@@ -624,6 +624,24 @@ def get_my_listings(actor_user_id, search=""):
     }
 
 
+def _resolve_mitra_uid(user):
+    """Resolve the logged-in UFC Mitra UID from the user/master record.
+
+    Farmer Produce listings snapshot ``mitra_uid`` when the Farmer publishes, so
+    this value is the authoritative ownership boundary for a Mitra's read-only
+    produce view.
+    """
+    uid = _clean(user.get("mitra_uid") or user.get("mapped_mitra_uid"), 80)
+    if uid:
+        return uid
+    master = (
+        mongo.db.ufc_mitra_master.find_one({"linked_user_id": str(user.get("_id"))})
+        or mongo.db.ufc_mitra_master.find_one({"linked_user_id": user.get("_id")})
+        or {}
+    )
+    return _clean(master.get("mitra_uid") or master.get("mapped_mitra_uid"), 80)
+
+
 def _market_visibility_query(user):
     role = user.get("resolved_role") or ""
     query = {"status": "published"}
@@ -632,6 +650,13 @@ def _market_visibility_query(user):
         if not centre_uid:
             raise ValueError("This UFC Admin is not linked to a Centre UID.")
         query["centre_uid"] = centre_uid
+    elif role == "ufc_mitra":
+        mitra_uid = _resolve_mitra_uid(user)
+        if not mitra_uid:
+            raise ValueError("This UFC Mitra is not linked to a Mitra UID.")
+        # Security boundary: a Mitra can see only published produce belonging
+        # to Farmers mapped to that Mitra. `view=all` must never bypass this.
+        query["mitra_uid"] = mitra_uid
     elif role in {"farmer", "avpl_admin", "super_admin", "accounts"}:
         pass
     else:
@@ -664,7 +689,13 @@ def get_marketplace(actor_user_id, search="", only_available=False):
             continue
         rows.append(row)
     return {
-        "viewer": {"role": user.get("resolved_role"), "name": user.get("resolved_name"), "user_id": str(user.get("_id")), "centre_uid": _resolve_ufc_uid(user) if user.get("resolved_role") == "ufc_admin" else ""},
+        "viewer": {
+            "role": user.get("resolved_role"),
+            "name": user.get("resolved_name"),
+            "user_id": str(user.get("_id")),
+            "centre_uid": _resolve_ufc_uid(user) if user.get("resolved_role") == "ufc_admin" else "",
+            "mitra_uid": _resolve_mitra_uid(user) if user.get("resolved_role") == "ufc_mitra" else "",
+        },
         "rows": rows,
         "query": q,
         "order_token": f"FMORD-{uuid4().hex.upper()}",

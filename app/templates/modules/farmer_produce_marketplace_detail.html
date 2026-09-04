@@ -6,7 +6,7 @@
 </style>
 {% set role = session.get('role','') %}
 {% set can_order = role in ['farmer','ufc_admin','avpl_admin','super_admin'] and listing.is_available and not listing.is_owner %}
-{% set can_view_contact = role in ['ufc_admin','avpl_admin','super_admin','accounts'] %}
+{% set can_view_contact = role in ['ufc_admin','ufc_mitra','avpl_admin','super_admin','accounts'] %}
 <div class="fpd">
   <header class="fpd-head">
     <div>
@@ -14,7 +14,7 @@
       <p>Farmer produce listing details{% if listing.listing_number %} · {{ listing.listing_number }}{% endif %}</p>
     </div>
     <div class="fpd-actions">
-      <a class="fpd-btn" href="{{ url_for('modules.farmer_produce_market') }}">← Back to Market</a>
+      <a class="fpd-btn" href="{{ url_for('modules.buy', view='all') if role == 'ufc_mitra' else url_for('modules.farmer_produce_market') }}">← {{ 'Back to Products' if role == 'ufc_mitra' else 'Back to Market' }}</a>
       {% if role in ['farmer','ufc_admin','avpl_admin','super_admin'] %}<a class="fpd-btn" href="{{ url_for('modules.farmer_produce_market_my_orders') }}">My Produce Orders</a>{% endif %}
     </div>
   </header>
@@ -90,6 +90,8 @@
       </form>
       {% elif listing.is_owner %}
         <div class="readonly">This is your own produce listing. Manage it from My Listings.</div>
+      {% elif role == 'ufc_mitra' %}
+        <div class="readonly">This produce belongs to one of your mapped Farmers. You have view-only access; the UFC Admin handles Centre purchase orders.</div>
       {% elif role == 'accounts' %}
         <div class="readonly">Accounts has view-only access to marketplace listings.</div>
       {% else %}
@@ -99,7 +101,8 @@
       <div class="meta">
         {% if listing.listing_number %}Listing: {{ listing.listing_number }}<br>{% endif %}
         {% if listing.centre_uid %}Mapped UFC: {{ listing.centre_uid }}<br>{% endif %}
-     </div>
+        {% if listing.published_at %}Published: {{ listing.published_at|ist_datetime }}{% endif %}
+      </div>
     </aside>
   </div>
 </div>

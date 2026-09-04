@@ -3211,7 +3211,32 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
 
         <div class="sidebar-section">
             <div class="sidebar-section-title">Reports</div>
-            <a href="{{ url_for('reports.overview') }}" class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="nav-label">Reports</span></a>
+
+            <a href="{{ url_for('reports.overview') }}"
+            class="sidebar-link {% if request.blueprint == 'reports' %}active{% endif %}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M4 19V9M10 19V5M16 19v-7M22 19V3"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <span class="nav-label">Reports</span>
+            </a>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">Opening Stocks</div>
+
+            <a href="{{ url_for('modules.ufc_opening_stock') }}"
+            class="nav-sub-link {% if request.endpoint in [
+                'modules.ufc_opening_stock',
+                'modules.ufc_correct_opening_stock',
+                'modules.ufc_void_opening_stock'
+            ] %}active{% endif %}">
+                Existing Stock
+            </a>
         </div>
 
         <div class="sidebar-section">
@@ -3305,12 +3330,7 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             Stock
                         </a>
 
-                        <a
-                            href="{{ url_for('modules.ufc_opening_stock') }}"
-                            class="nav-sub-link {% if request.endpoint in ['modules.ufc_opening_stock','modules.ufc_correct_opening_stock','modules.ufc_void_opening_stock'] %}active{% endif %}"
-                        >
-                            Existing Stock
-                        </a>
+                        
 
                     </div>
 
@@ -3615,12 +3635,12 @@ body.sidebar-collapsed .sidebar-collapse-btn .icon-expand{
                             Products
                         </a>
 
-                        <a
+                        <!-- <a
                             href="{{ url_for('modules.mitra_stock') }}"
                             class="nav-sub-link"
                         >
                             My Stock
-                        </a>
+                        </a> -->
 
                         <a
                             href="{{ url_for('modules.mitra_earnings') }}"
