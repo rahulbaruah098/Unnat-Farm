@@ -305,6 +305,98 @@ def _order_items(order):
     }]
 
 
+def _allocation_quantity_for_line(order, line, allocation_field):
+    """Return the authoritative quantity represented by stock allocations for one line.
+
+    This is primarily a compatibility/recovery helper for early one-product cart
+    orders where the order-level quantity was updated but the embedded item was
+    left at zero. Allocation rows are authoritative because they are what reserve
+    and issue the UFC inventory lots.
+    """
+    line_id = str((line or {}).get("line_id") or "legacy")
+    product_id = str((line or {}).get("source_product_id") or "")
+    total = Decimal("0")
+    for allocation in order.get(allocation_field) or []:
+        if not isinstance(allocation, dict):
+            continue
+        allocation_line_id = str(allocation.get("line_id") or "legacy")
+        allocation_product_id = str(allocation.get("source_product_id") or "")
+        line_matches = allocation_line_id == line_id
+        product_matches = bool(product_id and allocation_product_id and allocation_product_id == product_id)
+        # Historical one-line allocations may not have a useful line_id. Product
+        # identity is a safe fallback only when this order has exactly one line.
+        if line_matches or product_matches:
+            total += max(_decimal(allocation.get("quantity")), Decimal("0"))
+    return total
+
+
+def _effective_order_items(order):
+    """Return normalized order lines, recovering known one-line cart drift safely.
+
+    Early one-product cart orders could be approved through the single-item path,
+    which updated the legacy order-level fields but not the embedded `items` row.
+    Dispatch then used the embedded zero and could leave the document marked
+    Dispatched with 0/1 lines even though a real reservation/delivery allocation
+    moved stock. We recover display/receipt quantities from those authoritative
+    allocation rows. This function does not post stock or create financial data.
+    """
+    lines = _order_items(order)
+    if not lines:
+        return lines
+
+    status = str(order.get("status") or "requested").lower()
+    one_line = len(lines) == 1
+    recovered = []
+
+    for raw in lines:
+        line = dict(raw)
+        approved = _decimal(line.get("approved_quantity"))
+        dispatched = _decimal(
+            line.get("dispatched_quantity")
+            if line.get("dispatched_quantity") is not None
+            else line.get("delivered_quantity")
+        )
+
+        reserved_from_alloc = _allocation_quantity_for_line(order, line, "reservation_allocations")
+        delivered_from_alloc = _allocation_quantity_for_line(order, line, "delivery_allocations")
+
+        # For one-line cart compatibility, the order-level legacy quantity is also
+        # safe because it refers to this same product. Prefer allocations whenever
+        # they exist because they are the inventory-posting source of truth.
+        legacy_approved = _decimal(order.get("approved_quantity")) if one_line else Decimal("0")
+        legacy_dispatched = _decimal(order.get("delivered_quantity")) if one_line else Decimal("0")
+
+        if approved <= 0:
+            inferred_approved = max(reserved_from_alloc, delivered_from_alloc, legacy_approved)
+            if inferred_approved > 0:
+                approved = inferred_approved
+                line["approved_quantity"] = float(approved)
+                line["reserved_quantity"] = 0.0 if status in {"dispatched", "delivered", "received"} else float(approved)
+
+        if status in {"dispatched", "delivered", "received"} and dispatched <= 0:
+            inferred_dispatched = max(delivered_from_alloc, reserved_from_alloc, legacy_dispatched)
+            if inferred_dispatched > 0:
+                dispatched = inferred_dispatched
+                line["dispatched_quantity"] = float(dispatched)
+                line["delivered_quantity"] = float(dispatched)
+                line["reserved_quantity"] = 0.0
+
+        if dispatched > 0 and status in {"dispatched", "delivered"}:
+            line["status"] = "dispatched"
+        elif approved > 0 and status == "approved":
+            requested = _decimal(line.get("requested_quantity"))
+            line["status"] = "approved" if requested <= 0 or approved == requested else "partially_approved"
+
+        # Keep line totals aligned with the approved business quantity before
+        # receipt. Receipt settlement later replaces this with accepted value.
+        if approved > 0 and status in {"approved", "dispatched", "delivered"}:
+            line["line_total"] = float((approved * _decimal(line.get("unit_price"))).quantize(MONEY_QUANTUM))
+
+        recovered.append(line)
+
+    return recovered
+
+
 def _serialize_item(item):
     row = dict(item or {})
     row["source_product_id_str"] = str(row.get("source_product_id") or "")
@@ -505,8 +597,27 @@ def _serialize_order(order):
     row["outstanding_amount_display"] = _money(row.get("outstanding_amount") if row.get("outstanding_amount") is not None else row.get("grand_total") or row.get("total_amount"))
     row["payment_status_label"] = PAYMENT_STATUS_LABELS.get(str(row.get("payment_status") or "not_recorded"), str(row.get("payment_status") or "").replace("_", " ").title())
     row["payment_term_label"] = PAYMENT_TERM_LABELS.get(str(row.get("payment_term") or "cod"), str(row.get("payment_term") or "cod").replace("_", " ").title())
-    row["items"] = [_serialize_item(x) for x in _order_items(row)]
+    row["items"] = [_serialize_item(x) for x in _effective_order_items(row)]
     row["item_count"] = len(row["items"])
+
+    # Keep the simple one-product summary compatible with recovered embedded
+    # lines. This is display/read-model synchronization only; stock is never
+    # posted from serialization.
+    if row["item_count"] == 1:
+        only_line = row["items"][0]
+        line_approved = _decimal(only_line.get("approved_quantity"))
+        line_dispatched = _decimal(
+            only_line.get("dispatched_quantity")
+            if only_line.get("dispatched_quantity") is not None
+            else only_line.get("delivered_quantity")
+        )
+        if _decimal(row.get("approved_quantity")) <= 0 and line_approved > 0:
+            row["approved_quantity"] = float(line_approved)
+            row["approved_quantity_display"] = _qty(line_approved)
+        if _decimal(row.get("delivered_quantity")) <= 0 and line_dispatched > 0:
+            row["delivered_quantity"] = float(line_dispatched)
+            row["delivered_quantity_display"] = _qty(line_dispatched)
+
     row["is_multi_item_order"] = row.get("is_multi_item_order") is True or row["item_count"] > 1
     row["product_summary"] = (row["items"][0].get("product_name") or "Product") if row["item_count"] == 1 else f"{row['item_count']} products"
     row["approved_item_count"] = sum(1 for x in row["items"] if _decimal(x.get("approved_quantity")) > 0)
@@ -777,22 +888,45 @@ def approve_farmer_order(actor_user_id, centre_uid_hint, order_id, approved_quan
                 raise ValueError("Credit days must be a whole number.") from exc
             if due_days < 0 or due_days > 365:
                 raise ValueError("Credit days must be between 0 and 365.")
+    update = {
+        "status": "approved",
+        "approved_quantity": float(approved),
+        "reserved_quantity": float(approved),
+        "total_amount": float(total),
+        "reservation_allocations": allocations,
+        "stock_reserved": True,
+        "approval_note": _clean(note, 1000),
+        "payment_due_days": due_days,
+        "approved_by": actor["_id"],
+        "approved_by_name": actor.get("resolved_name") or "",
+        "approved_at": timestamp,
+        "updated_at": timestamp,
+    }
+
+    # A one-product cart still contains an `items` row even though the UI treats
+    # it as a simple order. Keep that embedded row authoritative and synchronized
+    # so dispatch/receipt never sees 0 after a successful approval.
+    raw_items = order.get("items") or []
+    if len(raw_items) == 1 and isinstance(raw_items[0], dict):
+        line = dict(raw_items[0])
+        requested_line = _decimal(line.get("requested_quantity"))
+        line["approved_quantity"] = float(approved)
+        line["reserved_quantity"] = float(approved)
+        line["line_total"] = float(total.quantize(MONEY_QUANTUM))
+        line["status"] = "approved" if requested_line <= 0 or approved == requested_line else "partially_approved"
+        line["reservation_allocations"] = allocations
+        update["items"] = [line]
+        update["item_count"] = 1
+        update["approved_item_count"] = 1
+        update["approval_scope"] = "full" if requested_line <= 0 or approved == requested_line else "partial"
+        _copy_line_to_legacy_fields(update, line)
+        # `_copy_line_to_legacy_fields` intentionally copies the line total inputs
+        # but not the order total; keep the approved order value explicit.
+        update["total_amount"] = float(total)
+
     result = mongo.db[ORDER_COLLECTION].update_one(
         {"_id": oid, "centre_uid": centre_uid, "status": "requested", "stock_reserved": {"$ne": True}},
-        {"$set": {
-            "status": "approved",
-            "approved_quantity": float(approved),
-            "reserved_quantity": float(approved),
-            "total_amount": float(total),
-            "reservation_allocations": allocations,
-            "stock_reserved": True,
-            "approval_note": _clean(note, 1000),
-            "payment_due_days": due_days,
-            "approved_by": actor["_id"],
-            "approved_by_name": actor.get("resolved_name") or "",
-            "approved_at": timestamp,
-            "updated_at": timestamp,
-        }},
+        {"$set": update},
     )
     if result.modified_count != 1:
         for allocation in allocations:
@@ -1827,8 +1961,11 @@ def deliver_farmer_order(actor_user_id, centre_uid_hint, order_id, delivery_note
         return {"order":_serialize_order(order),"message":"This order was already dispatched. UFC stock was not deducted again."}
     if order.get("status")!="approved" or order.get("stock_reserved") is not True:
         raise ValueError("Only an approved order with reserved UFC stock can be dispatched.")
+    items=_effective_order_items(order)
+    if not any(_decimal(line.get("approved_quantity")) > 0 for line in items):
+        raise RuntimeError("This order has no approved product quantity to dispatch. Refresh the order; if it is an older one-line cart order, approve it again before dispatch.")
     _apply_delivery_stock(order,actor)
-    items=_order_items(order); updated_items=[]
+    updated_items=[]
     for line in items:
         line=dict(line); approved=_decimal(line.get("approved_quantity")); line["dispatched_quantity"]=float(approved); line["delivered_quantity"]=float(approved); line["reserved_quantity"]=0.0
         if approved>0: line["status"]="dispatched"
@@ -1862,10 +1999,11 @@ def receive_farmer_order(actor_user_id, order_id, receipt_note="", receipt_lines
         return {"order":_serialize_order(order),"message":"This order is already received."}
     if order.get("status") not in {"dispatched", "delivered"}:
         raise ValueError("The UFC must dispatch this order before you can confirm receipt.")
-    receipt_rows=normalize_receipt_lines(_order_items(order),receipt_lines,dispatched_fields=("dispatched_quantity","delivered_quantity","approved_quantity"),allow_legacy_full_receipt=receipt_lines is None)
+    effective_items = _effective_order_items(order)
+    receipt_rows=normalize_receipt_lines(effective_items,receipt_lines,dispatched_fields=("dispatched_quantity","delivered_quantity","approved_quantity"),allow_legacy_full_receipt=receipt_lines is None)
     summary=summarize_receipt(receipt_rows); timestamp=now_utc()
     first=next((x for x in receipt_rows if x.get("receipt_applicable")),receipt_rows[0])
-    original_value=sum((_decimal(x.get("line_total")) for x in _order_items(order) if _decimal(x.get("approved_quantity"))>0),Decimal("0"))
+    original_value=sum((_decimal(x.get("line_total")) for x in effective_items if _decimal(x.get("approved_quantity"))>0),Decimal("0"))
     accepted_value=_decimal(summary.get("accepted_value"))
     # Actual invoice total (incl. GST) is calculated after receipt by the existing financial snapshot.
     patch={"status":"received","items":receipt_rows,"receipt_status":summary.get("receipt_status"),"receipt_note":_clean(receipt_note,1000),"received_at":timestamp,"received_by":actor.get("_id"),"received_by_name":actor.get("resolved_name") or "","received_item_count":summary.get("received_item_count"),"accepted_item_count":summary.get("accepted_item_count"),"discrepancy_item_count":summary.get("discrepancy_item_count"),"accepted_goods_value":float(accepted_value),"receipt_adjustment_amount":float(max(original_value-accepted_value,Decimal("0"))),"financial_sync_status":"pending","updated_at":timestamp}

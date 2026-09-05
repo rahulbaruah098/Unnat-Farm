@@ -114,6 +114,59 @@ def init_indexes(db):
     _ensure_unique_string_index(db.users, "centre_uid", "centre_uid_unique_string")
     _ensure_unique_string_index(db.users, "mitra_uid", "mitra_uid_unique_string")
 
+    # Mobile API v1 foundation: opaque access/refresh tokens, request
+    # idempotency and bounded request-audit retention.
+    _ensure_index(
+        db.mobile_auth_tokens,
+        [("token_hash", ASCENDING)],
+        name="mobile_auth_token_hash_unique",
+        unique=True,
+    )
+    _ensure_index(
+        db.mobile_auth_tokens,
+        [("user_id", ASCENDING), ("token_type", ASCENDING), ("revoked_at", ASCENDING)],
+        name="mobile_auth_user_type_revoked_idx",
+    )
+    _ensure_index(
+        db.mobile_auth_tokens,
+        [("family_id", ASCENDING), ("revoked_at", ASCENDING)],
+        name="mobile_auth_family_revoked_idx",
+    )
+    _ensure_index(
+        db.mobile_auth_tokens,
+        [("expires_at", ASCENDING)],
+        name="mobile_auth_expires_ttl",
+        expireAfterSeconds=0,
+    )
+    _ensure_index(
+        db.api_idempotency_keys,
+        [("scope_key", ASCENDING)],
+        name="api_idempotency_scope_unique",
+        unique=True,
+    )
+    _ensure_index(
+        db.api_idempotency_keys,
+        [("expires_at", ASCENDING)],
+        name="api_idempotency_expires_ttl",
+        expireAfterSeconds=0,
+    )
+    _ensure_index(
+        db.api_request_logs,
+        [("request_id", ASCENDING)],
+        name="api_request_id_idx",
+    )
+    _ensure_index(
+        db.api_request_logs,
+        [("actor_user_id", ASCENDING), ("created_at", ASCENDING)],
+        name="api_request_actor_date_idx",
+    )
+    _ensure_index(
+        db.api_request_logs,
+        [("expires_at", ASCENDING)],
+        name="api_request_log_expires_ttl",
+        expireAfterSeconds=0,
+    )
+
     # Master UID indexes.
     _ensure_unique_string_index(
         db.ufc_admin_master,
