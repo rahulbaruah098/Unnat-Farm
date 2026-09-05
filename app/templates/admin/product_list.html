@@ -36,12 +36,12 @@
 .image{height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f3f8f4;border-bottom:1px solid rgba(47,122,76,.08)}.image img{width:100%;height:100%;object-fit:contain}.no-image{color:var(--uf-primary);font-size:1.1rem;font-weight:850}
 .body{display:flex;flex-direction:column;flex:1;min-width:0;padding:14px}.name-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.name{margin:0;color:var(--uf-heading);font-size:.94rem;font-weight:800;line-height:1.3;overflow-wrap:anywhere}.sku{flex:0 0 auto;color:var(--uf-muted);font-size:.66rem;white-space:nowrap}.meta{display:flex;gap:5px;flex-wrap:wrap;margin:9px 0}.pill{display:inline-flex;align-items:center;min-height:24px;padding:4px 7px;border:1px solid #dcece1;border-radius:6px;background:#f8fcf9;color:#486252;font-size:.63rem;font-weight:800}.pill.green{background:#ecfdf3;border-color:#b7e4c7;color:#237a43}.pill.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.pill.amber{background:#fff7e6;border-color:#f4d38a;color:#8a5b00}.pill.red{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
 .stock-box{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}.stock-cell{min-width:0;padding:8px;border:1px solid rgba(47,122,76,.09);border-radius:9px;background:var(--uf-page);text-align:center}.stock-cell small{display:block;color:var(--uf-muted);font-size:.62rem}.stock-cell strong{display:block;margin-top:3px;color:#22372a;font-size:.84rem;font-weight:850;overflow-wrap:anywhere}.stock-cell.saleable strong{color:#237a43}
-.marketplace{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;margin-bottom:9px;border:1px solid rgba(47,122,76,.09);border-radius:9px;background:#f8fbf9}.marketplace small{color:var(--uf-muted);font-size:.63rem}.marketplace strong{color:#304438;font-size:.72rem;line-height:1.35}.note{margin:0 0 9px;color:var(--uf-muted);font-size:.68rem;line-height:1.4}
+.marketplace{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:9px 10px;margin-bottom:9px;border:1px solid rgba(47,122,76,.09);border-radius:9px;background:#f8fbf9}.marketplace small{color:var(--uf-muted);font-size:.63rem}.marketplace strong{color:#304438;font-size:.72rem;line-height:1.35}.market-price{margin-top:5px;color:#237a43;font-size:.72rem;font-weight:850}.market-price.missing{color:#9a6500}.note{margin:0 0 9px;color:var(--uf-muted);font-size:.68rem;line-height:1.4}
 .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:11px;border-top:1px solid #edf3ef}.actions form{margin:0}.action{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:6px 10px;border:1px solid rgba(47,122,76,.13);border-radius:8px;background:#fff;color:var(--uf-primary-dark);text-decoration:none;font:inherit;font-size:.68rem;font-weight:800;cursor:pointer}.action.edit{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}.action.warn{background:#fff7e6;color:#8a5b00;border-color:#f4d38a}.action.danger{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
 .grid.list{grid-template-columns:1fr}.grid.list .card{display:grid;grid-template-columns:190px minmax(0,1fr)}.grid.list .image{height:100%;min-height:175px;border-bottom:0;border-right:1px solid rgba(47,122,76,.08)}
 .empty{grid-column:1/-1;padding:34px 20px;border:1px dashed rgba(47,122,76,.22);border-radius:13px;background:var(--uf-page);text-align:center;color:var(--uf-muted);font-size:.78rem}
 .pagination{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:18px}.page-btn{min-width:35px;height:35px;border:1px solid rgba(47,122,76,.13);border-radius:8px;background:#fff;color:var(--uf-primary-dark);font:inherit;font-size:.7rem;font-weight:800;cursor:pointer}.page-btn.active{background:var(--uf-primary);border-color:var(--uf-primary);color:#fff}.page-btn:disabled{opacity:.4;cursor:not-allowed}
-.confirm-overlay{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.48)}.confirm-overlay.show{display:flex}.confirm-box{width:min(420px,100%);padding:24px;border:1px solid #dceee2;border-radius:16px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.22)}.confirm-box h3{margin:0 0 10px;color:var(--uf-heading);font-size:1.1rem;font-weight:800}.confirm-box p{margin:0;color:#64748b;font-size:.86rem;line-height:1.5}.confirm-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.modal-btn{min-height:40px;padding:8px 15px;border-radius:10px;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer}.modal-btn.cancel{border:1px solid #d5ddd8;background:#fff;color:#526158}.modal-btn.ok{border:1px solid #b91c1c;background:#b91c1c;color:#fff}
+.confirm-overlay{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.48)}.confirm-overlay.show{display:flex}.confirm-box{width:min(420px,100%);padding:24px;border:1px solid #dceee2;border-radius:16px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.22)}.confirm-box h3{margin:0 0 10px;color:var(--uf-heading);font-size:1.1rem;font-weight:800}.confirm-box p{margin:0;color:#64748b;font-size:.86rem;line-height:1.5}.confirm-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.modal-btn{min-height:40px;padding:8px 15px;border-radius:10px;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer}.modal-btn.cancel{border:1px solid #d5ddd8;background:#fff;color:#526158}.modal-btn.ok{border:1px solid #b91c1c;background:#b91c1c;color:#fff}.price-box{width:min(440px,100%);padding:24px;border:1px solid #dceee2;border-radius:16px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.22)}.price-box h3{margin:0;color:var(--uf-heading);font-size:1.08rem;font-weight:850}.price-box p{margin:7px 0 16px;color:#64748b;font-size:.78rem;line-height:1.5}.price-field{display:grid;gap:6px}.price-field label{color:#435349;font-size:.72rem;font-weight:800}.price-input-wrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;border:1px solid rgba(47,122,76,.18);border-radius:9px;overflow:hidden;background:#fff}.price-input-wrap span{padding:0 11px;color:#526158;font-size:.76rem;font-weight:800}.price-input-wrap input{min-width:0;width:100%;height:42px;border:0;border-left:1px solid #e4ece7;border-right:1px solid #e4ece7;padding:0 10px;font:inherit;font-size:.82rem;outline:none}.price-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.price-save{border-color:var(--uf-primary)!important;background:var(--uf-primary)!important;color:#fff!important}
 @media(max-width:1250px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.products-page{padding:20px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.view-toggle{display:none}.toolbar{grid-template-columns:1fr}.head-actions{justify-content:flex-start}}
 @media(max-width:620px){.products-page{padding:15px;border-radius:16px}.grid{grid-template-columns:1fr}.head-actions,.head-actions .btn,.bulk-actions,.bulk-actions .btn{width:100%}.bulk-bar{align-items:stretch}.grid.list .card{display:flex}.grid.list .image{height:150px;min-height:150px;border-right:0}.stock-box{grid-template-columns:repeat(3,minmax(0,1fr))}.confirm-actions{flex-direction:column-reverse}.modal-btn{width:100%}}
@@ -65,7 +65,7 @@
 
     <div class="flow-note">
         <div>✓</div>
-        <div>Select products and publish them when they are ready for UFCs.</div>
+        <div>Set the UFC selling price, then publish products when they are ready for UFCs.</div>
     </div>
 
     {% if can_publish %}
@@ -108,6 +108,8 @@
         {% set mapping = p.get('_accounting_mapping') or {} %}
         {% set readiness = p.get('_readiness') or {} %}
         {% set inv = p.get('_inventory') or {} %}
+        {% set publication = p.get('_ufc_publication') or {} %}
+        {% set ufc_price = publication.get('ufc_sale_price', 0)|float %}
         {% set published = p.get('_ufc_published', False) %}
         {% set active = p.get('is_active', True) %}
         <article class="card {% if not active %}disabled{% endif %}"
@@ -144,18 +146,37 @@
                 </div>
 
                 <div class="marketplace">
-                    <div><small>UFC Marketplace</small><br><strong>{{ 'Visible to all active UFC Centres' if published else 'Not published' }}</strong></div>
-                    <span class="pill {{ 'green' if published else 'amber' }}">{{ 'Published' if published else 'Private' }}</span>
+                    <div>
+                        <small>UFC Marketplace</small><br>
+                        <strong>{{ 'Visible to all active UFC Centres' if published else 'Not published' }}</strong>
+                        {% if ufc_price > 0 %}
+                            <div class="market-price">₹{{ '%.2f'|format(ufc_price) }} / {{ p.base_unit_code or p.base_unit_name or 'Unit' }}</div>
+                        {% else %}
+                            <div class="market-price missing">Price required before new UFC orders</div>
+                        {% endif %}
+                    </div>
+                    <span class="pill {{ 'green' if published and ufc_price > 0 else 'amber' }}">{% if published and ufc_price > 0 %}Published{% elif published %}Price Required{% else %}Private{% endif %}</span>
                 </div>
 
-                {% if readiness.get('purchase_ready') %}
-                    <div class="note">✓ Ready for purchase.</div>
+                {% if readiness.get('purchase_ready') and ufc_price > 0 %}
+                    <div class="note">✓ Ready for UFC orders.</div>
+                {% elif ufc_price <= 0 %}
+                    <div class="note"><strong>Next:</strong> Set the UFC selling price before accepting new UFC orders.</div>
                 {% else %}
                     <div class="note"><strong>Needs attention:</strong> {{ readiness.get('primary_issue') or 'Complete Product Accounting setup.' }}</div>
                 {% endif %}
 
-                {% if session.get('role') in ['avpl_admin','accounts'] %}
                 <div class="actions">
+                    {% if can_publish %}
+                    <button type="button" class="action price-button"
+                            data-product-name="{{ p.name|e }}"
+                            data-unit="{{ (p.base_unit_code or p.base_unit_name or 'Unit')|e }}"
+                            data-price="{{ '%.2f'|format(ufc_price) if ufc_price > 0 else '' }}"
+                            data-action="{{ url_for('admin.update_ufc_marketplace_price', product_id=p._id) }}">
+                        {{ 'Update Price' if ufc_price > 0 else 'Set UFC Price' }}
+                    </button>
+                    {% endif %}
+                    {% if session.get('role') in ['avpl_admin','accounts'] %}
                     <a class="action edit" href="{{ url_for('admin.edit_product', product_id=p._id) }}">Edit Master</a>
                     <form method="post" action="{{ url_for('admin.toggle_product_status', product_id=p._id) }}" class="confirm-form" data-message="{{ 'Enable this product?' if not active else 'Disable this product? Published products should normally be unpublished first.' }}">
                         <button class="action {{ 'edit' if not active else 'warn' }}" type="submit">{{ 'Enable' if not active else 'Disable' }}</button>
@@ -163,8 +184,8 @@
                     <form method="post" action="{{ url_for('admin.delete_product', product_id=p._id) }}" class="confirm-form" data-message="Delete this Product Master? Existing historical transactions will remain, but the product will leave the active list.">
                         <button class="action danger" type="submit">Delete</button>
                     </form>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </article>
         {% else %}
@@ -184,6 +205,27 @@
         </div>
     </div>
 </div>
+
+{% if can_publish %}
+<div class="confirm-overlay" id="priceOverlay">
+    <form class="price-box" id="priceForm" method="post">
+        <h3 id="priceTitle">Set UFC Marketplace Price</h3>
+        <p>Inventory cost remains separate. This is the selling price UFC Centres will see and order at, before GST.</p>
+        <div class="price-field">
+            <label for="priceInput">UFC Selling Price (before GST)</label>
+            <div class="price-input-wrap">
+                <span>₹</span>
+                <input id="priceInput" name="ufc_sale_price" type="number" min="0.01" step="0.01" required>
+                <span id="priceUnit">Unit</span>
+            </div>
+        </div>
+        <div class="price-actions">
+            <button type="button" class="modal-btn cancel" id="priceCancel">Cancel</button>
+            <button type="submit" class="modal-btn price-save">Save Price</button>
+        </div>
+    </form>
+</div>
+{% endif %}
 
 <script>
 (function(){
@@ -248,6 +290,25 @@
     cancel.addEventListener('click',()=>{overlay.classList.remove('show');pending=null;});
     overlay.addEventListener('click',e=>{if(e.target===overlay){overlay.classList.remove('show');pending=null;}});
     ok.addEventListener('click',()=>{if(!pending)return;pending.dataset.confirmed='1';pending.submit();});
+
+    const priceOverlay=document.getElementById('priceOverlay');
+    const priceForm=document.getElementById('priceForm');
+    const priceTitle=document.getElementById('priceTitle');
+    const priceInput=document.getElementById('priceInput');
+    const priceUnit=document.getElementById('priceUnit');
+    const priceCancel=document.getElementById('priceCancel');
+    document.querySelectorAll('.price-button').forEach(button=>button.addEventListener('click',()=>{
+        if(!priceOverlay||!priceForm)return;
+        priceForm.action=button.dataset.action||'';
+        priceTitle.textContent='UFC Price · '+(button.dataset.productName||'Product');
+        priceUnit.textContent='/ '+(button.dataset.unit||'Unit');
+        priceInput.value=button.dataset.price||'';
+        priceOverlay.classList.add('show');
+        setTimeout(()=>priceInput.focus(),20);
+    }));
+    if(priceCancel)priceCancel.addEventListener('click',()=>priceOverlay.classList.remove('show'));
+    if(priceOverlay)priceOverlay.addEventListener('click',e=>{if(e.target===priceOverlay)priceOverlay.classList.remove('show');});
+
     render();updateSelection();
 })();
 </script>

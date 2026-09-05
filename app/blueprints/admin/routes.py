@@ -88,6 +88,7 @@ from app.services.avpl_inventory_service import (
     get_stock_movement_overview,
     publish_products_to_ufc,
     reject_stock_adjustment,
+    set_ufc_marketplace_price,
 )
 from app.services.opening_stock_service import (
     correct_opening_stock_entry,
@@ -2453,6 +2454,37 @@ def reject_stock_adjustment_view(adjustment_id):
     except (ValueError, PermissionError, RuntimeError) as exc:
         flash(str(exc), 'danger')
     return redirect(url_for('admin.stock_adjustments'))
+
+
+@admin_bp.route('/products/<product_id>/ufc-marketplace-price', methods=['POST'])
+@login_required
+@roles_required('super_admin', 'avpl_admin')
+def update_ufc_marketplace_price(product_id):
+    entity = _stage2_entity_or_redirect()
+    if not entity:
+        return redirect(url_for('accounting.dashboard'))
+    try:
+        result = set_ufc_marketplace_price(
+            entity['_id'],
+            session.get('user_id'),
+            product_id,
+            request.form.get('ufc_sale_price'),
+        )
+        log_action(
+            session.get('user_id'),
+            'update_ufc_marketplace_price',
+            'product_marketplace',
+            product_id,
+            metadata={
+                'product_name': result.get('product_name'),
+                'ufc_sale_price': result.get('unit_price'),
+                'publication_status': result.get('status'),
+            },
+        )
+        flash(result.get('message') or 'UFC Marketplace price updated.', 'success')
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('admin.product_list'))
 
 
 @admin_bp.route('/products/ufc-marketplace', methods=['POST'])

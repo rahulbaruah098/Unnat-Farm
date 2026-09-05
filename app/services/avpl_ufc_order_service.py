@@ -240,13 +240,24 @@ def _next_purchase_number(centre_uid):
     return f"{safe_centre}-PUR-{year}-{sequence:05d}"
 
 
-def _is_published(entity_id, product_id):
+def _get_publication(entity_id, product_id):
     return mongo.db[PUBLICATION_COLLECTION].find_one({
         "accounting_entity_id": entity_id,
         "source_product_id": product_id,
         "status": "published",
         "scope": "all_active_ufc",
-    }) is not None
+    })
+
+
+def _is_published(entity_id, product_id):
+    return _get_publication(entity_id, product_id) is not None
+
+
+def _publication_price(publication):
+    price = _decimal((publication or {}).get("ufc_sale_price"))
+    if price <= 0:
+        return Decimal("0")
+    return price.quantize(Decimal("0.01"))
 
 
 def _lot_expired(lot):
@@ -309,6 +320,9 @@ def _order_items(order):
         "dispatched_quantity": order.get("dispatched_quantity") or 0,
         "received_quantity": order.get("received_quantity") or 0,
         "unit_price": order.get("unit_price") or 0,
+        "quoted_unit_price": order.get("quoted_unit_price") or order.get("unit_price") or 0,
+        "quoted_line_total": order.get("quoted_total_amount") or order.get("total_amount") or 0,
+        "quoted_price_locked": order.get("quoted_price_locked") is True,
         "line_total": order.get("total_amount") or 0,
         "status": order.get("status") or "requested",
         "reservation_allocations": order.get("reservation_allocations") or [],
@@ -328,6 +342,8 @@ def _serialize_order_item(item):
     row["rejected_quantity_display"] = _qty(row.get("rejected_quantity"))
     row["missing_quantity_display"] = _qty(row.get("missing_quantity"))
     row["unit_price_display"] = _money(row.get("unit_price"))
+    row["quoted_unit_price_display"] = _money(row.get("quoted_unit_price") if row.get("quoted_unit_price") is not None else row.get("unit_price"))
+    row["quoted_line_total_display"] = _money(row.get("quoted_line_total") if row.get("quoted_line_total") is not None else row.get("line_total"))
     row["line_total_display"] = _money(row.get("line_total"))
     line_status = str(row.get("status") or "requested")
     row["status_label"] = {
@@ -363,6 +379,8 @@ def _copy_line_to_legacy_fields(document, item):
         "dispatched_quantity": float(_decimal(item.get("dispatched_quantity"))),
         "received_quantity": float(_decimal(item.get("received_quantity"))),
         "unit_price": float(_decimal(item.get("unit_price"))),
+        "quoted_unit_price": float(_decimal(item.get("quoted_unit_price") if item.get("quoted_unit_price") is not None else item.get("unit_price"))),
+        "quoted_price_locked": item.get("quoted_price_locked") is True,
     })
     return document
 
@@ -386,6 +404,8 @@ def _serialize_order(order):
     row["dispatched_quantity_display"] = _qty(row.get("dispatched_quantity"))
     row["received_quantity_display"] = _qty(row.get("received_quantity"))
     row["unit_price_display"] = _money(row.get("unit_price"))
+    row["quoted_unit_price_display"] = _money(row.get("quoted_unit_price") if row.get("quoted_unit_price") is not None else row.get("unit_price"))
+    row["quoted_total_amount_display"] = _money(row.get("quoted_total_amount") if row.get("quoted_total_amount") is not None else row.get("total_amount"))
     row["total_amount_display"] = _money(row.get("total_amount"))
     row["payment_term_label"] = PAYMENT_TERM_LABELS.get(str(row.get("payment_term") or "credit"), str(row.get("payment_term") or "credit").replace("_", " ").title())
     row["payment_status_label"] = PAYMENT_STATUS_LABELS.get(str(row.get("payment_status") or "unpaid"), str(row.get("payment_status") or "unpaid").replace("_", " ").title())
@@ -393,7 +413,7 @@ def _serialize_order(order):
     row["outstanding_amount_display"] = _money(row.get("outstanding_amount") if row.get("outstanding_amount") is not None else row.get("invoice_grand_total") or row.get("total_amount"))
     row["items"] = [_serialize_order_item(item) for item in _order_items(row)]
     row["item_count"] = len(row["items"])
-    row["is_multi_item_order"] = row.get("is_multi_item_order") is True or row["item_count"] > 1
+    row["is_multi_item_order"] = row.get("is_multi_item_order") is True or (int(row.get("commerce_version") or 0) >= 2 and bool(row.get("items"))) or row["item_count"] > 1
     row["product_summary"] = (
         row["items"][0].get("product_name") or "Product"
         if row["item_count"] == 1
@@ -473,8 +493,12 @@ def create_ufc_order_request(actor_user_id, centre_uid_hint, product_id, quantit
     })
     if not product:
         raise ValueError("This AVPL product is not active.")
-    if not _is_published(entity["_id"], product_oid):
+    publication = _get_publication(entity["_id"], product_oid)
+    if not publication:
         raise ValueError("This product is no longer published to UFC Centres.")
+    marketplace_price = _publication_price(publication)
+    if marketplace_price <= 0:
+        raise ValueError("AVPL has not configured a UFC Marketplace price for this product yet.")
 
     saleable = _product_saleable(entity["_id"], product_oid)
     if saleable <= 0:
@@ -512,8 +536,13 @@ def create_ufc_order_request(actor_user_id, centre_uid_hint, product_id, quantit
         "reserved_quantity": 0.0,
         "dispatched_quantity": 0.0,
         "received_quantity": 0.0,
-        "unit_price": 0.0,
-        "total_amount": 0.0,
+        "unit_price": float(marketplace_price),
+        "quoted_unit_price": float(marketplace_price),
+        "quoted_price_locked": True,
+        "quoted_price_source": "avpl_marketplace_publication",
+        "quoted_price_at": publication.get("ufc_sale_price_updated_at") or publication.get("updated_at") or timestamp,
+        "quoted_total_amount": float((quantity_value * marketplace_price).quantize(Decimal("0.01"))),
+        "total_amount": float((quantity_value * marketplace_price).quantize(Decimal("0.01"))),
         "request_note": _clean_text(note, 1000),
         "status": "requested",
         "stock_reserved": False,
@@ -588,8 +617,13 @@ def create_ufc_cart_order_request(actor_user_id, centre_uid_hint, items, note=""
         if not oid or qty <= 0:
             raise ValueError("Every cart product must have a valid quantity greater than zero.")
         key = str(oid)
+        expected_price = _decimal(raw.get("unit_price") or raw.get("quoted_unit_price"))
         if key not in merged:
-            merged[key] = {"product_id": oid, "quantity": Decimal("0")}
+            merged[key] = {"product_id": oid, "quantity": Decimal("0"), "expected_unit_price": expected_price}
+        elif expected_price > 0 and merged[key].get("expected_unit_price") > 0 and expected_price != merged[key].get("expected_unit_price"):
+            raise ValueError("The same product has conflicting prices in your cart. Refresh the Marketplace and try again.")
+        elif expected_price > 0 and merged[key].get("expected_unit_price") <= 0:
+            merged[key]["expected_unit_price"] = expected_price
         merged[key]["quantity"] += qty
 
     lines = []
@@ -605,8 +639,17 @@ def create_ufc_cart_order_request(actor_user_id, centre_uid_hint, items, note=""
         })
         if not product:
             raise ValueError("One product in your cart is no longer active. Remove it and try again.")
-        if not _is_published(entity["_id"], product_oid):
+        publication = _get_publication(entity["_id"], product_oid)
+        if not publication:
             raise ValueError(f"{product.get('name') or 'A product'} is no longer published to UFC Centres.")
+        marketplace_price = _publication_price(publication)
+        if marketplace_price <= 0:
+            raise ValueError(f"AVPL has not configured a UFC Marketplace price for {product.get('name') or 'this product'} yet.")
+        expected_price = _decimal(merged_row.get("expected_unit_price"))
+        if expected_price > 0 and expected_price.quantize(Decimal("0.01")) != marketplace_price:
+            raise ValueError(
+                f"The UFC price for {product.get('name') or 'a product'} changed from ₹{_money(expected_price)} to ₹{_money(marketplace_price)}. Refresh the Marketplace and confirm the new price."
+            )
         saleable = _product_saleable(entity["_id"], product_oid)
         unit_code = product.get("base_unit_code") or product.get("base_unit_name") or "Unit"
         if saleable <= 0:
@@ -627,8 +670,13 @@ def create_ufc_cart_order_request(actor_user_id, centre_uid_hint, items, note=""
             "reserved_quantity": 0.0,
             "dispatched_quantity": 0.0,
             "received_quantity": 0.0,
-            "unit_price": 0.0,
-            "line_total": 0.0,
+            "unit_price": float(marketplace_price),
+            "quoted_unit_price": float(marketplace_price),
+            "quoted_price_locked": True,
+            "quoted_price_source": "avpl_marketplace_publication",
+            "quoted_price_at": publication.get("ufc_sale_price_updated_at") or publication.get("updated_at") or now_utc(),
+            "quoted_line_total": float((requested * marketplace_price).quantize(Decimal("0.01"))),
+            "line_total": float((requested * marketplace_price).quantize(Decimal("0.01"))),
             "status": "requested",
             "reservation_allocations": [],
         })
@@ -645,7 +693,7 @@ def create_ufc_cart_order_request(actor_user_id, centre_uid_hint, items, note=""
         "order_number": _next_order_number(),
         "checkout_token": token,
         "commerce_version": 2,
-        "is_multi_item_order": len(lines) > 1,
+        "is_multi_item_order": True,
         "item_count": len(lines),
         "items": lines,
         "accounting_entity_id": entity["_id"],
@@ -655,7 +703,8 @@ def create_ufc_cart_order_request(actor_user_id, centre_uid_hint, items, note=""
         "requested_by": actor["_id"],
         "requested_by_str": str(actor["_id"]),
         "requested_by_name": actor.get("resolved_name") or centre_name,
-        "total_amount": 0.0,
+        "quoted_total_amount": float(sum((_decimal(line.get("quoted_line_total")) for line in lines), Decimal("0")).quantize(Decimal("0.01"))),
+        "total_amount": float(sum((_decimal(line.get("quoted_line_total")) for line in lines), Decimal("0")).quantize(Decimal("0.01"))),
         "request_note": _clean_text(note, 1000),
         "status": "requested",
         "approval_scope": "pending",
@@ -858,13 +907,14 @@ def approve_ufc_order(actor_user_id, order_id, approved_quantity, unit_price, no
 
     qty = _decimal(approved_quantity)
     requested = _decimal(order.get("requested_quantity"))
-    price = _decimal(unit_price)
+    quoted_price = _decimal(order.get("quoted_unit_price") if order.get("quoted_price_locked") is True else 0)
+    price = quoted_price if quoted_price > 0 else _decimal(unit_price)
     if qty <= 0:
         raise ValueError("Approved quantity must be greater than zero.")
     if qty > requested:
         raise ValueError("Approved quantity cannot exceed the UFC requested quantity.")
     if price <= 0:
-        raise ValueError("Enter an AVPL sale price greater than zero before approving the order.")
+        raise ValueError("Enter an AVPL sale price greater than zero before approving this legacy order.")
     try:
         credit_days = int(str(credit_period_days or 0).strip() or 0)
     except (TypeError, ValueError) as exc:
@@ -972,11 +1022,12 @@ def approve_ufc_cart_order(actor_user_id, order_id, approvals, note="", credit_p
             request_row = approval_map.get(line_id, {})
             approved = _decimal(request_row.get("approved_quantity"))
             requested = _decimal(item.get("requested_quantity"))
-            price = _decimal(request_row.get("unit_price"))
+            quoted_price = _decimal(item.get("quoted_unit_price") if item.get("quoted_price_locked") is True else 0)
+            price = quoted_price if quoted_price > 0 else _decimal(request_row.get("unit_price"))
             if approved < 0 or approved > requested:
                 raise ValueError(f"Approved quantity for {item.get('product_name') or 'a product'} must be between 0 and {_qty(requested)} {item.get('unit_code') or 'units'}.")
             if approved > 0 and price <= 0:
-                raise ValueError(f"Enter a selling price for {item.get('product_name') or 'each approved product'}.")
+                raise ValueError(f"Enter a selling price for legacy line {item.get('product_name') or 'each approved product'}.")
             product = mongo.db.products.find_one({"_id": item.get("source_product_id"), "is_deleted": {"$ne": True}, "is_active": {"$ne": False}, "status": {"$nin": ["disabled", "deleted"]}})
             if approved > 0 and not product:
                 raise ValueError(f"{item.get('product_name') or 'A product'} is no longer active in Product Master.")

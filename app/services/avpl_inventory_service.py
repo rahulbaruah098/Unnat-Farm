@@ -1274,6 +1274,76 @@ def get_stock_adjustment_overview(accounting_entity_id, actor_user_id, status_fi
     }
 
 
+def set_ufc_marketplace_price(accounting_entity_id, actor_user_id, product_id, unit_price):
+    """Set the AVPL -> UFC selling price without changing publication state.
+
+    Inventory/opening-stock cost is intentionally separate from this commercial
+    selling price. Existing published products stay published; unpublished
+    products retain the price so they can be published later.
+    """
+    _ensure_indexes()
+    entity_id = _entity_id(accounting_entity_id)
+    actor = _get_actor(actor_user_id)
+    if actor["resolved_role"] not in MARKETPLACE_PUBLISHER_ROLES:
+        raise PermissionError("Only an AVPL Admin or Super Admin can manage UFC Marketplace prices.")
+
+    product_oid = _to_object_id(product_id)
+    if not product_oid:
+        raise ValueError("Select a valid Product Master.")
+    product = mongo.db.products.find_one({
+        "_id": product_oid,
+        "is_deleted": {"$ne": True},
+        "is_active": {"$ne": False},
+        "status": {"$nin": ["disabled", "deleted"]},
+    })
+    if not product:
+        raise ValueError("The Product Master is not active.")
+
+    price = _decimal(unit_price)
+    if price <= 0:
+        raise ValueError("UFC selling price must be greater than zero.")
+    price = price.quantize(Decimal("0.01"))
+    timestamp = now_utc()
+    existing = mongo.db[MARKETPLACE_PUBLICATION_COLLECTION].find_one(
+        {"accounting_entity_id": entity_id, "source_product_id": product_oid}
+    ) or {}
+    current_status = str(existing.get("status") or "unpublished").strip().lower()
+    if current_status not in {"published", "unpublished"}:
+        current_status = "unpublished"
+
+    update = {
+        "accounting_entity_id": entity_id,
+        "accounting_entity_id_str": str(entity_id),
+        "source_product_id": product_oid,
+        "source_product_id_str": str(product_oid),
+        "product_code": product.get("product_code") or "",
+        "product_name": product.get("name") or product.get("product_name") or "Product",
+        "scope": existing.get("scope") or "all_active_ufc",
+        "status": current_status,
+        "ufc_sale_price": float(price),
+        "ufc_sale_price_display": _money(price),
+        "ufc_sale_price_updated_by": actor["_id"],
+        "ufc_sale_price_updated_by_name": actor["resolved_name"],
+        "ufc_sale_price_updated_at": timestamp,
+        "updated_by": actor["_id"],
+        "updated_by_name": actor["resolved_name"],
+        "updated_at": timestamp,
+    }
+    mongo.db[MARKETPLACE_PUBLICATION_COLLECTION].update_one(
+        {"accounting_entity_id": entity_id, "source_product_id": product_oid},
+        {"$set": update, "$setOnInsert": {"created_at": timestamp}},
+        upsert=True,
+    )
+    return {
+        "product_id": str(product_oid),
+        "product_name": update["product_name"],
+        "unit_price": float(price),
+        "unit_price_display": _money(price),
+        "status": current_status,
+        "message": f"UFC Marketplace price for {update['product_name']} set to ₹{_money(price)}.",
+    }
+
+
 def publish_products_to_ufc(
     accounting_entity_id,
     actor_user_id,
@@ -1318,6 +1388,12 @@ def publish_products_to_ufc(
             }
         )
     }
+    existing_publications = {
+        row.get("source_product_id"): row
+        for row in mongo.db[MARKETPLACE_PUBLICATION_COLLECTION].find(
+            {"accounting_entity_id": entity_id, "source_product_id": {"$in": normalized}}
+        )
+    }
     timestamp = now_utc()
     changed = 0
     skipped = []
@@ -1340,6 +1416,14 @@ def publish_products_to_ufc(
                 continue
             if mapping.get("sales_enabled") is False:
                 skipped.append({"product_id": str(product_id), "product_name": product_name, "reason": "Sales is disabled in Accounting mapping."})
+                continue
+            marketplace_price = _decimal((existing_publications.get(product_id) or {}).get("ufc_sale_price"))
+            if marketplace_price <= 0:
+                skipped.append({
+                    "product_id": str(product_id),
+                    "product_name": product_name,
+                    "reason": "Set the UFC Marketplace selling price before publishing.",
+                })
                 continue
 
         status = "published" if publish else "unpublished"

@@ -249,9 +249,20 @@ def _published_avpl_products_for_ufc():
                 "status": "published",
                 "scope": "all_active_ufc",
             },
-            {"source_product_id": 1, "published_at": 1},
+            {
+                "source_product_id": 1,
+                "published_at": 1,
+                "ufc_sale_price": 1,
+                "ufc_sale_price_display": 1,
+                "ufc_sale_price_updated_at": 1,
+            },
         ).sort("published_at", -1)
     )
+    publication_by_product = {
+        row.get("source_product_id"): row
+        for row in publications
+        if isinstance(row.get("source_product_id"), ObjectId)
+    }
 
     published_ids = []
     seen_ids = set()
@@ -334,6 +345,15 @@ def _published_avpl_products_for_ufc():
             "reserved_quantity": reserved,
             "saleable_quantity": saleable,
         }
+        publication = publication_by_product.get(product_id) or {}
+        try:
+            marketplace_price = max(float(publication.get("ufc_sale_price") or 0), 0.0)
+        except (TypeError, ValueError):
+            marketplace_price = 0.0
+        product["_ufc_marketplace"] = publication
+        product["_ufc_sale_price"] = marketplace_price
+        product["_ufc_sale_price_display"] = f"{marketplace_price:.2f}"
+        product["_ufc_price_configured"] = marketplace_price > 0
         product["_ufc_published"] = True
         products.append(product)
     return products
