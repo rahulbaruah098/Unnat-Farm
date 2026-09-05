@@ -1,5 +1,21 @@
 {% extends 'base.html' %}
-{% block title %}AVPL Products{% endblock %}
+{% block title %}AVPL Products
+<style id="avpl-products-clean-redesign">
+.products-page{max-width:1500px!important;padding:20px 22px!important;border:1px solid #dbe9df!important;border-radius:16px!important;box-shadow:0 8px 24px rgba(26,72,43,.045)!important;background:#fff!important}
+.page-head{align-items:center!important;margin-bottom:12px!important;padding-bottom:12px!important;border-bottom:1px solid #e8eeea!important}.page-head h2{font-size:1.4rem!important}.page-head p{margin-top:3px!important;font-size:.7rem!important}.head-actions{gap:6px!important}.btn{min-height:35px!important;padding:6px 10px!important;font-size:.67rem!important}
+.flow-note{margin:0 0 12px!important;padding:8px 10px!important;border:0!important;border-left:3px solid #8fbea0!important;border-radius:7px!important;background:#f8fbf9!important;font-size:.68rem!important}
+.bulk-bar{margin:0 0 10px!important;padding:8px 10px!important;border-radius:8px!important;background:#fafcfa!important}.selection-count{min-height:22px!important;padding:2px 7px!important;font-size:.62rem!important}
+.toolbar{margin-bottom:8px!important}.search input{height:37px!important;font-size:.7rem!important}.view-toggle{padding:3px!important}.view-btn{padding:6px 10px!important;font-size:.65rem!important}.chips{gap:5px!important;margin-bottom:12px!important}.chip{min-height:29px!important;padding:5px 9px!important;font-size:.63rem!important}
+.grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important}.card{border-radius:11px!important;box-shadow:none!important;transition:border-color .16s ease,box-shadow .16s ease!important}.card:hover{border-color:#b8d3c0!important;box-shadow:0 7px 20px rgba(31,102,59,.055)!important}.card-check{top:8px!important;left:8px!important;width:28px!important;height:28px!important;border-radius:7px!important}.image{height:125px!important;border-bottom:1px solid #edf2ee!important;background:#f7faf8!important}.body{padding:11px!important}.name{font-size:.82rem!important}.sku{font-size:.58rem!important}.meta{gap:4px!important;margin:6px 0 8px!important}.pill{min-height:20px!important;padding:2px 6px!important;font-size:.55rem!important}
+.stock-box{display:flex!important;gap:0!important;margin:8px 0!important;border-top:1px solid #edf2ee!important;border-bottom:1px solid #edf2ee!important}.stock-cell{flex:1!important;padding:7px 5px!important;border:0!important;border-right:1px solid #edf2ee!important;border-radius:0!important;background:transparent!important}.stock-cell:last-child{border-right:0!important}.stock-cell small{font-size:.55rem!important}.stock-cell strong{font-size:.72rem!important;margin-top:2px!important}
+.marketplace{margin:0 0 7px!important;padding:7px 8px!important;border:0!important;border-radius:8px!important;background:#f8fbf9!important}.marketplace small{font-size:.56rem!important}.marketplace strong{font-size:.64rem!important}.market-price{font-size:.64rem!important;margin-top:3px!important}
+.commercial-strip{gap:0!important;margin:0 0 7px!important;border-top:1px solid #edf2ee!important;border-bottom:1px solid #edf2ee!important}.commercial-cell{padding:7px 6px!important;border:0!important;border-right:1px solid #edf2ee!important;border-radius:0!important;background:transparent!important}.commercial-cell:last-child{border-right:0!important}.commercial-cell small{font-size:.53rem!important}.commercial-cell strong{font-size:.62rem!important;margin-top:2px!important}
+.note{margin:0 0 7px!important;padding:0!important;font-size:.61rem!important;line-height:1.35!important}.actions{gap:5px!important;padding-top:8px!important}.action{min-height:31px!important;padding:5px 8px!important;font-size:.6rem!important}.grid.list .card{grid-template-columns:150px minmax(0,1fr)!important}.grid.list .image{min-height:150px!important}.pagination{margin-top:14px!important}.page-btn{min-width:32px!important;height:32px!important;font-size:.63rem!important}
+.confirm-box,.price-box{border-radius:14px!important;padding:20px!important}.confirm-box h3,.price-box h3{font-size:1rem!important}.confirm-box p,.price-box p{font-size:.72rem!important}.price-preview{gap:5px!important;margin-bottom:10px!important}.price-preview div{padding:7px!important;border-radius:7px!important}.price-preview small{font-size:.55rem!important}.price-preview strong{font-size:.68rem!important}.price-input-wrap input{height:39px!important}.price-actions{margin-top:14px!important}
+@media(max-width:1250px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:900px){.products-page{padding:16px!important}.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}@media(max-width:620px){.products-page{padding:13px!important;border-radius:14px!important}.grid{grid-template-columns:1fr!important}.page-head{align-items:flex-start!important}.head-actions{width:100%!important}.head-actions .btn{flex:1 1 calc(50% - 6px)!important}.bulk-left,.bulk-actions{width:100%!important}.bulk-actions .btn{flex:1 1 100%!important}.grid.list .card{display:flex!important}.grid.list .image{height:125px!important;min-height:125px!important}}
+</style>
+
+{% endblock %}
 {% block content %}
 {% set can_publish = session.get('role') in ['super_admin','avpl_admin'] %}
 <style>
@@ -36,12 +52,12 @@
 .image{height:150px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f3f8f4;border-bottom:1px solid rgba(47,122,76,.08)}.image img{width:100%;height:100%;object-fit:contain}.no-image{color:var(--uf-primary);font-size:1.1rem;font-weight:850}
 .body{display:flex;flex-direction:column;flex:1;min-width:0;padding:14px}.name-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.name{margin:0;color:var(--uf-heading);font-size:.94rem;font-weight:800;line-height:1.3;overflow-wrap:anywhere}.sku{flex:0 0 auto;color:var(--uf-muted);font-size:.66rem;white-space:nowrap}.meta{display:flex;gap:5px;flex-wrap:wrap;margin:9px 0}.pill{display:inline-flex;align-items:center;min-height:24px;padding:4px 7px;border:1px solid #dcece1;border-radius:6px;background:#f8fcf9;color:#486252;font-size:.63rem;font-weight:800}.pill.green{background:#ecfdf3;border-color:#b7e4c7;color:#237a43}.pill.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.pill.amber{background:#fff7e6;border-color:#f4d38a;color:#8a5b00}.pill.red{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
 .stock-box{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}.stock-cell{min-width:0;padding:8px;border:1px solid rgba(47,122,76,.09);border-radius:9px;background:var(--uf-page);text-align:center}.stock-cell small{display:block;color:var(--uf-muted);font-size:.62rem}.stock-cell strong{display:block;margin-top:3px;color:#22372a;font-size:.84rem;font-weight:850;overflow-wrap:anywhere}.stock-cell.saleable strong{color:#237a43}
-.marketplace{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:9px 10px;margin-bottom:9px;border:1px solid rgba(47,122,76,.09);border-radius:9px;background:#f8fbf9}.marketplace small{color:var(--uf-muted);font-size:.63rem}.marketplace strong{color:#304438;font-size:.72rem;line-height:1.35}.market-price{margin-top:5px;color:#237a43;font-size:.72rem;font-weight:850}.market-price.missing{color:#9a6500}.note{margin:0 0 9px;color:var(--uf-muted);font-size:.68rem;line-height:1.4}
+.marketplace{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:9px 10px;margin-bottom:7px;border:1px solid rgba(47,122,76,.09);border-radius:9px;background:#f8fbf9}.marketplace small{color:var(--uf-muted);font-size:.63rem}.marketplace strong{color:#304438;font-size:.72rem;line-height:1.35}.market-price{margin-top:5px;color:#237a43;font-size:.72rem;font-weight:850}.market-price.missing{color:#9a6500}.commercial-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 9px}.commercial-cell{padding:7px 8px;border:1px solid rgba(47,122,76,.09);border-radius:8px;background:#fff}.commercial-cell small{display:block;color:var(--uf-muted);font-size:.58rem;line-height:1.2}.commercial-cell strong{display:block;margin-top:3px;color:#263b2f;font-size:.68rem;font-weight:850;line-height:1.25;overflow-wrap:anywhere}.commercial-cell.margin strong.positive{color:#237a43}.commercial-cell.margin strong.negative{color:#b91c1c}.commercial-cell.margin strong.neutral{color:#8a5b00}.note{margin:0 0 9px;color:var(--uf-muted);font-size:.68rem;line-height:1.4}
 .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:11px;border-top:1px solid #edf3ef}.actions form{margin:0}.action{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:6px 10px;border:1px solid rgba(47,122,76,.13);border-radius:8px;background:#fff;color:var(--uf-primary-dark);text-decoration:none;font:inherit;font-size:.68rem;font-weight:800;cursor:pointer}.action.edit{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}.action.warn{background:#fff7e6;color:#8a5b00;border-color:#f4d38a}.action.danger{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
 .grid.list{grid-template-columns:1fr}.grid.list .card{display:grid;grid-template-columns:190px minmax(0,1fr)}.grid.list .image{height:100%;min-height:175px;border-bottom:0;border-right:1px solid rgba(47,122,76,.08)}
 .empty{grid-column:1/-1;padding:34px 20px;border:1px dashed rgba(47,122,76,.22);border-radius:13px;background:var(--uf-page);text-align:center;color:var(--uf-muted);font-size:.78rem}
 .pagination{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:18px}.page-btn{min-width:35px;height:35px;border:1px solid rgba(47,122,76,.13);border-radius:8px;background:#fff;color:var(--uf-primary-dark);font:inherit;font-size:.7rem;font-weight:800;cursor:pointer}.page-btn.active{background:var(--uf-primary);border-color:var(--uf-primary);color:#fff}.page-btn:disabled{opacity:.4;cursor:not-allowed}
-.confirm-overlay{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.48)}.confirm-overlay.show{display:flex}.confirm-box{width:min(420px,100%);padding:24px;border:1px solid #dceee2;border-radius:16px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.22)}.confirm-box h3{margin:0 0 10px;color:var(--uf-heading);font-size:1.1rem;font-weight:800}.confirm-box p{margin:0;color:#64748b;font-size:.86rem;line-height:1.5}.confirm-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.modal-btn{min-height:40px;padding:8px 15px;border-radius:10px;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer}.modal-btn.cancel{border:1px solid #d5ddd8;background:#fff;color:#526158}.modal-btn.ok{border:1px solid #b91c1c;background:#b91c1c;color:#fff}.price-box{width:min(440px,100%);padding:24px;border:1px solid #dceee2;border-radius:16px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.22)}.price-box h3{margin:0;color:var(--uf-heading);font-size:1.08rem;font-weight:850}.price-box p{margin:7px 0 16px;color:#64748b;font-size:.78rem;line-height:1.5}.price-field{display:grid;gap:6px}.price-field label{color:#435349;font-size:.72rem;font-weight:800}.price-input-wrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;border:1px solid rgba(47,122,76,.18);border-radius:9px;overflow:hidden;background:#fff}.price-input-wrap span{padding:0 11px;color:#526158;font-size:.76rem;font-weight:800}.price-input-wrap input{min-width:0;width:100%;height:42px;border:0;border-left:1px solid #e4ece7;border-right:1px solid #e4ece7;padding:0 10px;font:inherit;font-size:.82rem;outline:none}.price-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.price-save{border-color:var(--uf-primary)!important;background:var(--uf-primary)!important;color:#fff!important}
+.confirm-overlay{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.48)}.confirm-overlay.show{display:flex}.confirm-box{width:min(420px,100%);padding:24px;border:1px solid #dceee2;border-radius:16px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.22)}.confirm-box h3{margin:0 0 10px;color:var(--uf-heading);font-size:1.1rem;font-weight:800}.confirm-box p{margin:0;color:#64748b;font-size:.86rem;line-height:1.5}.confirm-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.modal-btn{min-height:40px;padding:8px 15px;border-radius:10px;font:inherit;font-size:.78rem;font-weight:800;cursor:pointer}.modal-btn.cancel{border:1px solid #d5ddd8;background:#fff;color:#526158}.modal-btn.ok{border:1px solid #b91c1c;background:#b91c1c;color:#fff}.price-box{width:min(440px,100%);padding:24px;border:1px solid #dceee2;border-radius:16px;background:#fff;box-shadow:0 24px 60px rgba(15,23,42,.22)}.price-box h3{margin:0;color:var(--uf-heading);font-size:1.08rem;font-weight:850}.price-box p{margin:7px 0 16px;color:#64748b;font-size:.78rem;line-height:1.5}.price-field{display:grid;gap:6px}.price-field label{color:#435349;font-size:.72rem;font-weight:800}.price-input-wrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;border:1px solid rgba(47,122,76,.18);border-radius:9px;overflow:hidden;background:#fff}.price-input-wrap span{padding:0 11px;color:#526158;font-size:.76rem;font-weight:800}.price-input-wrap input{min-width:0;width:100%;height:42px;border:0;border-left:1px solid #e4ece7;border-right:1px solid #e4ece7;padding:0 10px;font:inherit;font-size:.82rem;outline:none}.price-preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 14px}.price-preview div{padding:9px;border:1px solid #e2ece5;border-radius:8px;background:#f8fbf9}.price-preview small{display:block;color:#6b7b71;font-size:.6rem}.price-preview strong{display:block;margin-top:3px;color:#263b2f;font-size:.76rem;font-weight:850}.price-preview strong.positive{color:#237a43}.price-preview strong.negative{color:#b91c1c}.price-preview strong.neutral{color:#8a5b00}.price-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.price-save{border-color:var(--uf-primary)!important;background:var(--uf-primary)!important;color:#fff!important}
 @media(max-width:1250px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.products-page{padding:20px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.view-toggle{display:none}.toolbar{grid-template-columns:1fr}.head-actions{justify-content:flex-start}}
 @media(max-width:620px){.products-page{padding:15px;border-radius:16px}.grid{grid-template-columns:1fr}.head-actions,.head-actions .btn,.bulk-actions,.bulk-actions .btn{width:100%}.bulk-bar{align-items:stretch}.grid.list .card{display:flex}.grid.list .image{height:150px;min-height:150px;border-right:0}.stock-box{grid-template-columns:repeat(3,minmax(0,1fr))}.confirm-actions{flex-direction:column-reverse}.modal-btn{width:100%}}
@@ -51,7 +67,7 @@
     <div class="page-head">
         <div>
             <h2>AVPL Products</h2>
-            <p>Create products, receive stock, then publish them to UFCs.</p>
+            <p>Manage products, stock and UFC pricing.</p>
         </div>
         <div class="head-actions">
             <a class="btn soft" href="{{ url_for('admin.current_stock') }}">Current Stock</a>
@@ -65,19 +81,19 @@
 
     <div class="flow-note">
         <div>✓</div>
-        <div>Set the UFC selling price, then publish products when they are ready for UFCs.</div>
+        <div>Set the UFC price, then publish when ready.</div>
     </div>
 
     {% if can_publish %}
     <form id="marketplaceBulkForm" method="post" action="{{ url_for('admin.update_ufc_marketplace_publication') }}"></form>
     <div class="bulk-bar">
         <div class="bulk-left">
-            <label class="select-all"><input type="checkbox" id="selectVisible"> Select all visible</label>
+            <label class="select-all"><input type="checkbox" id="selectVisible"> Select visible</label>
             <span class="selection-count" id="selectionCount">0 selected</span>
         </div>
         <div class="bulk-actions">
-            <button class="btn soft bulk-submit" form="marketplaceBulkForm" name="action" value="unpublish" type="submit" disabled>Remove from UFC Marketplace</button>
-            <button class="btn primary bulk-submit" form="marketplaceBulkForm" name="action" value="publish" type="submit" disabled>Publish to UFC Marketplace</button>
+            <button class="btn soft bulk-submit" form="marketplaceBulkForm" name="action" value="unpublish" type="submit" disabled>Remove from UFC</button>
+            <button class="btn primary bulk-submit" form="marketplaceBulkForm" name="action" value="publish" type="submit" disabled>Publish to UFC</button>
         </div>
     </div>
     {% else %}
@@ -85,7 +101,7 @@
     {% endif %}
 
     <div class="toolbar">
-        <div class="search"><input id="searchInput" type="text" placeholder="Search product, SKU, category, brand or batch stock"></div>
+        <div class="search"><input id="searchInput" type="text" placeholder="Search product, SKU, category or brand"></div>
         <div class="view-toggle">
             <button type="button" class="view-btn active" data-view="grid">Grid</button>
             <button type="button" class="view-btn" data-view="list">List</button>
@@ -97,8 +113,8 @@
         <button type="button" class="chip" data-filter="input">Input</button>
         <button type="button" class="chip" data-filter="output">Output</button>
         <button type="button" class="chip" data-filter="both">Both</button>
-        <button type="button" class="chip" data-filter="published">Published to UFC</button>
-        <button type="button" class="chip" data-filter="unpublished">Not Published</button>
+        <button type="button" class="chip" data-filter="published">Published</button>
+        <button type="button" class="chip" data-filter="unpublished">Unpublished</button>
         <button type="button" class="chip" data-filter="stock">In Stock</button>
     </div>
 
@@ -110,6 +126,9 @@
         {% set inv = p.get('_inventory') or {} %}
         {% set publication = p.get('_ufc_publication') or {} %}
         {% set ufc_price = publication.get('ufc_sale_price', 0)|float %}
+        {% set wac = inv.get('weighted_average_cost_value', 0)|float %}
+        {% set margin_value = ufc_price - wac if ufc_price > 0 and wac > 0 else 0 %}
+        {% set margin_pct = ((margin_value / ufc_price) * 100) if ufc_price > 0 and wac > 0 else 0 %}
         {% set published = p.get('_ufc_published', False) %}
         {% set active = p.get('is_active', True) %}
         <article class="card {% if not active %}disabled{% endif %}"
@@ -148,20 +167,39 @@
                 <div class="marketplace">
                     <div>
                         <small>UFC Marketplace</small><br>
-                        <strong>{{ 'Visible to all active UFC Centres' if published else 'Not published' }}</strong>
+                        <strong>{{ 'Visible to UFCs' if published else 'Not published' }}</strong>
                         {% if ufc_price > 0 %}
                             <div class="market-price">₹{{ '%.2f'|format(ufc_price) }} / {{ p.base_unit_code or p.base_unit_name or 'Unit' }}</div>
                         {% else %}
-                            <div class="market-price missing">Price required before new UFC orders</div>
+                            <div class="market-price missing">Set UFC price</div>
                         {% endif %}
                     </div>
                     <span class="pill {{ 'green' if published and ufc_price > 0 else 'amber' }}">{% if published and ufc_price > 0 %}Published{% elif published %}Price Required{% else %}Private{% endif %}</span>
                 </div>
 
+                <div class="commercial-strip">
+                    <div class="commercial-cell">
+                        <small>WAC</small>
+                        <strong>{% if wac > 0 %}₹{{ '%.2f'|format(wac) }}{% else %}Not available{% endif %}</strong>
+                    </div>
+                    <div class="commercial-cell">
+                        <small>UFC Price</small>
+                        <strong>{% if ufc_price > 0 %}₹{{ '%.2f'|format(ufc_price) }}{% else %}Not set{% endif %}</strong>
+                    </div>
+                    <div class="commercial-cell margin">
+                        <small>Margin</small>
+                        {% if ufc_price > 0 and wac > 0 %}
+                            <strong class="{{ 'positive' if margin_value >= 0 else 'negative' }}">₹{{ '%.2f'|format(margin_value) }} · {{ '%.2f'|format(margin_pct) }}%</strong>
+                        {% else %}
+                            <strong class="neutral">—</strong>
+                        {% endif %}
+                    </div>
+                </div>
+
                 {% if readiness.get('purchase_ready') and ufc_price > 0 %}
-                    <div class="note">✓ Ready for UFC orders.</div>
+                    <div class="note">Ready for UFC orders.</div>
                 {% elif ufc_price <= 0 %}
-                    <div class="note"><strong>Next:</strong> Set the UFC selling price before accepting new UFC orders.</div>
+                    <div class="note"><strong>Next:</strong> Set UFC selling price.</div>
                 {% else %}
                     <div class="note"><strong>Needs attention:</strong> {{ readiness.get('primary_issue') or 'Complete Product Accounting setup.' }}</div>
                 {% endif %}
@@ -172,6 +210,7 @@
                             data-product-name="{{ p.name|e }}"
                             data-unit="{{ (p.base_unit_code or p.base_unit_name or 'Unit')|e }}"
                             data-price="{{ '%.2f'|format(ufc_price) if ufc_price > 0 else '' }}"
+                            data-wac="{{ '%.2f'|format(wac) if wac > 0 else '' }}"
                             data-action="{{ url_for('admin.update_ufc_marketplace_price', product_id=p._id) }}">
                         {{ 'Update Price' if ufc_price > 0 else 'Set UFC Price' }}
                     </button>
@@ -189,7 +228,7 @@
             </div>
         </article>
         {% else %}
-        <div class="empty">No AVPL products found. Add your first Product Master to begin.</div>
+        <div class="empty">No products found.</div>
         {% endfor %}
     </div>
     <div class="pagination" id="pagination"></div>
@@ -210,9 +249,14 @@
 <div class="confirm-overlay" id="priceOverlay">
     <form class="price-box" id="priceForm" method="post">
         <h3 id="priceTitle">Set UFC Marketplace Price</h3>
-        <p>Inventory cost remains separate. This is the selling price UFC Centres will see and order at, before GST.</p>
+        <p>Set the UFC selling price before GST.</p>
+        <div class="price-preview">
+            <div><small>WAC</small><strong id="priceWac">—</strong></div>
+            <div><small>UFC Price</small><strong id="priceCurrent">—</strong></div>
+            <div><small>Margin</small><strong id="priceMargin" class="neutral">—</strong></div>
+        </div>
         <div class="price-field">
-            <label for="priceInput">UFC Selling Price (before GST)</label>
+            <label for="priceInput">UFC Selling Price</label>
             <div class="price-input-wrap">
                 <span>₹</span>
                 <input id="priceInput" name="ufc_sale_price" type="number" min="0.01" step="0.01" required>
@@ -297,19 +341,56 @@
     const priceInput=document.getElementById('priceInput');
     const priceUnit=document.getElementById('priceUnit');
     const priceCancel=document.getElementById('priceCancel');
+    const priceWac=document.getElementById('priceWac');
+    const priceCurrent=document.getElementById('priceCurrent');
+    const priceMargin=document.getElementById('priceMargin');
+    let modalWac=0;
+    function money(value){return '₹'+Number(value||0).toFixed(2);}
+    function refreshPricePreview(){
+        if(!priceMargin)return;
+        const sale=Number(priceInput.value||0);
+        priceCurrent.textContent=sale>0?money(sale):'Not set';
+        priceWac.textContent=modalWac>0?money(modalWac):'Not available';
+        priceMargin.className='neutral';
+        if(sale>0&&modalWac>0){
+            const margin=sale-modalWac;
+            const pct=(margin/sale)*100;
+            priceMargin.textContent=money(margin)+' · '+pct.toFixed(2)+'%';
+            priceMargin.className=margin>=0?'positive':'negative';
+        }else{priceMargin.textContent='—';}
+    }
     document.querySelectorAll('.price-button').forEach(button=>button.addEventListener('click',()=>{
         if(!priceOverlay||!priceForm)return;
         priceForm.action=button.dataset.action||'';
         priceTitle.textContent='UFC Price · '+(button.dataset.productName||'Product');
         priceUnit.textContent='/ '+(button.dataset.unit||'Unit');
         priceInput.value=button.dataset.price||'';
+        modalWac=Number(button.dataset.wac||0);
+        refreshPricePreview();
         priceOverlay.classList.add('show');
         setTimeout(()=>priceInput.focus(),20);
     }));
+    if(priceInput)priceInput.addEventListener('input',refreshPricePreview);
     if(priceCancel)priceCancel.addEventListener('click',()=>priceOverlay.classList.remove('show'));
     if(priceOverlay)priceOverlay.addEventListener('click',e=>{if(e.target===priceOverlay)priceOverlay.classList.remove('show');});
 
     render();updateSelection();
 })();
 </script>
+
+<style id="avpl-products-clean-redesign">
+.products-page{max-width:1500px!important;padding:20px 22px!important;border:1px solid #dbe9df!important;border-radius:16px!important;box-shadow:0 8px 24px rgba(26,72,43,.045)!important;background:#fff!important}
+.page-head{align-items:center!important;margin-bottom:12px!important;padding-bottom:12px!important;border-bottom:1px solid #e8eeea!important}.page-head h2{font-size:1.4rem!important}.page-head p{margin-top:3px!important;font-size:.7rem!important}.head-actions{gap:6px!important}.btn{min-height:35px!important;padding:6px 10px!important;font-size:.67rem!important}
+.flow-note{margin:0 0 12px!important;padding:8px 10px!important;border:0!important;border-left:3px solid #8fbea0!important;border-radius:7px!important;background:#f8fbf9!important;font-size:.68rem!important}
+.bulk-bar{margin:0 0 10px!important;padding:8px 10px!important;border-radius:8px!important;background:#fafcfa!important}.selection-count{min-height:22px!important;padding:2px 7px!important;font-size:.62rem!important}
+.toolbar{margin-bottom:8px!important}.search input{height:37px!important;font-size:.7rem!important}.view-toggle{padding:3px!important}.view-btn{padding:6px 10px!important;font-size:.65rem!important}.chips{gap:5px!important;margin-bottom:12px!important}.chip{min-height:29px!important;padding:5px 9px!important;font-size:.63rem!important}
+.grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important}.card{border-radius:11px!important;box-shadow:none!important;transition:border-color .16s ease,box-shadow .16s ease!important}.card:hover{border-color:#b8d3c0!important;box-shadow:0 7px 20px rgba(31,102,59,.055)!important}.card-check{top:8px!important;left:8px!important;width:28px!important;height:28px!important;border-radius:7px!important}.image{height:125px!important;border-bottom:1px solid #edf2ee!important;background:#f7faf8!important}.body{padding:11px!important}.name{font-size:.82rem!important}.sku{font-size:.58rem!important}.meta{gap:4px!important;margin:6px 0 8px!important}.pill{min-height:20px!important;padding:2px 6px!important;font-size:.55rem!important}
+.stock-box{display:flex!important;gap:0!important;margin:8px 0!important;border-top:1px solid #edf2ee!important;border-bottom:1px solid #edf2ee!important}.stock-cell{flex:1!important;padding:7px 5px!important;border:0!important;border-right:1px solid #edf2ee!important;border-radius:0!important;background:transparent!important}.stock-cell:last-child{border-right:0!important}.stock-cell small{font-size:.55rem!important}.stock-cell strong{font-size:.72rem!important;margin-top:2px!important}
+.marketplace{margin:0 0 7px!important;padding:7px 8px!important;border:0!important;border-radius:8px!important;background:#f8fbf9!important}.marketplace small{font-size:.56rem!important}.marketplace strong{font-size:.64rem!important}.market-price{font-size:.64rem!important;margin-top:3px!important}
+.commercial-strip{gap:0!important;margin:0 0 7px!important;border-top:1px solid #edf2ee!important;border-bottom:1px solid #edf2ee!important}.commercial-cell{padding:7px 6px!important;border:0!important;border-right:1px solid #edf2ee!important;border-radius:0!important;background:transparent!important}.commercial-cell:last-child{border-right:0!important}.commercial-cell small{font-size:.53rem!important}.commercial-cell strong{font-size:.62rem!important;margin-top:2px!important}
+.note{margin:0 0 7px!important;padding:0!important;font-size:.61rem!important;line-height:1.35!important}.actions{gap:5px!important;padding-top:8px!important}.action{min-height:31px!important;padding:5px 8px!important;font-size:.6rem!important}.grid.list .card{grid-template-columns:150px minmax(0,1fr)!important}.grid.list .image{min-height:150px!important}.pagination{margin-top:14px!important}.page-btn{min-width:32px!important;height:32px!important;font-size:.63rem!important}
+.confirm-box,.price-box{border-radius:14px!important;padding:20px!important}.confirm-box h3,.price-box h3{font-size:1rem!important}.confirm-box p,.price-box p{font-size:.72rem!important}.price-preview{gap:5px!important;margin-bottom:10px!important}.price-preview div{padding:7px!important;border-radius:7px!important}.price-preview small{font-size:.55rem!important}.price-preview strong{font-size:.68rem!important}.price-input-wrap input{height:39px!important}.price-actions{margin-top:14px!important}
+@media(max-width:1250px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:900px){.products-page{padding:16px!important}.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}@media(max-width:620px){.products-page{padding:13px!important;border-radius:14px!important}.grid{grid-template-columns:1fr!important}.page-head{align-items:flex-start!important}.head-actions{width:100%!important}.head-actions .btn{flex:1 1 calc(50% - 6px)!important}.bulk-left,.bulk-actions{width:100%!important}.bulk-actions .btn{flex:1 1 100%!important}.grid.list .card{display:flex!important}.grid.list .image{height:125px!important;min-height:125px!important}}
+</style>
+
 {% endblock %}

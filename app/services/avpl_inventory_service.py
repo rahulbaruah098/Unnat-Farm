@@ -374,6 +374,7 @@ def get_product_inventory_snapshot_map(accounting_entity_id, product_ids=None):
             return {}
         query["source_product_id"] = {"$in": normalized_ids}
 
+    costs = _purchase_cost_by_product(entity_id)
     grouped = defaultdict(
         lambda: {
             "physical": Decimal("0"),
@@ -414,6 +415,8 @@ def get_product_inventory_snapshot_map(accounting_entity_id, product_ids=None):
             "warehouses": sorted(row["warehouses"]),
             "has_stock": row["physical"] > 0,
             "has_saleable_stock": row["saleable"] > 0,
+            "weighted_average_cost": _money(costs.get(product_id, Decimal("0"))),
+            "weighted_average_cost_value": float(costs.get(product_id, Decimal("0"))),
         }
     return result
 
