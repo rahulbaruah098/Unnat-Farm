@@ -2360,6 +2360,12 @@
 @media(prefers-reduced-motion:reduce){.uf-confirm-backdrop.is-open,.uf-confirm-card{animation:none!important}}
 .accounting-quick-nav{position:sticky;top:10px;z-index:40;display:flex;gap:7px;overflow-x:auto;padding:9px;margin:0 0 16px;border:1px solid #dbe9df;border-radius:13px;background:rgba(255,255,255,.96);box-shadow:0 8px 24px rgba(26,72,43,.06);scrollbar-width:thin}.accounting-quick-nav a{flex:0 0 auto;display:inline-flex;align-items:center;min-height:35px;padding:7px 11px;border-radius:8px;color:#526158;text-decoration:none;font-size:.73rem;font-weight:800}.accounting-quick-nav a:hover,.accounting-quick-nav a:focus{background:#eff8f1;color:#2f6e46;outline:none}.accounting-quick-nav a.primary{background:#2b7346;color:#fff}.accounting-form-cancel{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border:1px solid #d5e2d8;border-radius:9px;background:#fff;color:#526158;font:inherit;font-size:.75rem;font-weight:800;cursor:pointer}.accounting-section-description{max-width:720px}.accounting-maker-compact{color:#748279;font-size:.72rem;font-weight:600}.accounting-roadmap-card{margin-top:18px}
 
+
+/* === Operational Accounting home: compact by default === */
+.accounting-hero{padding:18px 20px!important}.accounting-subtitle{max-width:680px!important}.accounting-hero-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.accounting-hero-link{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 11px;border:1px solid #d5e4d9;border-radius:9px;background:#fff;color:#2f6e46;text-decoration:none;font-size:.72rem;font-weight:850}.accounting-hero-link.primary{background:#2b7346;border-color:#2b7346;color:#fff}.accounting-status-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}.accounting-status-card{min-height:96px!important;padding:14px!important}.accounting-status-card strong{font-size:1rem!important}.accounting-status-card p{margin-top:4px!important;font-size:.7rem!important}.accounting-operational-note{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 14px;padding:12px 14px;border:1px solid #d5e7da;border-radius:11px;background:#f5fbf6}.accounting-operational-note strong{display:block;color:#285f3c;font-size:.78rem}.accounting-operational-note span{display:block;margin-top:2px;color:#6e7f74;font-size:.68rem}.accounting-operational-links{display:flex;gap:7px;flex-wrap:wrap}.accounting-operational-links a{display:inline-flex;align-items:center;min-height:33px;padding:6px 10px;border:1px solid #d5e4d9;border-radius:8px;background:#fff;color:#2f6e46;text-decoration:none;font-size:.68rem;font-weight:850}.accounting-fold{margin:0 0 12px;border:1px solid #dbe9df;border-radius:13px;background:#fff;overflow:hidden}.accounting-fold>summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;cursor:pointer;list-style:none;user-select:none}.accounting-fold>summary::-webkit-details-marker{display:none}.accounting-fold>summary:after{content:'+';flex:0 0 auto;width:26px;height:26px;display:grid;place-items:center;border-radius:7px;background:#eff8f1;color:#2f6e46;font-size:1rem;font-weight:800}.accounting-fold[open]>summary:after{content:'−'}.accounting-fold-title{min-width:0}.accounting-fold-title strong{display:block;color:#22362a;font-size:.84rem}.accounting-fold-title small{display:block;margin-top:2px;color:#748279;font-size:.67rem}.accounting-fold-state{margin-left:auto;display:inline-flex;align-items:center;min-height:24px;padding:4px 8px;border-radius:7px;background:#eff8f1;color:#2f6e46;font-size:.64rem;font-weight:850;white-space:nowrap}.accounting-fold-state.warn{background:#fff4d9;color:#946200}.accounting-fold-state.bad{background:#fff0f0;color:#a73535}.accounting-fold-body{padding:0 12px 12px}.accounting-fold-body>.accounting-entity-card,.accounting-fold-body>.accounting-financial-year-card{margin:0!important;border:0!important;box-shadow:none!important;padding:12px!important}.accounting-fold-body>.accounting-entity-card>.accounting-section-heading,.accounting-fold-body>.accounting-financial-year-card>.accounting-section-heading{display:none!important}.accounting-fold .accounting-roadmap-card,.accounting-fold .accounting-user-access-card{margin:0!important}.accounting-tax-shortcut{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 12px}.accounting-tax-shortcut>div{padding:12px;border:1px solid #e0ebe3;border-radius:10px;background:#fbfdfb}.accounting-tax-shortcut span{display:block;color:#748279;font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.accounting-tax-shortcut strong{display:block;margin-top:4px;color:#25392d;font-size:.88rem}.accounting-advanced-note{margin:0 0 12px;padding:10px 12px;border:1px dashed #d9e6dc;border-radius:10px;color:#6e7f74;font-size:.69rem}.accounting-advanced-note a{color:#2f6e46;font-weight:850;text-decoration:none}.accounting-quick-nav{position:static!important;margin-bottom:12px!important}.accounting-quick-nav a.primary{background:#eff8f1!important;color:#2f6e46!important}.accounting-hidden-default{display:none!important}
+@media(max-width:980px){.accounting-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.accounting-tax-shortcut{grid-template-columns:1fr}.accounting-operational-note{align-items:flex-start;flex-direction:column}}
+@media(max-width:560px){.accounting-status-grid{grid-template-columns:1fr!important}.accounting-hero-actions,.accounting-operational-links,.accounting-operational-links a{width:100%}.accounting-hero-link{flex:1}.accounting-fold>summary{align-items:flex-start}.accounting-fold-state{display:none}}
+
 </style>
 {% endblock %}
 
@@ -2369,59 +2375,37 @@
         <div>
             <p class="accounting-eyebrow">Finance</p>
             <h1 id="accountingPageTitle">Accounting</h1>
-            <p class="accounting-subtitle">
-                Setup, transactions and controls in one place.
-            </p>
+            <p class="accounting-subtitle">Controls, exceptions and audit. Routine work stays in Products, Purchases, Payments and Stock.</p>
         </div>
-
-        <div class="accounting-access-badge">
-            <span class="accounting-access-dot" aria-hidden="true"></span>
-            Access verified
+        <div class="accounting-hero-actions">
+            <a class="accounting-hero-link primary" href="{{ url_for('admin.add_product') }}">Add Product</a>
+            <a class="accounting-hero-link" href="{{ url_for('admin.product_list') }}">Products</a>
+            {% if advanced_mode %}<a class="accounting-hero-link" href="{{ url_for('accounting.dashboard') }}">Simple View</a>{% else %}<a class="accounting-hero-link" href="{{ url_for('accounting.dashboard', advanced=1) }}">Advanced</a>{% endif %}
         </div>
     </div>
 
-    {% if streamlined_workflows_enabled %}
-    <div class="accounting-notice success" role="status">Routine setup activates on Save. Financial controls remain protected.</div>
-    {% endif %}
-
     <nav class="accounting-quick-nav" aria-label="Accounting sections">
-        <a class="primary" href="#voucher-engine">Vouchers</a>
-        <a href="#product-accounting-mapping">Products</a>
-        <a href="#party-ledgers">Parties</a>
-        <a href="#ledger-masters">Ledgers</a>
-        <a href="#gst-tax-master">GST</a>
-        <a href="#hsn-master">HSN</a>
-        <a href="#units-master">Units</a>
-        <a href="#financial-years">Financial Year</a>
-        <a href="#number-series">Numbering</a>
-        {% if user_access_capabilities.can_view %}<a href="#user-access">Access</a>{% endif %}
+        <a class="primary" href="#financial-year-fold">Financial Year</a>
+        <a href="#company-controls">Company</a>
+        <a href="#numbering-controls">Numbering</a>
+        <a href="#ledger-controls">Ledgers</a>
+        <a href="#unit-controls">Units</a>
+        <a href="#hierarchy-controls">Hierarchy</a>
+        {% if user_access_capabilities.can_view %}<a href="#access-controls">Access</a>{% endif %}
     </nav>
 
     <div class="accounting-status-grid">
-        <article class="accounting-status-card">
-            <span class="accounting-card-label">Module status</span>
-            <strong>Foundation active</strong>
-            <p>Core setup is available.</p>
-        </article>
-
-        <article class="accounting-status-card">
-            <span class="accounting-card-label">Financial years</span>
-            <strong>{{ financial_years|length }}</strong>
-            <p>{{ open_financial_years|length }} open for posting.</p>
-        </article>
-
-        <article class="accounting-status-card">
-            <span class="accounting-card-label">Needs review</span>
-            {% if streamlined_workflows_enabled %}
-                <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count }}</strong>
-                <p>Protected controls only.</p>
-            {% else %}
-                <strong>{{ pending_financial_years|length + financial_year_control_overview.pending_count + number_series_overview.pending_count + party_ledger_overview.counts.pending_approval + gst_tax_overview.counts.pending_approval + unit_overview.custom_pending|length + unit_overview.conversion_pending|length + hsn_overview.pending_rows|length }}</strong>
-                <p>Maker-checker mode is active.</p>
-            {% endif %}
-        </article>
+        <article class="accounting-status-card"><span class="accounting-card-label">Financial Year</span><strong>{% if open_financial_years %}{{ open_financial_years[0].display_name }}{% else %}Not Open{% endif %}</strong><p>{{ open_financial_years|length }} open for posting</p></article>
+        <article class="accounting-status-card"><span class="accounting-card-label">Tax Setup</span><strong>{{ compact_accounting_summary.active_hsn_count }} HSN</strong><p>{{ compact_accounting_summary.active_gst_rate_count }} active GST rate record(s)</p></article>
+        <article class="accounting-status-card"><span class="accounting-card-label">Products</span><strong>{{ compact_accounting_summary.accounting_ready_product_count }} Ready</strong><p>{{ compact_accounting_summary.product_issue_count }} need attention</p></article>
+        <article class="accounting-status-card"><span class="accounting-card-label">Posting</span><strong>{{ compact_accounting_summary.posted_voucher_count }} Posted</strong><p>Generated from business workflows</p></article>
     </div>
 
+
+
+    <details class="accounting-fold" id="company-controls" {% if not accounting_entity %}open{% endif %}>
+        <summary><span class="accounting-fold-title"><strong>Company & Accounting Entity</strong><small>Business profile and permanent AVPL books</small></span><span class="accounting-fold-state {% if not accounting_entity %}warn{% endif %}">{% if accounting_entity %}Ready{% else %}Setup required{% endif %}</span></summary>
+        <div class="accounting-fold-body">
     <div class="accounting-entity-card">
         <div class="accounting-section-heading">
             <div>
@@ -2516,6 +2500,12 @@
         {% endif %}
     </div>
 
+        </div>
+    </details>
+
+    <details class="accounting-fold" id="financial-year-fold" {% if not open_financial_years or pending_financial_years or financial_year_control_overview.pending_count %}open{% endif %}>
+        <summary><span class="accounting-fold-title"><strong>Financial Year</strong><small>Create, open, close or review protected lifecycle actions</small></span><span class="accounting-fold-state {% if not open_financial_years %}warn{% endif %}">{% if open_financial_years %}{{ open_financial_years[0].display_name }}{% else %}Needs setup{% endif %}</span></summary>
+        <div class="accounting-fold-body">
     <div class="accounting-financial-year-card" id="financial-years">
         <div class="accounting-section-heading">
             <div>
@@ -2753,34 +2743,55 @@
         {% endif %}
     </div>
 
-    {% include "accounting/_configuration_panels.html" %}
+        </div>
+    </details>
 
-    {% include "accounting/_number_series_panel.html" %}
+    <details class="accounting-fold" id="company-policy-controls">
+        <summary><span class="accounting-fold-title"><strong>Business Profile & Policy</strong><small>GSTIN, state, books and accounting defaults</small></span><span class="accounting-fold-state">Controls</span></summary>
+        <div class="accounting-fold-body">{% include "accounting/_configuration_panels.html" %}</div>
+    </details>
 
-    {% include "accounting/_entity_mapping_panel.html" %}
+    <details class="accounting-fold" id="numbering-controls">
+        <summary><span class="accounting-fold-title"><strong>Numbering</strong><small>Invoice and voucher number series</small></span><span class="accounting-fold-state {% if number_series_overview.pending_count or number_series_overview.returned_count %}warn{% endif %}">{{ number_series_overview.active_count }}/{{ number_series_overview.required_count }} active</span></summary>
+        <div class="accounting-fold-body">{% include "accounting/_number_series_panel.html" %}</div>
+    </details>
 
-    {% include "accounting/_account_groups_panel.html" %}
+    <details class="accounting-fold" id="hierarchy-controls">
+        <summary><span class="accounting-fold-title"><strong>Hierarchy Mapping</strong><small>Centre, Mitra and Farmer accounting links</small></span><span class="accounting-fold-state {% if entity_mapping_overview.unresolved_count %}warn{% endif %}">{% if entity_mapping_overview.unresolved_count %}{{ entity_mapping_overview.unresolved_count }} issue(s){% else %}Healthy{% endif %}</span></summary>
+        <div class="accounting-fold-body">{% include "accounting/_entity_mapping_panel.html" %}</div>
+    </details>
 
-    {% include "accounting/_ledgers_panel.html" %}
+    <details class="accounting-fold" id="ledger-controls">
+        <summary><span class="accounting-fold-title"><strong>Ledgers & Groups</strong><small>Protected accounting structure</small></span><span class="accounting-fold-state {% if not ledger_overview.health.is_complete %}warn{% endif %}">{{ ledger_overview.active_count }} ledgers</span></summary>
+        <div class="accounting-fold-body">{% include "accounting/_account_groups_panel.html" %}{% include "accounting/_ledgers_panel.html" %}</div>
+    </details>
 
-    {% include "accounting/_party_ledgers_panel.html" %}
+    <details class="accounting-fold" id="unit-controls">
+        <summary><span class="accounting-fold-title"><strong>Units</strong><small>UQC units and conversions</small></span><span class="accounting-fold-state {% if not unit_overview.foundation.is_complete %}warn{% endif %}">{% if unit_overview.foundation.is_complete %}Ready{% else %}Review{% endif %}</span></summary>
+        <div class="accounting-fold-body">{% include "accounting/_units_master_panel.html" %}</div>
+    </details>
 
-    {% include "accounting/_gst_tax_master_panel.html" %}
+    <details class="accounting-fold" id="tax-history-controls">
+        <summary><span class="accounting-fold-title"><strong>Tax Records</strong><small>HSN/GST is maintained from Product Master</small></span><span class="accounting-fold-state">{{ compact_accounting_summary.active_hsn_count }} HSN</span></summary>
+        <div class="accounting-fold-body"><div class="accounting-tax-shortcut"><div><span>Active HSN</span><strong>{{ compact_accounting_summary.active_hsn_count }}</strong></div><div><span>GST rate records</span><strong>{{ compact_accounting_summary.active_gst_rate_count }}</strong></div><div><span>Product mapping issues</span><strong>{{ compact_accounting_summary.product_issue_count }}</strong></div></div><div class="accounting-operational-links"><a href="{{ url_for('admin.add_product') }}">Add / Map Product</a><a href="{{ url_for('admin.product_list') }}">Product List</a></div></div>
+    </details>
 
-    {% include "accounting/_units_master_panel.html" %}
+    <div class="accounting-advanced-note">Supplier setup stays under <strong>Purchases</strong>. Product mapping, GST preview, product tracking and manual business vouchers are hidden from the normal Accounting home. {% if not advanced_mode %}<a href="{{ url_for('accounting.dashboard', advanced=1) }}">Open advanced controls</a>{% endif %}</div>
 
-    {% include "accounting/_hsn_master_panel.html" %}
-
-    {% include "accounting/_product_mapping_panel.html" %}
-
-    {% include "accounting/_gst_determination_panel.html" %}
-
-    {% include "accounting/_product_tracking_panel.html" %}
-
-    {# Stage 5 Batch 2: draft voucher lines and non-posting double-entry validation. #}
-    {% include "accounting/_voucher_engine_panel.html" %}
+    {% if advanced_mode %}
+        <details class="accounting-fold"><summary><span class="accounting-fold-title"><strong>Advanced · Parties</strong><small>Accounting party-ledger master</small></span><span class="accounting-fold-state">Advanced</span></summary><div class="accounting-fold-body">{% include "accounting/_party_ledgers_panel.html" %}</div></details>
+        <details class="accounting-fold"><summary><span class="accounting-fold-title"><strong>Advanced · GST Master</strong><small>Effective-dated rate administration</small></span><span class="accounting-fold-state">Advanced</span></summary><div class="accounting-fold-body">{% include "accounting/_gst_tax_master_panel.html" %}</div></details>
+        <details class="accounting-fold"><summary><span class="accounting-fold-title"><strong>Advanced · HSN Master</strong><small>Tax-classification history and exceptions</small></span><span class="accounting-fold-state">Advanced</span></summary><div class="accounting-fold-body">{% include "accounting/_hsn_master_panel.html" %}</div></details>
+        <details class="accounting-fold"><summary><span class="accounting-fold-title"><strong>Advanced · Product Mapping</strong><small>Exception repair only</small></span><span class="accounting-fold-state">Advanced</span></summary><div class="accounting-fold-body">{% include "accounting/_product_mapping_panel.html" %}</div></details>
+        <details class="accounting-fold"><summary><span class="accounting-fold-title"><strong>Advanced · GST Preview</strong><small>Diagnostic calculation only</small></span><span class="accounting-fold-state">Advanced</span></summary><div class="accounting-fold-body">{% include "accounting/_gst_determination_panel.html" %}</div></details>
+        <details class="accounting-fold"><summary><span class="accounting-fold-title"><strong>Advanced · Product Tracking</strong><small>Hidden from routine operations</small></span><span class="accounting-fold-state">Advanced</span></summary><div class="accounting-fold-body">{% include "accounting/_product_tracking_panel.html" %}</div></details>
+        <details class="accounting-fold"><summary><span class="accounting-fold-title"><strong>Advanced · Voucher Engine</strong><small>Manual technical voucher controls</small></span><span class="accounting-fold-state">Advanced</span></summary><div class="accounting-fold-body">{% include "accounting/_voucher_engine_panel.html" %}</div></details>
+    {% endif %}
 
     {% if user_access_capabilities.can_view %}
+        <details class="accounting-fold" id="access-controls">
+            <summary><span class="accounting-fold-title"><strong>Accounting Access</strong><small>User access and permissions</small></span><span class="accounting-fold-state">{{ user_access_summary.enabled_count }} enabled</span></summary>
+            <div class="accounting-fold-body">
         <div class="accounting-user-access-card" id="user-access">
             <div class="accounting-section-heading">
                 <div>
@@ -2986,8 +2997,11 @@
                 {% endif %}
             {% endif %}
         </div>
+            </div>
+        </details>
     {% endif %}
 
+    {% if advanced_mode %}
     <div class="accounting-roadmap-card">
         <div class="accounting-roadmap-heading">
             <div>
@@ -3135,6 +3149,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
 
 <div class="uf-confirm-backdrop" id="ufConfirmModal" aria-hidden="true">

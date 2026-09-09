@@ -1,6 +1,6 @@
 from app.utils.timezone import business_today, format_ist_date, format_ist_datetime
 from datetime import date
-
+from app.extensions import mongo
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from app.services.workflow_policy_service import workflow_is_streamlined
 
@@ -554,6 +554,7 @@ def _configuration_capabilities(access):
 @roles_required("super_admin", "avpl_admin", "accounts")
 @accounting_permission_required("accounting.dashboard.view")
 def dashboard():
+    advanced_mode = request.args.get("advanced") == "1"
     access = get_accounting_access(
         user_id=session["user_id"],
         session_role=session.get("role"),
@@ -928,7 +929,7 @@ def dashboard():
     }
     party_ledger_setup_error = ""
 
-    if avpl_entity_document and party_ledger_capabilities["can_view"]:
+    if advanced_mode and avpl_entity_document and party_ledger_capabilities["can_view"]:
         try:
             ensure_party_ledger_indexes()
             party_ledger_overview = get_party_ledger_overview(
@@ -1018,7 +1019,7 @@ def dashboard():
     }
     gst_tax_setup_error = ""
 
-    if avpl_entity_document and gst_tax_capabilities["can_view"]:
+    if advanced_mode and avpl_entity_document and gst_tax_capabilities["can_view"]:
         try:
             ensure_gst_tax_indexes()
             gst_tax_overview = get_gst_tax_overview(
@@ -1114,7 +1115,7 @@ def dashboard():
     }
     hsn_setup_error = ""
 
-    if avpl_entity_document and hsn_capabilities["can_view"]:
+    if advanced_mode and avpl_entity_document and hsn_capabilities["can_view"]:
         try:
             ensure_hsn_indexes()
             hsn_overview = get_hsn_overview(
@@ -1165,7 +1166,7 @@ def dashboard():
     }
     product_mapping_setup_error = ""
 
-    if avpl_entity_document and product_mapping_capabilities["can_view"]:
+    if advanced_mode and avpl_entity_document and product_mapping_capabilities["can_view"]:
         try:
             ensure_product_mapping_indexes()
             product_mapping_overview = get_product_mapping_overview(
@@ -1212,7 +1213,7 @@ def dashboard():
         "accounting_gst_determination_preview", None
     )
 
-    if avpl_entity_document and gst_determination_capabilities["can_view"]:
+    if advanced_mode and avpl_entity_document and gst_determination_capabilities["can_view"]:
         try:
             gst_determination_overview = get_gst_determination_overview(
                 avpl_entity_document["_id"],
@@ -1292,7 +1293,7 @@ def dashboard():
         "accounting_product_tracking_preview", None
     )
 
-    if avpl_entity_document and product_tracking_capabilities["can_view"]:
+    if advanced_mode and avpl_entity_document and product_tracking_capabilities["can_view"]:
         try:
             ensure_product_tracking_indexes()
             product_tracking_overview = get_product_tracking_overview(
@@ -1369,7 +1370,7 @@ def dashboard():
         "stale_lock_count": 0,
     }
 
-    if avpl_entity_document and voucher_capabilities["can_view"]:
+    if advanced_mode and avpl_entity_document and voucher_capabilities["can_view"]:
         try:
             ensure_voucher_indexes()
             ensure_voucher_posting_indexes()
@@ -1421,9 +1422,54 @@ def dashboard():
         except (PermissionError, ValueError, RuntimeError) as exc:
             user_access_setup_error = str(exc)
 
+    compact_accounting_summary = {
+        "active_hsn_count": 0,
+        "active_gst_rate_count": 0,
+        "active_product_count": 0,
+        "accounting_ready_product_count": 0,
+        "product_issue_count": 0,
+        "posted_voucher_count": 0,
+        "active_ledger_count": int(ledger_overview.get("active_count") or 0),
+        "active_unit_count": len(unit_overview.get("units") or []),
+    }
+    if avpl_entity_document:
+        entity_id = avpl_entity_document["_id"]
+        compact_accounting_summary["active_hsn_count"] = mongo.db.hsn_masters.count_documents({
+            "accounting_entity_id": entity_id,
+            "status": "active",
+            "is_active": True,
+            "is_deleted": False,
+        })
+        compact_accounting_summary["active_gst_rate_count"] = mongo.db.gst_tax_rates.count_documents({
+            "accounting_entity_id": entity_id,
+            "status": "active",
+            "is_active": True,
+            "is_deleted": False,
+        })
+        active_products = mongo.db.products.count_documents({
+            "is_deleted": {"$ne": True},
+            "is_active": {"$ne": False},
+        })
+        ready_products = mongo.db.accounting_product_mappings.count_documents({
+            "accounting_entity_id": entity_id,
+            "status": "active",
+            "is_active": True,
+            "is_deleted": {"$ne": True},
+        })
+        compact_accounting_summary["active_product_count"] = active_products
+        compact_accounting_summary["accounting_ready_product_count"] = ready_products
+        compact_accounting_summary["product_issue_count"] = max(0, active_products - ready_products)
+        compact_accounting_summary["posted_voucher_count"] = mongo.db.accounting_vouchers.count_documents({
+            "accounting_entity_id": entity_id,
+            "status": "posted",
+            "is_deleted": {"$ne": True},
+        })
+
     return render_template(
         "accounting/dashboard.html",
         accounting_access=access,
+        advanced_mode=advanced_mode,
+        compact_accounting_summary=compact_accounting_summary,
         accessible_entities=accessible_entities,
         accounting_entity=avpl_entity,
         financial_years=financial_years,

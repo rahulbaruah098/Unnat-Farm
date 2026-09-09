@@ -170,93 +170,155 @@
     {% endif %}
 
     {% if session.get('role') in ['ufc_admin','ufc_mitra'] %}
-    <h3 style="margin-top:30px;">Products Published by AVPL</h3>
-    <p class="marketplace-help">Choose a product and request the quantity you need. AVPL Admin will approve or reject the request. Price is confirmed by AVPL during approval.</p>
+    <div class="catalogue-heading">
+        <div>
+            <h3>Products Published by AVPL</h3>
+            <p>Prices show both the AVPL rate and the current GST-inclusive amount.</p>
+        </div>
+        <span class="catalogue-count">{{ products|length }} product{{ '' if products|length == 1 else 's' }}</span>
+    </div>
 
-    <div class="marketplace-grid" id="catalogueProductGrid">
-        {% for p in products %}
-            <div class="market-card searchable-card">
-                <div class="market-img-wrap">
-                    {% if p.image_name %}
-                        <img src="{{ url_for('documents.serve', filename=p.image_name) }}"
-                             alt="{{ p.name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% elif p.picture %}
-                        <img src="{{ url_for('documents.serve', filename=p.picture) }}"
-                             alt="{{ p.name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% elif p.file_path %}
-                        <img src="{{ url_for('documents.serve', filename=p.file_path) }}"
-                             alt="{{ p.name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% elif p.image %}
-                        <img src="{{ url_for('documents.serve', filename=p.image) }}"
-                             alt="{{ p.name }}"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="no-image" style="display:none;">No Image</div>
-                    {% else %}
-                        <div class="no-image">No Image</div>
-                    {% endif %}
-                </div>
+    {% if products %}
+    <div class="category-nav" id="catalogueCategoryNav" aria-label="Product categories">
+        <button type="button" class="category-filter active" data-category="all">
+            All <span>{{ products|length }}</span>
+        </button>
+        {% for group in products|groupby('_marketplace_category') %}
+        <button type="button" class="category-filter" data-category="{{ group.grouper|lower|e }}">
+            {{ group.grouper|title }} <span>{{ group.list|length }}</span>
+        </button>
+        {% endfor %}
+    </div>
 
-                <div class="market-body">
-                    <h4>{{ p.name }}</h4>
-
-                    <p><strong>SKU:</strong> {{ p.product_code or '-' }}</p>
-                    <p><strong>Category:</strong> {{ p.category or '-' }}</p>
-                    <p><strong>Type:</strong> {{ (p.product_role or p.type or '-')|title }}</p>
-
-                    {% set market_stock = p.get('_marketplace_stock') or {} %}
-                    {% set avpl_stock = market_stock.get('saleable_quantity', 0)|float %}
-                    {% set ufc_price = p.get('_ufc_sale_price', 0)|float %}
-                    {% set ufc_unit = p.base_unit_code or p.base_unit_name or p.unit or 'Unit' %}
-
-                    <div class="market-footer marketplace-readonly">
-                        <div>
-                            <span class="published-badge">Published by AVPL</span>
-                            {% if ufc_price > 0 %}
-                                <strong class="ufc-market-price">₹{{ '%.2f'|format(ufc_price) }} / {{ ufc_unit }}</strong><small class="stock-text">before GST</small>
-                            {% else %}
-                                <strong class="ufc-market-price price-missing">Price not configured</strong>
-                            {% endif %}
-                            {% if avpl_stock <= 0 %}
-                                <small class="stock-text stock-out">Currently out of stock</small>
-                            {% else %}
-                                <small class="stock-text">{{ '%g'|format(avpl_stock) }} {{ ufc_unit }} available at AVPL</small>
-                            {% endif %}
-                        </div>
-                        {% if session.get('role') == 'ufc_admin' %}
-                            {% if avpl_stock > 0 and ufc_price > 0 %}
-                            <div class="avpl-cart-add" data-product-id="{{ p._id }}" data-product-name="{{ p.name|e }}" data-unit="{{ ufc_unit|e }}" data-price="{{ '%.2f'|format(ufc_price) }}" data-max="{{ avpl_stock }}">
-                                <div class="avpl-cart-qty">
-                                    <button type="button" class="qty-step" data-step="-1" aria-label="Reduce quantity">−</button>
-                                    <input type="number" class="cart-qty-input" min="0.0001" max="{{ avpl_stock }}" step="0.0001" value="1" aria-label="Required quantity">
-                                    <button type="button" class="qty-step" data-step="1" aria-label="Increase quantity">+</button>
-                                </div>
-                                <button type="button" class="add-cart-btn">Add to Cart</button>
-                            </div>
-                            {% elif ufc_price <= 0 %}
-                            <div class="stage4-chip">Price required</div>
-                            {% else %}
-                            <div class="stage4-chip">Out of stock</div>
-                            {% endif %}
-                        {% else %}
-                            <div class="stage4-chip">UFC Admin places orders</div>
-                        {% endif %}
-                    </div>
+    <div id="catalogueProductGrid" class="catalogue-groups">
+        {% for group in products|groupby('_marketplace_category') %}
+        <section class="catalogue-category" data-category="{{ group.grouper|lower|e }}">
+            <div class="catalogue-category-head">
+                <div>
+                    <h4>{{ group.grouper|title }}</h4>
+                    <span>{{ group.list|length }} product{{ '' if group.list|length == 1 else 's' }}</span>
                 </div>
             </div>
-        {% else %}
-            <div class="empty-market">No products have been published by AVPL yet.</div>
+
+            <div class="marketplace-grid catalogue-category-grid">
+                {% for p in group.list %}
+                <article class="market-card searchable-card">
+                    <div class="market-img-wrap">
+                        {% if p.image_name %}
+                            <img src="{{ url_for('documents.serve', filename=p.image_name) }}"
+                                 alt="{{ p.name }}"
+                                 loading="lazy"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="no-image" style="display:none;">No Image</div>
+                        {% elif p.picture %}
+                            <img src="{{ url_for('documents.serve', filename=p.picture) }}"
+                                 alt="{{ p.name }}"
+                                 loading="lazy"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="no-image" style="display:none;">No Image</div>
+                        {% elif p.file_path %}
+                            <img src="{{ url_for('documents.serve', filename=p.file_path) }}"
+                                 alt="{{ p.name }}"
+                                 loading="lazy"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="no-image" style="display:none;">No Image</div>
+                        {% elif p.image %}
+                            <img src="{{ url_for('documents.serve', filename=p.image) }}"
+                                 alt="{{ p.name }}"
+                                 loading="lazy"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="no-image" style="display:none;">No Image</div>
+                        {% else %}
+                            <div class="no-image">No Image</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="market-body">
+                        <div class="product-card-head">
+                            <h4>{{ p.name }}</h4>
+                            <span class="published-badge">Published</span>
+                        </div>
+
+                        <div class="product-meta">
+                            <span>{{ p.product_code or '-' }}</span>
+                            <span>{{ (p.product_role or p.type or '-')|title }}</span>
+                        </div>
+
+                        {% set market_stock = p.get('_marketplace_stock') or {} %}
+                        {% set avpl_stock = market_stock.get('saleable_quantity', 0)|float %}
+                        {% set ufc_price = p.get('_ufc_sale_price', 0)|float %}
+                        {% set inclusive_price = p.get('_ufc_sale_price_inclusive', 0)|float %}
+                        {% set gst_rate = p.get('_gst_rate', 0)|float %}
+                        {% set gst_ready = p.get('_gst_configured') %}
+                        {% set ufc_unit = p.base_unit_code or p.base_unit_name or p.unit or 'Unit' %}
+
+                        <div class="price-panel">
+                            {% if ufc_price > 0 %}
+                                {% if gst_ready %}
+                                <div class="inclusive-price-row">
+                                    <div>
+                                        <span>Price</span>
+                                        <small>Incl of all txs</small>
+                                    </div>
+                                    <strong>₹{{ '%.2f'|format(inclusive_price) }} / {{ ufc_unit }}</strong>
+                                </div>
+                                {% else %}
+                                <div class="tax-pending">GST setup unavailable</div>
+                                {% endif %}
+                            {% else %}
+                                <div class="tax-pending">Price not configured</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="stock-line {{ 'out' if avpl_stock <= 0 else '' }}">
+                            <span>{{ '%g'|format(avpl_stock) }} {{ ufc_unit }}</span>
+                            <small>{{ 'Out of stock' if avpl_stock <= 0 else 'available' }}</small>
+                        </div>
+
+                        <div class="market-footer marketplace-readonly">
+                            {% if session.get('role') == 'ufc_admin' %}
+                                {% if avpl_stock > 0 and ufc_price > 0 and gst_ready %}
+                                <div class="avpl-cart-add"
+                                     data-product-id="{{ p._id }}"
+                                     data-product-name="{{ p.name|e }}"
+                                     data-unit="{{ ufc_unit|e }}"
+                                     data-price="{{ '%.2f'|format(ufc_price) }}"
+                                     data-inclusive-price="{{ '%.2f'|format(inclusive_price if gst_ready else ufc_price) }}"
+                                     data-gst-rate="{{ '%.4f'|format(gst_rate if gst_ready else 0) }}"
+                                     data-gst-ready="{{ '1' if gst_ready else '0' }}"
+                                     data-max="{{ avpl_stock }}">
+                                    <div class="avpl-cart-qty">
+                                        <button type="button" class="qty-step" data-step="-1" aria-label="Reduce quantity">−</button>
+                                        <input type="number" class="cart-qty-input" min="0.0001" max="{{ avpl_stock }}" step="0.0001" value="1" aria-label="Required quantity">
+                                        <button type="button" class="qty-step" data-step="1" aria-label="Increase quantity">+</button>
+                                    </div>
+                                    <button type="button" class="add-cart-btn">Add to Cart</button>
+                                </div>
+                                {% elif ufc_price <= 0 %}
+                                <div class="stage4-chip">Price required</div>
+                                {% elif not gst_ready %}
+                                <div class="stage4-chip">Tax setup required</div>
+                                {% else %}
+                                <div class="stage4-chip">Out of stock</div>
+                                {% endif %}
+                            {% else %}
+                                <div class="stage4-chip">UFC Admin places orders</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
         {% endfor %}
     </div>
 
     <div class="empty-market search-empty" id="catalogueSearchEmpty" style="display:none;">
-        No matching published AVPL products found.
+        No products match your search or category.
     </div>
+    {% else %}
+    <div class="empty-market">No products have been published by AVPL yet.</div>
+    {% endif %}
     {% endif %}
 </div>
 
@@ -267,7 +329,10 @@
     <div class="cart-head"><div><h3 id="avplCartTitle">Order from AVPL</h3><p>Add multiple products, then send one order request.</p></div><button type="button" class="cart-close" id="avplCartClose" aria-label="Close cart">×</button></div>
     <div id="avplCartRows" class="cart-rows"></div>
     <div class="cart-empty" id="avplCartEmpty">Your cart is empty.</div>
-    <div class="cart-estimate" id="avplCartEstimate"><span>Estimated value before GST</span><strong>₹0.00</strong></div>
+    <div class="cart-estimate" id="avplCartEstimate">
+      <div><span>Estimated total</span><small id="avplCartBeforeTax">Before GST ₹0.00</small></div>
+      <strong id="avplCartInclusiveTotal">₹0.00 incl. GST</strong>
+    </div>
     <form method="post" action="{{ url_for('modules.request_avpl_cart_order') }}" id="avplCartForm" class="cart-checkout">
       <input type="hidden" name="cart_json" id="avplCartJson"><input type="hidden" name="checkout_token" id="avplCheckoutToken">
       <label>Payment<select name="payment_term"><option value="credit">Credit / Pay Later</option><option value="cod">Pay on Delivery</option></select></label>
@@ -1075,6 +1140,38 @@ body:has(.avpl-confirm-overlay.active) {
 }
 </style>
 
+
+<style id="catalogue-all-flat-grid">
+#catalogueProductGrid.catalogue-show-all{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:16px;
+    width:100%;
+}
+#catalogueProductGrid.catalogue-show-all > .catalogue-category{
+    display:contents;
+}
+#catalogueProductGrid.catalogue-show-all > .catalogue-category > .catalogue-category-head{
+    display:none !important;
+}
+#catalogueProductGrid.catalogue-show-all > .catalogue-category > .catalogue-category-grid{
+    display:contents;
+}
+#catalogueProductGrid:not(.catalogue-show-all) .catalogue-category-head{
+    display:flex;
+}
+@media(max-width:1180px){
+    #catalogueProductGrid.catalogue-show-all{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+}
+@media(max-width:720px){
+    #catalogueProductGrid.catalogue-show-all{
+        grid-template-columns:1fr;
+    }
+}
+</style>
+
 <script>
 (function(){
     const searchInput = document.getElementById('buySearchInput');
@@ -1194,22 +1291,56 @@ body:has(.avpl-confirm-overlay.active) {
         farmerPagination.appendChild(next);
     }
 
+    let activeCatalogueCategory = 'all';
+
     function filterCatalogueGrid(term){
         if(!catalogueGrid) return;
 
-        const cards = Array.from(catalogueGrid.querySelectorAll('.searchable-card'));
+        const sections = Array.from(catalogueGrid.querySelectorAll('.catalogue-category'));
+        const showingAll = activeCatalogueCategory === 'all';
         let visibleCount = 0;
 
-        cards.forEach(function(card){
-            const match = card.textContent.toLowerCase().includes(term);
-            card.style.display = match ? '' : 'none';
-            if(match) visibleCount++;
+        catalogueGrid.classList.toggle('catalogue-show-all', showingAll);
+
+        sections.forEach(function(section){
+            const sectionCategory = (section.dataset.category || '').toLowerCase();
+            const categoryMatch = showingAll || sectionCategory === activeCatalogueCategory;
+            let sectionVisible = 0;
+
+            section.querySelectorAll('.searchable-card').forEach(function(card){
+                const textMatch = !term || card.textContent.toLowerCase().includes(term);
+                const show = categoryMatch && textMatch;
+                card.style.display = show ? '' : 'none';
+
+                if(show){
+                    sectionVisible++;
+                    visibleCount++;
+                }
+            });
+
+            if(showingAll){
+                section.style.display = sectionVisible ? '' : 'none';
+            }else{
+                section.style.display = categoryMatch && sectionVisible ? '' : 'none';
+            }
         });
 
         if(catalogueEmpty){
-            catalogueEmpty.style.display = term && cards.length && visibleCount === 0 ? '' : 'none';
+            catalogueEmpty.style.display = visibleCount === 0 ? '' : 'none';
         }
     }
+
+    document.querySelectorAll('#catalogueCategoryNav .category-filter').forEach(function(button){
+        button.addEventListener('click', function(){
+            activeCatalogueCategory = (button.dataset.category || 'all').toLowerCase();
+
+            document.querySelectorAll('#catalogueCategoryNav .category-filter').forEach(function(item){
+                item.classList.toggle('active', item === button);
+            });
+
+            filterCatalogueGrid(searchInput ? searchInput.value.trim().toLowerCase() : '');
+        });
+    });
 
     function applySearch(){
         const term = searchInput.value.trim().toLowerCase();
@@ -1244,6 +1375,7 @@ body:has(.avpl-confirm-overlay.active) {
     }
 
     renderFarmerPagination();
+    filterCatalogueGrid(searchInput ? searchInput.value.trim().toLowerCase() : '');
 })();
 </script>
 
@@ -1558,12 +1690,117 @@ document.addEventListener('DOMContentLoaded', function () {
 (function(){
  const openBtn=document.getElementById('avplCartOpen'); if(!openBtn)return;
  const overlay=document.getElementById('avplCartOverlay'), rows=document.getElementById('avplCartRows'), empty=document.getElementById('avplCartEmpty'), estimate=document.getElementById('avplCartEstimate'), count=document.getElementById('avplCartCount'), form=document.getElementById('avplCartForm'), json=document.getElementById('avplCartJson'), token=document.getElementById('avplCheckoutToken'), checkout=document.getElementById('avplCheckout');
- const key='unnatfarm:ufc-avpl-cart:v3'; let cart=[];
+ const key='unnatfarm:ufc-avpl-cart:v4'; let cart=[];
  function load(){try{cart=JSON.parse(sessionStorage.getItem(key)||'[]');if(!Array.isArray(cart))cart=[]}catch(_){cart=[]}}
  function save(){sessionStorage.setItem(key,JSON.stringify(cart));render()}
  function makeToken(){return 'UFC-CART-'+Date.now()+'-'+Math.random().toString(36).slice(2,10)}
- function render(){count.textContent=String(cart.length);rows.innerHTML='';empty.style.display=cart.length?'none':'block';checkout.disabled=!cart.length;json.value=JSON.stringify(cart.map(x=>({product_id:x.id,quantity:x.qty,unit_price:x.price})));let total=0;cart.forEach((item,i)=>{const line=(Number(item.qty)||0)*(Number(item.price)||0);total+=line;const el=document.createElement('div');el.className='cart-line';el.innerHTML='<div><strong></strong><small></small></div><input type="number" min="0.0001" step="0.0001"><button type="button" class="cart-remove" aria-label="Remove">×</button>';el.querySelector('strong').textContent=item.name;el.querySelector('small').textContent='₹'+Number(item.price||0).toFixed(2)+' / '+item.unit+' · Line ₹'+line.toFixed(2)+' · Available '+item.max+' '+item.unit;const input=el.querySelector('input');input.max=item.max;input.value=item.qty;input.addEventListener('change',()=>{let v=Math.max(.0001,Math.min(Number(item.max)||999999,Number(input.value)||.0001));item.qty=v;save()});el.querySelector('button').addEventListener('click',()=>{cart.splice(i,1);save()});rows.appendChild(el)});if(estimate){estimate.style.display=cart.length?'flex':'none';estimate.querySelector('strong').textContent='₹'+total.toFixed(2)}}
- document.querySelectorAll('.avpl-cart-add').forEach(box=>{const input=box.querySelector('.cart-qty-input');box.querySelectorAll('.qty-step').forEach(b=>b.addEventListener('click',()=>{const max=Number(box.dataset.max)||999999;input.value=Math.max(.0001,Math.min(max,(Number(input.value)||0)+Number(b.dataset.step))).toString()}));box.querySelector('.add-cart-btn').addEventListener('click',()=>{const q=Number(input.value),max=Number(box.dataset.max),price=Number(box.dataset.price);if(!Number.isFinite(q)||q<=0||q>max){showMarketplaceAlert('Enter a quantity within available stock.','error');input.focus();return}if(!Number.isFinite(price)||price<=0){showMarketplaceAlert('AVPL has not configured the UFC price for this product.','error');return}const old=cart.find(x=>x.id===box.dataset.productId);if(old){old.qty=Math.min(max,old.qty+q);old.price=price;old.max=max}else cart.push({id:box.dataset.productId,name:box.dataset.productName,unit:box.dataset.unit,max:max,qty:q,price:price});save();showMarketplaceAlert('Added to cart at ₹'+price.toFixed(2)+' / '+box.dataset.unit+'.','success')})});
+ function render(){
+   count.textContent=String(cart.length);
+   rows.innerHTML='';
+   empty.style.display=cart.length?'none':'block';
+   checkout.disabled=!cart.length;
+   json.value=JSON.stringify(cart.map(x=>({product_id:x.id,quantity:x.qty,unit_price:x.price})));
+
+   let beforeTaxTotal=0;
+   let inclusiveTotal=0;
+
+   cart.forEach((item,i)=>{
+      const qty=Number(item.qty)||0;
+      const basePrice=Number(item.price)||0;
+      const inclusivePrice=Number(item.inclusivePrice || item.price)||0;
+      const gstRate=Number(item.gstRate)||0;
+      const baseLine=qty*basePrice;
+      const inclusiveLine=qty*inclusivePrice;
+      beforeTaxTotal+=baseLine;
+      inclusiveTotal+=inclusiveLine;
+
+      const el=document.createElement('div');
+      el.className='cart-line';
+      el.innerHTML='<div><strong></strong><small></small></div><input type="number" min="0.0001" step="0.0001"><button type="button" class="cart-remove" aria-label="Remove">×</button>';
+      el.querySelector('strong').textContent=item.name;
+
+      const taxText=item.gstReady === false
+         ? 'GST setup unavailable'
+         : (gstRate>0 ? 'GST '+gstRate.toFixed(2).replace(/\.00$/,'')+'%' : 'No GST');
+      el.querySelector('small').textContent=
+         '₹'+basePrice.toFixed(2)+' / '+item.unit+
+         ' · ₹'+inclusivePrice.toFixed(2)+' incl. GST'+
+         ' · '+taxText+
+         ' · Available '+item.max+' '+item.unit;
+
+      const input=el.querySelector('input');
+      input.max=item.max;
+      input.value=item.qty;
+      input.addEventListener('change',()=>{
+         let v=Math.max(.0001,Math.min(Number(item.max)||999999,Number(input.value)||.0001));
+         item.qty=v;
+         save();
+      });
+      el.querySelector('button').addEventListener('click',()=>{
+         cart.splice(i,1);
+         save();
+      });
+      rows.appendChild(el);
+   });
+
+   if(estimate){
+      estimate.style.display=cart.length?'flex':'none';
+      const before=document.getElementById('avplCartBeforeTax');
+      const inclusive=document.getElementById('avplCartInclusiveTotal');
+      if(before) before.textContent='Before GST ₹'+beforeTaxTotal.toFixed(2);
+      if(inclusive) inclusive.textContent='₹'+inclusiveTotal.toFixed(2)+' incl. GST';
+   }
+ }
+ document.querySelectorAll('.avpl-cart-add').forEach(box=>{
+   const input=box.querySelector('.cart-qty-input');
+   box.querySelectorAll('.qty-step').forEach(b=>b.addEventListener('click',()=>{
+      const max=Number(box.dataset.max)||999999;
+      input.value=Math.max(.0001,Math.min(max,(Number(input.value)||0)+Number(b.dataset.step))).toString();
+   }));
+
+   box.querySelector('.add-cart-btn').addEventListener('click',()=>{
+      const q=Number(input.value);
+      const max=Number(box.dataset.max);
+      const price=Number(box.dataset.price);
+      const inclusivePrice=Number(box.dataset.inclusivePrice || box.dataset.price);
+      const gstRate=Number(box.dataset.gstRate || 0);
+      const gstReady=box.dataset.gstReady === '1';
+
+      if(!Number.isFinite(q)||q<=0||q>max){
+         showMarketplaceAlert('Enter a quantity within available stock.','error');
+         input.focus();
+         return;
+      }
+      if(!Number.isFinite(price)||price<=0){
+         showMarketplaceAlert('AVPL has not configured the UFC price for this product.','error');
+         return;
+      }
+
+      const old=cart.find(x=>x.id===box.dataset.productId);
+      if(old){
+         old.qty=Math.min(max,old.qty+q);
+         old.price=price;
+         old.inclusivePrice=inclusivePrice;
+         old.gstRate=gstRate;
+         old.gstReady=gstReady;
+         old.max=max;
+      }else{
+         cart.push({
+            id:box.dataset.productId,
+            name:box.dataset.productName,
+            unit:box.dataset.unit,
+            max:max,
+            qty:q,
+            price:price,
+            inclusivePrice:inclusivePrice,
+            gstRate:gstRate,
+            gstReady:gstReady
+         });
+      }
+      save();
+      showMarketplaceAlert('Added to cart · ₹'+inclusivePrice.toFixed(2)+' incl. GST / '+box.dataset.unit+'.','success');
+   });
+ });
  function open(){render();overlay.classList.add('open');overlay.setAttribute('aria-hidden','false')}function close(){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true')}
  openBtn.addEventListener('click',open);document.getElementById('avplCartClose').addEventListener('click',close);document.getElementById('avplContinue').addEventListener('click',close);overlay.addEventListener('click',e=>{if(e.target===overlay)close()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))close()});form.addEventListener('submit',e=>{if(!cart.length){e.preventDefault();return}token.value=makeToken();json.value=JSON.stringify(cart.map(x=>({product_id:x.id,quantity:x.qty,unit_price:x.price})));checkout.disabled=true;checkout.textContent='Placing Order...';setTimeout(()=>sessionStorage.removeItem(key),50)});load();render();
 })();
@@ -2023,6 +2260,346 @@ table tbody tr:hover td{
 @media(max-width:480px){
     .marketplace-grid,.grid{
         grid-template-columns:1fr !important;
+    }
+}
+</style>
+
+
+
+<style id="ufc-marketplace-category-gst-ux">
+.catalogue-heading{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:14px;
+    margin:28px 0 12px;
+}
+.catalogue-heading h3{margin:0;color:#17251d;font-size:1.02rem;font-weight:900}
+.catalogue-heading p{margin:4px 0 0;color:#718078;font-size:.72rem;line-height:1.45}
+.catalogue-count{
+    flex:0 0 auto;
+    padding:6px 9px;
+    border:1px solid #d8e7dc;
+    border-radius:8px;
+    background:#f7fbf8;
+    color:#2f6e46;
+    font-size:.67rem;
+    font-weight:850;
+}
+.category-nav{
+    display:flex;
+    gap:7px;
+    overflow-x:auto;
+    padding:2px 0 10px;
+    margin-bottom:3px;
+    scrollbar-width:thin;
+}
+.category-filter{
+    flex:0 0 auto;
+    min-height:34px;
+    padding:6px 10px;
+    border:1px solid #d6e4da !important;
+    border-radius:9px !important;
+    background:#fff !important;
+    color:#526158 !important;
+    font-size:.68rem !important;
+    font-weight:850 !important;
+    cursor:pointer;
+    box-shadow:none !important;
+}
+.category-filter span{
+    margin-left:4px;
+    color:#7b897f;
+    font-size:.62rem;
+}
+.category-filter.active{
+    border-color:#2b7346 !important;
+    background:#edf7f0 !important;
+    color:#1f5f39 !important;
+}
+.category-filter.active span{color:#2b7346}
+.catalogue-groups{
+    display:grid;
+    gap:22px;
+}
+.catalogue-category{
+    min-width:0;
+}
+.catalogue-category-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:0 1px 7px;
+    border-bottom:1px solid #e3ece6;
+}
+.catalogue-category-head h4{
+    margin:0;
+    color:#203629;
+    font-size:.84rem;
+    font-weight:900;
+}
+.catalogue-category-head span{
+    display:block;
+    margin-top:2px;
+    color:#7a887f;
+    font-size:.64rem;
+    font-weight:700;
+}
+.catalogue-category-grid{
+    grid-template-columns:repeat(auto-fill,minmax(210px,1fr)) !important;
+    gap:12px !important;
+    margin-top:12px !important;
+}
+.product-card-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:8px;
+}
+.product-card-head h4{
+    flex:1 1 auto;
+    margin:0 !important;
+    font-size:.83rem !important;
+    line-height:1.3 !important;
+}
+.product-card-head .published-badge{
+    flex:0 0 auto;
+    width:auto !important;
+    padding:4px 6px !important;
+    font-size:.58rem !important;
+}
+.product-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+    margin-top:5px;
+    color:#748279;
+    font-size:.62rem;
+    font-weight:700;
+}
+.product-meta span+span::before{
+    content:"•";
+    margin-right:5px;
+    color:#b1bbb4;
+}
+.price-panel{
+    display:grid;
+    gap:6px;
+    margin-top:10px;
+    padding:9px 10px;
+    border:1px solid #dce9e0;
+    border-radius:10px;
+    background:#f8fbf9;
+}
+.base-price-row,
+.inclusive-price-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+.base-price-row span,
+.inclusive-price-row span{
+    display:block;
+    color:#718078;
+    font-size:.62rem;
+    font-weight:750;
+}
+.base-price-row strong{
+    color:#345a42;
+    font-size:.74rem;
+    font-weight:850;
+    text-align:right;
+}
+.inclusive-price-row{
+    padding-top:6px;
+    border-top:1px solid #e5eee7;
+}
+.inclusive-price-row strong{
+    color:#1f6e3f;
+    font-size:.9rem;
+    font-weight:950;
+    text-align:right;
+}
+.inclusive-price-row small{
+    display:block;
+    margin-top:1px;
+    color:#7b887f;
+    font-size:.56rem;
+    font-weight:750;
+}
+.tax-pending{
+    padding:6px 8px;
+    border:1px solid #f0d79b;
+    border-radius:8px;
+    background:#fff9ec;
+    color:#865d0b;
+    font-size:.63rem;
+    font-weight:800;
+}
+.stock-line{
+    display:flex;
+    align-items:baseline;
+    gap:5px;
+    margin-top:8px;
+    color:#2f6e46;
+}
+.stock-line span{font-size:.7rem;font-weight:850}
+.stock-line small{color:#7a887f;font-size:.6rem;font-weight:700}
+.stock-line.out span,.stock-line.out small{color:#a73535}
+.catalogue-category-grid .market-img-wrap{
+    min-height:128px !important;
+    max-height:155px !important;
+    aspect-ratio:4 / 3 !important;
+}
+.catalogue-category-grid .market-body{
+    padding:11px !important;
+}
+.catalogue-category-grid .market-footer{
+    padding-top:8px !important;
+    margin-top:8px !important;
+}
+.catalogue-category-grid .avpl-cart-add{
+    grid-template-columns:minmax(105px,.78fr) minmax(95px,1fr);
+    gap:6px;
+    margin-top:0;
+}
+.catalogue-category-grid .avpl-cart-qty{
+    grid-template-columns:30px minmax(42px,1fr) 30px;
+    min-height:36px;
+}
+.catalogue-category-grid .add-cart-btn{
+    min-height:36px !important;
+    padding:7px 9px !important;
+    font-size:.65rem !important;
+}
+.cart-estimate>div{
+    display:grid;
+    gap:2px;
+}
+.cart-estimate>div span{font-size:.7rem}
+.cart-estimate>div small{
+    color:#7b887f;
+    font-size:.61rem;
+    font-weight:700;
+}
+.cart-estimate>strong{
+    text-align:right;
+    white-space:nowrap;
+}
+@media(max-width:1100px){
+    .catalogue-category-grid{
+        grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+    }
+}
+@media(max-width:820px){
+    .catalogue-heading{
+        align-items:flex-start;
+    }
+    .catalogue-category-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    }
+}
+@media(max-width:600px){
+    .catalogue-heading{
+        flex-direction:column;
+        align-items:stretch;
+    }
+    .catalogue-count{width:max-content}
+    .category-nav{
+        margin-left:-2px;
+        margin-right:-2px;
+        padding-bottom:8px;
+    }
+    .catalogue-category-grid{
+        grid-template-columns:1fr !important;
+    }
+    .catalogue-category-grid .market-card{
+        display:grid !important;
+        grid-template-columns:118px minmax(0,1fr);
+        align-items:stretch;
+    }
+    .catalogue-category-grid .market-img-wrap{
+        min-height:100% !important;
+        max-height:none !important;
+        aspect-ratio:auto !important;
+        border-bottom:0 !important;
+        border-right:1px solid #edf2ee;
+    }
+    .catalogue-category-grid .market-body{
+        padding:10px !important;
+    }
+    .catalogue-category-grid .avpl-cart-add{
+        grid-template-columns:1fr !important;
+    }
+    .catalogue-category-grid .published-badge{
+        display:none !important;
+    }
+}
+@media(max-width:420px){
+    .catalogue-category-grid .market-card{
+        grid-template-columns:94px minmax(0,1fr);
+    }
+    .base-price-row,
+    .inclusive-price-row{
+        align-items:flex-start;
+        flex-direction:column;
+        gap:2px;
+    }
+    .base-price-row strong,
+    .inclusive-price-row strong{
+        text-align:left;
+    }
+    .cart-estimate{
+        align-items:flex-start !important;
+        flex-direction:column;
+    }
+    .cart-estimate>strong{text-align:left}
+}
+</style>
+
+
+<style id="catalogue-all-perfect-fix">
+/* ALL view: every product card is a direct visual item of one continuous grid. */
+#catalogueProductGrid.catalogue-show-all{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fill,minmax(210px,1fr)) !important;
+    gap:12px !important;
+    align-items:stretch !important;
+}
+#catalogueProductGrid.catalogue-show-all > .catalogue-category{
+    display:contents !important;
+}
+#catalogueProductGrid.catalogue-show-all > .catalogue-category > .catalogue-category-head{
+    display:none !important;
+}
+#catalogueProductGrid.catalogue-show-all > .catalogue-category > .catalogue-category-grid{
+    display:contents !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+/* Category view: restore the normal grouped section/grid. */
+#catalogueProductGrid:not(.catalogue-show-all){
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:22px !important;
+}
+#catalogueProductGrid:not(.catalogue-show-all) > .catalogue-category{
+    display:block;
+}
+#catalogueProductGrid:not(.catalogue-show-all) > .catalogue-category > .catalogue-category-grid{
+    display:grid !important;
+}
+@media(max-width:820px){
+    #catalogueProductGrid.catalogue-show-all{
+        grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    }
+}
+@media(max-width:600px){
+    #catalogueProductGrid.catalogue-show-all{
+        grid-template-columns:1fr !important;
+        gap:10px !important;
     }
 }
 </style>

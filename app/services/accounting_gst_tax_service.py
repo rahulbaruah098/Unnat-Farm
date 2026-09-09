@@ -1820,6 +1820,161 @@ def _foundation_health(entity_id):
     }
 
 
+
+def ensure_gst_rate_for_product_setup(
+    accounting_entity_id,
+    actor_user_id,
+    total_rate,
+    effective_from=None,
+):
+    """Resolve or create a current GST slab from Product Master quick setup.
+
+    The normal GST master routes and maker/checker history are kept intact. This
+    helper is intentionally scoped to streamlined Product Master creation/editing
+    so AVPL Admin or Accounts can finish routine statutory setup without leaving
+    the product form. Existing rate periods are never rewritten.
+    """
+    actor = _get_actor(
+        actor_user_id,
+        allowed_roles={"accounts", "avpl_admin", "super_admin"},
+    )
+    entity = _assert_active_avpl_entity(accounting_entity_id)
+    permission = CREATE_PERMISSION if actor.get("resolved_role") == "accounts" else APPROVE_PERMISSION
+    _require_permission(actor, entity["_id"], permission)
+
+    if not workflow_is_streamlined("accounting.gst_tax"):
+        raise ValueError(
+            "Quick GST setup is available only in streamlined mode. Complete the GST rate workflow from Accounting instead."
+        )
+
+    ensure_gst_tax_indexes()
+    _assert_foundation_ready(entity["_id"])
+
+    rate_value = _parse_rate(total_rate)
+    today = business_today()
+    if effective_from:
+        effective_dt = _parse_date(effective_from, "Effective from")
+        effective_date = effective_dt.date() if isinstance(effective_dt, datetime) else effective_dt
+    else:
+        effective_date = today
+    if effective_date > today:
+        raise ValueError("A GST rate used by a new product cannot start in the future.")
+
+    current_dt = datetime.combine(today, time.min)
+    existing_rows = list(
+        mongo.db[GST_RATE_COLLECTION].find(
+            {
+                "accounting_entity_id": entity["_id"],
+                "status": STATUS_ACTIVE,
+                "is_active": True,
+                "is_deleted": False,
+            }
+        )
+    )
+    for row in existing_rows:
+        if _is_date_current(row, current_dt) and _decimal_value(row.get("total_rate")) == rate_value:
+            return {
+                "rate": serialize_gst_tax_rate(row),
+                "created": False,
+                "message": "Existing current GST rate selected.",
+            }
+
+    rate_text = _decimal_string(rate_value).rstrip("0").rstrip(".") or "0"
+    safe_rate_text = rate_text.replace(".", "_")
+    rate_code = _sanitize_rate_code(f"GST_{safe_rate_text}")
+    raw_payload = {
+        "name": f"GST {rate_text}%",
+        "rate_code": rate_code,
+        "description": "Created from Product Master quick tax setup.",
+        "total_rate": rate_text,
+        "effective_from": effective_date.isoformat(),
+        "effective_to": "",
+    }
+    payload = _validate_rate_payload(raw_payload, entity)
+    _assert_no_active_overlap(
+        entity["_id"],
+        payload["rate_code"],
+        payload["effective_from"],
+        payload["effective_to"],
+    )
+
+    timestamp = now_utc()
+    document = {
+        **payload,
+        "accounting_entity_id": entity["_id"],
+        "accounting_entity_id_str": str(entity["_id"]),
+        "entity_code": entity.get("entity_code") or AVPL_ENTITY_CODE,
+        "rate_master_id": str(uuid4()),
+        "status": STATUS_ACTIVE,
+        "is_active": True,
+        "is_deleted": False,
+        "version": 1,
+        "created_by": actor["_id"],
+        "created_by_str": str(actor["_id"]),
+        "created_by_name": actor.get("resolved_name") or "",
+        "created_at": timestamp,
+        "submitted_by": actor["_id"],
+        "submitted_by_name": actor.get("resolved_name") or "",
+        "submitted_at": timestamp,
+        "submission_note": "Created from Product Master quick tax setup.",
+        "approved_by": actor["_id"],
+        "approved_by_name": actor.get("resolved_name") or "",
+        "approved_at": timestamp,
+        "approval_note": "Validated and activated from Product Master quick tax setup.",
+        "updated_by": actor["_id"],
+        "updated_by_str": str(actor["_id"]),
+        "updated_by_name": actor.get("resolved_name") or "",
+        "updated_at": timestamp,
+        "audit_sync_required": False,
+        "change_history": [
+            _change_event(
+                "quick_create_gst_rate_from_product_master",
+                actor,
+                new_status=STATUS_ACTIVE,
+                changed_fields=[
+                    "rate_code", "total_rate", "cgst_rate", "sgst_rate",
+                    "igst_rate", "effective_from",
+                ],
+                remarks="Created and activated from Product Master quick tax setup.",
+            )
+        ],
+    }
+    try:
+        result = mongo.db[GST_RATE_COLLECTION].insert_one(document)
+    except DuplicateKeyError:
+        # A concurrent Product Master request may have created the same working
+        # slab first. Re-resolve current rates rather than creating duplicates.
+        for row in mongo.db[GST_RATE_COLLECTION].find(
+            {
+                "accounting_entity_id": entity["_id"],
+                "status": STATUS_ACTIVE,
+                "is_active": True,
+                "is_deleted": False,
+            }
+        ):
+            if _is_date_current(row, current_dt) and _decimal_value(row.get("total_rate")) == rate_value:
+                return {
+                    "rate": serialize_gst_tax_rate(row),
+                    "created": False,
+                    "message": "Existing current GST rate selected.",
+                }
+        raise ValueError("This GST rate changed while saving. Refresh the product form and try again.")
+
+    document["_id"] = result.inserted_id
+    _record_audit(
+        document,
+        actor,
+        "quick_create_gst_rate_from_product_master",
+        changed_fields=["rate_code", "total_rate", "effective_from"],
+        remarks="Created and activated from Product Master quick tax setup.",
+    )
+    return {
+        "rate": serialize_gst_tax_rate(document),
+        "created": True,
+        "message": f"GST {rate_text}% is ready to use.",
+    }
+
+
 def get_gst_tax_option_catalog(accounting_entity_id=None):
     entity_id = _to_object_id(accounting_entity_id) if accounting_entity_id else None
     active_rates = []

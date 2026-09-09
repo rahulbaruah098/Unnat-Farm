@@ -1,5 +1,10 @@
 {% extends 'base.html' %}
 {% block title %}AVPL Products
+
+
+{% endblock %}
+{% block content %}
+{% set can_publish = session.get('role') in ['super_admin','avpl_admin'] %}
 <style id="avpl-products-clean-redesign">
 .products-page{max-width:1500px!important;padding:20px 22px!important;border:1px solid #dbe9df!important;border-radius:16px!important;box-shadow:0 8px 24px rgba(26,72,43,.045)!important;background:#fff!important}
 .page-head{align-items:center!important;margin-bottom:12px!important;padding-bottom:12px!important;border-bottom:1px solid #e8eeea!important}.page-head h2{font-size:1.4rem!important}.page-head p{margin-top:3px!important;font-size:.7rem!important}.head-actions{gap:6px!important}.btn{min-height:35px!important;padding:6px 10px!important;font-size:.67rem!important}
@@ -14,10 +19,6 @@
 .confirm-box,.price-box{border-radius:14px!important;padding:20px!important}.confirm-box h3,.price-box h3{font-size:1rem!important}.confirm-box p,.price-box p{font-size:.72rem!important}.price-preview{gap:5px!important;margin-bottom:10px!important}.price-preview div{padding:7px!important;border-radius:7px!important}.price-preview small{font-size:.55rem!important}.price-preview strong{font-size:.68rem!important}.price-input-wrap input{height:39px!important}.price-actions{margin-top:14px!important}
 @media(max-width:1250px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:900px){.products-page{padding:16px!important}.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}@media(max-width:620px){.products-page{padding:13px!important;border-radius:14px!important}.grid{grid-template-columns:1fr!important}.page-head{align-items:flex-start!important}.head-actions{width:100%!important}.head-actions .btn{flex:1 1 calc(50% - 6px)!important}.bulk-left,.bulk-actions{width:100%!important}.bulk-actions .btn{flex:1 1 100%!important}.grid.list .card{display:flex!important}.grid.list .image{height:125px!important;min-height:125px!important}}
 </style>
-
-{% endblock %}
-{% block content %}
-{% set can_publish = session.get('role') in ['super_admin','avpl_admin'] %}
 <style>
 :root{
     --uf-primary:#397e51;--uf-primary-dark:#2f6e46;--uf-primary-deep:#24583a;

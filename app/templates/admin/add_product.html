@@ -12,6 +12,7 @@
 {% set selected_purchase_ledger_id = values.get('purchase_ledger_id') or accounting_mapping.get('purchase_ledger_id_str') or '' %}
 {% set selected_sales_ledger_id = values.get('sales_ledger_id') or accounting_mapping.get('sales_ledger_id_str') or '' %}
 {% set selected_inventory_ledger_id = values.get('inventory_ledger_id') or accounting_mapping.get('inventory_ledger_id_str') or '' %}
+{% set accounting_inputs_ready = selected_purchase_ledger_id and selected_sales_ledger_id and selected_inventory_ledger_id %}
 {% set mapping_note_value = values.get('mapping_note') or accounting_mapping.get('mapping_note') or '' %}
 {% set inventory_tracking_value = values.get('inventory_tracking_enabled') %}
 {% set purchase_enabled_value = values.get('purchase_enabled') %}
@@ -38,8 +39,11 @@
 .current-image{display:flex;align-items:center;gap:14px;padding:12px;border:1px solid rgba(47,122,76,.10);border-radius:10px;background:var(--uf-page)}.current-image img{width:76px;height:76px;border-radius:9px;object-fit:contain;background:var(--uf-soft)}
 .centre-dropdown{position:relative;width:100%}.centre-select-display{width:100%;min-height:41px;padding:0 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid rgba(47,122,76,.14);border-radius:9px;background:#fff;color:#304438;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}.centre-select-display span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.centre-arrow{color:var(--uf-primary-dark);font-size:14px;transition:.2s ease}.centre-dropdown.open .centre-arrow{transform:rotate(180deg)}.centre-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 7px);z-index:9999;max-height:310px;padding:11px;overflow-y:auto;overscroll-behavior:contain;border:1px solid rgba(47,122,76,.12);border-radius:11px;background:#fff;box-shadow:0 16px 36px rgba(15,23,42,.14)}.centre-dropdown.open .centre-menu{display:block}.centre-search{height:40px;margin-bottom:9px}.centre-options{max-height:205px;overflow:auto;display:grid;gap:7px;padding-right:3px}.centre-option{display:flex;flex-direction:row;align-items:center;gap:9px;padding:8px 9px;border:1px solid rgba(47,122,76,.10);border-radius:8px;background:#fbfdfb;color:#304438;font-size:.73rem;font-weight:700;cursor:pointer}.centre-option:hover{background:var(--uf-soft);border-color:rgba(47,122,76,.24)}.centre-option input{width:17px;height:17px;min-width:17px;min-height:17px;padding:0;accent-color:var(--uf-primary)}.centre-menu-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf2ee}.centre-ok-btn,.centre-clear-btn{min-height:36px;padding:7px 12px;border-radius:8px;font:inherit;font-size:.7rem;font-weight:800;cursor:pointer}.centre-ok-btn{border:1px solid var(--uf-primary);background:var(--uf-primary);color:#fff}.centre-clear-btn{border:1px solid rgba(47,122,76,.14);background:#fff;color:#526158}
 .form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;flex-wrap:wrap}.cancel-btn,.submit-btn{min-height:41px;display:inline-flex;align-items:center;justify-content:center;padding:8px 15px;border-radius:9px;font:inherit;font-size:.76rem;font-weight:800;text-decoration:none;cursor:pointer}.cancel-btn{border:1px solid rgba(47,122,76,.14);background:#fff;color:#526158}.submit-btn{border:1px solid var(--uf-primary);background:var(--uf-primary);color:#fff}.submit-btn:hover{background:var(--uf-primary-dark);border-color:var(--uf-primary-dark)}
+
+.hsn-picker{position:relative}.hsn-picker-row{display:flex;gap:8px;align-items:stretch}.hsn-picker-row>input{flex:1}.tax-quick-btn{flex:0 0 auto;min-height:41px;padding:8px 12px;border:1px solid rgba(47,122,76,.18);border-radius:9px;background:#f3f8f4;color:var(--uf-primary-dark);font:inherit;font-size:.72rem;font-weight:850;cursor:pointer;white-space:nowrap}.tax-quick-btn:hover{background:#eaf5ed;border-color:rgba(47,122,76,.32)}.hsn-suggestions{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:80;max-height:270px;overflow:auto;padding:6px;border:1px solid rgba(47,122,76,.14);border-radius:10px;background:#fff;box-shadow:0 16px 34px rgba(24,66,40,.13)}.hsn-suggestions.open{display:block}.hsn-suggestion{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 10px;border:0;border-radius:8px;background:#fff;text-align:left;cursor:pointer}.hsn-suggestion:hover,.hsn-suggestion:focus{background:#f2f8f4;outline:none}.hsn-suggestion strong{display:block;color:#25382c;font-size:.75rem}.hsn-suggestion small{display:block;margin-top:2px;color:#748279;font-size:.66rem}.hsn-suggestion .tax-mini{flex:0 0 auto;color:#2f6e46;font-size:.66rem;font-weight:850}.tax-summary{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid rgba(47,122,76,.12);border-radius:11px;background:#f7fbf8}.tax-summary.empty{border-style:dashed;color:#748279}.tax-summary-main strong{display:block;color:#22372a;font-size:.8rem}.tax-summary-main small{display:block;margin-top:3px;color:#6e7f74;font-size:.69rem}.tax-summary-rate{flex:0 0 auto;text-align:right}.tax-summary-rate strong{display:block;color:#2f6e46;font-size:.88rem}.tax-summary-rate small{display:block;color:#748279;font-size:.65rem}.accounting-details{grid-column:1/-1;border:1px solid rgba(47,122,76,.10);border-radius:11px;background:#fbfdfb}.accounting-details>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;cursor:pointer;color:#304438;font-size:.75rem;font-weight:850;list-style:none}.accounting-details>summary::-webkit-details-marker{display:none}.accounting-details>summary:after{content:'+';color:#2f6e46;font-size:1rem}.accounting-details[open]>summary:after{content:'−'}.accounting-details-body{padding:0 13px 13px}.accounting-details-note{color:#748279;font-size:.66rem;font-weight:600}.tax-modal-backdrop{display:none;position:fixed;inset:0;z-index:10050;align-items:center;justify-content:center;padding:18px;background:rgba(18,31,23,.48);backdrop-filter:blur(2px)}.tax-modal-backdrop.open{display:flex}.tax-modal{width:min(610px,100%);max-height:calc(100vh - 36px);overflow:auto;padding:18px;border:1px solid rgba(47,122,76,.13);border-radius:15px;background:#fff;box-shadow:0 30px 70px rgba(15,23,42,.22)}.tax-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}.tax-modal-head h3{margin:0;color:#17251d;font-size:1rem}.tax-modal-head p{margin:4px 0 0;color:#748279;font-size:.7rem}.tax-modal-close{width:34px;height:34px;border:1px solid rgba(47,122,76,.12);border-radius:8px;background:#fff;color:#526158;font-size:1.1rem;cursor:pointer}.tax-modal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tax-modal-grid .full{grid-column:1/-1}.tax-modal-error{display:none;margin-top:12px;padding:9px 11px;border:1px solid #f3c3c3;border-radius:8px;background:#fff4f4;color:#9f2929;font-size:.7rem;font-weight:700}.tax-modal-error.show{display:block}.tax-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}.tax-modal-actions button{min-height:39px;padding:8px 13px;border-radius:9px;font:inherit;font-size:.73rem;font-weight:850;cursor:pointer}.tax-modal-cancel{border:1px solid rgba(47,122,76,.14);background:#fff;color:#526158}.tax-modal-save{border:1px solid #397e51;background:#397e51;color:#fff}.tax-modal-save[disabled]{opacity:.6;cursor:wait}.field-error{border-color:#d56b6b!important;box-shadow:0 0 0 4px rgba(185,28,28,.06)!important}.inline-field-error{display:none;color:#b42318;font-size:.67rem;font-weight:700}.inline-field-error.show{display:block}
+
 @media(max-width:1100px){.product-master-page{padding:22px}}
-@media(max-width:720px){.product-master-page{padding:18px;border-radius:18px}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.back-btn{display:flex;align-items:center;justify-content:center}.title-row{align-items:stretch;flex-direction:column}.page-actions,.page-actions a{width:100%}.form-section{padding:15px}.centre-menu{position:fixed;left:16px;right:16px;top:90px;width:auto;max-height:calc(100vh - 120px)}}
+@media(max-width:720px){.product-master-page{padding:18px;border-radius:18px}.hsn-picker-row{flex-direction:column}.tax-quick-btn{width:100%}.tax-summary{align-items:flex-start;flex-direction:column}.tax-summary-rate{text-align:left}.tax-modal-grid{grid-template-columns:1fr}.tax-modal-grid .full{grid-column:auto}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}.back-btn{display:flex;align-items:center;justify-content:center}.title-row{align-items:stretch;flex-direction:column}.page-actions,.page-actions a{width:100%}.form-section{padding:15px}.centre-menu{position:fixed;left:16px;right:16px;top:90px;width:auto;max-height:calc(100vh - 120px)}}
 @media(max-width:560px){.product-master-page{padding:15px;border-radius:16px}.form-actions,.cancel-btn,.submit-btn{width:100%}.centre-menu-footer{flex-direction:column-reverse}.centre-ok-btn,.centre-clear-btn{width:100%}}
 </style>
 
@@ -155,96 +159,100 @@
         <section class="form-section">
             <div class="section-heading">
                 <div>
-                    <h3>Accounting Setup</h3>
-                    <p>Choose HSN and ledgers. GST is resolved automatically.</p>
+                    <h3>Tax & Accounting</h3>
+                    <p>Select an existing HSN or add HSN/GST here. Product Accounting is validated on save.</p>
                 </div>
                 {% if current_mapping_status == 'active' %}
                     <span class="legacy-pill" style="border-color:#b9dfc4;background:#eff8f1;color:#2f6e46;">Accounting Ready</span>
                 {% elif current_mapping_status %}
                     <span class="legacy-pill">Needs Activation</span>
                 {% else %}
-                    <span class="legacy-pill" style="border-color:#b9dfc4;background:#eff8f1;color:#2f6e46;">Activates on Save</span>
+                    <span class="legacy-pill" style="border-color:#b9dfc4;background:#eff8f1;color:#2f6e46;">Auto on Save</span>
                 {% endif %}
             </div>
 
             {% if not accounting_entity %}
-                <div class="batch-note"><strong>Accounting setup unavailable:</strong> The active AVPL Accounting entity was not found.</div>
+                <div class="batch-note"><strong>Accounting unavailable:</strong> Active AVPL Accounting is required before saving a product.</div>
             {% endif %}
 
             <div class="form-grid">
-                <label class="field-label">HSN Classification <span class="required-mark">*</span>
-                    <select name="hsn_master_id" id="hsnMasterSelect" required>
-                        <option value="">Select HSN</option>
-                        {% for hsn in hsn_masters %}
-                            <option
-                                value="{{ hsn.id }}"
-                                data-taxability="{{ hsn.taxability_name or hsn.taxability_code }}"
-                                data-gst-rate="{{ hsn.gst_rate_code or 'No GST rate' }}"
-                                {% if selected_hsn_id|string == hsn.id|string %}selected{% endif %}
-                            >
-                                {{ hsn.hsn_code }} — {{ hsn.description or hsn.taxability_name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    {% if not hsn_masters %}<small class="field-help">No active HSN is available. Add it in Accounting first.</small>{% endif %}
-                </label>
+                <div class="field-label full">
+                    <span>HSN <span class="required-mark">*</span></span>
+                    <div class="hsn-picker" id="hsnPicker">
+                        <div class="hsn-picker-row">
+                            <input type="text" id="hsnLookup" autocomplete="off" placeholder="Search HSN code or description">
+                            <button type="button" class="tax-quick-btn" id="openTaxQuick">+ Add HSN / GST</button>
+                        </div>
+                        <input type="hidden" name="hsn_master_id" id="hsnMasterId" value="{{ selected_hsn_id }}" required>
+                        <div class="hsn-suggestions" id="hsnSuggestions" role="listbox"></div>
+                    </div>
+                    <small class="field-help">Existing HSNs load their current GST automatically.</small>
+                    <small class="inline-field-error" id="hsnInlineError">Select an HSN or save the new HSN/GST setup first.</small>
+                </div>
 
-                <label class="field-label">Resolved Tax Treatment
-                    <input type="text" id="resolvedTaxTreatment" value="Select an HSN to resolve GST" readonly>
-                    <small class="field-help">Resolved from the selected HSN.</small>
-                </label>
+                <div class="tax-summary empty" id="taxSummary">
+                    <div class="tax-summary-main">
+                        <strong>No HSN selected</strong>
+                        <small>Search an existing HSN or add one here.</small>
+                    </div>
+                    <div class="tax-summary-rate"><strong>—</strong><small>GST</small></div>
+                </div>
 
-                <label class="field-label">Purchase Ledger <span class="required-mark">*</span>
-                    <select name="purchase_ledger_id" required>
-                        <option value="">Select purchase ledger</option>
-                        {% for ledger in purchase_ledgers %}
-                            <option value="{{ ledger.id }}" {% if selected_purchase_ledger_id|string == ledger.id|string %}selected{% endif %}>
-                                {{ ledger.ledger_code }} — {{ ledger.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </label>
+                <details class="accounting-details" {% if not accounting_inputs_ready %}open{% endif %}>
+                    <summary>
+                        <span>Accounting mapping</span>
+                        <span class="accounting-details-note">Validated automatically on save</span>
+                    </summary>
+                    <div class="accounting-details-body">
+                        <div class="form-grid">
+                            <label class="field-label">Purchase Ledger <span class="required-mark">*</span>
+                                <select name="purchase_ledger_id" required>
+                                    <option value="">Select purchase ledger</option>
+                                    {% for ledger in purchase_ledgers %}
+                                        <option value="{{ ledger.id }}" {% if selected_purchase_ledger_id|string == ledger.id|string %}selected{% endif %}>{{ ledger.ledger_code }} — {{ ledger.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
 
-                <label class="field-label">Sales Ledger <span class="required-mark">*</span>
-                    <select name="sales_ledger_id" required>
-                        <option value="">Select sales ledger</option>
-                        {% for ledger in sales_ledgers %}
-                            <option value="{{ ledger.id }}" {% if selected_sales_ledger_id|string == ledger.id|string %}selected{% endif %}>
-                                {{ ledger.ledger_code }} — {{ ledger.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </label>
+                            <label class="field-label">Sales Ledger <span class="required-mark">*</span>
+                                <select name="sales_ledger_id" required>
+                                    <option value="">Select sales ledger</option>
+                                    {% for ledger in sales_ledgers %}
+                                        <option value="{{ ledger.id }}" {% if selected_sales_ledger_id|string == ledger.id|string %}selected{% endif %}>{{ ledger.ledger_code }} — {{ ledger.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
 
-                <label class="field-label">Inventory Ledger <span class="required-mark">*</span>
-                    <select name="inventory_ledger_id" required>
-                        <option value="">Select inventory ledger</option>
-                        {% for ledger in inventory_ledgers %}
-                            <option value="{{ ledger.id }}" {% if selected_inventory_ledger_id|string == ledger.id|string %}selected{% endif %}>
-                                {{ ledger.ledger_code }} — {{ ledger.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </label>
+                            <label class="field-label">Inventory Ledger <span class="required-mark">*</span>
+                                <select name="inventory_ledger_id" required>
+                                    <option value="">Select inventory ledger</option>
+                                    {% for ledger in inventory_ledgers %}
+                                        <option value="{{ ledger.id }}" {% if selected_inventory_ledger_id|string == ledger.id|string %}selected{% endif %}>{{ ledger.ledger_code }} — {{ ledger.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
 
-                <label class="checkbox-card">
-                    <input type="checkbox" name="inventory_tracking_enabled" {% if inventory_tracking_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
-                    <span>Inventory Tracking<small>Track stock and batches.</small></span>
-                </label>
+                            <label class="checkbox-card">
+                                <input type="checkbox" name="inventory_tracking_enabled" {% if inventory_tracking_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
+                                <span>Inventory Tracking<small>Track stock and batches.</small></span>
+                            </label>
 
-                <label class="checkbox-card">
-                    <input type="checkbox" name="purchase_enabled" {% if purchase_enabled_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
-                    <span>Purchase Enabled<small>Allow purchasing.</small></span>
-                </label>
+                            <label class="checkbox-card">
+                                <input type="checkbox" name="purchase_enabled" {% if purchase_enabled_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
+                                <span>Purchase Enabled<small>Allow purchasing.</small></span>
+                            </label>
 
-                <label class="checkbox-card">
-                    <input type="checkbox" name="sales_enabled" {% if sales_enabled_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
-                    <span>Sales Enabled<small>Allow selling.</small></span>
-                </label>
+                            <label class="checkbox-card">
+                                <input type="checkbox" name="sales_enabled" {% if sales_enabled_value in [true, 'on', 'true', '1', 1] %}checked{% endif %}>
+                                <span>Sales Enabled<small>Allow selling.</small></span>
+                            </label>
 
-                <label class="field-label full">Accounting Note <span style="font-weight:500;color:#748279;">(optional)</span>
-                    <textarea name="mapping_note" maxlength="1500" placeholder="Optional internal note">{{ mapping_note_value }}</textarea>
-                </label>
+                            <label class="field-label full">Accounting Note <span style="font-weight:500;color:#748279;">(optional)</span>
+                                <textarea name="mapping_note" maxlength="1500" placeholder="Optional internal note">{{ mapping_note_value }}</textarea>
+                            </label>
+                        </div>
+                    </div>
+                </details>
             </div>
         </section>
 
@@ -286,6 +294,31 @@
             </div>
         </section>
 
+        <div class="tax-modal-backdrop" id="taxQuickModal" aria-hidden="true">
+            <div class="tax-modal" role="dialog" aria-modal="true" aria-labelledby="taxQuickTitle">
+                <div class="tax-modal-head">
+                    <div><h3 id="taxQuickTitle">Add HSN & GST</h3><p>Saved to the Accounting master and selected for this product.</p></div>
+                    <button type="button" class="tax-modal-close" id="closeTaxQuick" aria-label="Close">×</button>
+                </div>
+                <div class="tax-modal-grid">
+                    <label class="field-label">HSN <span class="required-mark">*</span><input id="quickHsnCode" inputmode="numeric" maxlength="8" placeholder="4, 6 or 8 digits"></label>
+                    <label class="field-label">Taxability <span class="required-mark">*</span>
+                        <select id="quickTaxability">
+                            {% for code, item in taxability_options.items() %}<option value="{{ code }}" {% if code == 'TAXABLE' %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    <label class="field-label full">Description <span class="required-mark">*</span><input id="quickHsnDescription" maxlength="300" placeholder="Short HSN description"></label>
+                    <label class="field-label" id="quickGstRateWrap">GST Rate (%) <span class="required-mark">*</span>
+                        <input id="quickGstRate" type="number" min="0" max="100" step="0.001" list="gstRateSuggestions" placeholder="e.g. 5 or 18">
+                        <datalist id="gstRateSuggestions">{% for rate in gst_rate_options %}<option value="{{ rate.total_rate }}">{{ rate.name }}</option>{% endfor %}</datalist>
+                    </label>
+                    <label class="field-label" id="quickEffectiveWrap">Effective From <span class="required-mark">*</span><input id="quickEffectiveFrom" type="date" value="{{ tax_setup_today }}" max="{{ tax_setup_today }}"></label>
+                </div>
+                <div class="tax-modal-error" id="taxQuickError"></div>
+                <div class="tax-modal-actions"><button type="button" class="tax-modal-cancel" id="cancelTaxQuick">Cancel</button><button type="button" class="tax-modal-save" id="saveTaxQuick">Save & Use</button></div>
+            </div>
+        </div>
+
         <div class="form-actions">
             <a href="{{ url_for('admin.product_list') }}" class="cancel-btn">Cancel</a>
             <button type="submit" class="submit-btn">{{ 'Save Changes' if is_edit else 'Save Product' }}</button>
@@ -295,23 +328,102 @@
 
 <script>
 (function(){
-    const hsn = document.getElementById('hsnMasterSelect');
-    const output = document.getElementById('resolvedTaxTreatment');
-    function refreshTax(){
-        if(!hsn || !output) return;
-        const option = hsn.options[hsn.selectedIndex];
-        if(!option || !option.value){
-            output.value = 'Select an HSN to resolve GST';
-            return;
-        }
-        const taxability = option.dataset.taxability || 'Unknown';
-        const rate = option.dataset.gstRate || 'No GST rate';
-        output.value = taxability + ' · ' + rate;
+    const options = {{ hsn_picker_options|tojson }};
+    const quickUrl = {{ url_for('admin.quick_create_product_tax_setup')|tojson }};
+    const productForm = document.getElementById('productMasterForm');
+    const picker = document.getElementById('hsnPicker');
+    const lookup = document.getElementById('hsnLookup');
+    const hiddenId = document.getElementById('hsnMasterId');
+    const suggestions = document.getElementById('hsnSuggestions');
+    const summary = document.getElementById('taxSummary');
+    const inlineError = document.getElementById('hsnInlineError');
+    const modal = document.getElementById('taxQuickModal');
+    const openBtn = document.getElementById('openTaxQuick');
+    const closeBtn = document.getElementById('closeTaxQuick');
+    const cancelBtn = document.getElementById('cancelTaxQuick');
+    const saveBtn = document.getElementById('saveTaxQuick');
+    const qCode = document.getElementById('quickHsnCode');
+    const qDesc = document.getElementById('quickHsnDescription');
+    const qTax = document.getElementById('quickTaxability');
+    const qRate = document.getElementById('quickGstRate');
+    const qRateWrap = document.getElementById('quickGstRateWrap');
+    const qEffective = document.getElementById('quickEffectiveFrom');
+    const qEffectiveWrap = document.getElementById('quickEffectiveWrap');
+    const qError = document.getElementById('taxQuickError');
+    let selected = null;
+
+    function optionLabel(item){ return (item.hsn_code || '') + (item.description ? ' — ' + item.description : ''); }
+    function findById(id){ return options.find(item => String(item.id) === String(id || '')); }
+    function taxText(item){
+        if(!item) return '';
+        if((item.taxability_code || '').toUpperCase() !== 'TAXABLE') return item.taxability_name || item.taxability_code || 'Non-taxable';
+        return item.gst_total_rate_display || (item.gst_total_rate ? item.gst_total_rate + '%' : item.gst_rate_code || 'GST');
     }
-    if(hsn){ hsn.addEventListener('change', refreshTax); refreshTax(); }
+    function renderSummary(item){
+        summary.innerHTML = '';
+        const main = document.createElement('div'); main.className='tax-summary-main';
+        const title=document.createElement('strong'); const detail=document.createElement('small');
+        const rateBox=document.createElement('div'); rateBox.className='tax-summary-rate';
+        const rateStrong=document.createElement('strong'); const rateSmall=document.createElement('small');
+        if(!item){
+            summary.classList.add('empty'); title.textContent='No HSN selected'; detail.textContent='Search an existing HSN or add one here.'; rateStrong.textContent='—'; rateSmall.textContent='GST';
+        }else{
+            summary.classList.remove('empty'); title.textContent=(item.hsn_code || '') + ' · ' + (item.taxability_name || item.taxability_code || ''); detail.textContent=item.description || '';
+            if((item.taxability_code || '').toUpperCase()==='TAXABLE'){
+                rateStrong.textContent=taxText(item);
+                const bits=[]; if(item.cgst_rate && item.sgst_rate) bits.push('CGST '+item.cgst_rate+'% + SGST '+item.sgst_rate+'%'); if(item.igst_rate) bits.push('IGST '+item.igst_rate+'%'); rateSmall.textContent=bits.join(' · ') || item.gst_rate_code || 'Current GST';
+            }else{ rateStrong.textContent=item.taxability_name || 'No GST'; rateSmall.textContent='No GST rate'; }
+        }
+        main.append(title,detail); rateBox.append(rateStrong,rateSmall); summary.append(main,rateBox);
+    }
+    function setSelected(item){
+        selected=item || null; hiddenId.value=item ? item.id : ''; lookup.value=item ? optionLabel(item) : ''; lookup.classList.remove('field-error'); inlineError.classList.remove('show'); suggestions.classList.remove('open'); renderSummary(item);
+    }
+    function renderSuggestions(){
+        const q=(lookup.value || '').trim().toLowerCase(); suggestions.innerHTML='';
+        const rows=options.filter(item => !q || (item.hsn_code || '').toLowerCase().includes(q) || (item.description || '').toLowerCase().includes(q)).slice(0,10);
+        if(!rows.length){ suggestions.classList.remove('open'); return; }
+        rows.forEach(item => {
+            const b=document.createElement('button'); b.type='button'; b.className='hsn-suggestion'; b.setAttribute('role','option');
+            const left=document.createElement('span'); const st=document.createElement('strong'); const sm=document.createElement('small'); const tax=document.createElement('span'); tax.className='tax-mini';
+            st.textContent=item.hsn_code || ''; sm.textContent=item.description || ''; tax.textContent=taxText(item); left.append(st,sm); b.append(left,tax); b.addEventListener('click',()=>setSelected(item)); suggestions.appendChild(b);
+        }); suggestions.classList.add('open');
+    }
+    function cleanTypedCode(){ return (lookup.value || '').replace(/\D/g,'').slice(0,8); }
+    function showQuickError(message){ qError.textContent=message || 'Unable to save tax setup.'; qError.classList.add('show'); }
+    function clearQuickError(){ qError.textContent=''; qError.classList.remove('show'); }
+    function toggleRateFields(){ const taxable=(qTax.value || '').toUpperCase()==='TAXABLE'; qRateWrap.style.display=taxable?'flex':'none'; qEffectiveWrap.style.display=taxable?'flex':'none'; if(!taxable) qRate.value=''; }
+    function openQuick(){
+        clearQuickError(); const code=cleanTypedCode(); if(code) qCode.value=code; modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; toggleRateFields(); setTimeout(()=>qCode.focus(),30);
+    }
+    function closeQuick(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); document.body.style.overflow=''; clearQuickError(); }
+
+    lookup.addEventListener('focus',renderSuggestions);
+    lookup.addEventListener('input',()=>{ if(selected && lookup.value!==optionLabel(selected)){ selected=null; hiddenId.value=''; renderSummary(null); } renderSuggestions(); });
+    document.addEventListener('click',(e)=>{ if(picker && !picker.contains(e.target)) suggestions.classList.remove('open'); });
+    openBtn.addEventListener('click',openQuick); closeBtn.addEventListener('click',closeQuick); cancelBtn.addEventListener('click',closeQuick); qTax.addEventListener('change',toggleRateFields);
+    modal.addEventListener('click',(e)=>{ if(e.target===modal) closeQuick(); });
+    document.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeQuick(); });
+
+    saveBtn.addEventListener('click',async()=>{
+        clearQuickError();
+        const code=(qCode.value || '').replace(/\D/g,''); const desc=(qDesc.value || '').trim(); const tax=(qTax.value || '').trim(); const rate=(qRate.value || '').trim();
+        if(!/^(\d{4}|\d{6}|\d{8})$/.test(code)){ showQuickError('HSN must contain exactly 4, 6 or 8 digits.'); return; }
+        if(!desc){ showQuickError('Enter a short HSN description.'); return; }
+        if(tax==='TAXABLE' && rate===''){ showQuickError('Enter the applicable GST rate.'); return; }
+        saveBtn.disabled=true; saveBtn.textContent='Saving…';
+        try{
+            const response=await fetch(quickUrl,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({hsn_code:code,description:desc,taxability_code:tax,gst_total_rate:rate,effective_from:qEffective.value})});
+            const data=await response.json().catch(()=>({ok:false,message:'Invalid server response.'}));
+            if(!response.ok || !data.ok) throw new Error(data.message || 'Unable to save tax setup.');
+            const item=data.hsn || {}; const existingIndex=options.findIndex(row=>String(row.id)===String(item.id)); if(existingIndex>=0) options[existingIndex]=item; else options.push(item); setSelected(item); closeQuick();
+        }catch(err){ showQuickError(err.message || 'Unable to save tax setup.'); }
+        finally{ saveBtn.disabled=false; saveBtn.textContent='Save & Use'; }
+    });
+
+    if(productForm){ productForm.addEventListener('submit',(e)=>{ if(!hiddenId.value){ e.preventDefault(); lookup.classList.add('field-error'); inlineError.classList.add('show'); lookup.focus(); } }); }
+    const initial=findById(hiddenId.value); if(initial) setSelected(initial); else renderSummary(null); toggleRateFields();
 })();
-
-
 </script>
 
 {% endblock %}

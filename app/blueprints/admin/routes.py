@@ -25,6 +25,14 @@ from app.services.accounting_product_mapping_service import (
     get_product_readiness_snapshot,
     upsert_product_mapping_request_from_product_master,
 )
+from app.services.accounting_hsn_service import (
+    ensure_hsn_for_product_setup,
+    get_hsn_option_catalog,
+)
+from app.services.accounting_gst_tax_service import (
+    ensure_gst_rate_for_product_setup,
+    get_gst_tax_option_catalog,
+)
 from app.services.accounting_party_ledger_service import (
     approve_party_ledger,
     cancel_party_ledger,
@@ -1281,6 +1289,10 @@ def _product_accounting_form_catalog(product=None):
         return {
             'entity': None,
             'hsn_masters': [],
+            'hsn_picker_options': [],
+            'taxability_options': {},
+            'gst_rate_options': [],
+            'tax_setup_today': '',
             'units': [],
             'purchase_ledgers': [],
             'sales_ledgers': [],
@@ -1289,6 +1301,47 @@ def _product_accounting_form_catalog(product=None):
         }
 
     options = get_product_mapping_option_catalog(entity['_id'])
+    hsn_catalog = get_hsn_option_catalog(entity['_id'])
+    gst_catalog = get_gst_tax_option_catalog(entity['_id'])
+
+    # Only rates that are effective today are offered in Product Master. Future
+    # rates remain safely available in the Accounting history but cannot be
+    # attached accidentally to a product that is being created for current use.
+    current_rates = [
+        row for row in (gst_catalog.get('active_rates') or [])
+        if row.get('is_current_today')
+    ]
+    rate_by_code = {}
+    for row in current_rates:
+        code = str(row.get('rate_code') or '').upper()
+        if code and code not in rate_by_code:
+            rate_by_code[code] = row
+
+    hsn_masters = []
+    hsn_picker_options = []
+    for row in (options.get('hsn_masters') or []):
+        item = dict(row)
+        rate = rate_by_code.get(str(item.get('gst_rate_code') or '').upper()) or {}
+        item['gst_total_rate'] = rate.get('total_rate') or ''
+        item['gst_total_rate_display'] = rate.get('total_rate_display') or ''
+        item['cgst_rate'] = rate.get('cgst_rate') or ''
+        item['sgst_rate'] = rate.get('sgst_rate') or ''
+        item['igst_rate'] = rate.get('igst_rate') or ''
+        hsn_masters.append(item)
+        hsn_picker_options.append({
+            'id': item.get('id') or '',
+            'hsn_code': item.get('hsn_code') or '',
+            'description': item.get('description') or '',
+            'taxability_code': item.get('taxability_code') or '',
+            'taxability_name': item.get('taxability_name') or item.get('taxability_code') or '',
+            'gst_rate_code': item.get('gst_rate_code') or '',
+            'gst_total_rate': item.get('gst_total_rate') or '',
+            'gst_total_rate_display': item.get('gst_total_rate_display') or '',
+            'cgst_rate': item.get('cgst_rate') or '',
+            'sgst_rate': item.get('sgst_rate') or '',
+            'igst_rate': item.get('igst_rate') or '',
+        })
+
     mapping = None
     if product and product.get('_id'):
         mapping = mongo.db.accounting_product_mappings.find_one({
@@ -1300,7 +1353,11 @@ def _product_accounting_form_catalog(product=None):
 
     return {
         'entity': entity,
-        'hsn_masters': options.get('hsn_masters') or [],
+        'hsn_masters': hsn_masters,
+        'hsn_picker_options': hsn_picker_options,
+        'taxability_options': hsn_catalog.get('taxability') or {},
+        'gst_rate_options': current_rates,
+        'tax_setup_today': gst_catalog.get('today') or '',
         'units': options.get('units') or [],
         'purchase_ledgers': options.get('purchase_ledgers') or [],
         'sales_ledgers': options.get('sales_ledgers') or [],
@@ -1324,6 +1381,10 @@ def _product_master_form_context(product=None, form_data=None):
         'categories': categories,
         'units': accounting_catalog.get('units') or _active_avpl_product_units(),
         'hsn_masters': accounting_catalog.get('hsn_masters') or [],
+        'hsn_picker_options': accounting_catalog.get('hsn_picker_options') or [],
+        'taxability_options': accounting_catalog.get('taxability_options') or {},
+        'gst_rate_options': accounting_catalog.get('gst_rate_options') or [],
+        'tax_setup_today': accounting_catalog.get('tax_setup_today') or '',
         'purchase_ledgers': accounting_catalog.get('purchase_ledgers') or [],
         'sales_ledgers': accounting_catalog.get('sales_ledgers') or [],
         'inventory_ledgers': accounting_catalog.get('inventory_ledgers') or [],
@@ -1507,6 +1568,109 @@ def _build_product_master_payload(existing_product=None):
         # Legacy commercial fields stay active until Stage 1 Batch 1.3.
         'updated_at': now_utc(),
     }
+
+
+@admin_bp.route('/products/tax-setup/quick-create', methods=['POST'])
+@login_required
+@roles_required('avpl_admin', 'accounts')
+def quick_create_product_tax_setup():
+    """Create/reuse an HSN + current GST slab from Product Master.
+
+    This endpoint intentionally keeps the statutory masters authoritative while
+    removing the need to leave Product Master for routine setup. Existing HSNs
+    are never overwritten and existing GST periods are reused whenever possible.
+    """
+    payload = request.get_json(silent=True) or request.form
+    entity = _active_avpl_accounting_entity()
+    if not entity:
+        return jsonify({'ok': False, 'message': 'The active AVPL Accounting entity is not available.'}), 400
+
+    hsn_code = _clean_product_field(payload.get('hsn_code'), 8)
+    description = _clean_product_field(payload.get('description'), 300)
+    taxability_code = _clean_product_field(payload.get('taxability_code'), 30).upper()
+    effective_from = _clean_product_field(payload.get('effective_from'), 20)
+    gst_total_rate = _clean_product_field(payload.get('gst_total_rate'), 30)
+
+    if not hsn_code:
+        return jsonify({'ok': False, 'message': 'Enter an HSN code.'}), 400
+    if not description:
+        return jsonify({'ok': False, 'message': 'Enter a short HSN description.'}), 400
+    if taxability_code not in {'TAXABLE', 'EXEMPT', 'NIL_RATED', 'NON_GST'}:
+        return jsonify({'ok': False, 'message': 'Select a valid taxability type.'}), 400
+
+    try:
+        rate_result = None
+        gst_rate_code = ''
+        if taxability_code == 'TAXABLE':
+            if gst_total_rate == '':
+                raise ValueError('Enter the applicable GST rate.')
+            rate_result = ensure_gst_rate_for_product_setup(
+                entity['_id'],
+                session['user_id'],
+                gst_total_rate,
+                effective_from=effective_from or None,
+            )
+            gst_rate_code = (rate_result.get('rate') or {}).get('rate_code') or ''
+
+        hsn_result = ensure_hsn_for_product_setup(
+            entity['_id'],
+            session['user_id'],
+            {
+                'hsn_code': hsn_code,
+                'description': description,
+                'taxability_code': taxability_code,
+                'gst_rate_code': gst_rate_code,
+                'source_reference': 'Product Master quick tax setup',
+                'notes': '',
+            },
+        )
+        hsn = hsn_result.get('hsn') or {}
+        rate = (rate_result or {}).get('rate') or {}
+
+        if not rate and hsn.get('gst_rate_code'):
+            current_catalog = get_gst_tax_option_catalog(entity['_id'])
+            rate = next(
+                (
+                    item for item in (current_catalog.get('active_rates') or [])
+                    if item.get('is_current_today')
+                    and str(item.get('rate_code') or '').upper() == str(hsn.get('gst_rate_code') or '').upper()
+                ),
+                {},
+            )
+
+        log_action(
+            session['user_id'],
+            'quick_setup_product_tax',
+            'hsn_master',
+            hsn.get('id') or '',
+            metadata={
+                'hsn_code': hsn.get('hsn_code') or hsn_code,
+                'taxability_code': hsn.get('taxability_code') or taxability_code,
+                'gst_rate_code': hsn.get('gst_rate_code') or gst_rate_code,
+                'source': 'product_master',
+            },
+        )
+
+        return jsonify({
+            'ok': True,
+            'message': hsn_result.get('message') or 'Tax setup is ready.',
+            'hsn': {
+                'id': hsn.get('id') or '',
+                'hsn_code': hsn.get('hsn_code') or '',
+                'description': hsn.get('description') or '',
+                'taxability_code': hsn.get('taxability_code') or '',
+                'taxability_name': hsn.get('taxability_name') or hsn.get('taxability_code') or '',
+                'gst_rate_code': hsn.get('gst_rate_code') or '',
+                'gst_total_rate': rate.get('total_rate') or '',
+                'gst_total_rate_display': rate.get('total_rate_display') or '',
+                'cgst_rate': rate.get('cgst_rate') or '',
+                'sgst_rate': rate.get('sgst_rate') or '',
+                'igst_rate': rate.get('igst_rate') or '',
+            },
+        })
+    except (ValueError, PermissionError, RuntimeError) as exc:
+        return jsonify({'ok': False, 'message': str(exc)}), 400
+
 
 
 @admin_bp.route('/products/add', methods=['GET', 'POST'])

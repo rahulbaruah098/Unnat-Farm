@@ -231,6 +231,141 @@ def _active_avpl_marketplace_entity():
     })
 
 
+def _marketplace_number(value, default=0.0):
+    """Convert Mongo numeric values, including Decimal128, to float safely."""
+    try:
+        if hasattr(value, "to_decimal"):
+            value = value.to_decimal()
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _marketplace_tax_snapshot_map(accounting_entity_id, product_ids):
+    """Resolve current GST snapshots for published AVPL products in bulk.
+
+    Product Accounting remains authoritative. This helper only prepares a
+    read-only price preview for the UFC marketplace; order/invoice services
+    still recalculate statutory tax independently.
+    """
+    product_ids = [pid for pid in product_ids if isinstance(pid, ObjectId)]
+    if not product_ids:
+        return {}
+
+    mappings = list(mongo.db.accounting_product_mappings.find(
+        {
+            "accounting_entity_id": accounting_entity_id,
+            "source_product_id": {"$in": product_ids},
+            "status": "active",
+            "is_active": True,
+            "is_accounting_eligible": True,
+            "is_deleted": {"$ne": True},
+        },
+        {
+            "source_product_id": 1,
+            "taxability_code": 1,
+            "taxability_name": 1,
+            "gst_rate_code": 1,
+            "hsn_code": 1,
+        },
+    ))
+
+    mapping_by_product = {
+        row.get("source_product_id"): row
+        for row in mappings
+        if isinstance(row.get("source_product_id"), ObjectId)
+    }
+
+    rate_codes = sorted({
+        str(row.get("gst_rate_code") or "").strip().upper()
+        for row in mappings
+        if str(row.get("taxability_code") or "").strip().upper() == "TAXABLE"
+        and str(row.get("gst_rate_code") or "").strip()
+    })
+
+    rate_by_code = {}
+    if rate_codes:
+        today_start = datetime.combine(business_today(), datetime.min.time())
+        rate_rows = mongo.db.gst_tax_rates.find(
+            {
+                "accounting_entity_id": accounting_entity_id,
+                "rate_code": {"$in": rate_codes},
+                "status": {"$in": ["active", "retired"]},
+                "is_deleted": False,
+                "effective_from": {"$lte": today_start},
+                "$or": [
+                    {"effective_to": None},
+                    {"effective_to": {"$exists": False}},
+                    {"effective_to": {"$gte": today_start}},
+                ],
+            },
+            {
+                "rate_code": 1,
+                "total_rate": 1,
+                "cgst_rate": 1,
+                "sgst_rate": 1,
+                "igst_rate": 1,
+                "effective_from": 1,
+            },
+        ).sort([("rate_code", 1), ("effective_from", -1)])
+
+        for row in rate_rows:
+            code = str(row.get("rate_code") or "").strip().upper()
+            if code and code not in rate_by_code:
+                rate_by_code[code] = row
+
+    result = {}
+    for product_id in product_ids:
+        mapping = mapping_by_product.get(product_id) or {}
+        taxability = str(mapping.get("taxability_code") or "").strip().upper()
+        rate_code = str(mapping.get("gst_rate_code") or "").strip().upper()
+
+        if not mapping:
+            result[str(product_id)] = {
+                "configured": False,
+                "taxability_code": "",
+                "taxability_name": "",
+                "gst_rate_code": "",
+                "gst_rate": 0.0,
+                "hsn_code": "",
+            }
+            continue
+
+        if taxability != "TAXABLE":
+            result[str(product_id)] = {
+                "configured": True,
+                "taxability_code": taxability,
+                "taxability_name": mapping.get("taxability_name") or taxability.replace("_", " ").title(),
+                "gst_rate_code": "",
+                "gst_rate": 0.0,
+                "hsn_code": mapping.get("hsn_code") or "",
+            }
+            continue
+
+        rate = rate_by_code.get(rate_code)
+        if not rate:
+            result[str(product_id)] = {
+                "configured": False,
+                "taxability_code": taxability,
+                "taxability_name": mapping.get("taxability_name") or "Taxable",
+                "gst_rate_code": rate_code,
+                "gst_rate": 0.0,
+                "hsn_code": mapping.get("hsn_code") or "",
+            }
+            continue
+
+        result[str(product_id)] = {
+            "configured": True,
+            "taxability_code": taxability,
+            "taxability_name": mapping.get("taxability_name") or "Taxable",
+            "gst_rate_code": rate_code,
+            "gst_rate": max(_marketplace_number(rate.get("total_rate")), 0.0),
+            "hsn_code": mapping.get("hsn_code") or "",
+        }
+
+    return result
+
+
 def _published_avpl_products_for_ufc():
     """Return only AVPL products explicitly published to all active UFCs.
 
@@ -328,6 +463,8 @@ def _published_avpl_products_for_ufc():
             except Exception:
                 pass
 
+    tax_by_product = _marketplace_tax_snapshot_map(avpl_entity["_id"], published_ids)
+
     products = []
     for product_id in published_ids:
         product = product_by_id.get(product_id)
@@ -350,11 +487,31 @@ def _published_avpl_products_for_ufc():
             marketplace_price = max(float(publication.get("ufc_sale_price") or 0), 0.0)
         except (TypeError, ValueError):
             marketplace_price = 0.0
+        tax_snapshot = tax_by_product.get(str(product_id)) or {}
+        gst_configured = tax_snapshot.get("configured") is True
+        gst_rate = max(_marketplace_number(tax_snapshot.get("gst_rate")), 0.0)
+        inclusive_price = (
+            marketplace_price * (1.0 + (gst_rate / 100.0))
+            if marketplace_price > 0 and gst_configured
+            else 0.0
+        )
+
         product["_ufc_marketplace"] = publication
         product["_ufc_sale_price"] = marketplace_price
         product["_ufc_sale_price_display"] = f"{marketplace_price:.2f}"
         product["_ufc_price_configured"] = marketplace_price > 0
         product["_ufc_published"] = True
+        product["_marketplace_category"] = (
+            str(product.get("category") or "Other").strip() or "Other"
+        )
+        product["_gst_configured"] = gst_configured
+        product["_gst_rate"] = gst_rate
+        product["_gst_rate_display"] = f"{gst_rate:g}"
+        product["_gst_taxability_code"] = tax_snapshot.get("taxability_code") or ""
+        product["_gst_taxability_name"] = tax_snapshot.get("taxability_name") or ""
+        product["_gst_hsn_code"] = tax_snapshot.get("hsn_code") or ""
+        product["_ufc_sale_price_inclusive"] = inclusive_price
+        product["_ufc_sale_price_inclusive_display"] = f"{inclusive_price:.2f}"
         products.append(product)
     return products
 

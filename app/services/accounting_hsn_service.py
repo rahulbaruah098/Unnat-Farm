@@ -540,6 +540,140 @@ def reactivate_hsn_master(hsn_id, actor_user_id, expected_version, reason):
     return _transition(hsn_id, actor_user_id, expected_version, "reactivate_hsn_master", REACTIVATE_PERMISSION, {"avpl_admin", "super_admin"}, {STATUS_INACTIVE}, STATUS_ACTIVE, reason=reason)
 
 
+
+def ensure_hsn_for_product_setup(accounting_entity_id, actor_user_id, form):
+    """Resolve or create an active HSN directly from Product Master quick setup.
+
+    Existing HSN records are reused. A conflicting active/draft classification is
+    never overwritten silently; the user must review that master instead. This
+    keeps historical tax classification and audit history safe while making new
+    product creation a one-screen workflow.
+    """
+    actor = _get_actor(
+        actor_user_id,
+        allowed_roles={"accounts", "avpl_admin", "super_admin"},
+    )
+    entity = _assert_active_avpl_entity(accounting_entity_id)
+    permission = CREATE_PERMISSION if actor.get("resolved_role") == "accounts" else APPROVE_PERMISSION
+    _require_permission(actor, entity["_id"], permission)
+
+    if not workflow_is_streamlined("accounting.hsn"):
+        raise ValueError(
+            "Quick HSN setup is available only in streamlined mode. Complete the HSN workflow from Accounting instead."
+        )
+
+    ensure_hsn_indexes()
+    payload = _payload(entity["_id"], form)
+    existing = mongo.db[HSN_COLLECTION].find_one(
+        {
+            "accounting_entity_id": entity["_id"],
+            "hsn_code": payload["hsn_code"],
+            "is_deleted": {"$ne": True},
+            "status": {"$ne": STATUS_CANCELLED},
+        }
+    )
+    if existing:
+        if existing.get("status") == STATUS_ACTIVE and existing.get("is_active") is True:
+            same_tax = (
+                str(existing.get("taxability_code") or "").upper() == payload["taxability_code"]
+                and str(existing.get("gst_rate_code") or "").upper() == payload["gst_rate_code"]
+            )
+            if not same_tax:
+                current_label = existing.get("taxability_name") or existing.get("taxability_code") or "current tax setup"
+                if existing.get("gst_rate_code"):
+                    current_label += f" · {existing.get('gst_rate_code')}"
+                raise ValueError(
+                    f"HSN {payload['hsn_code']} already exists with {current_label}. Use the existing HSN or review its tax history before changing the classification."
+                )
+            return {
+                "hsn": serialize_hsn_master(existing),
+                "created": False,
+                "message": "Existing HSN selected.",
+            }
+
+        status_label = STATUS_LABELS.get(existing.get("status"), str(existing.get("status") or "existing").replace("_", " ").title())
+        raise ValueError(
+            f"HSN {payload['hsn_code']} already exists and is {status_label}. Complete or review that record before using it on a product."
+        )
+
+    timestamp = now_utc()
+    document = {
+        "accounting_entity_id": entity["_id"],
+        "accounting_entity_id_str": str(entity["_id"]),
+        "entity_code": entity.get("entity_code") or AVPL_ENTITY_CODE,
+        **payload,
+        "live_hsn_key": f"{entity['_id']}:{payload['hsn_code']}",
+        "status": STATUS_ACTIVE,
+        "is_active": True,
+        "is_deleted": False,
+        "version": 1,
+        "created_by": actor["_id"],
+        "created_by_str": str(actor["_id"]),
+        "created_by_name": actor.get("resolved_name") or "",
+        "created_at": timestamp,
+        "submitted_by": actor["_id"],
+        "submitted_by_name": actor.get("resolved_name") or "",
+        "submitted_at": timestamp,
+        "submission_note": "Created from Product Master quick tax setup.",
+        "approved_by": actor["_id"],
+        "approved_by_name": actor.get("resolved_name") or "",
+        "approved_at": timestamp,
+        "approval_note": "Validated and activated from Product Master quick tax setup.",
+        "updated_by": actor["_id"],
+        "updated_by_str": str(actor["_id"]),
+        "updated_by_name": actor.get("resolved_name") or "",
+        "updated_at": timestamp,
+        "audit_sync_required": False,
+        "change_history": [
+            _change_event(
+                "quick_create_hsn_from_product_master",
+                actor,
+                new_status=STATUS_ACTIVE,
+                changed_fields=list(payload),
+                remarks="Created and activated from Product Master quick tax setup.",
+            )
+        ],
+    }
+    try:
+        result = mongo.db[HSN_COLLECTION].insert_one(document)
+    except DuplicateKeyError:
+        concurrent = mongo.db[HSN_COLLECTION].find_one(
+            {
+                "accounting_entity_id": entity["_id"],
+                "hsn_code": payload["hsn_code"],
+                "status": STATUS_ACTIVE,
+                "is_active": True,
+                "is_deleted": False,
+            }
+        )
+        if concurrent:
+            same_tax = (
+                str(concurrent.get("taxability_code") or "").upper() == payload["taxability_code"]
+                and str(concurrent.get("gst_rate_code") or "").upper() == payload["gst_rate_code"]
+            )
+            if same_tax:
+                return {
+                    "hsn": serialize_hsn_master(concurrent),
+                    "created": False,
+                    "message": "Existing HSN selected.",
+                }
+        raise ValueError("This HSN changed while saving. Refresh the product form and try again.")
+
+    document["_id"] = result.inserted_id
+    _record_audit(
+        document,
+        actor,
+        "quick_create_hsn_from_product_master",
+        changed_fields=list(payload),
+        remarks="Created and activated from Product Master quick tax setup.",
+    )
+    return {
+        "hsn": serialize_hsn_master(document),
+        "created": True,
+        "message": f"HSN {payload['hsn_code']} is ready to use.",
+    }
+
+
 def get_hsn_option_catalog(accounting_entity_id=None):
     entity_id = _to_object_id(accounting_entity_id) if accounting_entity_id else None
     taxability = {}
